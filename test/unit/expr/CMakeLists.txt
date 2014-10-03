@@ -1,0 +1,1 @@
+add_library(expr_test term_manager_test.cpp)
