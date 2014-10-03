@@ -18,7 +18,7 @@
 					<folderInfo id="cdt.managedbuild.config.gnu.exe.debug.2098504293." name="/" resourcePath="">
 						<toolChain id="cdt.managedbuild.toolchain.gnu.exe.debug.1794017882" name="Linux GCC" superClass="cdt.managedbuild.toolchain.gnu.exe.debug">
 							<targetPlatform id="cdt.managedbuild.target.gnu.platform.exe.debug.1417975436" name="Debug Platform" superClass="cdt.managedbuild.target.gnu.platform.exe.debug"/>
-							<builder buildPath="${workspace_loc:/sal2}/Debug" id="cdt.managedbuild.target.gnu.builder.exe.debug.1131167228" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="cdt.managedbuild.target.gnu.builder.exe.debug"/>
+							<builder arguments="VERBOSE=1" buildPath="${workspace_loc:/sal2}/build" command="make" id="cdt.managedbuild.target.gnu.builder.exe.debug.1131167228" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="cdt.managedbuild.target.gnu.builder.exe.debug"/>
 							<tool id="cdt.managedbuild.tool.gnu.archiver.base.1905257656" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base"/>
 							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.375038072" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug">
 								<option id="gnu.cpp.compiler.exe.debug.option.optimization.level.1116951989" name="Optimization Level" superClass="gnu.cpp.compiler.exe.debug.option.optimization.level" value="gnu.cpp.compiler.optimization.level.none" valueType="enumerated"/>
@@ -51,18 +51,9 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<folderInfo id="cdt.managedbuild.config.gnu.exe.debug.2098504293.1924017844" name="/" resourcePath="test/unit">
-						<toolChain id="cdt.managedbuild.toolchain.gnu.exe.debug.838880659" name="Linux GCC" superClass="cdt.managedbuild.toolchain.gnu.exe.debug" unusedChildren="">
-							<tool id="cdt.managedbuild.tool.gnu.archiver.base.818211446" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base.1905257656"/>
-							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.311463285" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.375038072"/>
-							<tool id="cdt.managedbuild.tool.gnu.c.compiler.exe.debug.514475949" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.exe.debug.1271433456"/>
-							<tool id="cdt.managedbuild.tool.gnu.c.linker.exe.debug.2021303755" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.exe.debug.662788343"/>
-							<tool id="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug.1635213391" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug.1776361670"/>
-							<tool id="cdt.managedbuild.tool.gnu.assembler.exe.debug.264512804" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.exe.debug.712303154"/>
-						</toolChain>
-					</folderInfo>
 					<sourceEntries>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="test"/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

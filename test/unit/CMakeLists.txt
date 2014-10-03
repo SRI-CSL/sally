@@ -15,6 +15,8 @@ endforeach(DIR)
 # The test libraries
 foreach (DIR expr)
   add_subdirectory(${DIR})
+  # We need to add the options, to include the whole library, otherwise boost
+  # auto-registration of tests doesn't work.
   set(sal2_test_LIBS -Wl,--whole-archive ${DIR}_test -Wl,--no-whole-archive ${sal2_test_LIBS})
 endforeach(DIR)
 

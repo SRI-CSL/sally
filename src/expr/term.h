@@ -10,13 +10,10 @@
 #include <vector>
 #include <iostream>
 
+#include "utils/otuput.h"
+
 namespace sal2 {
 namespace term {
-
-enum output_language {
-  // SMTLIB (Default)
-  SMTLIB = 0
-};
 
 enum term_type {
   TYPE_BOOL,
@@ -26,12 +23,19 @@ enum term_type {
 
 enum term_op {
   OP_VARIABLE,
+  // Boolean
   OP_BOOL_CONSTANT,
-  OP_BOOL_AND,
-  OP_BOOL_OR,
-  OP_BOOL_NOT,
-  OP_BOOL_IMPLIES,
-  OP_BOOL_XOR
+  OP_AND,
+  OP_OR,
+  OP_NOT,
+  OP_IMPLIES,
+  OP_XOR,
+  // Arithmetic
+  OP_REAL_CONSTANT,
+  OP_ADD,
+  OP_SUB,
+  OP_MULT,
+  OP_DIV
 };
 
 template <term_op op> struct term_op_traits {};
@@ -44,6 +48,11 @@ struct term_op_traits<OP_VARIABLE> {
 template<>
 struct term_op_traits<OP_BOOL_CONSTANT> {
   typedef bool payload_type;
+};
+
+template<>
+struct term_op_traits<OP_REAL_CONSTANT> {
+  typedef rational payload_type;
 };
 
 class term;

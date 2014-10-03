@@ -14,18 +14,6 @@
 namespace sal2 {
 namespace term {
 
-static
-void*& get_ostream_term_manager(std::ostream& out) {
-  static const int xindex = std::ios_base::xalloc();
-  return out.pword(xindex);
-}
-
-static
-long& get_ostream_output_language(std::ostream& out) {
-  static const int x_index = std::ios_base::xalloc();
-  return out.iword(x_index);
-}
-
 void term_ref::to_stream(std::ostream& out) const {
   const term_manager* tm = static_cast<const term_manager*>(get_ostream_term_manager(out));
   if (tm == 0) {
@@ -50,15 +38,15 @@ void term::to_stream(std::ostream& out) const {
 static inline
 std::string get_smt_keyword(term_op op) {
   switch (op) {
-  case OP_BOOL_AND:
+  case OP_AND:
     return "and";
-  case OP_BOOL_OR:
+  case OP_OR:
     return "or";
-  case OP_BOOL_NOT:
+  case OP_NOT:
     return "not";
-  case OP_BOOL_IMPLIES:
+  case OP_IMPLIES:
     return "implies";
-  case OP_BOOL_XOR:
+  case OP_XOR:
     return "xor";
   default:
     assert(false);
@@ -74,11 +62,11 @@ void term::to_stream_smt(std::ostream& out, const term_manager& tm) const {
   case OP_BOOL_CONSTANT:
     out << (get<bool>() ? "true" : "false");
     break;
-  case OP_BOOL_AND:
-  case OP_BOOL_OR:
-  case OP_BOOL_NOT:
-  case OP_BOOL_IMPLIES:
-  case OP_BOOL_XOR:
+  case OP_AND:
+  case OP_OR:
+  case OP_NOT:
+  case OP_IMPLIES:
+  case OP_XOR:
     out << "(" << get_smt_keyword(d_op);
     for (size_t i = 0; i < d_size; ++ i) {
       out << " " << d_children[i];
