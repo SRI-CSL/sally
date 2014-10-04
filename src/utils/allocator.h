@@ -47,7 +47,7 @@ public:
   }
 
   template<typename T>
-  const T& get(size_t i) const { return *((const T*)d_memory + i); }
+  const T& get(size_t i) const { return *((const T*)(d_memory + i)); }
 
   template<typename T>
   T& get(size_t i) { return *((T*)d_memory + i); }
@@ -55,7 +55,8 @@ public:
 
 template<typename T>
 T* allocator::allocate(size_t size) {
-  // Align the d_size
+
+  // Align the size
   size = (size + 7) & ~((size_t)7);
 
   // Make sure there is enough memory
@@ -70,7 +71,7 @@ T* allocator::allocate(size_t size) {
   // Actually allocate
   T* o = (T*)(d_memory + d_size);
   // Increase the d_size
-  d_size  += size;
+  d_size += size;
   // Return the clause memory
   return o;
 }

@@ -121,7 +121,7 @@ struct term_extra {
   }
 
   template<typename T>
-  static size_t malloc_size() { return sizeof(term_extra) + sizeof(T); }
+  static size_t alloc_size() { return sizeof(term_extra) + sizeof(T); }
 
   template<typename T>
   const T& get() const { return *(const T*)d_data; }
@@ -215,10 +215,10 @@ term_ref term_manager::mk_term(const typename term_op_traits<op>::payload_type& 
   }
   hash ^= term_op_traits<op>::payload_hash(payload);
   // Construct the term
-  term* t = d_term_memory.allocate<term>(term::alloc_size(0));
+  term* t = d_term_memory.allocate<term>(term::alloc_size(end - begin));
   t->construct(op, begin, end);
   // Construct the payload
-  term_extra* t_extra = d_term_extra_memory.allocate<term_extra>(term_extra::malloc_size<payload_type>());
+  term_extra* t_extra = d_term_extra_memory.allocate<term_extra>(term_extra::alloc_size<payload_type>());
   t_extra->construct<payload_type>(hash, &payload);
   // Get the reference
   return term_ref(d_term_memory.index_of(t));
