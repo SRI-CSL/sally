@@ -36,6 +36,7 @@ enum term_op {
   OP_SUB,
   OP_MUL,
   OP_DIV,
+  OP_LAST
 };
 
 /** No payload */

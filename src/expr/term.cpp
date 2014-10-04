@@ -14,6 +14,11 @@
 namespace sal2 {
 namespace term {
 
+term_manager::term_manager() {
+  for (unsigned i = 0; i < OP_LAST; ++ i) {
+    d_payload_memory[i] = 0;
+  }
+}
 void term_ref::to_stream(std::ostream& out) const {
   const term_manager* tm = output::get_term_manager(out);
   if (tm == 0) {
@@ -68,7 +73,7 @@ void term::to_stream_smt(std::ostream& out, const term_manager& tm) const {
     out << "var";
     break;
   case OP_BOOL_CONSTANT:
-    out << (tm.get_term_extra(this).get<bool>() ? "true" : "false");
+    out << (tm.get_term_payload(this).get<bool>() ? "true" : "false");
     break;
   case OP_AND:
   case OP_OR:
@@ -95,7 +100,8 @@ void term::to_stream_smt(std::ostream& out, const term_manager& tm) const {
 }
 
 term_manager::~term_manager() {
-  for (unsigned i = 0; i < d_terms.size(); ++ i) {
+  for (unsigned i = 0; i < OP_LAST; ++ i) {
+    delete d_payload_memory[i];
   }
 }
 
