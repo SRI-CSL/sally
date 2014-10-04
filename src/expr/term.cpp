@@ -48,6 +48,14 @@ std::string get_smt_keyword(term_op op) {
     return "implies";
   case OP_XOR:
     return "xor";
+  case OP_ADD:
+    return "+";
+  case OP_SUB:
+    return "-";
+  case OP_MUL:
+    return "*";
+  case OP_DIV:
+    return "/";
   default:
     assert(false);
     return "unknown";
@@ -67,6 +75,10 @@ void term::to_stream_smt(std::ostream& out, const term_manager& tm) const {
   case OP_NOT:
   case OP_IMPLIES:
   case OP_XOR:
+  case OP_ADD:
+  case OP_SUB:
+  case OP_MUL:
+  case OP_DIV:
     out << "(" << get_smt_keyword(d_op);
     for (size_t i = 0; i < d_size; ++ i) {
       out << " " << d_children[i];

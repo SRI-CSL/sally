@@ -34,7 +34,7 @@ enum term_op {
   OP_REAL_CONSTANT,
   OP_ADD,
   OP_SUB,
-  OP_MULT,
+  OP_MUL,
   OP_DIV,
 };
 
