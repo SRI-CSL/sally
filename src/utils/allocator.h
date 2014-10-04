@@ -54,18 +54,18 @@ public:
   T* allocate(size_t size);
 
   template<typename T>
-  size_t index_of(const T* o) const {
-    return (const char*)o - d_memory;
+  size_t index_of(const T& o) const {
+    return (const char*)&o - d_memory;
   }
 
   template<typename T>
-  ref get_ref(const T* o) { return ref(index_of(o)); }
+  ref ref_of(const T& o) { return ref(index_of(o)); }
 
   template<typename T>
-  const T& get(ref o_ref) const { return *((const T*)(d_memory + o_ref.d_ref)); }
+  const T& object_of(ref o_ref) const { return *((const T*)(d_memory + o_ref.d_ref)); }
 
   template<typename T>
-  T& get(ref o_ref) { return *((T*)d_memory + o_ref.d_ref); }
+  T& object_of(ref o_ref) { return *((T*)d_memory + o_ref.d_ref); }
 };
 
 template<typename T>
@@ -92,6 +92,8 @@ T* allocator_base::allocate(size_t size) {
 }
 
 class empty_type {};
+typedef const empty_type* empty_type_ptr;
+
 
 template<typename T>
 struct type_traits {
@@ -122,6 +124,17 @@ private:
     T t_data;
     size_t e_size;
     E e_data[];
+
+    template <typename iterator>
+    void construct(const T& data, iterator begin, iterator end) {
+      new (&t_data) T(data);
+      if (!type_traits<E>::is_empty) {
+        e_size = end - begin;
+        for (E* e = e_data; begin != end; ++ begin) {
+          new (e) E(*begin);
+        }
+      }
+    }
   };
 
   // All the allocated data
@@ -130,54 +143,55 @@ private:
 public:
 
   /** Allocate T with n children of type E */
-  T* allocate(size_t n = 0) {
+  template<typename iterator>
+  T* allocate(const T& t, iterator begin, iterator end) {
     data* full;
     if (type_traits<E>::is_empty) {
       full = allocator_base::allocate<data>(sizeof(data));
     } else {
-      full = allocator_base::allocate<data>(sizeof(data) + n*sizeof(E));
-      full->e_size = n;
+      full = allocator_base::allocate<data>(sizeof(data) + (end - begin)*sizeof(E));
     }
+    full->construct(t, begin, end);
     return &full->t_data;
   }
 
   /** Get the reference of the object */
-  ref get_ref(const T& o) const { return ref(allocator_base::index_of<T>(&o)); }
+  ref ref_of(const T& o) const { return ref(allocator_base::index_of<T>(o)); }
 
   /** Get the object given the reference */
-  const T& get(ref o_ref) const {
-    const data& d = allocator_base::get<data>(o_ref);
+  const T& object_of(ref o_ref) const {
+    const data& d = allocator_base::object_of<data>(o_ref);
     return d.t_data;
   }
 
   /** Get the object given the reference */
-  T& get(ref o_ref) {
-    const data* data = allocator_base::get<data>(o_ref);
-    return data->t_data;
+  T& object_of(ref o_ref) {
+    data& d = allocator_base::object_of<data>(o_ref);
+    return d.t_data;
   }
 
   /** Get the number of children */
-  size_t get_size(const T& o) {
-    const data* data = allocator_base::get<data>(get_ref(o));
-    return data->e_size;
+  size_t object_size(const T& o) {
+    const data& d = (const data&) o;
+    return d.e_size;
   }
 
   /** Get the first child */
-  const E* begin(const T& o) const {
-    const data* data = allocator_base::get<data>(get_ref(o));
-    return data->e_data;
+  const E* object_begin(const T& o) const {
+    const data& d = (const data&) o;
+    return d.e_data;
   }
 
   /** Get the last child */
-  const E* end(const T& o) const {
-    const data* data = allocator_base::get<data>(get_ref(o));
-    return data->e_data + data->e_size;
+  const E* object_end(const T& o) const {
+    const data& d = (const data&) o;
+    return d.e_data + d.e_size;
   }
 
   ~allocator() {
     for (unsigned i = 0; i < d_allocated.size(); ++ i) {
       allocator_base::ref o_ref = d_allocated[i];
-      data& d = allocator_base::get<data>(o_ref);
+      data& d = allocator_base::object_of<data>(o_ref);
       // Destruct Es
       if (!type_traits<E>::is_empty) {
         for (unsigned i = 0; i < d.e_size; ++ i) {

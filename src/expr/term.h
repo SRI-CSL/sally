@@ -17,142 +17,53 @@
 namespace sal2 {
 namespace term {
 
-class term;
-class term_manager;
-
-/** References to terms */
-class term_ref {
-
-  /** Reference into the memory */
-  size_t d_ref;
-
-  /** Private only to internal classes */
-  term_ref(size_t ref): d_ref(ref) {}
-
-  friend class term;
-  friend class term_manager;
-
-public:
-
-  /** Default ref construct a null reference */
-  term_ref(): d_ref(-1) {}
-  /** Copy constructor */
-  term_ref(const term_ref& tref): d_ref(tref.d_ref) {}
-  /** Assignment */
-  term_ref& operator = (const term_ref& tref) { d_ref = tref.d_ref; return *this; }
-
-  /** Output to the stream */
-  void to_stream(std::ostream& out) const;
-
-  /** Null reference */
-  static const term_ref null;
-};
-
-inline
-std::ostream& operator << (std::ostream& out, const term_ref& ref) {
-  ref.to_stream(out);
-  return out;
-}
-
-/** Terms are an operation and children or a bayload. */
-class term {
-
-  /** The kind of term */
-  term_op d_op;
-
-  /** The extra data reference */
-  size_t d_extras_ref;
-
-  /** Number of children */
-  size_t d_size;
-
-  /** The children */
-  term_ref d_children[];
-
-  friend class term_manager;
-
-  /** Size in bytes necessary for the term */
-  static size_t alloc_size(size_t nchildren) {
-    return sizeof(term) + nchildren * sizeof(term_ref);
-  }
-
-public:
-
-  /** Construct the term */
-  template<typename iterator_type>
-  void construct(term_op op, size_t extras_ref, iterator_type begin, iterator_type end) {
-    d_op = op;
-    d_extras_ref = extras_ref;
-    d_size = end - begin;
-    for (size_t i = 0; begin != end; ++ i, ++ begin) {
-      d_children[i] = *begin;
-    }
-  }
-
-  /** Get the child */
-  term_ref operator [] (size_t i) const;
-
-  /** Hash of the term */
-  size_t hash() const;
-
-  /** Stream it */
-  void to_stream(std::ostream& out) const;
-
-  /** Stream it */
-  void to_stream_smt(std::ostream& out, const term_manager& tm) const;
-};
-
-inline
-std::ostream& operator << (std::ostream& out, const term& t) {
-  t.to_stream(out);
-  return out;
-}
-
-/** Extra data of the term */
-struct term_extra {
-  /** Hash of the term */
-  size_t d_hash;
-  /** Any payload */
-  char d_data[];
-
-  template<typename T>
-  void construct(size_t hash, const T* payload) {
-    d_hash = hash;
-    new (d_data) T(*payload);
-  }
-
-  template<typename T>
-  static size_t alloc_size() { return sizeof(term_extra) + sizeof(T); }
-
-  template<typename T>
-  const T& get() const { return *(const T*)d_data; }
-
-  template<typename T>
-  T& get() { return *(T*)d_data; }
-};
-
+/**
+ * Term manager controles the terms, allocation and grabage collection.
+ */
 class term_manager {
 
 public:
 
-  typedef utils::allocator_base::ref ref;
+  /** Base references */
+  typedef utils::allocator_base::ref base_ref;
 
+  /** Payload references */
+  typedef base_ref payload_ref;
+
+  /** Term references */
+  class term_ref : public base_ref {
+  public:
+    term_ref(const base_ref& ref): base_ref(ref) {}
+    term_ref(const utils::empty_type& empty) {}
+    void to_stream(std::ostream& out) const;
+  };
+
+  /** Terms */
   struct term {
-    term_op op;
-    size_t hash;
-    ref payload;
+    term_op d_op;
+    size_t d_hash;
+    payload_ref d_payload;
+
+    term(term_op op, size_t hash, payload_ref payload)
+    : d_op(op)
+    , d_hash(hash)
+    , d_payload(payload)
+    {}
+
+    void to_stream(std::ostream& out) const;
+    void to_stream_smt(std::ostream& out, const term_manager& tm) const;
   };
 
 private:
 
   /** Memory for the terms */
-  utils::allocator<term, ref> d_memory;
+  utils::allocator<term, term_ref> d_memory;
 
   /** Allocations for the */
   utils::allocator_base* d_payload_memory[OP_LAST];
 
   /** All allocated terms */
-  std::vector<ref> d_terms;
+  std::vector<term_ref> d_terms;
 
   /** Compute the hash of the term */
   size_t compute_hash(const term* t);
@@ -172,7 +83,7 @@ public:
   /** Make a term from just payload */
   template<term_op op>
   term_ref mk_term(const typename term_op_traits<op>::payload_type& payload) {
-    return mk_term<op, char*>(payload, 0, 0);
+    return mk_term<op, utils::empty_type*>(payload, 0, 0);
   }
 
   /** Make a term from one child */
@@ -196,24 +107,58 @@ public:
   }
 
   /** Get a reference for the term */
-  ref get_ref(const term& term) const {
-    return d_memory.get_ref(term);
+  term_ref ref_of(const term& term) const {
+    return d_memory.ref_of(term);
   }
 
   /** Get a term of the reference */
-  const term& get_term(ref term_ref) const {
-    return d_memory.get(term_ref);
+  const term& term_of(term_ref ref) const {
+    return d_memory.object_of(ref);
   }
 
   /** Get a term extra */
   template<typename payload_type>
-  const term_extra& get_term_payload(const term* t) const {
-    return d_payload_memory[t->op]->get<payload_type>(t->payload);
+  const payload_type& payload_of(const term& t) const {
+    return d_payload_memory[t.d_op]->object_of<payload_type>(t.d_payload);
   }
 
+  /** Get the size of the term */
+  size_t term_size(const term& t) {
+    return d_memory.object_size(t);
+  }
 
+  /** First child */
+  const term_ref* term_begin(const term& t) const {
+    return d_memory.object_begin(t);
+  }
+
+  /** End of children (one past) */
+  const term_ref* term_end(const term& t) const {
+    return d_memory.object_end(t);
+  }
 };
 
+/** The term type */
+typedef term_manager::term term;
+
+/** Output operator for terms */
+inline
+std::ostream& operator << (std::ostream& out, const term& t) {
+  t.to_stream(out);
+  return out;
+}
+
+/** The term reference type */
+typedef term_manager::term_ref term_ref;
+
+/** Output operator for term references */
+inline
+std::ostream& operator << (std::ostream& out, const term_ref& t_ref) {
+  t_ref.to_stream(out);
+  return out;
+}
+
+/** IO modifier to set the term manager */
 struct set_tm {
   const term_manager* tm;
   set_tm(const term_manager& tm): tm(&tm) {}
@@ -228,17 +173,11 @@ term_ref term_manager::mk_term(const typename term_op_traits<op>::payload_type& 
   typedef typename term_op_traits<op>::payload_type payload_type;
   typedef utils::allocator<payload_type, utils::empty_type> payload_allocator;
 
-  // If the payload type for this term is not empty, we might have to initialize
-  // the memory for the payloads
-  if (!utils::type_traits<payload_type>::is_empty && d_payload_memory[op] == 0) {
-    d_payload_memory[op] = new payload_allocator();
-  }
-
   // Compute the hash of the term
   size_t hash = op;
   for (iterator_type it = begin; it != end; ++ it) {
-    size_t child_hash = d_memory.get(it).d_hash;
-    hash ^= child_hash + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    const term& child = term_of(*it);
+    hash ^= child.d_hash + 0x9e3779b9 + (hash << 6) + (hash >> 2);
   }
 
   // If there is a payload, add it to the hash
@@ -247,26 +186,23 @@ term_ref term_manager::mk_term(const typename term_op_traits<op>::payload_type& 
   }
 
   // Construct the payload if any
-  ref p_ref = ref::null;
+  payload_ref p_ref = term_ref::null;
   if (!utils::type_traits<payload_type>::is_empty) {
+    // If no payload allocator, construct it
+    if (d_payload_memory[op] == 0) {
+      d_payload_memory[op] = new payload_allocator();
+    }
     // Allocate the payload and copy construct it
     payload_allocator* palloc = ((payload_allocator*) d_payload_memory[op]);
-    const payload_type* t_payload = palloc->allocate();
-    p_ref = palloc->get_ref(*t_payload);
-    new (t_payload) payload_type(payload);
+    const payload_type* t_payload = palloc->template allocate<utils::empty_type_ptr>(payload, 0, 0);
+    p_ref = palloc->ref_of(*t_payload);
   }
 
   // Construct the term
-  term* t = d_memory.allocate(end - begin);
-  t->hash = hash;
-  t->op = op;
-  t->payload = p_ref;
-  for (ref* child_ref = d_memory.begin(*t); begin != end; ++ child_ref, ++ begin) {
-    *child_ref = *begin;
-  }
+  term* t = d_memory.allocate(term(op, hash, p_ref), begin, end);
 
   // Get the reference
-  return d_memory.get_ref(*t);
+  return d_memory.ref_of(*t);
 }
 
 }

@@ -19,16 +19,17 @@ term_manager::term_manager() {
     d_payload_memory[i] = 0;
   }
 }
-void term_ref::to_stream(std::ostream& out) const {
+
+void term_manager::term_ref::to_stream(std::ostream& out) const {
   const term_manager* tm = output::get_term_manager(out);
   if (tm == 0) {
     out << d_ref;
   } else {
-    tm->get_term(*this).to_stream(out);
+    tm->term_of(*this).to_stream(out);
   }
 }
 
-void term::to_stream(std::ostream& out) const {
+void term_manager::term::to_stream(std::ostream& out) const {
   output::language lang = output::get_output_language(out);
   const term_manager* tm = output::get_term_manager(out);
   switch (lang) {
@@ -67,13 +68,13 @@ std::string get_smt_keyword(term_op op) {
   }
 }
 
-void term::to_stream_smt(std::ostream& out, const term_manager& tm) const {
+void term_manager::term::to_stream_smt(std::ostream& out, const term_manager& tm) const {
   switch (d_op) {
   case OP_VARIABLE:
     out << "var";
     break;
   case OP_BOOL_CONSTANT:
-    out << (tm.get_term_payload(this).get<bool>() ? "true" : "false");
+    out << (tm.payload_of<bool>(*this) ? "true" : "false");
     break;
   case OP_AND:
   case OP_OR:
@@ -83,16 +84,17 @@ void term::to_stream_smt(std::ostream& out, const term_manager& tm) const {
   case OP_ADD:
   case OP_SUB:
   case OP_MUL:
-  case OP_DIV:
+  case OP_DIV: {
     out << "(" << get_smt_keyword(d_op);
-    for (size_t i = 0; i < d_size; ++ i) {
-      out << " " << d_children[i];
+    for (const term_ref* it = tm.term_begin(*this); it != tm.term_end(*this); ++ it) {
+      out << " " << *it;
     }
     out << ")";
     break;
+  }
   case OP_REAL_CONSTANT:
     // Stream is already in SMT mode
-    out << tm.get_term_extra(this).get<rational>();
+    out << tm.payload_of<rational>(*this);
     break;
   default:
     assert(false);
