@@ -73,6 +73,10 @@ void term::to_stream_smt(std::ostream& out, const term_manager& tm) const {
     }
     out << ")";
     break;
+  case OP_REAL_CONSTANT:
+    // Stream is already in SMT mode
+    out << tm.get_term_extra(this).get<rational>();
+    break;
   default:
     assert(false);
   }

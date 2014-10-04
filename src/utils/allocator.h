@@ -32,6 +32,7 @@ public:
   , d_capacity(initial_size)
   {}
 
+  /** Destructor just frees the memory, stuff inside needs to be destructed by hand */
   ~allocator() {
     std::free(d_memory);
   }

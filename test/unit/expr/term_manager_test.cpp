@@ -51,8 +51,15 @@ BOOST_AUTO_TEST_CASE(mk_term) {
   children.push_back(t_not);
   children.push_back(t_or);
   term_ref t_and = d_tm.mk_term<OP_AND>(children.begin(), children.end());
-
   cout << t_and << endl;
+
+  term_ref t_r0 = d_tm.mk_term<OP_REAL_CONSTANT>(rational(0, 1));
+  cout << t_r0 << endl;
+  term_ref t_r1 = d_tm.mk_term<OP_REAL_CONSTANT>(rational(1, 2));
+  cout << t_r1 << endl;
+  term_ref t_r2 = d_tm.mk_term<OP_REAL_CONSTANT>(rational(-1, 2));
+  cout << t_r2 << endl;
+
 }
 
 BOOST_AUTO_TEST_SUITE_END();

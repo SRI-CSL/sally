@@ -73,7 +73,7 @@ struct term_op_traits<OP_BOOL_CONSTANT> {
 template<>
 struct term_op_traits<OP_REAL_CONSTANT> {
   typedef rational payload_type;
-  size_t payload_hash(const payload_type& payload) {
+  static size_t payload_hash(const payload_type& payload) {
     return payload.hash();
   }
 };

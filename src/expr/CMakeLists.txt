@@ -1,1 +1,1 @@
-add_library(expr term.cpp)
+add_library(expr term.cpp rational.cpp)

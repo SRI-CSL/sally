@@ -80,8 +80,9 @@ public:
 
   /** Construct the term */
   template<typename iterator_type>
-  void construct(term_op op, iterator_type begin, iterator_type end) {
+  void construct(term_op op, size_t extras_ref, iterator_type begin, iterator_type end) {
     d_op = op;
+    d_extras_ref = extras_ref;
     d_size = end - begin;
     for (size_t i = 0; begin != end; ++ i, ++ begin) {
       d_children[i] = *begin;
@@ -214,12 +215,12 @@ term_ref term_manager::mk_term(const typename term_op_traits<op>::payload_type& 
     hash ^= d_term_extra_memory.get<term_extra>(get_term(*it).d_extras_ref).d_hash + 0x9e3779b9 + (hash << 6) + (hash >> 2);
   }
   hash ^= term_op_traits<op>::payload_hash(payload);
-  // Construct the term
-  term* t = d_term_memory.allocate<term>(term::alloc_size(end - begin));
-  t->construct(op, begin, end);
   // Construct the payload
   term_extra* t_extra = d_term_extra_memory.allocate<term_extra>(term_extra::alloc_size<payload_type>());
   t_extra->construct<payload_type>(hash, &payload);
+  // Construct the term
+  term* t = d_term_memory.allocate<term>(term::alloc_size(end - begin));
+  t->construct(op, d_term_extra_memory.index_of(t_extra), begin, end);
   // Get the reference
   return term_ref(d_term_memory.index_of(t));
 }

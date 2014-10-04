@@ -30,7 +30,7 @@ void rational::to_stream(std::ostream& out) const {
       out << "(/ ";
       if (sgn < 0) {
         // when printing gmp numerator skip the -, but wrap into (- )
-        out << "(- " << (++ d_gmp_rat.get_num().get_str().c_str()) << ")";
+        out << "(- " << (d_gmp_rat.get_num().get_str().c_str() + 1) << ")";
       } else {
         // just regular print
         out << d_gmp_rat.get_num().get_str();
@@ -43,6 +43,3 @@ void rational::to_stream(std::ostream& out) const {
     assert(false);
   }
 }
-
-
-
