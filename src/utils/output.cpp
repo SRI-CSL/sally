@@ -7,15 +7,36 @@
 
 #include "utils/output.h"
 
+namespace sal2 {
+namespace output {
+
 static
-void*& get_ostream_term_manager(std::ostream& out) {
+void*& __get_term_manager(std::ostream& out) {
   static const int xindex = std::ios_base::xalloc();
   return out.pword(xindex);
 }
 
 static
-long& get_ostream_output_language(std::ostream& out) {
+long& __get_output_language(std::ostream& out) {
   static const int x_index = std::ios_base::xalloc();
   return out.iword(x_index);
 }
 
+const term::term_manager* get_term_manager(std::ostream& out) {
+  return (term::term_manager*) __get_term_manager(out);
+}
+
+void set_term_manager(std::ostream& out, const term::term_manager* tm) {
+  __get_term_manager(out) = (void*) tm;
+}
+
+output_language get_output_language(std::ostream& out) {
+  return (output_language) __get_output_language(out);
+}
+
+void set_term_manager(std::ostream& out, output_language lang) {
+  __get_output_language(out) = lang;
+}
+
+}
+}

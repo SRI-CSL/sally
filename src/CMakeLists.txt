@@ -1,4 +1,4 @@
-set(sal2_SRC_DIRS expr)
+set(sal2_SRC_DIRS utils expr)
 
 foreach(DIR ${sal2_SRC_DIRS})
   add_subdirectory(${DIR})

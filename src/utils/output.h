@@ -5,9 +5,18 @@
  *      Author: dejan
  */
 
+#pragma once
+
 #include <iostream>
 
 namespace sal2 {
+
+namespace term {
+  class term_manager;
+};
+
+
+
 namespace output {
 
 enum output_language {
@@ -15,17 +24,17 @@ enum output_language {
   SMTLIB = 0
 };
 
-get_ostream_term_manager(std::ostream& out) {
-  static const int xindex = std::ios_base::xalloc();
-  return out.pword(xindex);
-}
+/** Get the term manager associated with out */
+const term::term_manager* get_term_manager(std::ostream& out);
 
-static
-long& get_ostream_output_language(std::ostream& out) {
-  static const int x_index = std::ios_base::xalloc();
-  return out.iword(x_index);
-}
+/** Set the term manager associated with out */
+void set_term_manager(std::ostream& out, const term::term_manager* tm);
 
+/** Get the output language associated with out */
+output_language get_output_language(std::ostream& out);
+
+/** Set the output language associated with out */
+void set_term_manager(std::ostream& out, output_language lang);
 
 }
 }

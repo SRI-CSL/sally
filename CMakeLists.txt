@@ -18,7 +18,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 # Find the GMP number library
 find_library(GMP_LIBRARY gmp)
 if (GMP_LIBRARY)
-  message(STATUS "GMP library: "${GMP_LIBRARY})
+  message(STATUS "GMP library: " ${GMP_LIBRARY})
 else()
   MESSAGE(FATAL_ERROR "Could not the GMP number library (sudo apt-get libgmp-dev)")
 endif()

@@ -7,7 +7,7 @@
 
 #include "expr/rational.h"
 
-#include "utils/ostream.h"
+#include "utils/output.h"
 
 using namespace std;
 using namespace sal2;

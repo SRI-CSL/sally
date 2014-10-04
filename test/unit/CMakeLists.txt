@@ -7,7 +7,7 @@ add_executable(sal2_test test_runner.cpp)
 add_dependencies(check sal2_test)
 
 # Original sal2 libraries
-foreach (DIR expr)
+foreach (DIR utils expr)
   link_directories(${sal2_BINARY_DIR}/src/${DIR})
   set(sal2_test_LIBS ${DIR} ${sal2_test_LIBS})
 endforeach(DIR)

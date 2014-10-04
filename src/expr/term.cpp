@@ -6,6 +6,7 @@
  */
 
 #include "expr/term.h"
+#include "utils/output.h"
 
 #include <cstdlib>
 #include <iomanip>
@@ -15,7 +16,7 @@ namespace sal2 {
 namespace term {
 
 void term_ref::to_stream(std::ostream& out) const {
-  const term_manager* tm = static_cast<const term_manager*>(get_ostream_term_manager(out));
+  const term_manager* tm = output::get_term_manager(out);
   if (tm == 0) {
     out << d_ref;
   } else {
@@ -24,10 +25,10 @@ void term_ref::to_stream(std::ostream& out) const {
 }
 
 void term::to_stream(std::ostream& out) const {
-  output_language lang = static_cast<output_language>(get_ostream_output_language(out));
-  const term_manager* tm = static_cast<const term_manager*>(get_ostream_term_manager(out));
+  output::output_language lang = output::get_output_language(out);
+  const term_manager* tm = output::get_term_manager(out);
   switch (lang) {
-  case SMTLIB:
+  case output::SMTLIB:
     to_stream_smt(out, *tm);
     break;
   default:
@@ -88,7 +89,7 @@ term_manager::term_manager()
 }
 
 std::ostream& operator << (std::ostream& out, const set_tm& stm) {
-  get_ostream_term_manager(out) = (void*)stm.tm;
+  output::set_term_manager(out, stm.tm);
   return out;
 }
 

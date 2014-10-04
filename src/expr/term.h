@@ -10,7 +10,8 @@
 #include <vector>
 #include <iostream>
 
-#include "utils/otuput.h"
+#include "expr/rational.h"
+#include "utils/output.h"
 
 namespace sal2 {
 namespace term {
