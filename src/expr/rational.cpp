@@ -19,7 +19,7 @@ std::string rational::to_string() const {
 }
 
 void rational::to_stream(std::ostream& out) const {
-  output::output_language lang = output::get_output_language(out);
+  output::language lang = output::get_output_language(out);
   switch (lang) {
   case output::SMTLIB: {
     const mpz_class& num = d_gmp_rat.get_num();

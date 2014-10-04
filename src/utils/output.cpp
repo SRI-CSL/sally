@@ -30,11 +30,11 @@ void set_term_manager(std::ostream& out, const term::term_manager* tm) {
   __get_term_manager(out) = (void*) tm;
 }
 
-output_language get_output_language(std::ostream& out) {
-  return (output_language) __get_output_language(out);
+language get_output_language(std::ostream& out) {
+  return (language) __get_output_language(out);
 }
 
-void set_term_manager(std::ostream& out, output_language lang) {
+void set_term_manager(std::ostream& out, language lang) {
   __get_output_language(out) = lang;
 }
 

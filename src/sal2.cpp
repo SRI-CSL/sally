@@ -38,11 +38,11 @@ int main() {
   cout << t_var << endl;
 
   // Unary
-  term_ref t_not = tm.mk_term(OP_NOT, t_var);
+  term_ref t_not = tm.mk_term<OP_NOT>(t_var);
   cout << t_not << endl;
 
   // Binary
-  term_ref t_or = tm.mk_term(OP_OR, t_var, t_not);
+  term_ref t_or = tm.mk_term<OP_OR>(t_var, t_not);
   cout << t_or << endl;
 
   std::vector<term_ref> children;
@@ -51,7 +51,7 @@ int main() {
   children.push_back(t_var);
   children.push_back(t_not);
   children.push_back(t_or);
-  term_ref t_and = tm.mk_term(OP_AND, children);
+  term_ref t_and = tm.mk_term<OP_AND>(children.begin(), children.end());
 
   cout << t_and << endl;
 }

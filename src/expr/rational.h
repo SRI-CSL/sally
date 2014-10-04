@@ -23,6 +23,7 @@ public:
   rational(const char* s): d_gmp_rat(s, 10) { d_gmp_rat.canonicalize(); }
   rational(std::string s): d_gmp_rat(s, 10) { d_gmp_rat.canonicalize(); }
   rational(const rational& q): d_gmp_rat(q.d_gmp_rat) { d_gmp_rat.canonicalize(); }
+  size_t hash() const { return 0; }
   std::string to_string() const;
   void to_stream(std::ostream& out) const;
 };

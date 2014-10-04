@@ -17,7 +17,7 @@ namespace term {
 
 namespace output {
 
-enum output_language {
+enum language {
   // SMTLIB (Default)
   SMTLIB = 0
 };
@@ -29,10 +29,10 @@ const term::term_manager* get_term_manager(std::ostream& out);
 void set_term_manager(std::ostream& out, const term::term_manager* tm);
 
 /** Get the output language associated with out */
-output_language get_output_language(std::ostream& out);
+language get_output_language(std::ostream& out);
 
 /** Set the output language associated with out */
-void set_term_manager(std::ostream& out, output_language lang);
+void set_term_manager(std::ostream& out, language lang);
 
 }
 }
