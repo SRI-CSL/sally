@@ -8,6 +8,7 @@
 #pragma once
 
 #include "expr/rational.h"
+#include "utils/allocator.h"
 
 namespace sal2 {
 namespace term {
@@ -39,17 +40,9 @@ enum term_op {
   OP_LAST
 };
 
-/** No payload */
-struct payload_null_type {
-  payload_null_type() {}
-};
-
-/** Singleton for passing no payload */
-static const payload_null_type payload_null;
-
 template <term_op op>
 struct term_op_traits {
-  typedef payload_null_type payload_type;
+  typedef alloc::empty_type payload_type;
   static size_t payload_hash(const payload_type& payload) {
     return 0;
   }

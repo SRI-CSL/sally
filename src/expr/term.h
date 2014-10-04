@@ -25,7 +25,7 @@ class term_manager {
 public:
 
   /** Base references */
-  typedef utils::allocator_base::ref base_ref;
+  typedef alloc::allocator_base::ref base_ref;
 
   /** Payload references */
   typedef base_ref payload_ref;
@@ -34,7 +34,7 @@ public:
   class term_ref : public base_ref {
   public:
     term_ref(const base_ref& ref): base_ref(ref) {}
-    term_ref(const utils::empty_type& empty) {}
+    term_ref(const alloc::empty_type& empty) {}
     void to_stream(std::ostream& out) const;
   };
 
@@ -57,10 +57,10 @@ public:
 private:
 
   /** Memory for the terms */
-  utils::allocator<term, term_ref> d_memory;
+  alloc::allocator<term, term_ref> d_memory;
 
   /** Allocations for the */
-  utils::allocator_base* d_payload_memory[OP_LAST];
+  alloc::allocator_base* d_payload_memory[OP_LAST];
 
   /** All allocated terms */
   std::vector<term_ref> d_terms;
@@ -83,27 +83,27 @@ public:
   /** Make a term from just payload */
   template<term_op op>
   term_ref mk_term(const typename term_op_traits<op>::payload_type& payload) {
-    return mk_term<op, utils::empty_type*>(payload, 0, 0);
+    return mk_term<op, alloc::empty_type*>(payload, 0, 0);
   }
 
   /** Make a term from one child */
   template<term_op op>
   term_ref mk_term(term_ref child) {
     term_ref children[1] = { child };
-    return mk_term<op, term_ref*>(payload_null, children, children + 1);
+    return mk_term<op, term_ref*>(alloc::empty, children, children + 1);
   }
 
   /** Make a term from two children */
   template<term_op op>
   term_ref mk_term(term_ref child1, term_ref child2) {
     term_ref children[2] = { child1, child2 };
-    return mk_term<op, term_ref*>(payload_null, children, children + 2);
+    return mk_term<op, term_ref*>(alloc::empty, children, children + 2);
   }
 
   /** Make a term with a list of children */
   template <term_op op, typename iterator_type>
   term_ref mk_term(iterator_type children_begin, iterator_type children_end) {
-    return mk_term<op, iterator_type>(payload_null, children_begin, children_end);
+    return mk_term<op, iterator_type>(alloc::empty, children_begin, children_end);
   }
 
   /** Get a reference for the term */
@@ -171,7 +171,7 @@ template <term_op op, typename iterator_type>
 term_ref term_manager::mk_term(const typename term_op_traits<op>::payload_type& payload, iterator_type begin, iterator_type end) {
 
   typedef typename term_op_traits<op>::payload_type payload_type;
-  typedef utils::allocator<payload_type, utils::empty_type> payload_allocator;
+  typedef alloc::allocator<payload_type, alloc::empty_type> payload_allocator;
 
   // Compute the hash of the term
   size_t hash = op;
@@ -181,20 +181,20 @@ term_ref term_manager::mk_term(const typename term_op_traits<op>::payload_type& 
   }
 
   // If there is a payload, add it to the hash
-  if (!utils::type_traits<payload_type>::is_empty) {
+  if (!alloc::type_traits<payload_type>::is_empty) {
     hash ^= term_op_traits<op>::payload_hash(payload);
   }
 
   // Construct the payload if any
   payload_ref p_ref = term_ref::null;
-  if (!utils::type_traits<payload_type>::is_empty) {
+  if (!alloc::type_traits<payload_type>::is_empty) {
     // If no payload allocator, construct it
     if (d_payload_memory[op] == 0) {
       d_payload_memory[op] = new payload_allocator();
     }
     // Allocate the payload and copy construct it
     payload_allocator* palloc = ((payload_allocator*) d_payload_memory[op]);
-    const payload_type* t_payload = palloc->template allocate<utils::empty_type_ptr>(payload, 0, 0);
+    const payload_type* t_payload = palloc->template allocate<alloc::empty_type_ptr>(payload, 0, 0);
     p_ref = palloc->ref_of(*t_payload);
   }
 

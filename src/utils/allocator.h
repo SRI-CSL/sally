@@ -11,7 +11,7 @@
 #include <vector>
 
 namespace sal2 {
-namespace utils {
+namespace alloc {
 
 class allocator_base {
 
@@ -93,7 +93,7 @@ T* allocator_base::allocate(size_t size) {
 
 class empty_type {};
 typedef const empty_type* empty_type_ptr;
-
+static const empty_type empty;
 
 template<typename T>
 struct type_traits {
