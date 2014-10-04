@@ -88,6 +88,13 @@ term_manager::term_manager()
 {
 }
 
+term_manager::~term_manager() {
+  for (unsigned i = 0; i < d_terms.size(); ++ i) {
+    term* t = (term*)(d_memory + d_terms[i].d_ref);
+    // destruct the payload
+  }
+}
+
 std::ostream& operator << (std::ostream& out, const set_tm& stm) {
   output::set_term_manager(out, stm.tm);
   return out;
@@ -110,6 +117,8 @@ term* term_manager::allocate(size_t size) {
   term* t = (term*)(d_memory + d_size);
   // Increase the d_size
   d_size  += size;
+  // Add to the list of terms
+  d_terms.push_back(get_ref(*t));
   // Return the clause memory
   return t;
 }

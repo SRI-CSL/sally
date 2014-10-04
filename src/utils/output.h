@@ -15,8 +15,6 @@ namespace term {
   class term_manager;
 };
 
-
-
 namespace output {
 
 enum output_language {

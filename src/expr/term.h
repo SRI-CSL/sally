@@ -36,10 +36,13 @@ enum term_op {
   OP_ADD,
   OP_SUB,
   OP_MULT,
-  OP_DIV
+  OP_DIV,
 };
 
-template <term_op op> struct term_op_traits {};
+template <term_op op>
+struct term_op_traits {
+  typedef void payload_type;
+};
 
 template<>
 struct term_op_traits<OP_VARIABLE> {
@@ -143,10 +146,16 @@ class term_manager {
   /** Allocate at least size bytes and return the pointer */
   term* allocate(size_t size);
 
+  /** All alocated terms */
+  std::vector<term_ref> d_terms;
+
 public:
 
   /** Construct it */
   term_manager();
+
+  /** Destruct it */
+  ~term_manager();
 
   template <term_op op>
   term_ref mk_term(const typename term_op_traits<op>::payload_type& payload);
