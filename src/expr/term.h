@@ -199,8 +199,12 @@ term_ref term_manager::mk_term(const typename term_op_traits<op>::payload_type& 
   }
 
   // Construct the term
-  term* t = d_memory.allocate(term(op, hash, p_ref), begin, end);
-
+  term* t = 0;
+  if (term_op_traits<op>::has_children) {
+    t = d_memory.allocate(term(op, hash, p_ref), begin, end);
+  } else {
+    t = d_memory.allocate(term(op, hash, p_ref));
+  }
   // Get the reference
   return d_memory.ref_of(*t);
 }

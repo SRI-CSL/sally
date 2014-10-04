@@ -43,6 +43,7 @@ enum term_op {
 template <term_op op>
 struct term_op_traits {
   typedef alloc::empty_type payload_type;
+  static const bool has_children = true;
   static size_t payload_hash(const payload_type& payload) {
     return 0;
   }
@@ -51,6 +52,7 @@ struct term_op_traits {
 template<>
 struct term_op_traits<OP_VARIABLE> {
   typedef term_type payload_type;
+  static const bool has_children = false;
   static size_t payload_hash(const payload_type& payload) {
     return payload;
   }
@@ -59,14 +61,16 @@ struct term_op_traits<OP_VARIABLE> {
 template<>
 struct term_op_traits<OP_BOOL_CONSTANT> {
   typedef bool payload_type;
+  static const bool has_children = false;
   static size_t payload_hash(const payload_type& payload) {
-    return payload ? true : false;
+    return payload ? 1 : 0;
   }
 };
 
 template<>
 struct term_op_traits<OP_REAL_CONSTANT> {
   typedef rational payload_type;
+  static const bool has_children = false;
   static size_t payload_hash(const payload_type& payload) {
     return payload.hash();
   }

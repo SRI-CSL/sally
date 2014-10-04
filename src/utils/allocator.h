@@ -102,7 +102,7 @@ struct type_traits {
 
 template<>
 struct type_traits<empty_type> {
-  static const bool is_empty = false;
+  static const bool is_empty = true;
 };
 
 template<typename T, typename E = empty_type>
@@ -128,8 +128,7 @@ private:
     template <typename iterator>
     void construct(const T& data, iterator begin, iterator end) {
       new (&t_data) T(data);
-      if (!type_traits<E>::is_empty) {
-        e_size = end - begin;
+      if (!type_traits<E>::is_empty && begin != end) {
         for (E* e = e_data; begin != end; ++ begin) {
           new (e) E(*begin);
         }
@@ -147,11 +146,19 @@ public:
   T* allocate(const T& t, iterator begin, iterator end) {
     data* full;
     if (type_traits<E>::is_empty) {
-      full = allocator_base::allocate<data>(sizeof(data));
+      full = allocator_base::allocate<data>(sizeof(T));
     } else {
       full = allocator_base::allocate<data>(sizeof(data) + (end - begin)*sizeof(E));
+      full->e_size = (end - begin);
     }
     full->construct(t, begin, end);
+    return &full->t_data;
+  }
+
+  /** Allocate T with no children */
+  T* allocate(const T& t) {
+    data* full = allocator_base::allocate<data>(sizeof(T));
+    full->template construct<empty_type_ptr>(t, 0, 0);
     return &full->t_data;
   }
 
