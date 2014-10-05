@@ -129,7 +129,7 @@ private:
     void construct(const T& data, iterator begin, iterator end) {
       new (&t_data) T(data);
       if (!type_traits<E>::is_empty && begin != end) {
-        for (E* e = e_data; begin != end; ++ begin) {
+        for (E* e = e_data; begin != end; ++ begin, ++ e) {
           new (e) E(*begin);
         }
       }
@@ -148,8 +148,9 @@ public:
     if (type_traits<E>::is_empty) {
       full = allocator_base::allocate<data>(sizeof(T));
     } else {
-      full = allocator_base::allocate<data>(sizeof(data) + (end - begin)*sizeof(E));
-      full->e_size = (end - begin);
+      size_t size = end - begin;
+      full = allocator_base::allocate<data>(sizeof(data) + size*sizeof(E));
+      full->e_size = size;
     }
     full->construct(t, begin, end);
     return full->t_data;
