@@ -14,10 +14,6 @@ using namespace std;
 using namespace sal2;
 using namespace term;
 
-std::string rational::to_string() const {
-  return d_gmp_rat.get_str();
-}
-
 void rational::to_stream(std::ostream& out) const {
   output::language lang = output::get_output_language(out);
   switch (lang) {

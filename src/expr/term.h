@@ -19,7 +19,8 @@ namespace sal2 {
 namespace term {
 
 /**
- * Term manager controles the terms, allocation and grabage collection.
+ * Term manager controles the terms, allocation and grabage collection. All
+ * terms are defined in term_ops.h.
  */
 class term_manager {
 
@@ -41,67 +42,73 @@ public:
 
   /** Terms */
   struct term {
+    /** The term kind */
     term_op d_op;
+    /** Hash of this term */
     size_t d_hash;
+    /** Reference to the payload */
     payload_ref d_payload;
 
+    /** Construct the term with all the attributes */
     term(term_op op, size_t hash, payload_ref payload)
     : d_op(op)
     , d_hash(hash)
     , d_payload(payload)
     {}
 
+    /** Output to the stream using the language set on the stream */
     void to_stream(std::ostream& out) const;
+    /** Output to the stream using the SMT2 language */
     void to_stream_smt(std::ostream& out, const term_manager& tm) const;
   };
 
 private:
 
-  /** Memory for the terms */
+  /** Memory where the terms are kept */
   alloc::allocator<term, term_ref> d_memory;
 
-  /** Allocations for the */
+  /** Memory for the payloads, one for each kind of expression */
   alloc::allocator_base* d_payload_memory[OP_LAST];
 
-  /** All allocated terms */
-  std::vector<term_ref> d_terms;
+  /** Does the specific kind have children */
+  static bool s_has_children[OP_LAST];
 
-  /** Compute the hash of the term */
-  size_t compute_hash(const term* t);
+  /** List of all allocated terms */
+  std::vector<term_ref> d_terms;
 
 public:
 
   /** Construct them manager */
   term_manager();
 
-  /** Destruct it */
+  /** Destruct the manager, and destruct all payloads that the manager owns */
   ~term_manager();
 
   /** Generic term constructor */
   template <term_op op, typename iterator_type>
   term_ref mk_term(const typename term_op_traits<op>::payload_type& payload, iterator_type children_begin, iterator_type children_end);
 
-  /** Make a term from just payload */
+  /** Make a term from just payload (for constants) */
   template<term_op op>
   term_ref mk_term(const typename term_op_traits<op>::payload_type& payload) {
     return mk_term<op, alloc::empty_type*>(payload, 0, 0);
   }
 
-  /** Make a term from one child */
+  /** Make a term from one child and no payload */
   template<term_op op>
   term_ref mk_term(term_ref child) {
     term_ref children[1] = { child };
     return mk_term<op, term_ref*>(alloc::empty, children, children + 1);
   }
 
-  /** Make a term from two children */
+  /** Make a term from two children and no payload */
   template<term_op op>
   term_ref mk_term(term_ref child1, term_ref child2) {
     term_ref children[2] = { child1, child2 };
     return mk_term<op, term_ref*>(alloc::empty, children, children + 2);
   }
 
-  /** Make a term with a list of children */
+  /** Make a term with a list of children and no payload */
   template <term_op op, typename iterator_type>
   term_ref mk_term(iterator_type children_begin, iterator_type children_end) {
     return mk_term<op, iterator_type>(alloc::empty, children_begin, children_end);
@@ -117,26 +124,40 @@ public:
     return d_memory.object_of(ref);
   }
 
-  /** Get a term extra */
+  /** Get a term payload */
   template<typename payload_type>
   const payload_type& payload_of(const term& t) const {
     assert(d_payload_memory[t.d_op] != 0);
     return d_payload_memory[t.d_op]->object_of<payload_type>(t.d_payload);
   }
 
-  /** Get the size of the term */
+  /**
+   * Get the number of children this term has.
+   */
   size_t term_size(const term& t) {
-    return d_memory.object_size(t);
+    if (s_has_children[t.d_op]) {
+      return d_memory.object_size(t);
+    } else {
+      return 0;
+    }
   }
 
   /** First child */
   const term_ref* term_begin(const term& t) const {
-    return d_memory.object_begin(t);
+    if (s_has_children[t.d_op]) {
+      return d_memory.object_begin(t);
+    } else {
+      return 0;
+    }
   }
 
   /** End of children (one past) */
   const term_ref* term_end(const term& t) const {
-    return d_memory.object_end(t);
+    if (s_has_children[t.d_op]) {
+      return d_memory.object_end(t);
+    } else {
+      return 0;
+    }
   }
 };
 
@@ -177,14 +198,18 @@ term_ref term_manager::mk_term(const typename term_op_traits<op>::payload_type& 
 
   // Compute the hash of the term
   size_t hash = op;
-  for (iterator_type it = begin; it != end; ++ it) {
-    const term& child = term_of(*it);
-    hash ^= child.d_hash + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+  // If there are children, add to the hash
+  if (term_op_traits<op>::has_children) {
+    for (iterator_type it = begin; it != end; ++ it) {
+      const term& child = term_of(*it);
+      hash ^= child.d_hash + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    }
+    // Also, remember that this op has children
+    s_has_children[op] = true;
   }
-
   // If there is a payload, add it to the hash
   if (!alloc::type_traits<payload_type>::is_empty) {
-    hash ^= term_op_traits<op>::payload_hash(payload);
+    hash ^= term_op_traits<op>::payload_hash(payload) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
   }
 
   // Construct the payload if any

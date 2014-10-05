@@ -20,7 +20,9 @@ enum term_type {
 };
 
 /**
- * Enumeration of all term kinds.
+ * Enumeration of all term kinds. For each term kind, there is an associated
+ * term_op_traits instatiation that defines the content of the specific kind
+ * of term.
  */
 enum term_op {
   OP_VARIABLE,
@@ -40,13 +42,52 @@ enum term_op {
   OP_LAST
 };
 
+/**
+ * The traits class contains an instantiation for each term kind.
+ *
+ * * If the term has a payload it should define the payload_type to be of that type, or
+ *   otherwise define it to be alloc::empty_type.
+ *
+ * * Each payload is also associated with a has function.
+ *
+ * * If the term can have childre, then the constant has_children should be
+ *   defined to be true, or false otherwise.
+ */
 template <term_op op>
 struct term_op_traits {
+
+  /** Default terms have no payload, so we use the alloc::empty type. */
   typedef alloc::empty_type payload_type;
+
+  /** The hash function for the empty payload just returns 0 */
+  static size_t payload_hash(const payload_type& payload) { return 0; }
+
+  /** Default terms have children */
   static const bool has_children = true;
+};
+
+/**
+ * Boolean constant terms have a payload of type bool and no children.
+ */
+template<>
+struct term_op_traits<OP_BOOL_CONSTANT> {
+  typedef bool payload_type;
   static size_t payload_hash(const payload_type& payload) {
-    return 0;
+    return payload ? 1 : 0;
   }
+  static const bool has_children = false;
+};
+
+/**
+ * Rational constants terms have a payload of type rational (gmp) and no children.
+ */
+template<>
+struct term_op_traits<OP_REAL_CONSTANT> {
+  typedef rational payload_type;
+  static size_t payload_hash(const payload_type& payload) {
+    return payload.hash();
+  }
+  static const bool has_children = false;
 };
 
 template<>
@@ -58,23 +99,6 @@ struct term_op_traits<OP_VARIABLE> {
   }
 };
 
-template<>
-struct term_op_traits<OP_BOOL_CONSTANT> {
-  typedef bool payload_type;
-  static const bool has_children = false;
-  static size_t payload_hash(const payload_type& payload) {
-    return payload ? 1 : 0;
-  }
-};
-
-template<>
-struct term_op_traits<OP_REAL_CONSTANT> {
-  typedef rational payload_type;
-  static const bool has_children = false;
-  static size_t payload_hash(const payload_type& payload) {
-    return payload.hash();
-  }
-};
 
 }
 }
