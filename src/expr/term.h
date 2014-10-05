@@ -9,6 +9,7 @@
 
 #include <vector>
 #include <iostream>
+#include <cassert>
 
 #include "expr/term_ops.h"
 #include "utils/output.h"
@@ -119,6 +120,7 @@ public:
   /** Get a term extra */
   template<typename payload_type>
   const payload_type& payload_of(const term& t) const {
+    assert(d_payload_memory[t.d_op] != 0);
     return d_payload_memory[t.d_op]->object_of<payload_type>(t.d_payload);
   }
 
@@ -194,19 +196,18 @@ term_ref term_manager::mk_term(const typename term_op_traits<op>::payload_type& 
     }
     // Allocate the payload and copy construct it
     payload_allocator* palloc = ((payload_allocator*) d_payload_memory[op]);
-    const payload_type* t_payload = palloc->template allocate<alloc::empty_type_ptr>(payload, 0, 0);
-    p_ref = palloc->ref_of(*t_payload);
+    const payload_type& t_payload = palloc->template allocate<alloc::empty_type_ptr>(payload, 0, 0);
+    p_ref = palloc->ref_of(t_payload);
   }
 
   // Construct the term
-  term* t = 0;
-  if (term_op_traits<op>::has_children) {
-    t = d_memory.allocate(term(op, hash, p_ref), begin, end);
-  } else {
-    t = d_memory.allocate(term(op, hash, p_ref));
-  }
+  term& t = term_op_traits<op>::has_children ?
+    d_memory.allocate(term(op, hash, p_ref), begin, end)
+  : d_memory.allocate(term(op, hash, p_ref))
+  ;
+
   // Get the reference
-  return d_memory.ref_of(*t);
+  return d_memory.ref_of(t);
 }
 
 }

@@ -65,7 +65,7 @@ public:
   const T& object_of(ref o_ref) const { return *((const T*)(d_memory + o_ref.d_ref)); }
 
   template<typename T>
-  T& object_of(ref o_ref) { return *((T*)d_memory + o_ref.d_ref); }
+  T& object_of(ref o_ref) { return *((T*)(d_memory + o_ref.d_ref)); }
 };
 
 template<typename T>
@@ -143,7 +143,7 @@ public:
 
   /** Allocate T with n children of type E */
   template<typename iterator>
-  T* allocate(const T& t, iterator begin, iterator end) {
+  T& allocate(const T& t, iterator begin, iterator end) {
     data* full;
     if (type_traits<E>::is_empty) {
       full = allocator_base::allocate<data>(sizeof(T));
@@ -152,14 +152,14 @@ public:
       full->e_size = (end - begin);
     }
     full->construct(t, begin, end);
-    return &full->t_data;
+    return full->t_data;
   }
 
   /** Allocate T with no children */
-  T* allocate(const T& t) {
+  T& allocate(const T& t) {
     data* full = allocator_base::allocate<data>(sizeof(T));
     full->template construct<empty_type_ptr>(t, 0, 0);
-    return &full->t_data;
+    return full->t_data;
   }
 
   /** Get the reference of the object */
