@@ -14,6 +14,7 @@
 #include "expr/term_ops.h"
 #include "utils/output.h"
 #include "utils/allocator.h"
+#include "utils/hasher.h"
 
 namespace sal2 {
 namespace term {
@@ -182,17 +183,19 @@ term_ref term_manager::mk_term(const typename term_op_traits<op>::payload_type& 
   typedef alloc::allocator<payload_type, alloc::empty_type> payload_allocator;
 
   // Compute the hash of the term
-  size_t hash = op;
+  utils::hasher hasher;
+  hasher.add(op);
+
   // If there are children, add to the hash
   if (term_op_traits<op>::has_children) {
     for (iterator_type it = begin; it != end; ++ it) {
       const term& child = term_of(*it);
-      hash ^= child.d_hash + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+      hasher.add(child.d_hash);
     }
   }
   // If there is a payload, add it to the hash
   if (!alloc::type_traits<payload_type>::is_empty) {
-    hash ^= term_op_traits<op>::payload_hash(payload) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    hasher.add(term_op_traits<op>::payload_hash(payload));
   }
 
   // Construct the payload if any
@@ -208,7 +211,7 @@ term_ref term_manager::mk_term(const typename term_op_traits<op>::payload_type& 
   }
 
   // Construct the term
-  term_ref t_ref = d_memory.allocate(term(op, hash, p_ref), begin, end);
+  term_ref t_ref = d_memory.allocate(term(op, hasher.get(), p_ref), begin, end);
 
   // Get the reference
   return t_ref;
