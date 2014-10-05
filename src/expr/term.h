@@ -70,9 +70,6 @@ private:
   /** Memory for the payloads, one for each kind of expression */
   alloc::allocator_base* d_payload_memory[OP_LAST];
 
-  /** Does the specific kind have children */
-  static bool s_has_children[OP_LAST];
-
   /** List of all allocated terms */
   std::vector<term_ref> d_terms;
 
@@ -135,29 +132,17 @@ public:
    * Get the number of children this term has.
    */
   size_t term_size(const term& t) {
-    if (s_has_children[t.d_op]) {
-      return d_memory.object_size(t);
-    } else {
-      return 0;
-    }
+    return d_memory.object_size(t);
   }
 
   /** First child */
   const term_ref* term_begin(const term& t) const {
-    if (s_has_children[t.d_op]) {
-      return d_memory.object_begin(t);
-    } else {
-      return 0;
-    }
+    return d_memory.object_begin(t);
   }
 
   /** End of children (one past) */
   const term_ref* term_end(const term& t) const {
-    if (s_has_children[t.d_op]) {
-      return d_memory.object_end(t);
-    } else {
-      return 0;
-    }
+    return d_memory.object_end(t);
   }
 };
 
@@ -204,8 +189,6 @@ term_ref term_manager::mk_term(const typename term_op_traits<op>::payload_type& 
       const term& child = term_of(*it);
       hash ^= child.d_hash + 0x9e3779b9 + (hash << 6) + (hash >> 2);
     }
-    // Also, remember that this op has children
-    s_has_children[op] = true;
   }
   // If there is a payload, add it to the hash
   if (!alloc::type_traits<payload_type>::is_empty) {
@@ -221,18 +204,14 @@ term_ref term_manager::mk_term(const typename term_op_traits<op>::payload_type& 
     }
     // Allocate the payload and copy construct it
     payload_allocator* palloc = ((payload_allocator*) d_payload_memory[op]);
-    const payload_type& t_payload = palloc->template allocate<alloc::empty_type_ptr>(payload, 0, 0);
-    p_ref = palloc->ref_of(t_payload);
+    p_ref = palloc->template allocate<alloc::empty_type_ptr>(payload, 0, 0);
   }
 
   // Construct the term
-  term& t = term_op_traits<op>::has_children ?
-    d_memory.allocate(term(op, hash, p_ref), begin, end)
-  : d_memory.allocate(term(op, hash, p_ref))
-  ;
+  term_ref t_ref = d_memory.allocate(term(op, hash, p_ref), begin, end);
 
   // Get the reference
-  return d_memory.ref_of(t);
+  return t_ref;
 }
 
 }

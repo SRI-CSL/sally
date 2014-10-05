@@ -9,10 +9,18 @@
 #include "utils/output.h"
 
 #include <cassert>
+#include <tr1/functional>
 
 using namespace std;
 using namespace sal2;
 using namespace term;
+
+size_t rational::hash() const {
+  // TODO: fix this
+  size_t h1 = tr1::hash<long int>()(mpz_get_si(d_gmp_rat.get_den_mpz_t()));
+  size_t h2 = tr1::hash<long int>()(mpz_get_si(d_gmp_rat.get_num_mpz_t()));
+  return h1 + h2;
+}
 
 void rational::to_stream(std::ostream& out) const {
   output::language lang = output::get_output_language(out);

@@ -26,7 +26,7 @@ public:
   /** Copy construct */
   rational(const rational& q): d_gmp_rat(q.d_gmp_rat) { d_gmp_rat.canonicalize(); }
   /** Construct from GMP */
-  rational(const mpq_class& gmp_rat) : d_gmp_rat(gmp_rat) {}
+  rational(const mpq_class& gmp_rat) : d_gmp_rat(gmp_rat) { d_gmp_rat.canonicalize(); }
   /** Construct p/q */
   rational(long p, unsigned long q) : d_gmp_rat(p, q) { d_gmp_rat.canonicalize(); }
   /** Construct from string representation */
@@ -35,7 +35,7 @@ public:
   rational(std::string s): d_gmp_rat(s, 10) { d_gmp_rat.canonicalize(); }
 
   /** Hash of the rational */
-  size_t hash() const { return 0; }
+  size_t hash() const;
   /** Output to stream */
   void to_stream(std::ostream& out) const;
 };

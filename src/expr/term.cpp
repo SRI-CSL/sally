@@ -14,9 +14,6 @@
 namespace sal2 {
 namespace term {
 
-/** By default, everyone has children */
-bool term_manager::s_has_children[OP_LAST] = { true };
-
 term_manager::term_manager() {
   for (unsigned i = 0; i < OP_LAST; ++ i) {
     d_payload_memory[i] = 0;
