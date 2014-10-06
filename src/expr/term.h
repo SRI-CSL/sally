@@ -61,6 +61,22 @@ public:
     void to_stream(std::ostream& out) const;
     /** Output to the stream using the SMT2 language */
     void to_stream_smt(std::ostream& out, const term_manager& tm) const;
+
+    /** Number of children, if any */
+    size_t size() const {
+      return alloc::allocator<term, term_ref>::object_size(*this);
+    }
+
+    /** Returns the first child */
+    const term_ref* begin() const {
+      return alloc::allocator<term, term_ref>::object_begin(*this);
+    }
+
+    /** The one past last child */
+    const term_ref* end() const {
+      return alloc::allocator<term, term_ref>::object_end(*this);
+    }
+
   };
 
 private:

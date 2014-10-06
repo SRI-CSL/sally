@@ -29,21 +29,26 @@ BOOST_AUTO_TEST_CASE(mk_term) {
   // Make some terms
   term_ref t_true = d_tm.mk_term<OP_BOOL_CONSTANT>(true);
   cout << t_true << endl;
+  BOOST_CHECK_EQUAL(d_tm.term_of(t_true).size(), 0);
 
   term_ref t_false = d_tm.mk_term<OP_BOOL_CONSTANT>(false);
   cout << t_false << endl;
+  BOOST_CHECK_EQUAL(d_tm.term_of(t_false).size(), 0);
 
   // A variable
   term_ref t_v_bool = d_tm.mk_term<OP_VARIABLE>(bool_type);
   cout << t_v_bool << endl;
+  BOOST_CHECK_EQUAL(d_tm.term_of(t_v_bool).size(), 0);
 
   // Unary
   term_ref t_not = d_tm.mk_term<OP_NOT>(t_v_bool);
   cout << t_not << endl;
+  BOOST_CHECK_EQUAL(d_tm.term_of(t_not).size(), 1);
 
   // Binary
   term_ref t_or = d_tm.mk_term<OP_OR>(t_v_bool, t_not);
   cout << t_or << endl;
+  BOOST_CHECK_EQUAL(d_tm.term_of(t_or).size(), 2);
 
   std::vector<term_ref> children;
   children.push_back(t_true);
@@ -53,6 +58,7 @@ BOOST_AUTO_TEST_CASE(mk_term) {
   children.push_back(t_or);
   term_ref t_and = d_tm.mk_term<OP_AND>(children.begin(), children.end());
   cout << t_and << endl;
+  BOOST_CHECK_EQUAL(d_tm.term_of(t_and).size(), 5);
 
   term_ref t_v_real_0 = d_tm.mk_term<OP_VARIABLE>(real_type);
   cout << t_v_real_0 << endl;
@@ -70,16 +76,20 @@ BOOST_AUTO_TEST_CASE(mk_term) {
 
   term_ref t_sub = d_tm.mk_term<OP_SUB>(t_v_real_0, t_v_real_1);
   cout << t_sub << endl;
+  BOOST_CHECK_EQUAL(d_tm.term_of(t_sub).size(), 2);
   term_ref t_div = d_tm.mk_term<OP_DIV>(t_v_real_1, t_v_real_2);
   cout << t_div << endl;
+  BOOST_CHECK_EQUAL(d_tm.term_of(t_div).size(), 2);
 
   term_ref t_add_children[] = { t_v_real_0, t_v_real_1, t_r1 };
   term_ref t_add = d_tm.mk_term<OP_ADD>(t_add_children, t_add_children + 3);
   cout << t_add << endl;
+  BOOST_CHECK_EQUAL(d_tm.term_of(t_add).size(), 3);
 
   term_ref t_mul_children[] = { t_v_real_1, t_r1, t_v_real_2, t_r2 };
   term_ref t_mul = d_tm.mk_term<OP_MUL>(t_mul_children, t_mul_children + 4);
   cout << t_mul << endl;
+  BOOST_CHECK_EQUAL(d_tm.term_of(t_mul).size(), 4);
 }
 
 BOOST_AUTO_TEST_SUITE_END();

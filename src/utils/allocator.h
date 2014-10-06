@@ -207,19 +207,19 @@ public:
   }
 
   /** Get the number of children */
-  size_t object_size(const T& o) const {
+  static size_t object_size(const T& o) {
     const data& d = (const data&) o;
     return d.e_size;
   }
 
   /** Get the first child */
-  const E* object_begin(const T& o) const {
+  static const E* object_begin(const T& o) {
     const data& d = (const data&) o;
     return d.e_data;
   }
 
   /** Get the last child */
-  const E* object_end(const T& o) const {
+  static const E* object_end(const T& o) {
     const data& d = (const data&) o;
     return d.e_data + d.e_size;
   }

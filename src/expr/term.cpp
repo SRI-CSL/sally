@@ -86,7 +86,7 @@ void term_manager::term::to_stream_smt(std::ostream& out, const term_manager& tm
   case OP_MUL:
   case OP_DIV: {
     out << "(" << get_smt_keyword(d_op);
-    for (const term_ref* it = tm.term_begin(*this); it != tm.term_end(*this); ++ it) {
+    for (const term_ref* it = begin(); it != end(); ++ it) {
       out << " " << *it;
     }
     out << ")";
