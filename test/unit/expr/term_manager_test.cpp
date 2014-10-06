@@ -84,12 +84,20 @@ BOOST_AUTO_TEST_CASE(mk_term) {
   term_ref t_add_children[] = { t_v_real_0, t_v_real_1, t_r1 };
   term_ref t_add = d_tm.mk_term<OP_ADD>(t_add_children, t_add_children + 3);
   cout << t_add << endl;
-  BOOST_CHECK_EQUAL(d_tm.term_of(t_add).size(), 3);
+  const term::term& add = d_tm.term_of(t_add);
+  BOOST_CHECK_EQUAL(add.size(), 3);
+  for (unsigned i = 0; i < add.size(); ++ i) {
+    BOOST_CHECK_EQUAL(add[i], t_add_children[i]);
+  }
 
   term_ref t_mul_children[] = { t_v_real_1, t_r1, t_v_real_2, t_r2 };
   term_ref t_mul = d_tm.mk_term<OP_MUL>(t_mul_children, t_mul_children + 4);
   cout << t_mul << endl;
-  BOOST_CHECK_EQUAL(d_tm.term_of(t_mul).size(), 4);
+  const term::term& mul = d_tm.term_of(t_mul);
+  BOOST_CHECK_EQUAL(mul.size(), 4);
+  for (unsigned i = 0; i < mul.size(); ++ i) {
+    BOOST_CHECK_EQUAL(mul[i], t_mul_children[i]);
+  }
 }
 
 BOOST_AUTO_TEST_SUITE_END();

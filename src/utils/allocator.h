@@ -64,6 +64,7 @@ public:
     ref(const ref& r): d_ref(r.d_ref) {}
     static const ref null;
     int cmp(ref r) const { return d_ref - r.d_ref; }
+    bool operator == (const ref& r) const { return d_ref == r.d_ref; }
   };
 
   /** Constructor */

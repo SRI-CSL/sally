@@ -77,6 +77,11 @@ public:
       return alloc::allocator<term, term_ref>::object_end(*this);
     }
 
+    /** Return the k-th child */
+    term_ref operator[] (size_t k) const {
+      return begin()[k];
+    }
+
   };
 
 private:
