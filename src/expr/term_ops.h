@@ -48,8 +48,6 @@ enum term_op {
  * * If the term has a payload it should define the payload_type to be of that type, or
  *   otherwise define it to be alloc::empty_type.
  *
- * * Each payload is also associated with a has function.
- *
  * * If the term can have childre, then the constant has_children should be
  *   defined to be true, or false otherwise.
  */
@@ -58,9 +56,6 @@ struct term_op_traits {
 
   /** Default terms have no payload, so we use the alloc::empty type. */
   typedef alloc::empty_type payload_type;
-
-  /** The hash function for the empty payload just returns 0 */
-  static size_t payload_hash(const payload_type& payload) { return 0; }
 
   /** Default terms have children */
   static const bool has_children = true;
@@ -72,9 +67,6 @@ struct term_op_traits {
 template<>
 struct term_op_traits<OP_BOOL_CONSTANT> {
   typedef bool payload_type;
-  static size_t payload_hash(const payload_type& payload) {
-    return payload ? 1 : 0;
-  }
   static const bool has_children = false;
 };
 
@@ -84,9 +76,6 @@ struct term_op_traits<OP_BOOL_CONSTANT> {
 template<>
 struct term_op_traits<OP_REAL_CONSTANT> {
   typedef rational payload_type;
-  static size_t payload_hash(const payload_type& payload) {
-    return payload.hash();
-  }
   static const bool has_children = false;
 };
 
@@ -94,11 +83,7 @@ template<>
 struct term_op_traits<OP_VARIABLE> {
   typedef term_type payload_type;
   static const bool has_children = false;
-  static size_t payload_hash(const payload_type& payload) {
-    return payload;
-  }
 };
-
 
 }
 }

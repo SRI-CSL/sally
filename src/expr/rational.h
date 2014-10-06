@@ -11,6 +11,8 @@
 #include <string>
 #include <iostream>
 
+#include "utils/hash.h"
+
 namespace sal2 {
 namespace term {
 
@@ -36,8 +38,13 @@ public:
 
   /** Hash of the rational */
   size_t hash() const;
+  /** Compare the two numbers */
+  int cmp(const rational& q) const { return mpq_cmp(d_gmp_rat.get_mpq_t(), q.d_gmp_rat.get_mpq_t()); }
   /** Output to stream */
   void to_stream(std::ostream& out) const;
+
+  /** Comparison */
+  bool operator == (const rational& q) { return this->cmp(q) == 0; }
 };
 
 inline
@@ -47,4 +54,16 @@ std::ostream& operator << (std::ostream& out, const rational& q) {
 }
 
 }
+
+namespace hash {
+
+template<>
+struct hash<term::rational> {
+  size_t operator()(const term::rational& q) const {
+    return q.hash();
+  }
+};
+
+}
+
 }

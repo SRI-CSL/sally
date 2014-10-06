@@ -112,5 +112,38 @@ std::ostream& operator << (std::ostream& out, const set_tm& stm) {
   return out;
 }
 
+int term_manager::cmp(const term& t1, const term& t2) const {
+
+  // Compare the ops
+  int op_cmp = t1.d_op - t2.d_op;
+  if (op_cmp != 0) return op_cmp;
+
+  // Compare the payload references, if any
+  int payload_cmp = t1.d_payload.cmp(t2.d_payload);
+  if (payload_cmp != 0) {
+    // References are the same, but the payloads themselves might be different
+  }
+
+  // Compare the sizes
+  int size_cmp = (int)term_size(t1) - (int)term_size(t2);
+  if (size_cmp != 0) {
+    return size_cmp;
+  }
+
+  // Compare the children
+  const term_ref* t1_child = term_begin(t1);
+  const term_ref* t1_end = term_end(t1);
+  const term_ref* t2_child = term_begin(t2);
+  for (; t1_child != t1_end; ++ t1_child, ++ t2_child) {
+    int child_cmp = cmp(*t1_child, *t2_child);
+    if (child_cmp != 0) {
+      return child_cmp;
+    }
+  }
+
+  // Everything is equal
+  return 0;
+}
+
 }
 }

@@ -14,7 +14,7 @@
 #include "expr/term_ops.h"
 #include "utils/output.h"
 #include "utils/allocator.h"
-#include "utils/hasher.h"
+#include "utils/hash.h"
 
 namespace sal2 {
 namespace term {
@@ -132,7 +132,7 @@ public:
   /**
    * Get the number of children this term has.
    */
-  size_t term_size(const term& t) {
+  size_t term_size(const term& t) const {
     return d_memory.object_size(t);
   }
 
@@ -144,6 +144,14 @@ public:
   /** End of children (one past) */
   const term_ref* term_end(const term& t) const {
     return d_memory.object_end(t);
+  }
+
+  /** Compare two objects, 0 means equal */
+  int cmp(const term& t1, const term& t2) const;
+
+  /** Compare two objects, 0 means equal */
+  int cmp(term_ref r1, term_ref r2) const {
+    return cmp(term_of(r1), term_of(r2));
   }
 };
 
@@ -183,7 +191,7 @@ term_ref term_manager::mk_term(const typename term_op_traits<op>::payload_type& 
   typedef alloc::allocator<payload_type, alloc::empty_type> payload_allocator;
 
   // Compute the hash of the term
-  utils::hasher hasher;
+  hash::sequence_hash hasher;
   hasher.add(op);
 
   // If there are children, add to the hash
@@ -195,7 +203,7 @@ term_ref term_manager::mk_term(const typename term_op_traits<op>::payload_type& 
   }
   // If there is a payload, add it to the hash
   if (!alloc::type_traits<payload_type>::is_empty) {
-    hasher.add(term_op_traits<op>::payload_hash(payload));
+    hasher.add(hash::hash<payload_type>()(payload));
   }
 
   // Construct the payload if any

@@ -10,9 +10,37 @@
 #include <cstdlib>
 #include <vector>
 
+#include "utils/hash.h"
+
 namespace sal2 {
 namespace alloc {
 
+class empty_type {};
+typedef const empty_type* empty_type_ptr;
+static const empty_type empty;
+
+template<typename T>
+struct type_traits {
+  static const bool is_empty = false;
+};
+
+template<>
+struct type_traits<empty_type> {
+  static const bool is_empty = true;
+};
+
+}
+
+namespace hash {
+
+template<>
+struct hash<alloc::empty_type> {
+  size_t operator()(alloc::empty_type e) const { return 0; }
+};
+
+}
+
+namespace alloc {
 class allocator_base {
 
   /** The memory */
@@ -35,6 +63,7 @@ public:
     ref(): d_ref(-1) {}
     ref(const ref& r): d_ref(r.d_ref) {}
     static const ref null;
+    int cmp(ref r) const { return d_ref - r.d_ref; }
   };
 
   /** Constructor */
@@ -53,17 +82,21 @@ public:
   template<typename T>
   T* allocate(size_t size);
 
+  /** Returns the index in memory of the given object */
   template<typename T>
   size_t index_of(const T& o) const {
     return (const char*)&o - d_memory;
   }
 
+  /** Returns the reference of the given object */
   template<typename T>
   ref ref_of(const T& o) { return ref(index_of(o)); }
 
+  /** Returns the object pointed to by the given reference */
   template<typename T>
   const T& object_of(ref o_ref) const { return *((const T*)(d_memory + o_ref.d_ref)); }
 
+  /** Returns the object pointed to by the given reference */
   template<typename T>
   T& object_of(ref o_ref) { return *((T*)(d_memory + o_ref.d_ref)); }
 };
@@ -91,24 +124,24 @@ T* allocator_base::allocate(size_t size) {
   return o;
 }
 
-class empty_type {};
-typedef const empty_type* empty_type_ptr;
-static const empty_type empty;
-
-template<typename T>
-struct type_traits {
-  static const bool is_empty = false;
-};
-
-template<>
-struct type_traits<empty_type> {
-  static const bool is_empty = true;
-};
-
+/**
+ * Allocator of objects that have a structure as
+ *
+ *  - T data
+ *  - size_t size
+ *  - E elements
+ *
+ * In other words, the object consist of initial data, and then an inlined
+ * array of elements with the size fixed. To ommit the trailing array, just
+ * use empty_type for E.
+ */
 template<typename T, typename E = empty_type>
 class allocator : public allocator_base {
 public:
 
+  /**
+   * The reference class for the <T, E> type of objects.
+   */
   class ref : public allocator_base::ref {
     friend class allocator<T, E>;
     ref(size_t ref): allocator_base::ref(ref) {}
@@ -136,12 +169,12 @@ private:
     }
   };
 
-  // All the allocated data
+  /** All the allocated objects, so that we can destruct it later */
   std::vector<allocator_base::ref> d_allocated;
 
 public:
 
-  /** Allocate T with n children of type E */
+  /** Allocate T with children from begin .. end */
   template<typename iterator>
   ref allocate(const T& t, iterator begin, iterator end) {
     data* full;
@@ -174,7 +207,7 @@ public:
   }
 
   /** Get the number of children */
-  size_t object_size(const T& o) {
+  size_t object_size(const T& o) const {
     const data& d = (const data&) o;
     return d.e_size;
   }
@@ -191,6 +224,7 @@ public:
     return d.e_data + d.e_size;
   }
 
+  /** Destructor, destructs all Ts and Es */
   ~allocator() {
     for (unsigned i = 0; i < d_allocated.size(); ++ i) {
       allocator_base::ref o_ref = d_allocated[i];
