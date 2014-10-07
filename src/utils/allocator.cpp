@@ -10,5 +10,4 @@
 using namespace sal2;
 using namespace alloc;
 
-const allocator_base::ref allocator_base::ref::null;
 

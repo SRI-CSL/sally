@@ -15,7 +15,11 @@
 namespace sal2 {
 namespace alloc {
 
-class empty_type {};
+class empty_type {
+public:
+  bool operator == (empty_type other) const { return true; }
+};
+
 typedef empty_type* empty_type_ptr;
 typedef const empty_type* empty_type_constptr;
 static const empty_type empty;
@@ -42,6 +46,10 @@ struct hash<alloc::empty_type> {
 }
 
 namespace alloc {
+
+/**
+ * Base allocator does the basic allocation stuff.
+ */
 class allocator_base {
 
   /** The memory */
@@ -55,16 +63,31 @@ class allocator_base {
 
 public:
 
+  /**
+   * References to the allocated memoty, just indices into the memory. There
+   * are two special values: the null reference (for default values and bad
+   * results) and lazy reference (meant for references not yet allocated).
+   */
   class ref {
   protected:
     size_t d_ref;
     ref(size_t ref): d_ref(ref) {}
     friend class allocator_base;
+    static const size_t null_value = (size_t)-1;
   public:
-    ref(): d_ref(-1) {}
-    ref(const ref& r):d_ref(r.d_ref) {}
-    bool is_null() const { return d_ref == (size_t)-1; }
-    static const ref null;
+
+    /** Create undefined reference */
+    ref(): d_ref(null_value) {}
+    /** Copy construct */
+    ref(const ref& r): d_ref(r.d_ref) {}
+
+    /** Get the reference as an index */
+    size_t index() const { return d_ref; }
+
+    /** Is this null reference */
+    bool is_null() const { return d_ref == null_value; }
+
+    /** Compare */
     bool operator == (const ref& r) const { return d_ref == r.d_ref; }
   };
 
@@ -183,7 +206,7 @@ public:
     if (type_traits<E>::is_empty) {
       full = allocator_base::allocate<data>(sizeof(T));
     } else {
-      size_t size = end - begin;
+      size_t size = std::distance(begin, end);
       full = allocator_base::allocate<data>(sizeof(data) + size*sizeof(E));
       full->e_size = size;
     }

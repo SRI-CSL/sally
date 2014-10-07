@@ -243,7 +243,7 @@ term_ref term_manager::mk_term(const typename term_op_traits<op>::payload_type& 
   typedef alloc::allocator<payload_type, alloc::empty_type> payload_allocator;
 
   // Construct the payload if any
-  payload_ref p_ref = term_ref::null;
+  payload_ref p_ref;
   if (!alloc::type_traits<payload_type>::is_empty) {
     // If no payload allocator, construct it
     if (d_payload_memory[op] == 0) {

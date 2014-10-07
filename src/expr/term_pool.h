@@ -20,11 +20,22 @@ struct term_ref_with_hash {
 
   term_ref_with_hash(term_ref ref, size_t hash)
   : ref(ref), hash(hash) {}
-  bool operator == (const term_ref_with_hash& ref) const;
+  term_ref_with_hash(const term_ref_with_hash& other)
+  : ref(other.real_ref())
+  , hash(other.hash)
+  {}
+
+  virtual ~term_ref_with_hash() {}
+
+  virtual term_ref real_ref() const {
+    return ref;
+  }
 
   virtual bool cmp(const term_ref_with_hash& other) const {
     return ref == other.ref;
   }
+
+  bool operator == (const term_ref_with_hash& ref) const;
 };
 
 /**
@@ -47,7 +58,7 @@ class term_constructor : public term_ref_with_hash {
 public:
 
   term_constructor(term_manager& tm, const payload_type& payload, iterator_type begin, iterator_type end)
-  : term_ref_with_hash(term_ref::null, tm.term_hash<op, iterator_type>(payload, begin, end))
+  : term_ref_with_hash(term_ref(), tm.term_hash<op, iterator_type>(payload, begin, end))
   , d_tm(tm)
   , d_payload(payload)
   , d_begin(begin)
@@ -58,7 +69,11 @@ public:
   bool cmp(const term_ref_with_hash& other_ref_with_hash) const {
 
     term_ref other_ref = other_ref_with_hash.ref;
-    assert(!other_ref.is_null());
+
+    // If the other reference is null, we're comparing to default => not equal
+    if (other_ref.is_null()) {
+      return false;
+    }
 
     // The actual term we are comparing with
     const term& other = d_tm.term_of(other_ref);
@@ -95,6 +110,12 @@ public:
 
     return true;
   }
+
+  /** Actually make it happen */
+  virtual term_ref real_ref() const {
+    return d_tm.mk_term<op, iterator_type>(d_payload, d_begin, d_end);
+  }
+
 };
 
 /**
@@ -144,7 +165,7 @@ public:
   template <term_op op, typename iterator_type>
   term_ref mk_term(const term_constructor<op, iterator_type>& t) {
     // Insert and return the actual term_ref
-    d_pool.insert(t);
+    return d_pool.insert(t).first->ref;
   }
 
 };

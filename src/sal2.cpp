@@ -18,22 +18,4 @@ using namespace sal2::expr;
 
 int main() {
 
-  // Term manager
-  term_manager tm;
-
-  // The pool
-  term_pool tmp(tm);
-
-  // Set the term manager for output
-  cout << set_tm(tm);
-
-  // Some rationals
-  rational r1(0, 1);
-  rational r2(1, 1);
-  rational r3(-1, 1);
-
-  term_ref t1 = tmp.mk_term(term_constructor<OP_REAL_CONSTANT>(tm, r1, 0, 0));
-  term_ref t2 = tmp.mk_term(term_constructor<OP_REAL_CONSTANT>(tm, r1, 0, 0));
-  cout << (r1 == r2 ? "same :)" : "not same :(") << endl;
-
 }
