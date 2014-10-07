@@ -17,10 +17,10 @@
 #include "utils/hash.h"
 
 namespace sal2 {
-namespace term {
+namespace expr {
 
 /**
- * Term manager controles the terms, allocation and grabage collection. All
+ * Term manager controls the terms, allocation and garbage collection. All
  * terms are defined in term_ops.h.
  */
 class term_manager {
@@ -36,19 +36,26 @@ public:
   /** Term references */
   class term_ref : public base_ref {
   public:
+    term_ref(): base_ref() {}
     term_ref(const base_ref& ref): base_ref(ref) {}
     term_ref(const alloc::empty_type& empty) {}
     void to_stream(std::ostream& out) const;
   };
 
   /** Terms */
-  struct term {
+  class term {
     /** The term kind */
     term_op d_op;
     /** Hash of this term */
     size_t d_hash;
     /** Reference to the payload */
     payload_ref d_payload;
+
+    term(): d_op(OP_LAST), d_hash(0) {}
+
+    friend class term_manager;
+
+  public:
 
     /** Construct the term with all the attributes */
     term(term_op op, size_t hash, payload_ref payload)
@@ -61,6 +68,12 @@ public:
     void to_stream(std::ostream& out) const;
     /** Output to the stream using the SMT2 language */
     void to_stream_smt(std::ostream& out, const term_manager& tm) const;
+
+    /** What kind of term is this */
+    term_op op() const { return d_op; }
+
+    /** Hash */
+    size_t hash() const { return d_hash; }
 
     /** Number of children, if any */
     size_t size() const {
@@ -81,7 +94,6 @@ public:
     term_ref operator[] (size_t k) const {
       return begin()[k];
     }
-
   };
 
 private:
@@ -102,6 +114,10 @@ public:
 
   /** Destruct the manager, and destruct all payloads that the manager owns */
   ~term_manager();
+
+  /** Compute the has of the term parts */
+  template <term_op op, typename iterator_type>
+  size_t term_hash(const typename term_op_traits<op>::payload_type& payload, iterator_type begin, iterator_type end);
 
   /** Generic term constructor */
   template <term_op op, typename iterator_type>
@@ -167,13 +183,6 @@ public:
     return d_memory.object_end(t);
   }
 
-  /** Compare two objects, 0 means equal */
-  int cmp(const term& t1, const term& t2) const;
-
-  /** Compare two objects, 0 means equal */
-  int cmp(term_ref r1, term_ref r2) const {
-    return cmp(term_of(r1), term_of(r2));
-  }
 };
 
 /** The term type */
@@ -206,26 +215,32 @@ struct set_tm {
 std::ostream& operator << (std::ostream& out, const set_tm& stm);
 
 template <term_op op, typename iterator_type>
+size_t term_manager::term_hash(const typename term_op_traits<op>::payload_type& payload, iterator_type begin, iterator_type end) {
+
+  typedef typename term_op_traits<op>::payload_type payload_type;
+
+  // Compute the hash of the term
+  utils::sequence_hash hasher;
+  hasher.add(op);
+
+  // If there are children, add to the hash
+  for (iterator_type it = begin; it != end; ++ it) {
+    const term& child = term_of(*it);
+    hasher.add(child.d_hash);
+  }
+
+  // If there is a payload, add it to the hash
+  if (!alloc::type_traits<payload_type>::is_empty) {
+    hasher.add(utils::hash<payload_type>()(payload));
+  }
+
+}
+
+template <term_op op, typename iterator_type>
 term_ref term_manager::mk_term(const typename term_op_traits<op>::payload_type& payload, iterator_type begin, iterator_type end) {
 
   typedef typename term_op_traits<op>::payload_type payload_type;
   typedef alloc::allocator<payload_type, alloc::empty_type> payload_allocator;
-
-  // Compute the hash of the term
-  hash::sequence_hash hasher;
-  hasher.add(op);
-
-  // If there are children, add to the hash
-  if (term_op_traits<op>::has_children) {
-    for (iterator_type it = begin; it != end; ++ it) {
-      const term& child = term_of(*it);
-      hasher.add(child.d_hash);
-    }
-  }
-  // If there is a payload, add it to the hash
-  if (!alloc::type_traits<payload_type>::is_empty) {
-    hasher.add(hash::hash<payload_type>()(payload));
-  }
 
   // Construct the payload if any
   payload_ref p_ref = term_ref::null;
@@ -236,11 +251,14 @@ term_ref term_manager::mk_term(const typename term_op_traits<op>::payload_type& 
     }
     // Allocate the payload and copy construct it
     payload_allocator* palloc = ((payload_allocator*) d_payload_memory[op]);
-    p_ref = palloc->template allocate<alloc::empty_type_ptr>(payload, 0, 0);
+    p_ref = palloc->template allocate<alloc::empty_type_constptr>(payload, 0, 0);
   }
 
+  // Get the hash
+  size_t hash = term_hash<op, iterator_type>(payload, begin, end);
+
   // Construct the term
-  term_ref t_ref = d_memory.allocate(term(op, hasher.get(), p_ref), begin, end);
+  term_ref t_ref = d_memory.allocate(term(op, hash, p_ref), begin, end);
 
   // Get the reference
   return t_ref;

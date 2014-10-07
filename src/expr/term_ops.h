@@ -11,7 +11,7 @@
 #include "utils/allocator.h"
 
 namespace sal2 {
-namespace term {
+namespace expr {
 
 enum term_type {
   TYPE_BOOL,
@@ -21,7 +21,7 @@ enum term_type {
 
 /**
  * Enumeration of all term kinds. For each term kind, there is an associated
- * term_op_traits instatiation that defines the content of the specific kind
+ * term_op_traits instantiation that defines the content of the specific kind
  * of term.
  */
 enum term_op {
@@ -43,22 +43,17 @@ enum term_op {
 };
 
 /**
- * The traits class contains an instantiation for each term kind.
+ * The traits class contains an instantiation for each term kind. Any payload
+ * types need to have an associated utils::hash specialization, copy constructors
+ * and the operator ==.
  *
- * * If the term has a payload it should define the payload_type to be of that type, or
- *   otherwise define it to be alloc::empty_type.
- *
- * * If the term can have childre, then the constant has_children should be
- *   defined to be true, or false otherwise.
+ * If the term has a payload it should define the payload_type to be of that
+ * type, or otherwise define it to be alloc::empty_type.
  */
 template <term_op op>
 struct term_op_traits {
-
   /** Default terms have no payload, so we use the alloc::empty type. */
   typedef alloc::empty_type payload_type;
-
-  /** Default terms have children */
-  static const bool has_children = true;
 };
 
 /**
@@ -67,7 +62,6 @@ struct term_op_traits {
 template<>
 struct term_op_traits<OP_BOOL_CONSTANT> {
   typedef bool payload_type;
-  static const bool has_children = false;
 };
 
 /**
@@ -76,13 +70,11 @@ struct term_op_traits<OP_BOOL_CONSTANT> {
 template<>
 struct term_op_traits<OP_REAL_CONSTANT> {
   typedef rational payload_type;
-  static const bool has_children = false;
 };
 
 template<>
 struct term_op_traits<OP_VARIABLE> {
   typedef term_type payload_type;
-  static const bool has_children = false;
 };
 
 }

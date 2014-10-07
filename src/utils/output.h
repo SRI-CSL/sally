@@ -11,7 +11,7 @@
 
 namespace sal2 {
 
-namespace term {
+namespace expr {
   class term_manager;
 };
 
@@ -23,10 +23,10 @@ enum language {
 };
 
 /** Get the term manager associated with out */
-const term::term_manager* get_term_manager(std::ostream& out);
+const expr::term_manager* get_term_manager(std::ostream& out);
 
 /** Set the term manager associated with out */
-void set_term_manager(std::ostream& out, const term::term_manager* tm);
+void set_term_manager(std::ostream& out, const expr::term_manager* tm);
 
 /** Get the output language associated with out */
 language get_output_language(std::ostream& out);

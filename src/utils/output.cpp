@@ -22,11 +22,11 @@ long& __get_output_language(std::ostream& out) {
   return out.iword(x_index);
 }
 
-const term::term_manager* get_term_manager(std::ostream& out) {
-  return (term::term_manager*) __get_term_manager(out);
+const expr::term_manager* get_term_manager(std::ostream& out) {
+  return (expr::term_manager*) __get_term_manager(out);
 }
 
-void set_term_manager(std::ostream& out, const term::term_manager* tm) {
+void set_term_manager(std::ostream& out, const expr::term_manager* tm) {
   __get_term_manager(out) = (void*) tm;
 }
 

@@ -8,50 +8,30 @@
 #include <iostream>
 #include <iomanip>
 
-#include <expr/term.h>
+#include "expr/term.h"
+#include "expr/term_pool.h"
 
 using namespace std;
 
 using namespace sal2;
-using namespace sal2::term;
+using namespace sal2::expr;
 
 int main() {
 
   // Term manager
   term_manager tm;
 
+  // The pool
+  term_pool tmp(tm);
+
   // Set the term manager for output
   cout << set_tm(tm);
 
-  // Some types
-  term_type bool_type = TYPE_BOOL;
+  // Some rationals
+  rational r1(0, 1);
+  rational r2(1, 1);
+  rational r3(-1, 1);
 
-  // Make some terms
-  term_ref t_true = tm.mk_term<OP_BOOL_CONSTANT>(true);
-  cout << t_true << endl;
+  tmp.mk_term(term_constructor<OP_REAL_CONSTANT>(tm, r1, 0, 0));
 
-  term_ref t_false = tm.mk_term<OP_BOOL_CONSTANT>(false);
-  cout << t_false << endl;
-
-  // A variable
-  term_ref t_var = tm.mk_term<OP_VARIABLE>(bool_type);
-  cout << t_var << endl;
-
-  // Unary
-  term_ref t_not = tm.mk_term<OP_NOT>(t_var);
-  cout << t_not << endl;
-
-  // Binary
-  term_ref t_or = tm.mk_term<OP_OR>(t_var, t_not);
-  cout << t_or << endl;
-
-  std::vector<term_ref> children;
-  children.push_back(t_true);
-  children.push_back(t_false);
-  children.push_back(t_var);
-  children.push_back(t_not);
-  children.push_back(t_or);
-  term_ref t_and = tm.mk_term<OP_AND>(children.begin(), children.end());
-
-  cout << t_and << endl;
 }

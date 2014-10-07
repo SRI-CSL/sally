@@ -16,7 +16,8 @@ namespace sal2 {
 namespace alloc {
 
 class empty_type {};
-typedef const empty_type* empty_type_ptr;
+typedef empty_type* empty_type_ptr;
+typedef const empty_type* empty_type_constptr;
 static const empty_type empty;
 
 template<typename T>
@@ -31,7 +32,7 @@ struct type_traits<empty_type> {
 
 }
 
-namespace hash {
+namespace utils {
 
 template<>
 struct hash<alloc::empty_type> {
@@ -61,9 +62,9 @@ public:
     friend class allocator_base;
   public:
     ref(): d_ref(-1) {}
-    ref(const ref& r): d_ref(r.d_ref) {}
+    ref(const ref& r):d_ref(r.d_ref) {}
+    bool is_null() const { return d_ref == (size_t)-1; }
     static const ref null;
-    int cmp(ref r) const { return d_ref - r.d_ref; }
     bool operator == (const ref& r) const { return d_ref == r.d_ref; }
   };
 

@@ -13,12 +13,12 @@
 
 using namespace std;
 using namespace sal2;
-using namespace term;
+using namespace expr;
 
 size_t rational::hash() const {
-  hash::sequence_hash hasher;
-  hasher.add(hash::hash<long int>()(mpz_get_si(d_gmp_rat.get_den_mpz_t())));
-  hasher.add(hash::hash<long int>()(mpz_get_si(d_gmp_rat.get_num_mpz_t())));
+  utils::sequence_hash hasher;
+  hasher.add(utils::hash<long int>()(mpz_get_si(d_gmp_rat.get_den_mpz_t())));
+  hasher.add(utils::hash<long int>()(mpz_get_si(d_gmp_rat.get_num_mpz_t())));
   return hasher.get();
 }
 

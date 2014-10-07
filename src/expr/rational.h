@@ -14,7 +14,7 @@
 #include "utils/hash.h"
 
 namespace sal2 {
-namespace term {
+namespace expr {
 
 /**
  * Wrapper around the GMP rational.
@@ -55,11 +55,11 @@ std::ostream& operator << (std::ostream& out, const rational& q) {
 
 }
 
-namespace hash {
+namespace utils {
 
 template<>
-struct hash<term::rational> {
-  size_t operator()(const term::rational& q) const {
+struct hash<expr::rational> {
+  size_t operator()(const expr::rational& q) const {
     return q.hash();
   }
 };

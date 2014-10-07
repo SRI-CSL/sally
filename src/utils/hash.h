@@ -9,7 +9,7 @@
 
 namespace sal2 {
 
-namespace hash {
+namespace utils {
 
 /**
  * To be instantiated by any type that needs to be hashed by sal. Default hash
