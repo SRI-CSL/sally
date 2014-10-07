@@ -44,7 +44,7 @@ public:
   void to_stream(std::ostream& out) const;
 
   /** Comparison */
-  bool operator == (const rational& q) { return this->cmp(q) == 0; }
+  bool operator == (const rational& q) const { return this->cmp(q) == 0; }
 };
 
 inline

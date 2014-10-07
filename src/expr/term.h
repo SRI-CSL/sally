@@ -126,7 +126,7 @@ public:
   /** Make a term from just payload (for constants) */
   template<term_op op>
   term_ref mk_term(const typename term_op_traits<op>::payload_type& payload) {
-    return mk_term<op, alloc::empty_type*>(payload, 0, 0);
+    return mk_term<op, term_ref*>(payload, 0, 0);
   }
 
   /** Make a term from one child and no payload */

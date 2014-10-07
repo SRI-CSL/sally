@@ -17,16 +17,20 @@ namespace expr {
 struct term_ref_with_hash {
   term_ref ref;
   size_t hash;
-public:
+
   term_ref_with_hash(term_ref ref, size_t hash)
   : ref(ref), hash(hash) {}
-  bool operator == (const term_ref_with_hash& ref);
+  bool operator == (const term_ref_with_hash& ref) const;
+
+  virtual bool cmp(const term_ref_with_hash& other) const {
+    return ref == other.ref;
+  }
 };
 
 /**
  * A term with all the information in the package.
  */
-template <term_op op, typename iterator_type = alloc::empty_type_constptr>
+template <term_op op, typename iterator_type = const term_ref*>
 class term_constructor : public term_ref_with_hash {
 
   typedef typename term_op_traits<op>::payload_type payload_type;
@@ -51,13 +55,16 @@ public:
   {}
 
   /** Compare to a term op without using the hash. */
-  bool cmp(const term_ref& other_ref) {
+  bool cmp(const term_ref_with_hash& other_ref_with_hash) const {
+
+    term_ref other_ref = other_ref_with_hash.ref;
+    assert(!other_ref.is_null());
 
     // The actual term we are comparing with
     const term& other = d_tm.term_of(other_ref);
 
     // Check hash first
-    if (hash != other.hash()) {
+    if (this->hash != other_ref_with_hash.hash) {
       return false;
     }
 
@@ -73,7 +80,7 @@ public:
     }
 
     // Compare the payloads
-    if (d_payload != d_tm.payload_of<payload_type>(other)) {
+    if (!(d_payload == d_tm.payload_of<payload_type>(other))) {
       return false;
     }
 
@@ -81,20 +88,28 @@ public:
     iterator_type it_this = d_begin;
     const term_ref* it_other = other.begin();
     for (; it_this != d_end; ++ it_this, ++ it_other) {
-      if (*it_this != *it_other) {
+      if (!(*it_this == *it_other)) {
         return false;
       }
     }
 
     return true;
   }
-
-  /** Get the hash */
-  size_t hash() const { return hash; }
 };
 
-bool term_ref_with_hash::operator == (const term_ref_with_hash& ref) {
-
+/**
+ * Term references are compared directly, unless one of them is null. Null is
+ * a marker that this is a term constructor, in which case the comparison is
+ * done by hand.
+ */
+bool term_ref_with_hash::operator == (const term_ref_with_hash& other) const {
+  if (this->ref.is_null()) {
+    return cmp(other);
+  }
+  if (other.ref.is_null()) {
+    return other.cmp(*this);
+  }
+  return cmp(other);
 }
 
 
