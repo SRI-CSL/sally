@@ -281,8 +281,6 @@ term_ref term_manager::mk_term(const typename term_op_traits<op>::payload_type& 
   // Construct the term
   term_ref t_ref = d_memory.allocate(term(op, hash, p_ref), begin, end);
 
-  std::cout << "allocated " << t_ref << ": " << t_ref.index() << ", " << term_of(t_ref).d_hash << std::endl;
-
   // Get the reference
   return t_ref;
 }
