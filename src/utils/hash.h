@@ -17,7 +17,7 @@ namespace utils {
  */
 template<typename T>
 struct hash {
-  size_t operator()(bool value) const {
+  size_t operator()(T value) const {
     return static_cast<size_t>(value);
   }
 };
@@ -27,8 +27,10 @@ class sequence_hash {
   size_t d_hash;
 public:
   sequence_hash(): d_hash(0) {}
-  void add(size_t h) {
-    d_hash ^= h + 0x9e3779b9 + (d_hash << 6) + (d_hash >> 2);
+
+  template <typename T>
+  void add(const T& t) {
+    d_hash ^= hash<T>()(t) + 0x9e3779b9 + (d_hash << 6) + (d_hash >> 2);
   }
   size_t get() const { return d_hash; }
 };

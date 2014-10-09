@@ -17,8 +17,8 @@ using namespace expr;
 
 size_t rational::hash() const {
   utils::sequence_hash hasher;
-  hasher.add(utils::hash<long int>()(mpz_get_si(d_gmp_rat.get_den_mpz_t())));
-  hasher.add(utils::hash<long int>()(mpz_get_si(d_gmp_rat.get_num_mpz_t())));
+  hasher.add(mpz_get_si(d_gmp_rat.get_den_mpz_t()));
+  hasher.add(mpz_get_si(d_gmp_rat.get_num_mpz_t()));
   return hasher.get();
 }
 

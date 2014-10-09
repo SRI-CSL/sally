@@ -16,7 +16,7 @@ public:
   ~term_manager_test_fixture() {}
 };
 
-BOOST_FIXTURE_TEST_SUITE(term_manager_test, term_manager_test_fixture);
+BOOST_FIXTURE_TEST_SUITE(term_manager_test, term_manager_test_fixture)
 
 BOOST_AUTO_TEST_CASE(mk_term) {
 
@@ -103,7 +103,7 @@ BOOST_AUTO_TEST_CASE(mk_term) {
 
 BOOST_AUTO_TEST_CASE(mk_term_pooled) {
 
-  unsigned n = 10;
+  int n = 10;
 
   // The pool
   term_pool tmp(tm);
@@ -113,15 +113,16 @@ BOOST_AUTO_TEST_CASE(mk_term_pooled) {
 
   // Some rationals
   rational number[n];
-  for (unsigned i = 0; i < n; ++ i) {
+  for (int i = 0; i < n; ++ i) {
     number[i] = rational(i, i + 1);
   }
 
   term_ref number_ref[2][n];
-  for (unsigned k = 0; k < 2; ++ k) {
-    for (unsigned i = 0; i < n; ++ i) {
-      number_ref[k][i] = tmp.mk_term(term_constructor<OP_REAL_CONSTANT>(tm, number[i], 0, 0));
-      cout << number_ref[k][i] << ": " << number_ref[k][i].index() << endl;
+  for (int k = 0; k < 2; ++ k) {
+    for (int i = 0; i < n; ++ i) {
+      term_ref ref = tmp.mk_term(term_constructor<OP_REAL_CONSTANT>(tm, number[i], 0, 0));
+      number_ref[k][i] = ref;
+      cout << ref << ": " << ref.index() << ", " << tm.term_of(ref).hash() << endl;
     }
   }
 
@@ -132,11 +133,12 @@ BOOST_AUTO_TEST_CASE(mk_term_pooled) {
     BOOST_CHECK_EQUAL(number_ref[0][i], number_ref[0][i]);
   }
 
-  term_ref add_ref[n][2];
-  for (unsigned k = 0; k < 2; ++ k) {
-    for (unsigned i = 1; i < n; ++ i) {
-      add_ref[k][i] = tmp.mk_term(term_constructor<OP_ADD>(tm, alloc::empty, number_ref[k] + 0, number_ref[k] + i + 1));
-      cout << add_ref[k][i] << ": " << add_ref[k][i].index() << endl;
+  term_ref add_ref[2][n];
+  for (int k = 0; k < 2; ++ k) {
+    for (int i = 1; i < n; ++ i) {
+      term_ref ref = tmp.mk_term(term_constructor<OP_ADD>(tm, alloc::empty, number_ref[k] + 0, number_ref[k] + i + 1));
+      add_ref[k][i] = ref;
+      cout << ref << ": " << ref.index() << ", " << tm.term_of(ref).hash() << endl;
     }
   }
 
@@ -150,4 +152,4 @@ BOOST_AUTO_TEST_CASE(mk_term_pooled) {
 
 }
 
-BOOST_AUTO_TEST_SUITE_END();
+BOOST_AUTO_TEST_SUITE_END()

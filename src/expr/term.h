@@ -185,6 +185,12 @@ public:
 
 };
 
+template<>
+inline const alloc::empty_type& term_manager::payload_of<alloc::empty_type>(const term& t) const {
+  return alloc::empty;
+}
+
+
 /** The term type */
 typedef term_manager::term term;
 
@@ -194,6 +200,21 @@ std::ostream& operator << (std::ostream& out, const term& t) {
   t.to_stream(out);
   return out;
 }
+
+}
+
+namespace utils {
+
+template<>
+struct hash<expr::term> {
+  size_t operator()(const expr::term& t) const {
+    return t.hash();
+  }
+};
+
+}
+
+namespace expr {
 
 /** The term reference type */
 typedef term_manager::term_ref term_ref;
@@ -225,15 +246,15 @@ size_t term_manager::term_hash(const typename term_op_traits<op>::payload_type& 
 
   // If there are children, add to the hash
   for (iterator_type it = begin; it != end; ++ it) {
-    const term& child = term_of(*it);
-    hasher.add(child.d_hash);
+    hasher.add(term_of(*it));
   }
 
   // If there is a payload, add it to the hash
   if (!alloc::type_traits<payload_type>::is_empty) {
-    hasher.add(utils::hash<payload_type>()(payload));
+    hasher.add(payload);
   }
 
+  return hasher.get();
 }
 
 template <term_op op, typename iterator_type>
@@ -259,6 +280,8 @@ term_ref term_manager::mk_term(const typename term_op_traits<op>::payload_type& 
 
   // Construct the term
   term_ref t_ref = d_memory.allocate(term(op, hash, p_ref), begin, end);
+
+  std::cout << "allocated " << t_ref << ": " << t_ref.index() << ", " << term_of(t_ref).d_hash << std::endl;
 
   // Get the reference
   return t_ref;

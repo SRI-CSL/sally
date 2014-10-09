@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 2.6)
 project(sal2 CXX)
 enable_testing()
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wall")
+
 # Default is release with debug info
 IF(NOT CMAKE_BUILD_TYPE)
 SET(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel." FORCE)

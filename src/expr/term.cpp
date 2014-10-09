@@ -21,11 +21,15 @@ term_manager::term_manager() {
 }
 
 void term_manager::term_ref::to_stream(std::ostream& out) const {
-  const term_manager* tm = output::get_term_manager(out);
-  if (tm == 0) {
-    out << d_ref;
+  if (is_null()) {
+    out << "null";
   } else {
-    tm->term_of(*this).to_stream(out);
+    const term_manager* tm = output::get_term_manager(out);
+    if (tm == 0) {
+      out << d_ref;
+    } else {
+      tm->term_of(*this).to_stream(out);
+    }
   }
 }
 

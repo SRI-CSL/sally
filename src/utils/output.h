@@ -13,7 +13,7 @@ namespace sal2 {
 
 namespace expr {
   class term_manager;
-};
+}
 
 namespace output {
 
