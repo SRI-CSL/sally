@@ -17,6 +17,7 @@ namespace alloc {
 
 class empty_type {
 public:
+  empty_type() {}
   bool operator == (empty_type other) const { return true; }
 };
 

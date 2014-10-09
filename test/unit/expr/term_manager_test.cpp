@@ -103,10 +103,10 @@ BOOST_AUTO_TEST_CASE(mk_term) {
 
 BOOST_AUTO_TEST_CASE(mk_term_pooled) {
 
-  int n = 10;
+  const int n = 10;
 
   // The pool
-  term_pool tmp(tm);
+  term_pool tmp;
 
   // Set the term manager for output
   cout << set_tm(tm);

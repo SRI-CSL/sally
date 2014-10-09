@@ -146,9 +146,6 @@ public:
 
 private:
 
-  /** The term manager */
-  term_manager& d_tm;
-
   /** The underlying hash set */
   typedef boost::unordered_set<term_ref_with_hash, hasher> hash_set;
 
@@ -157,9 +154,7 @@ private:
 
 public:
 
-  term_pool(term_manager& tm)
-  : d_tm(tm)
-  {}
+  term_pool() {}
 
   /** Insert a new term or get a reference to an existing term that's equal. */
   template <term_op op, typename iterator_type>
