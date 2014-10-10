@@ -1,7 +1,6 @@
 #include <boost/test/unit_test.hpp>
 
 #include "expr/term.h"
-#include "expr/term_pool.h"
 
 #include <iostream>
 
@@ -19,7 +18,7 @@ public:
   ~term_manager_test_fixture() {}
 };
 
-BOOST_FIXTURE_TEST_SUITE(term_manager_test, term_manager_test_fixture)
+BOOST_FIXTURE_TEST_SUITE(term_manager_construction, term_manager_test_fixture)
 
 BOOST_AUTO_TEST_CASE(mk_term) {
 
@@ -27,26 +26,26 @@ BOOST_AUTO_TEST_CASE(mk_term) {
   cout << set_tm(tm);
 
   // Make some terms
-  term_ref t_true = tm.mk_term<OP_BOOL_CONSTANT>(true);
+  term_ref t_true = tm.mk_term<CONST_BOOL>(true);
   cout << t_true << endl;
   BOOST_CHECK_EQUAL(tm.term_of(t_true).size(), 0);
 
-  term_ref t_false = tm.mk_term<OP_BOOL_CONSTANT>(false);
+  term_ref t_false = tm.mk_term<CONST_BOOL>(false);
   cout << t_false << endl;
   BOOST_CHECK_EQUAL(tm.term_of(t_false).size(), 0);
 
   // A variable
-  term_ref t_v_bool = tm.mk_term<OP_VARIABLE>("x", tm.booleanType());
+  term_ref t_v_bool = tm.mk_term<VARIABLE>("x", tm.booleanType());
   cout << t_v_bool << endl;
   BOOST_CHECK_EQUAL(tm.term_of(t_v_bool).size(), 1);
 
   // Unary
-  term_ref t_not = tm.mk_term<OP_NOT>(t_v_bool);
+  term_ref t_not = tm.mk_term<TERM_NOT>(t_v_bool);
   cout << t_not << endl;
   BOOST_CHECK_EQUAL(tm.term_of(t_not).size(), 1);
 
   // Binary
-  term_ref t_or = tm.mk_term<OP_OR>(t_v_bool, t_not);
+  term_ref t_or = tm.mk_term<TERM_OR>(t_v_bool, t_not);
   cout << t_or << endl;
   BOOST_CHECK_EQUAL(tm.term_of(t_or).size(), 2);
 
@@ -56,33 +55,33 @@ BOOST_AUTO_TEST_CASE(mk_term) {
   children.push_back(t_v_bool);
   children.push_back(t_not);
   children.push_back(t_or);
-  term_ref t_and = tm.mk_term<OP_AND>(children.begin(), children.end());
+  term_ref t_and = tm.mk_term<TERM_AND>(children.begin(), children.end());
   cout << t_and << endl;
   BOOST_CHECK_EQUAL(tm.term_of(t_and).size(), 5);
 
-  term_ref t_v_real_0 = tm.mk_term<OP_VARIABLE>("x", tm.realType());
+  term_ref t_v_real_0 = tm.mk_term<VARIABLE>("x", tm.realType());
   cout << t_v_real_0 << endl;
-  term_ref t_v_real_1 = tm.mk_term<OP_VARIABLE>("y", tm.realType());
+  term_ref t_v_real_1 = tm.mk_term<VARIABLE>("y", tm.realType());
   cout << t_v_real_1 << endl;
-  term_ref t_v_real_2 = tm.mk_term<OP_VARIABLE>("z", tm.realType());
+  term_ref t_v_real_2 = tm.mk_term<VARIABLE>("z", tm.realType());
   cout << t_v_real_2 << endl;
 
-  term_ref t_r0 = tm.mk_term<OP_REAL_CONSTANT>(rational(0, 1));
+  term_ref t_r0 = tm.mk_term<CONST_RATIONAL>(rational(0, 1));
   cout << t_r0 << endl;
-  term_ref t_r1 = tm.mk_term<OP_REAL_CONSTANT>(rational(1, 2));
+  term_ref t_r1 = tm.mk_term<CONST_RATIONAL>(rational(1, 2));
   cout << t_r1 << endl;
-  term_ref t_r2 = tm.mk_term<OP_REAL_CONSTANT>(rational(-1, 2));
+  term_ref t_r2 = tm.mk_term<CONST_RATIONAL>(rational(-1, 2));
   cout << t_r2 << endl;
 
-  term_ref t_sub = tm.mk_term<OP_SUB>(t_v_real_0, t_v_real_1);
+  term_ref t_sub = tm.mk_term<TERM_SUB>(t_v_real_0, t_v_real_1);
   cout << t_sub << endl;
   BOOST_CHECK_EQUAL(tm.term_of(t_sub).size(), 2);
-  term_ref t_div = tm.mk_term<OP_DIV>(t_v_real_1, t_v_real_2);
+  term_ref t_div = tm.mk_term<TERM_DIV>(t_v_real_1, t_v_real_2);
   cout << t_div << endl;
   BOOST_CHECK_EQUAL(tm.term_of(t_div).size(), 2);
 
   term_ref t_add_children[] = { t_v_real_0, t_v_real_1, t_r1 };
-  term_ref t_add = tm.mk_term<OP_ADD>(t_add_children, t_add_children + 3);
+  term_ref t_add = tm.mk_term<TERM_ADD>(t_add_children, t_add_children + 3);
   cout << t_add << endl;
   const term& add = tm.term_of(t_add);
   BOOST_CHECK_EQUAL(add.size(), 3);
@@ -91,7 +90,7 @@ BOOST_AUTO_TEST_CASE(mk_term) {
   }
 
   term_ref t_mul_children[] = { t_v_real_1, t_r1, t_v_real_2, t_r2 };
-  term_ref t_mul = tm.mk_term<OP_MUL>(t_mul_children, t_mul_children + 4);
+  term_ref t_mul = tm.mk_term<TERM_MUL>(t_mul_children, t_mul_children + 4);
   cout << t_mul << endl;
   const term& mul = tm.term_of(t_mul);
   BOOST_CHECK_EQUAL(mul.size(), 4);
@@ -100,12 +99,9 @@ BOOST_AUTO_TEST_CASE(mk_term) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(mk_term_pooled) {
+BOOST_AUTO_TEST_CASE(term_manager_hashconsing) {
 
   const int n = 10;
-
-  // The pool
-  term_pool tmp;
 
   // Set the term manager for output
   cout << set_tm(tm);
@@ -119,7 +115,7 @@ BOOST_AUTO_TEST_CASE(mk_term_pooled) {
   term_ref number_ref[2][n];
   for (int k = 0; k < 2; ++ k) {
     for (int i = 0; i < n; ++ i) {
-      term_ref ref = tmp.mk_term(term_constructor<OP_REAL_CONSTANT>(tm, number[i], 0, 0));
+      term_ref ref = tm.mk_term<CONST_RATIONAL>(number[i]);
       number_ref[k][i] = ref;
       cout << ref << ": " << ref.index() << ", " << tm.term_of(ref).hash() << endl;
     }
@@ -135,7 +131,7 @@ BOOST_AUTO_TEST_CASE(mk_term_pooled) {
   term_ref add_ref[2][n];
   for (int k = 0; k < 2; ++ k) {
     for (int i = 1; i < n; ++ i) {
-      term_ref ref = tmp.mk_term(term_constructor<OP_ADD>(tm, alloc::empty, number_ref[k] + 0, number_ref[k] + i + 1));
+      term_ref ref = tm.mk_term<TERM_ADD>(number_ref[k] + 0, number_ref[k] + i + 1);
       add_ref[k][i] = ref;
       cout << ref << ": " << ref.index() << ", " << tm.term_of(ref).hash() << endl;
     }
@@ -147,7 +143,6 @@ BOOST_AUTO_TEST_CASE(mk_term_pooled) {
     }
     BOOST_CHECK_EQUAL(add_ref[0][i], add_ref[1][i]);
   }
-
 
 }
 

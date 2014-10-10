@@ -9,7 +9,6 @@
 #include <iomanip>
 
 #include "expr/term.h"
-#include "expr/term_pool.h"
 
 using namespace std;
 

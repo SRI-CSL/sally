@@ -14,18 +14,33 @@
 namespace sal2 {
 namespace expr {
 
+/**
+ * Term references are compared directly, unless one of them is null. Null is
+ * a marker that this is a term constructor, in which case the comparison is
+ * done by hand.
+ */
+bool term_ref_with_hash::operator == (const term_ref_with_hash& other) const {
+  if (this->ref.is_null()) {
+    return cmp(other);
+  }
+  if (other.ref.is_null()) {
+    return other.cmp(*this);
+  }
+  return cmp(other);
+}
+
 term_manager::term_manager(bool typecheck)
 : d_typecheck(typecheck)
 {
-  // Initalize all payload memory to 0
+  // Initialize all payload memories to 0
   for (unsigned i = 0; i < OP_LAST; ++ i) {
     d_payload_memory[i] = 0;
   }
 
   // Create the types
-  d_booleanType = mk_term<OP_TYPE_BOOL>(alloc::empty);
-  d_integerType = mk_term<OP_TYPE_INTEGER>(alloc::empty);
-  d_realType = mk_term<OP_TYPE_REAL>(alloc::empty);
+  d_booleanType = mk_term<TYPE_BOOL>(alloc::empty);
+  d_integerType = mk_term<TYPE_INTEGER>(alloc::empty);
+  d_realType = mk_term<TYPE_REAL>(alloc::empty);
 }
 
 void term_ref::to_stream(std::ostream& out) const {
@@ -56,29 +71,29 @@ void term::to_stream(std::ostream& out) const {
 static inline
 std::string get_smt_keyword(term_op op) {
   switch (op) {
-  case OP_AND:
+  case TERM_AND:
     return "and";
-  case OP_OR:
+  case TERM_OR:
     return "or";
-  case OP_NOT:
+  case TERM_NOT:
     return "not";
-  case OP_IMPLIES:
+  case TERM_IMPLIES:
     return "implies";
-  case OP_XOR:
+  case TERM_XOR:
     return "xor";
-  case OP_ADD:
+  case TERM_ADD:
     return "+";
-  case OP_SUB:
+  case TERM_SUB:
     return "-";
-  case OP_MUL:
+  case TERM_MUL:
     return "*";
-  case OP_DIV:
+  case TERM_DIV:
     return "/";
-  case OP_TYPE_BOOL:
+  case TYPE_BOOL:
     return "Bool";
-  case OP_TYPE_INTEGER:
+  case TYPE_INTEGER:
     return "Integer";
-  case OP_TYPE_REAL:
+  case TYPE_REAL:
     return "Real";
   default:
     assert(false);
@@ -88,21 +103,21 @@ std::string get_smt_keyword(term_op op) {
 
 void term::to_stream_smt(std::ostream& out, const term_manager& tm) const {
   switch (d_op) {
-  case OP_VARIABLE:
+  case VARIABLE:
     out << tm.payload_of<std::string>(*this);
     break;
-  case OP_BOOL_CONSTANT:
+  case CONST_BOOL:
     out << (tm.payload_of<bool>(*this) ? "true" : "false");
     break;
-  case OP_AND:
-  case OP_OR:
-  case OP_NOT:
-  case OP_IMPLIES:
-  case OP_XOR:
-  case OP_ADD:
-  case OP_SUB:
-  case OP_MUL:
-  case OP_DIV: {
+  case TERM_AND:
+  case TERM_OR:
+  case TERM_NOT:
+  case TERM_IMPLIES:
+  case TERM_XOR:
+  case TERM_ADD:
+  case TERM_SUB:
+  case TERM_MUL:
+  case TERM_DIV: {
     if (size() > 0) {
       out << "(";
     }
@@ -115,7 +130,7 @@ void term::to_stream_smt(std::ostream& out, const term_manager& tm) const {
     }
     break;
   }
-  case OP_REAL_CONSTANT:
+  case CONST_RATIONAL:
     // Stream is already in SMT mode
     out << tm.payload_of<rational>(*this);
     break;
@@ -137,31 +152,31 @@ std::ostream& operator << (std::ostream& out, const set_tm& stm) {
 
 term_ref term_manager::type_of(const term& t) const {
   switch (t.op()) {
-  case OP_TYPE_BOOL:
-  case OP_TYPE_INTEGER:
-  case OP_TYPE_REAL:
+  case TYPE_BOOL:
+  case TYPE_INTEGER:
+  case TYPE_REAL:
     return term_ref();
-  case OP_VARIABLE:
+  case VARIABLE:
     return t[0];
   // Equality
-  case OP_EQ:
+  case TERM_EQ:
     return booleanType();
     break;
 
   // Boolean terms
-  case OP_BOOL_CONSTANT:
-  case OP_AND:
-  case OP_OR:
-  case OP_XOR:
-  case OP_NOT:
-  case OP_IMPLIES:
+  case CONST_BOOL:
+  case TERM_AND:
+  case TERM_OR:
+  case TERM_XOR:
+  case TERM_NOT:
+  case TERM_IMPLIES:
     return booleanType();
   // Arithmetic terms
-  case OP_REAL_CONSTANT:
-  case OP_ADD:
-  case OP_MUL:
-  case OP_SUB:
-  case OP_DIV:
+  case CONST_RATIONAL:
+  case TERM_ADD:
+  case TERM_MUL:
+  case TERM_SUB:
+  case TERM_DIV:
     return d_realType;
   default:
     assert(false);
@@ -184,21 +199,21 @@ bool term_manager::typecheck(term_ref t_ref) {
   bool ok = true;
 
   switch (t.op()) {
-  case OP_TYPE_BOOL:
-  case OP_TYPE_INTEGER:
-  case OP_TYPE_REAL:
-  case OP_VARIABLE:
+  case TYPE_BOOL:
+  case TYPE_INTEGER:
+  case TYPE_REAL:
+  case VARIABLE:
     break;
   // Equality
-  case OP_EQ:
+  case TERM_EQ:
     ok = (type_of(t) == type_of(t));
     break;
   // Boolean terms
-  case OP_BOOL_CONSTANT:
+  case CONST_BOOL:
     break;
-  case OP_AND:
-  case OP_OR:
-  case OP_XOR:
+  case TERM_AND:
+  case TERM_OR:
+  case TERM_XOR:
     if (t.size() < 2) {
       ok = false;
     } else {
@@ -210,14 +225,14 @@ bool term_manager::typecheck(term_ref t_ref) {
       }
     }
     break;
-  case OP_NOT:
+  case TERM_NOT:
     if (t.size() != 1) {
       ok = false;
     } else {
       ok = type_of(t[0]) == booleanType();
     }
     break;
-  case OP_IMPLIES:
+  case TERM_IMPLIES:
     if (t.size() != 2) {
       ok = false;
     } else {
@@ -225,10 +240,10 @@ bool term_manager::typecheck(term_ref t_ref) {
     }
     break;
   // Arithmetic terms
-  case OP_REAL_CONSTANT:
+  case CONST_RATIONAL:
     break;
-  case OP_ADD:
-  case OP_MUL:
+  case TERM_ADD:
+  case TERM_MUL:
     if (t.size() < 2) {
       ok = false;
     } else {
@@ -240,14 +255,14 @@ bool term_manager::typecheck(term_ref t_ref) {
       }
     }
     break;
-  case OP_SUB:
+  case TERM_SUB:
     if (t.size() != 2) {
       ok = false;
     } else {
       ok = type_of(t[0]) == realType() && type_of(t[1]) == realType();
     }
     break;
-  case OP_DIV:
+  case TERM_DIV:
     if (t.size() != 2) {
       ok = false;
     } else {

@@ -21,30 +21,30 @@ namespace expr {
 enum term_op {
 
   // Types
-  OP_TYPE_BOOL,
-  OP_TYPE_INTEGER,
-  OP_TYPE_REAL,
+  TYPE_BOOL,
+  TYPE_INTEGER,
+  TYPE_REAL,
 
   // Variables
-  OP_VARIABLE,
+  VARIABLE,
 
   // Equality
-  OP_EQ,
+  TERM_EQ,
 
   // Boolean terms
-  OP_BOOL_CONSTANT,
-  OP_AND,
-  OP_OR,
-  OP_NOT,
-  OP_IMPLIES,
-  OP_XOR,
+  CONST_BOOL,
+  TERM_AND,
+  TERM_OR,
+  TERM_NOT,
+  TERM_IMPLIES,
+  TERM_XOR,
 
   // Arithmetic terms
-  OP_REAL_CONSTANT,
-  OP_ADD,
-  OP_SUB,
-  OP_MUL,
-  OP_DIV,
+  CONST_RATIONAL,
+  TERM_ADD,
+  TERM_SUB,
+  TERM_MUL,
+  TERM_DIV,
 
   // Marker for the last
   OP_LAST
@@ -68,7 +68,7 @@ struct term_op_traits {
  * Boolean constant terms have a payload of type bool and no children.
  */
 template<>
-struct term_op_traits<OP_BOOL_CONSTANT> {
+struct term_op_traits<CONST_BOOL> {
   typedef bool payload_type;
 };
 
@@ -76,16 +76,16 @@ struct term_op_traits<OP_BOOL_CONSTANT> {
  * Rational constants terms have a payload of type rational (gmp) and no children.
  */
 template<>
-struct term_op_traits<OP_REAL_CONSTANT> {
+struct term_op_traits<CONST_RATIONAL> {
   typedef rational payload_type;
 };
 
 /**
  * Variables have a payload that is their name, and one child, which is the
- * type of the variable.
+ * name of the variable.
  */
 template<>
-struct term_op_traits<OP_VARIABLE> {
+struct term_op_traits<VARIABLE> {
   typedef std::string payload_type;
 };
 
