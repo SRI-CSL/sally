@@ -191,7 +191,7 @@ private:
 
   /** Generic term constructor */
   template <term_op op, typename iterator_type>
-  term_ref mk_term_internal(const typename term_op_traits<op>::payload_type& payload, iterator_type children_begin, iterator_type children_end);
+  term_ref mk_term_internal(const typename term_op_traits<op>::payload_type& payload, iterator_type children_begin, iterator_type children_end, size_t hash);
 
   /**
    * A term with all the information in the package.
@@ -223,9 +223,14 @@ private:
     /** Compare to a term op without using the hash. */
     bool cmp(const term_ref_with_hash& other_ref_with_hash) const;
 
-    /** Actually make it happen */
+    /**
+     * Actually consruct the reference. This is remembered and guarded from
+     * calling more than once.
+     */
     virtual term_ref real_ref() const {
-      return d_tm.mk_term_internal<op, iterator_type>(d_payload, d_begin, d_end);
+      assert(ref.is_null());
+      const_cast<term_constructor*>(this)->ref = d_tm.mk_term_internal<op, iterator_type>(d_payload, d_begin, d_end, hash);
+      return ref;
     }
 
   };
@@ -410,7 +415,7 @@ size_t term_manager::term_hash(const typename term_op_traits<op>::payload_type& 
 }
 
 template <term_op op, typename iterator_type>
-term_ref term_manager::mk_term_internal(const typename term_op_traits<op>::payload_type& payload, iterator_type begin, iterator_type end) {
+term_ref term_manager::mk_term_internal(const typename term_op_traits<op>::payload_type& payload, iterator_type begin, iterator_type end, size_t hash) {
 
   typedef typename term_op_traits<op>::payload_type payload_type;
   typedef alloc::allocator<payload_type, alloc::empty_type> payload_allocator;
@@ -426,9 +431,6 @@ term_ref term_manager::mk_term_internal(const typename term_op_traits<op>::paylo
     payload_allocator* palloc = ((payload_allocator*) d_payload_memory[op]);
     p_ref = palloc->template allocate<alloc::empty_type_constptr>(payload, 0, 0);
   }
-
-  // Get the hash
-  size_t hash = term_hash<op, iterator_type>(payload, begin, end);
 
   // Construct the term
   term_ref t_ref = d_memory.allocate(term(op, hash, p_ref), begin, end);
