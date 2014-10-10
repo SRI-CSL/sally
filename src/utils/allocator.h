@@ -90,7 +90,10 @@ public:
 
     /** Compare */
     bool operator == (const ref& r) const { return d_ref == r.d_ref; }
-  };
+
+    /** Compare */
+    bool operator != (const ref& r) const { return d_ref != r.d_ref; }
+};
 
   /** Constructor */
   allocator_base(size_t initial_size = 10000)

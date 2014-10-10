@@ -21,6 +21,110 @@
 namespace sal2 {
 namespace expr {
 
+/** Term references */
+class term_ref : public alloc::allocator_base::ref {
+  typedef alloc::allocator_base::ref base_ref;
+public:
+  term_ref(): base_ref() {}
+  term_ref(const base_ref& ref): base_ref(ref) {}
+  term_ref(const alloc::empty_type& empty) {}
+  void to_stream(std::ostream& out) const;
+};
+
+/** Output operator for term references */
+inline
+std::ostream& operator << (std::ostream& out, const term_ref& t_ref) {
+  t_ref.to_stream(out);
+  return out;
+}
+
+/** Terms */
+class term {
+
+  typedef alloc::allocator_base::ref payload_ref;
+
+  /** The term kind */
+  term_op d_op;
+  /** Hash of this term */
+  size_t d_hash;
+
+  /** Reference to the payload */
+  payload_ref d_payload;
+
+  term(): d_op(OP_LAST), d_hash(0) {}
+
+  friend class term_manager;
+
+public:
+
+  /** Construct the term with all the attributes */
+  term(term_op op, size_t hash, payload_ref payload)
+  : d_op(op)
+  , d_hash(hash)
+  , d_payload(payload)
+  {}
+
+  /** Output to the stream using the language set on the stream */
+  void to_stream(std::ostream& out) const;
+  /** Output to the stream using the SMT2 language */
+  void to_stream_smt(std::ostream& out, const term_manager& tm) const;
+
+  /** What kind of term is this */
+  term_op op() const { return d_op; }
+
+  /** Hash */
+  size_t hash() const { return d_hash; }
+
+  /** Number of children, if any */
+  size_t size() const {
+    return alloc::allocator<term, term_ref>::object_size(*this);
+  }
+
+  /** Returns the first child */
+  const term_ref* begin() const {
+    return alloc::allocator<term, term_ref>::object_begin(*this);
+  }
+
+  /** The one past last child */
+  const term_ref* end() const {
+    return alloc::allocator<term, term_ref>::object_end(*this);
+  }
+
+  /** Return the k-th child */
+  term_ref operator[] (size_t k) const {
+    return begin()[k];
+  }
+};
+
+/** Output operator for terms */
+inline
+std::ostream& operator << (std::ostream& out, const term& t) {
+  t.to_stream(out);
+  return out;
+}
+
+}
+
+namespace utils {
+
+template<>
+struct hash<expr::term_ref> {
+  size_t operator()(expr::term_ref t) const {
+    return t.index();
+  }
+};
+
+template<>
+struct hash<expr::term> {
+  size_t operator()(const expr::term& t) const {
+    return t.hash();
+  }
+};
+
+}
+
+namespace expr {
+
 /**
  * Term manager controls the terms, allocation and garbage collection. All
  * terms are defined in term_ops.h.
@@ -34,69 +138,6 @@ public:
 
   /** Payload references */
   typedef base_ref payload_ref;
-
-  /** Term references */
-  class term_ref : public base_ref {
-  public:
-    term_ref(): base_ref() {}
-    term_ref(const base_ref& ref): base_ref(ref) {}
-    term_ref(const alloc::empty_type& empty) {}
-    void to_stream(std::ostream& out) const;
-  };
-
-  /** Terms */
-  class term {
-    /** The term kind */
-    term_op d_op;
-    /** Hash of this term */
-    size_t d_hash;
-    /** Reference to the payload */
-    payload_ref d_payload;
-
-    term(): d_op(OP_LAST), d_hash(0) {}
-
-    friend class term_manager;
-
-  public:
-
-    /** Construct the term with all the attributes */
-    term(term_op op, size_t hash, payload_ref payload)
-    : d_op(op)
-    , d_hash(hash)
-    , d_payload(payload)
-    {}
-
-    /** Output to the stream using the language set on the stream */
-    void to_stream(std::ostream& out) const;
-    /** Output to the stream using the SMT2 language */
-    void to_stream_smt(std::ostream& out, const term_manager& tm) const;
-
-    /** What kind of term is this */
-    term_op op() const { return d_op; }
-
-    /** Hash */
-    size_t hash() const { return d_hash; }
-
-    /** Number of children, if any */
-    size_t size() const {
-      return alloc::allocator<term, term_ref>::object_size(*this);
-    }
-
-    /** Returns the first child */
-    const term_ref* begin() const {
-      return alloc::allocator<term, term_ref>::object_begin(*this);
-    }
-
-    /** The one past last child */
-    const term_ref* end() const {
-      return alloc::allocator<term, term_ref>::object_end(*this);
-    }
-
-    /** Return the k-th child */
-    term_ref operator[] (size_t k) const {
-      return begin()[k];
-    }
-  };
 
 private:
 
@@ -121,11 +162,13 @@ private:
   /** Real type */
   term_ref d_realType;
 
+  typedef boost::unordered_map<term_ref, term_ref, utils::hash<term_ref> > tcc_map;
+
   /**
    * Map from terms to their type-checking conditions. If the entry is empty
    * then TCC = true.
    */
-  boost::unordered_map<term_ref, term_ref> d_tcc_map;
+  tcc_map d_tcc_map;
 
   /** Typecheck the term (adds to TCC if needed) */
   bool typecheck(term_ref t);
@@ -229,47 +272,27 @@ public:
     return d_memory.object_end(t);
   }
 
+  /** Get the type of the term */
+  term_ref type_of(const term& t) const;
+
+  /** Get the type of the term */
+  term_ref type_of(term_ref t) const {
+    return type_of(term_of(t));
+  }
+
+  /** Get the TCC of the term */
+  term_ref tcc_of(const term& t) const;
+
+  /** Get the TCC of the term */
+  term_ref tcc_of(term_ref t) const {
+    return tcc_of(term_of(t));
+  }
+
 };
 
 template<>
 inline const alloc::empty_type& term_manager::payload_of<alloc::empty_type>(const term& t) const {
   return alloc::empty;
-}
-
-
-/** The term type */
-typedef term_manager::term term;
-
-/** Output operator for terms */
-inline
-std::ostream& operator << (std::ostream& out, const term& t) {
-  t.to_stream(out);
-  return out;
-}
-
-}
-
-namespace utils {
-
-template<>
-struct hash<expr::term> {
-  size_t operator()(const expr::term& t) const {
-    return t.hash();
-  }
-};
-
-}
-
-namespace expr {
-
-/** The term reference type */
-typedef term_manager::term_ref term_ref;
-
-/** Output operator for term references */
-inline
-std::ostream& operator << (std::ostream& out, const term_ref& t_ref) {
-  t_ref.to_stream(out);
-  return out;
 }
 
 /** IO modifier to set the term manager */

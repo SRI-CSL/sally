@@ -28,7 +28,7 @@ term_manager::term_manager(bool typecheck)
   d_realType = mk_term<OP_TYPE_REAL>(alloc::empty);
 }
 
-void term_manager::term_ref::to_stream(std::ostream& out) const {
+void term_ref::to_stream(std::ostream& out) const {
   if (is_null()) {
     out << "null";
   } else {
@@ -41,7 +41,7 @@ void term_manager::term_ref::to_stream(std::ostream& out) const {
   }
 }
 
-void term_manager::term::to_stream(std::ostream& out) const {
+void term::to_stream(std::ostream& out) const {
   output::language lang = output::get_output_language(out);
   const term_manager* tm = output::get_term_manager(out);
   switch (lang) {
@@ -86,7 +86,7 @@ std::string get_smt_keyword(term_op op) {
   }
 }
 
-void term_manager::term::to_stream_smt(std::ostream& out, const term_manager& tm) const {
+void term::to_stream_smt(std::ostream& out, const term_manager& tm) const {
   switch (d_op) {
   case OP_VARIABLE:
     out << tm.payload_of<std::string>(*this);
@@ -135,49 +135,132 @@ std::ostream& operator << (std::ostream& out, const set_tm& stm) {
   return out;
 }
 
+term_ref term_manager::type_of(const term& t) const {
+  switch (t.op()) {
+  case OP_TYPE_BOOL:
+  case OP_TYPE_INTEGER:
+  case OP_TYPE_REAL:
+    return term_ref();
+  case OP_VARIABLE:
+    return t[0];
+  // Equality
+  case OP_EQ:
+    return booleanType();
+    break;
+
+  // Boolean terms
+  case OP_BOOL_CONSTANT:
+  case OP_AND:
+  case OP_OR:
+  case OP_XOR:
+  case OP_NOT:
+  case OP_IMPLIES:
+    return booleanType();
+  // Arithmetic terms
+  case OP_REAL_CONSTANT:
+  case OP_ADD:
+  case OP_MUL:
+  case OP_SUB:
+  case OP_DIV:
+    return d_realType;
+  default:
+    assert(false);
+  }
+  return term_ref();
+}
+
+term_ref term_manager::tcc_of(const term& t) const {
+  tcc_map::const_iterator find = d_tcc_map.find(ref_of(t));
+  if (find == d_tcc_map.end()) {
+    return term_ref();
+  } else {
+    return find->second;
+  }
+}
+
 bool term_manager::typecheck(term_ref t_ref) {
   const term& t = term_of(t_ref);
+
+  bool ok = true;
 
   switch (t.op()) {
   case OP_TYPE_BOOL:
   case OP_TYPE_INTEGER:
   case OP_TYPE_REAL:
   case OP_VARIABLE:
-    return true;
+    break;
   // Equality
   case OP_EQ:
-
+    ok = (type_of(t) == type_of(t));
     break;
-
   // Boolean terms
   case OP_BOOL_CONSTANT:
-    return true;
+    break;
   case OP_AND:
   case OP_OR:
   case OP_XOR:
-    // Check types of arguments
+    if (t.size() < 2) {
+      ok = false;
+    } else {
+      for (const term_ref* it = t.begin(); it != t.end(); ++ it) {
+        if (type_of(*it) != booleanType()) {
+          ok = false;
+          break;
+        }
+      }
+    }
+    break;
   case OP_NOT:
-    // One argument
+    if (t.size() != 1) {
+      ok = false;
+    } else {
+      ok = type_of(t[0]) == booleanType();
+    }
+    break;
   case OP_IMPLIES:
-    // Only binary
+    if (t.size() != 2) {
+      ok = false;
+    } else {
+      ok = type_of(t[0]) == booleanType() && type_of(t[1]) == booleanType();
+    }
     break;
   // Arithmetic terms
   case OP_REAL_CONSTANT:
-    return true;
+    break;
   case OP_ADD:
   case OP_MUL:
-    // Check arguments
+    if (t.size() < 2) {
+      ok = false;
+    } else {
+      for (const term_ref* it = t.begin(); it != t.end(); ++ it) {
+        if (type_of(*it) != realType()) {
+          ok = false;
+          break;
+        }
+      }
+    }
+    break;
   case OP_SUB:
-    // Only binary
+    if (t.size() != 2) {
+      ok = false;
+    } else {
+      ok = type_of(t[0]) == realType() && type_of(t[1]) == realType();
+    }
+    break;
   case OP_DIV:
-    // Binary with TCC: den != 0
+    if (t.size() != 2) {
+      ok = false;
+    } else {
+      ok = type_of(t[0]) == realType() && type_of(t[1]) == realType();
+      // TODO: make TCC
+    }
+    break;
   default:
     assert(false);
   }
 
-  return true;
+  return ok;
 }
-
 
 }
 }
