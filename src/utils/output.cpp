@@ -5,6 +5,8 @@
  *      Author: dejan
  */
 
+#include <string>
+
 #include "utils/output.h"
 
 namespace sal2 {

@@ -18,6 +18,11 @@ term_manager::term_manager() {
   for (unsigned i = 0; i < OP_LAST; ++ i) {
     d_payload_memory[i] = 0;
   }
+
+  // Create the types
+  d_booleanType = mk_term<OP_TYPE_BOOL>(alloc::empty);
+  d_integerType = mk_term<OP_TYPE_INTEGER>(alloc::empty);
+  d_realType = mk_term<OP_TYPE_REAL>(alloc::empty);
 }
 
 void term_manager::term_ref::to_stream(std::ostream& out) const {
@@ -66,6 +71,12 @@ std::string get_smt_keyword(term_op op) {
     return "*";
   case OP_DIV:
     return "/";
+  case OP_TYPE_BOOL:
+    return "Bool";
+  case OP_TYPE_INTEGER:
+    return "Integer";
+  case OP_TYPE_REAL:
+    return "Real";
   default:
     assert(false);
     return "unknown";
@@ -75,7 +86,7 @@ std::string get_smt_keyword(term_op op) {
 void term_manager::term::to_stream_smt(std::ostream& out, const term_manager& tm) const {
   switch (d_op) {
   case OP_VARIABLE:
-    out << "var";
+    out << tm.payload_of<std::string>(*this);
     break;
   case OP_BOOL_CONSTANT:
     out << (tm.payload_of<bool>(*this) ? "true" : "false");
@@ -89,11 +100,16 @@ void term_manager::term::to_stream_smt(std::ostream& out, const term_manager& tm
   case OP_SUB:
   case OP_MUL:
   case OP_DIV: {
-    out << "(" << get_smt_keyword(d_op);
+    if (size() > 0) {
+      out << "(";
+    }
+    out << get_smt_keyword(d_op);
     for (const term_ref* it = begin(); it != end(); ++ it) {
       out << " " << *it;
     }
-    out << ")";
+    if (size() > 0) {
+      out << ")";
+    }
     break;
   }
   case OP_REAL_CONSTANT:

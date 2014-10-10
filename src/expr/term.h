@@ -107,6 +107,15 @@ private:
   /** List of all allocated terms */
   std::vector<term_ref> d_terms;
 
+  /** Boolean type */
+  term_ref d_booleanType;
+
+  /** Integer type */
+  term_ref d_integerType;
+
+  /** Real type */
+  term_ref d_realType;
+
 public:
 
   /** Construct them manager */
@@ -114,6 +123,15 @@ public:
 
   /** Destruct the manager, and destruct all payloads that the manager owns */
   ~term_manager();
+
+  /** Get the Boolean type */
+  term_ref booleanType() const { return d_booleanType; }
+
+  /** Get the Integer type */
+  term_ref integerType() const { return d_integerType; }
+
+  /** Get the Real type */
+  term_ref realType() const { return d_realType; }
 
   /** Compute the has of the term parts */
   template <term_op op, typename iterator_type>
@@ -147,6 +165,20 @@ public:
   template <term_op op, typename iterator_type>
   term_ref mk_term(iterator_type children_begin, iterator_type children_end) {
     return mk_term<op, iterator_type>(alloc::empty, children_begin, children_end);
+  }
+
+  /** Make a term from one child and payload */
+  template<term_op op>
+  term_ref mk_term(const typename term_op_traits<op>::payload_type& payload, term_ref child) {
+    term_ref children[1] = { child };
+    return mk_term<op, term_ref*>(payload, children, children + 1);
+  }
+
+  /** Make a term from two children and payload */
+  template<term_op op>
+  term_ref mk_term(const typename term_op_traits<op>::payload_type& payload, term_ref child1, term_ref child2) {
+    term_ref children[2] = { child1, child2 };
+    return mk_term<op, term_ref*>(payload, children, children + 2);
   }
 
   /** Get a reference for the term */

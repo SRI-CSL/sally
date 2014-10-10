@@ -25,6 +25,11 @@ enum term_type {
  * of term.
  */
 enum term_op {
+  // Types
+  OP_TYPE_BOOL,
+  OP_TYPE_INTEGER,
+  OP_TYPE_REAL,
+  // Variables
   OP_VARIABLE,
   // Boolean
   OP_BOOL_CONSTANT,
@@ -72,9 +77,13 @@ struct term_op_traits<OP_REAL_CONSTANT> {
   typedef rational payload_type;
 };
 
+/**
+ * Variables have a payload that is their name, and one child, which is the
+ * type of the variable.
+ */
 template<>
 struct term_op_traits<OP_VARIABLE> {
-  typedef term_type payload_type;
+  typedef std::string payload_type;
 };
 
 }

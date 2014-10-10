@@ -23,10 +23,6 @@ BOOST_AUTO_TEST_CASE(mk_term) {
   // Set the term manager for output
   cout << set_tm(tm);
 
-  // Some types
-  term_type bool_type = TYPE_BOOL;
-  term_type real_type = TYPE_REAL;
-
   // Make some terms
   term_ref t_true = tm.mk_term<OP_BOOL_CONSTANT>(true);
   cout << t_true << endl;
@@ -37,9 +33,9 @@ BOOST_AUTO_TEST_CASE(mk_term) {
   BOOST_CHECK_EQUAL(tm.term_of(t_false).size(), 0);
 
   // A variable
-  term_ref t_v_bool = tm.mk_term<OP_VARIABLE>(bool_type);
+  term_ref t_v_bool = tm.mk_term<OP_VARIABLE>("x", tm.booleanType());
   cout << t_v_bool << endl;
-  BOOST_CHECK_EQUAL(tm.term_of(t_v_bool).size(), 0);
+  BOOST_CHECK_EQUAL(tm.term_of(t_v_bool).size(), 1);
 
   // Unary
   term_ref t_not = tm.mk_term<OP_NOT>(t_v_bool);
@@ -61,11 +57,11 @@ BOOST_AUTO_TEST_CASE(mk_term) {
   cout << t_and << endl;
   BOOST_CHECK_EQUAL(tm.term_of(t_and).size(), 5);
 
-  term_ref t_v_real_0 = tm.mk_term<OP_VARIABLE>(real_type);
+  term_ref t_v_real_0 = tm.mk_term<OP_VARIABLE>("x", tm.realType());
   cout << t_v_real_0 << endl;
-  term_ref t_v_real_1 = tm.mk_term<OP_VARIABLE>(real_type);
+  term_ref t_v_real_1 = tm.mk_term<OP_VARIABLE>("y", tm.realType());
   cout << t_v_real_1 << endl;
-  term_ref t_v_real_2 = tm.mk_term<OP_VARIABLE>(real_type);
+  term_ref t_v_real_2 = tm.mk_term<OP_VARIABLE>("z", tm.realType());
   cout << t_v_real_2 << endl;
 
   term_ref t_r0 = tm.mk_term<OP_REAL_CONSTANT>(rational(0, 1));

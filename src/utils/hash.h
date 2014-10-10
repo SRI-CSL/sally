@@ -7,8 +7,9 @@
 
 #pragma once
 
-namespace sal2 {
+#include <string>
 
+namespace sal2 {
 namespace utils {
 
 /**
@@ -33,7 +34,25 @@ public:
     d_hash ^= hash<T>()(t) + 0x9e3779b9 + (d_hash << 6) + (d_hash >> 2);
   }
   size_t get() const { return d_hash; }
+
+  template <typename iterator>
+  void add(iterator begin, iterator end) {
+    for (; begin != end; ++ begin) {
+      add(*begin);
+    }
+  }
 };
+
+/** String hash. */
+template<>
+struct hash<std::string> {
+  size_t operator()(std::string value) const {
+    sequence_hash seq;
+    seq.add(value.begin(), value.end());
+    return seq.get();
+  }
+};
+
 
 }
 }
