@@ -12,7 +12,10 @@ using namespace expr;
 struct term_manager_test_fixture {
   term_manager tm;
 public:
-  term_manager_test_fixture() {}
+  term_manager_test_fixture()
+  : tm(true)
+  {}
+
   ~term_manager_test_fixture() {}
 };
 

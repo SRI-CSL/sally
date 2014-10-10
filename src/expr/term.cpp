@@ -14,7 +14,10 @@
 namespace sal2 {
 namespace expr {
 
-term_manager::term_manager() {
+term_manager::term_manager(bool typecheck)
+: d_typecheck(typecheck)
+{
+  // Initalize all payload memory to 0
   for (unsigned i = 0; i < OP_LAST; ++ i) {
     d_payload_memory[i] = 0;
   }
@@ -131,6 +134,50 @@ std::ostream& operator << (std::ostream& out, const set_tm& stm) {
   output::set_term_manager(out, stm.tm);
   return out;
 }
+
+bool term_manager::typecheck(term_ref t_ref) {
+  const term& t = term_of(t_ref);
+
+  switch (t.op()) {
+  case OP_TYPE_BOOL:
+  case OP_TYPE_INTEGER:
+  case OP_TYPE_REAL:
+  case OP_VARIABLE:
+    return true;
+  // Equality
+  case OP_EQ:
+
+    break;
+
+  // Boolean terms
+  case OP_BOOL_CONSTANT:
+    return true;
+  case OP_AND:
+  case OP_OR:
+  case OP_XOR:
+    // Check types of arguments
+  case OP_NOT:
+    // One argument
+  case OP_IMPLIES:
+    // Only binary
+    break;
+  // Arithmetic terms
+  case OP_REAL_CONSTANT:
+    return true;
+  case OP_ADD:
+  case OP_MUL:
+    // Check arguments
+  case OP_SUB:
+    // Only binary
+  case OP_DIV:
+    // Binary with TCC: den != 0
+  default:
+    assert(false);
+  }
+
+  return true;
+}
+
 
 }
 }

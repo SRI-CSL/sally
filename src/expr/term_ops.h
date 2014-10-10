@@ -13,37 +13,40 @@
 namespace sal2 {
 namespace expr {
 
-enum term_type {
-  TYPE_BOOL,
-  TYPE_REAL,
-  TYPE_INTEGER
-};
-
 /**
  * Enumeration of all term kinds. For each term kind, there is an associated
  * term_op_traits instantiation that defines the content of the specific kind
  * of term.
  */
 enum term_op {
+
   // Types
   OP_TYPE_BOOL,
   OP_TYPE_INTEGER,
   OP_TYPE_REAL,
+
   // Variables
   OP_VARIABLE,
-  // Boolean
+
+  // Equality
+  OP_EQ,
+
+  // Boolean terms
   OP_BOOL_CONSTANT,
   OP_AND,
   OP_OR,
   OP_NOT,
   OP_IMPLIES,
   OP_XOR,
-  // Arithmetic
+
+  // Arithmetic terms
   OP_REAL_CONSTANT,
   OP_ADD,
   OP_SUB,
   OP_MUL,
   OP_DIV,
+
+  // Marker for the last
   OP_LAST
 };
 

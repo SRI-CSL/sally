@@ -11,6 +11,8 @@
 #include <iostream>
 #include <cassert>
 
+#include <boost/unordered_map.hpp>
+
 #include "expr/term_ops.h"
 #include "utils/output.h"
 #include "utils/allocator.h"
@@ -98,6 +100,9 @@ public:
 
 private:
 
+  /** Whether to typecheck or not */
+  bool d_typecheck;
+
   /** Memory where the terms are kept */
   alloc::allocator<term, term_ref> d_memory;
 
@@ -116,10 +121,19 @@ private:
   /** Real type */
   term_ref d_realType;
 
+  /**
+   * Map from terms to their type-checking conditions. If the entry is empty
+   * then TCC = true.
+   */
+  boost::unordered_map<term_ref, term_ref> d_tcc_map;
+
+  /** Typecheck the term (adds to TCC if needed) */
+  bool typecheck(term_ref t);
+
 public:
 
   /** Construct them manager */
-  term_manager();
+  term_manager(bool typecheck);
 
   /** Destruct the manager, and destruct all payloads that the manager owns */
   ~term_manager();
@@ -312,6 +326,13 @@ term_ref term_manager::mk_term(const typename term_op_traits<op>::payload_type& 
 
   // Construct the term
   term_ref t_ref = d_memory.allocate(term(op, hash, p_ref), begin, end);
+
+  // Type-check the term
+  if (d_typecheck) {
+    if (!typecheck(t_ref)) {
+      return term_ref();
+    }
+  }
 
   // Get the reference
   return t_ref;
