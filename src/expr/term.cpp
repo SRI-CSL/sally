@@ -71,7 +71,6 @@ void term::to_stream(std::ostream& out) const {
 static inline
 std::string get_smt_keyword(term_op op) {
   switch (op) {
-    return "Real";
   case TERM_AND:
     return "and";
   case TERM_OR:
