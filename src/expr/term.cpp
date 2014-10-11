@@ -71,6 +71,7 @@ void term::to_stream(std::ostream& out) const {
 static inline
 std::string get_smt_keyword(term_op op) {
   switch (op) {
+    return "Real";
   case TERM_AND:
     return "and";
   case TERM_OR:
@@ -103,6 +104,11 @@ std::string get_smt_keyword(term_op op) {
 
 void term::to_stream_smt(std::ostream& out, const term_manager& tm) const {
   switch (d_op) {
+  case TYPE_BOOL:
+  case TYPE_INTEGER:
+  case TYPE_REAL:
+    out << get_smt_keyword(d_op);
+    break;
   case VARIABLE:
     out << tm.payload_of<std::string>(*this);
     break;
@@ -275,6 +281,25 @@ bool term_manager::typecheck(term_ref t_ref) {
   }
 
   return ok;
+}
+
+void term_manager::toStream(std::ostream& out) const {
+  out << "Term memory:" << std::endl;
+  out << d_memory << std::endl;
+
+  for (int op = 0; op < OP_LAST; ++ op) {
+    out << "Payloads of :" << (term_op) op << std::endl;
+    if (d_payload_memory[op]) {
+      out << *d_payload_memory[op] << std::endl;
+    } else {
+      out << "null" << std::endl;
+    }
+  }
+
+  out << "Terms:" << std::endl;
+  for (term_ref_hash_set::const_iterator it = d_pool.begin(); it != d_pool.end(); ++ it) {
+    out << it->ref.index() << ": " << it->ref << std::endl;
+  }
 }
 
 }

@@ -8,8 +8,8 @@
 #pragma once
 
 #include <vector>
-#include <iostream>
 #include <cassert>
+#include <iostream>
 
 #include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
@@ -186,9 +186,6 @@ private:
   /** Memory for the payloads, one for each kind of expression */
   alloc::allocator_base* d_payload_memory[OP_LAST];
 
-  /** List of all allocated terms */
-  std::vector<term_ref> d_terms;
-
   /** Generic term constructor */
   template <term_op op, typename iterator_type>
   term_ref mk_term_internal(const typename term_op_traits<op>::payload_type& payload, iterator_type children_begin, iterator_type children_end, size_t hash);
@@ -236,10 +233,10 @@ private:
   };
 
   /** The underlying hash set */
-  typedef boost::unordered_set<term_ref_with_hash, utils::hash<term_ref_with_hash> > hash_set;
+  typedef boost::unordered_set<term_ref_with_hash, utils::hash<term_ref_with_hash> > term_ref_hash_set;
 
   /** The pool of existing terms */
-  hash_set d_pool;
+  term_ref_hash_set d_pool;
 
   /** Boolean type */
   term_ref d_booleanType;
@@ -272,6 +269,9 @@ public:
 
   /** Destruct the manager, and destruct all payloads that the manager owns */
   ~term_manager();
+
+  /** Print the term manager information and all the terms to out */
+  void toStream(std::ostream& out) const;
 
   /** Get the Boolean type */
   term_ref booleanType() const { return d_booleanType; }
@@ -377,6 +377,12 @@ public:
   }
 
 };
+
+inline
+std::ostream& operator << (std::ostream& out, const term_manager& tm) {
+  tm.toStream(out);
+  return out;
+}
 
 template<>
 inline const alloc::empty_type& term_manager::payload_of<alloc::empty_type>(const term& t) const {

@@ -7,8 +7,10 @@
 
 #pragma once
 
-#include <cstdlib>
 #include <vector>
+#include <cstdlib>
+#include <typeinfo>
+#include <iostream>
 
 #include "utils/hash.h"
 
@@ -128,7 +130,18 @@ public:
   /** Returns the object pointed to by the given reference */
   template<typename T>
   T& object_of(ref o_ref) { return *((T*)(d_memory + o_ref.d_ref)); }
+
+  /** Print out some info */
+  virtual void to_stream(std::ostream& out) const {
+    out << "(size = " << d_size << ", capacity = " << d_capacity << ")";
+  }
 };
+
+inline
+std::ostream& operator << (std::ostream& out, const allocator_base& alloc) {
+  alloc.to_stream(out);
+  return out;
+}
 
 template<typename T>
 T* allocator_base::allocate(size_t size) {
@@ -269,6 +282,10 @@ public:
     }
   }
 
+  void to_stream(std::ostream& out) const {
+    out << "allocator<" << typeid(T).name() << ">";
+    allocator_base::to_stream(out);
+  }
 };
 
 }

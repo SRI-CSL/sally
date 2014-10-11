@@ -15,7 +15,9 @@ public:
   : tm(true)
   {}
 
-  ~term_manager_test_fixture() {}
+  ~term_manager_test_fixture() {
+    cout << tm << endl;
+  }
 };
 
 BOOST_FIXTURE_TEST_SUITE(term_manager_construction, term_manager_test_fixture)

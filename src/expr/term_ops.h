@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <iostream>
+
 #include "expr/rational.h"
 #include "utils/allocator.h"
 
@@ -88,6 +90,35 @@ template<>
 struct term_op_traits<VARIABLE> {
   typedef std::string payload_type;
 };
+
+inline
+std::ostream& operator << (std::ostream& out, term_op op) {
+
+#define SWITCH_TO_STRING(op) case op: out << #op; break;
+  switch (op) {
+    SWITCH_TO_STRING(TYPE_BOOL)
+    SWITCH_TO_STRING(TYPE_INTEGER)
+    SWITCH_TO_STRING(TYPE_REAL)
+    SWITCH_TO_STRING(VARIABLE)
+    SWITCH_TO_STRING(TERM_EQ)
+    SWITCH_TO_STRING(CONST_BOOL)
+    SWITCH_TO_STRING(TERM_AND)
+    SWITCH_TO_STRING(TERM_OR)
+    SWITCH_TO_STRING(TERM_NOT)
+    SWITCH_TO_STRING(TERM_IMPLIES)
+    SWITCH_TO_STRING(TERM_XOR)
+    SWITCH_TO_STRING(CONST_RATIONAL)
+    SWITCH_TO_STRING(TERM_ADD)
+    SWITCH_TO_STRING(TERM_SUB)
+    SWITCH_TO_STRING(TERM_MUL)
+    SWITCH_TO_STRING(TERM_DIV)
+    SWITCH_TO_STRING(OP_LAST)
+  default:
+    out << "unknown";
+  }
+#undef SWITCH_TO_STRING
+  return out;
+}
 
 }
 }
