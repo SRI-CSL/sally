@@ -199,7 +199,7 @@ private:
     template <typename iterator>
     void construct(const T& data, iterator begin, iterator end, size_t extras) {
       new (&t_data) T(data);
-      if (!type_traits<E>::is_empty && begin != end && extras != 0) {
+      if (!type_traits<E>::is_empty) {
         E* e = e_data;
         for (; begin != end; ++ begin, ++ e) {
           new (e) E(*begin);
