@@ -194,12 +194,12 @@ private:
   struct data {
     T t_data;
     size_t e_size;
-    E e_data[1];
+    E e_data[];
 
     template <typename iterator>
     void construct(const T& data, iterator begin, iterator end, size_t extras) {
       new (&t_data) T(data);
-      if (!type_traits<E>::is_empty) {
+      if (!type_traits<E>::is_empty && begin != end && extras != 0) {
         E* e = e_data;
         for (; begin != end; ++ begin, ++ e) {
           new (e) E(*begin);
@@ -225,8 +225,7 @@ public:
       full = allocator_base::allocate<data>(sizeof(T));
     } else {
       size_t size = std::distance(begin, end);
-      // sizeof(data) already includes one E
-      full = allocator_base::allocate<data>(sizeof(data) + (size + extras - 1)*sizeof(E));
+      full = allocator_base::allocate<data>(sizeof(data) + (size + extras)*sizeof(E));
       full->e_size = size;
     }
     full->construct(t, begin, end, extras);
