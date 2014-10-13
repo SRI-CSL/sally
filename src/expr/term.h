@@ -50,16 +50,12 @@ class term {
   /** The term kind */
   term_op d_op;
 
-  /** Reference to the payload */
-  payload_ref d_payload;
-
   /** Default constructor */
   term(): d_op(OP_LAST) {}
 
   /** Construct the term with all the attributes */
-  term(term_op op, payload_ref payload)
+  term(term_op op)
   : d_op(op)
-  , d_payload(payload)
   {}
 
   friend class term_manager;
@@ -345,7 +341,7 @@ public:
   template<typename payload_type>
   const payload_type& payload_of(const term& t) const {
     assert(d_payload_memory[t.d_op] != 0);
-    return d_payload_memory[t.d_op]->object_of<payload_type>(t.d_payload);
+    return d_payload_memory[t.d_op]->object_of<payload_type>(*t.end());
   }
 
   /**
@@ -447,11 +443,19 @@ term_ref_strong term_manager::mk_term_internal(const typename term_op_traits<op>
     }
     // Allocate the payload and copy construct it
     payload_allocator* palloc = ((payload_allocator*) d_payload_memory[op]);
-    p_ref = palloc->template allocate<alloc::empty_type_constptr>(payload, 0, 0);
+    p_ref = palloc->template allocate<alloc::empty_type_constptr>(payload, 0, 0, 0);
   }
 
   // Construct the term
-  term_ref t_ref = d_memory.allocate(term(op, p_ref), begin, end);
+  term_ref t_ref;
+  if (alloc::type_traits<payload_type>::is_empty) {
+    // No payload, 0 for extras
+    t_ref = d_memory.allocate(term(op), begin, end, 0);
+  } else {
+    // Pyaload active, add a child
+    t_ref = d_memory.allocate(term(op), begin, end, 1);
+    *alloc::allocator<term, term_ref>::object_end(d_memory.object_of(t_ref)) = p_ref;
+  }
 
   // Type-check the term
   if (d_typecheck) {

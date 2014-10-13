@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include <typeinfo>
 #include <iostream>
+#include <cassert>
 
 #include "utils/hash.h"
 
@@ -202,11 +203,15 @@ private:
     E e_data[];
 
     template <typename iterator>
-    void construct(const T& data, iterator begin, iterator end) {
+    void construct(const T& data, iterator begin, iterator end, size_t extras) {
       new (&t_data) T(data);
-      if (!type_traits<E>::is_empty && begin != end) {
-        for (E* e = e_data; begin != end; ++ begin, ++ e) {
+      if (!type_traits<E>::is_empty) {
+        E* e = e_data;
+        for (; begin != end; ++ begin, ++ e) {
           new (e) E(*begin);
+        }
+        for (size_t i = 0; i < extras; ++ i, ++ e) {
+          new (e) E();
         }
       }
     }
@@ -217,18 +222,19 @@ private:
 
 public:
 
-  /** Allocate T with children from begin .. end */
+  /** Allocate T with children from begin .. end, with potentially extra children */
   template<typename iterator>
-  ref allocate(const T& t, iterator begin, iterator end) {
+  ref allocate(const T& t, iterator begin, iterator end, size_t extras) {
     data* full;
     if (type_traits<E>::is_empty) {
+      assert(extras == 0);
       full = allocator_base::allocate<data>(sizeof(T));
     } else {
       size_t size = std::distance(begin, end);
-      full = allocator_base::allocate<data>(sizeof(data) + size*sizeof(E));
+      full = allocator_base::allocate<data>(sizeof(data) + (size + extras)*sizeof(E));
       full->e_size = size;
     }
-    full->construct(t, begin, end);
+    full->construct(t, begin, end, extras);
     ref t_ref(allocator_base::index_of(*full));
     d_allocated.push_back(t_ref);
     return t_ref;
@@ -264,6 +270,18 @@ public:
   /** Get the last child */
   static const E* object_end(const T& o) {
     const data& d = (const data&) o;
+    return d.e_data + d.e_size;
+  }
+
+  /** Get the first child */
+  static E* object_begin(T& o) {
+    data& d = (data&) o;
+    return d.e_data;
+  }
+
+  /** Get the last child */
+  static E* object_end(T& o) {
+    data& d = (data&) o;
     return d.e_data + d.e_size;
   }
 
