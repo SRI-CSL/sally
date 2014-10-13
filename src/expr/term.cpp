@@ -39,9 +39,9 @@ term_manager::term_manager(bool typecheck)
   }
 
   // Create the types
-  d_booleanType = mk_term<TYPE_BOOL>(alloc::empty);
-  d_integerType = mk_term<TYPE_INTEGER>(alloc::empty);
-  d_realType = mk_term<TYPE_REAL>(alloc::empty);
+  d_booleanType = mk_term<TYPE_BOOL>(alloc::empty_type());
+  d_integerType = mk_term<TYPE_INTEGER>(alloc::empty_type());
+  d_realType = mk_term<TYPE_REAL>(alloc::empty_type());
 }
 
 void term_ref::to_stream(std::ostream& out) const {

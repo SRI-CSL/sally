@@ -297,20 +297,20 @@ public:
   template<term_op op>
   term_ref_strong mk_term(term_ref child) {
     term_ref children[1] = { child };
-    return mk_term<op, term_ref*>(alloc::empty, children, children + 1);
+    return mk_term<op, term_ref*>(alloc::empty_type(), children, children + 1);
   }
 
   /** Make a term from two children and no payload */
   template<term_op op>
   term_ref_strong mk_term(term_ref child1, term_ref child2) {
     term_ref children[2] = { child1, child2 };
-    return mk_term<op, term_ref*>(alloc::empty, children, children + 2);
+    return mk_term<op, term_ref*>(alloc::empty_type(), children, children + 2);
   }
 
   /** Make a term with a list of children and no payload */
   template <term_op op, typename iterator_type>
   term_ref_strong mk_term(iterator_type children_begin, iterator_type children_end) {
-    return mk_term<op, iterator_type>(alloc::empty, children_begin, children_end);
+    return mk_term<op, iterator_type>(alloc::empty_type(), children_begin, children_end);
   }
 
   /** Make a term from one child and payload */
@@ -394,7 +394,8 @@ std::ostream& operator << (std::ostream& out, const term_manager& tm) {
 
 template<>
 inline const alloc::empty_type& term_manager::payload_of<alloc::empty_type>(const term& t) const {
-  return alloc::empty;
+  static alloc::empty_type empty;
+  return empty;
 }
 
 /** IO modifier to set the term manager */
@@ -443,7 +444,7 @@ term_ref_strong term_manager::mk_term_internal(const typename term_op_traits<op>
     }
     // Allocate the payload and copy construct it
     payload_allocator* palloc = ((payload_allocator*) d_payload_memory[op]);
-    p_ref = palloc->template allocate<alloc::empty_type_constptr>(payload, 0, 0, 0);
+    p_ref = palloc->template allocate<alloc::empty_type*>(payload, 0, 0, 0);
   }
 
   // Construct the term

@@ -18,15 +18,9 @@
 namespace sal2 {
 namespace alloc {
 
-class empty_type {
-public:
-  empty_type() {}
+struct empty_type {
   bool operator == (empty_type other) const { return true; }
 };
-
-typedef empty_type* empty_type_ptr;
-typedef const empty_type* empty_type_constptr;
-static const empty_type empty;
 
 template<typename T>
 struct type_traits {
