@@ -77,15 +77,16 @@ public:
     ref(size_t ref): d_ref(ref) {}
     friend class allocator_base;
     static const size_t null_value = (size_t)-1;
+
+    /** Only for descendants */
+    size_t index() const { return d_ref; }
+
   public:
 
     /** Create undefined reference */
     ref(): d_ref(null_value) {}
     /** Copy construct */
     ref(const ref& r): d_ref(r.d_ref) {}
-
-    /** Get the reference as an index */
-    size_t index() const { return d_ref; }
 
     /** Is this null reference */
     bool is_null() const { return d_ref == null_value; }

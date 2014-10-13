@@ -19,11 +19,11 @@ namespace expr {
  * a marker that this is a term constructor, in which case the comparison is
  * done by hand.
  */
-bool term_ref_with_hash::operator == (const term_ref_with_hash& other) const {
-  if (this->ref.is_null()) {
+bool term_ref_strong::operator == (const term_ref_strong& other) const {
+  if (this->is_null()) {
     return cmp(other);
   }
-  if (other.ref.is_null()) {
+  if (other.is_null()) {
     return other.cmp(*this);
   }
   return cmp(other);
@@ -31,6 +31,7 @@ bool term_ref_with_hash::operator == (const term_ref_with_hash& other) const {
 
 term_manager::term_manager(bool typecheck)
 : d_typecheck(typecheck)
+, d_term_ids_max(1)
 {
   // Initialize all payload memories to 0
   for (unsigned i = 0; i < OP_LAST; ++ i) {
@@ -282,7 +283,7 @@ bool term_manager::typecheck(term_ref t_ref) {
   return ok;
 }
 
-void term_manager::toStream(std::ostream& out) const {
+void term_manager::to_stream(std::ostream& out) const {
   out << "Term memory:" << std::endl;
   out << d_memory << std::endl;
 
@@ -297,7 +298,7 @@ void term_manager::toStream(std::ostream& out) const {
 
   out << "Terms:" << std::endl;
   for (term_ref_hash_set::const_iterator it = d_pool.begin(); it != d_pool.end(); ++ it) {
-    out << it->ref.index() << ": " << it->ref << std::endl;
+    out << it->id() << ": " << *it << std::endl;
   }
 }
 
