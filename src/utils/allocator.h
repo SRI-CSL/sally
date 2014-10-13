@@ -194,7 +194,7 @@ private:
   struct data {
     T t_data;
     size_t e_size;
-    E e_data[];
+    E e_data[0];
 
     template <typename iterator>
     void construct(const T& data, iterator begin, iterator end, size_t extras) {
