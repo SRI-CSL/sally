@@ -194,7 +194,7 @@ private:
   struct data {
     T t_data;
     size_t e_size;
-    E e_data[];
+    E e_data[1];
 
     template <typename iterator>
     void construct(const T& data, iterator begin, iterator end, size_t extras) {
@@ -225,7 +225,8 @@ public:
       full = allocator_base::allocate<data>(sizeof(T));
     } else {
       size_t size = std::distance(begin, end);
-      full = allocator_base::allocate<data>(sizeof(data) + (size + extras)*sizeof(E));
+      // sizeof(data) already includes one E
+      full = allocator_base::allocate<data>(sizeof(data) + (size + extras - 1)*sizeof(E));
       full->e_size = size;
     }
     full->construct(t, begin, end, extras);
