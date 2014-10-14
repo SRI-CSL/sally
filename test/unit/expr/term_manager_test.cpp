@@ -119,7 +119,7 @@ BOOST_AUTO_TEST_CASE(term_manager_hashconsing) {
     for (int i = 0; i < n; ++ i) {
       term_ref_strong ref = tm.mk_term<CONST_RATIONAL>(number[i]);
       number_ref[k][i] = ref;
-      cout << ref << ": " << ref.id() << endl;
+      cout << ref << ": " << ref.id() << ", " << ref.hash() << endl;
     }
   }
 
@@ -135,7 +135,7 @@ BOOST_AUTO_TEST_CASE(term_manager_hashconsing) {
     for (int i = 1; i < n; ++ i) {
       term_ref_strong ref = tm.mk_term<TERM_ADD>(number_ref[k] + 0, number_ref[k] + i + 1);
       add_ref[k][i] = ref;
-      cout << ref << ": " << ref.id() << endl;
+      cout << ref << ": " << ref.id() << ", " << ref.hash()  << endl;
     }
   }
 
