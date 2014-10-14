@@ -141,6 +141,8 @@ public:
 
   /** By default we compare with references */
   virtual bool cmp(const term_ref_strong& other) const {
+    assert(index() != 0);
+    assert(other.index() != 0);
     return index() == other.index();
   }
 
