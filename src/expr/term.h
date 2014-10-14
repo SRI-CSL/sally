@@ -157,7 +157,7 @@ namespace utils {
 template<>
 struct hash<expr::term_ref_strong> {
   size_t operator () (const expr::term_ref_strong& ref) const {
-    return ref.id();
+    return ref.hash();
   }
 };
 
