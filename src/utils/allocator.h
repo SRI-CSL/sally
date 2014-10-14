@@ -185,7 +185,7 @@ public:
     ref(size_t ref): allocator_base::ref(ref) {}
   public:
     ref(): allocator_base::ref(-1) {}
-    ref(const allocator_base::ref ref): allocator_base::ref(ref) {}
+    ref(const allocator_base::ref& ref): allocator_base::ref(ref) {}
     static const ref null;
   };
 

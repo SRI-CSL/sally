@@ -189,9 +189,6 @@ public:
 
     typedef typename term_op_traits<op>::payload_type payload_type;
 
-    /** The hash of the reference */
-    size_t d_hash;
-
     /** The term manager */
     term_manager& d_tm;
     /** The payload */
@@ -204,8 +201,7 @@ public:
   public:
 
     term_ref_constructor(term_manager& tm, const payload_type& payload, iterator_type begin, iterator_type end)
-    : term_ref_strong()
-    , d_hash(tm.term_hash<op, iterator_type>(payload, begin, end))
+    : term_ref_strong(term_ref(), 0, tm.term_hash<op, iterator_type>(payload, begin, end))
     , d_tm(tm)
     , d_payload(payload)
     , d_begin(begin)
