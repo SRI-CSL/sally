@@ -136,6 +136,9 @@ public:
   /** The ID of the term. Doesn't change during lifetime */
   size_t id() const { return d_id; }
 
+  /** Returns the hash of the reference */
+  size_t hash() const { return d_hash; }
+
   /** By default we compare with references */
   virtual bool cmp(const term_ref_strong& other) const {
     return index() == other.index();
@@ -499,13 +502,13 @@ bool term_manager::term_ref_constructor<op, iterator_type>::cmp(const term_ref_s
     return false;
   }
 
-  // The actual term we are comparing with
-  const term& other = d_tm.term_of(other_ref);
-
   // Compare hashes first
-  if (d_hash != other.hash()) {
+  if (hash() != other_ref.hash()) {
     return false;
   }
+
+  // The actual term we are comparing with
+  const term& other = d_tm.term_of(other_ref);
 
   // Different ops => not equal
   if (op != d_tm.term_of(other_ref).op()) {
