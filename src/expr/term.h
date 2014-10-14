@@ -50,13 +50,15 @@ class term {
   /** The term kind */
   term_op d_op;
 
+  /** The hash of the term (independent of reference) */
+  size_t d_hash;
+
   /** Default constructor */
-  term(): d_op(OP_LAST) {}
+  term(): d_op(OP_LAST), d_hash(0) {}
 
   /** Construct the term with all the attributes */
-  term(term_op op)
-  : d_op(op)
-  {}
+  term(term_op op, size_t hash)
+  : d_op(op), d_hash(hash) {}
 
   friend class term_manager;
 
@@ -69,6 +71,9 @@ public:
 
   /** What kind of term is this */
   term_op op() const { return d_op; }
+
+  /** Returns the hash of the term */
+  size_t hash() const { return d_hash; }
 
   /** Number of children, if any */
   size_t size() const {
@@ -106,12 +111,18 @@ class term_ref_strong : public term_ref {
   /** Id of the term in the expression manager */
   size_t d_id;
 
+  /** Hash of the term */
+  size_t d_hash;
+
+  friend class term_manager;
+
+  term_ref_strong(const term_ref& ref, size_t id, size_t hash)
+  : term_ref(ref), d_id(id), d_hash(hash) {}
+
 public:
 
   term_ref_strong()
-  : term_ref(), d_id(0) {}
-  term_ref_strong(const term_ref& ref, size_t id)
-  : term_ref(ref), d_id(id) {}
+  : term_ref(), d_id(0), d_hash(0) {}
   term_ref_strong(const term_ref_strong& other)
   { *this = other.finalize(); }
 
@@ -119,7 +130,7 @@ public:
 
   /** Return the "real" version of self. Default, just self. */
   virtual term_ref_strong finalize() const {
-    return term_ref_strong(*this, d_id);
+    return term_ref_strong(*this, d_id, d_hash);
   }
 
   /** The ID of the term. Doesn't change during lifetime */
@@ -170,28 +181,16 @@ public:
     }
   };
 
-private:
-
-  /** Whether to typecheck or not */
-  bool d_typecheck;
-
-  /** Memory where the terms are kept */
-  alloc::allocator<term, term_ref> d_memory;
-
-  /** Memory for the payloads, one for each kind of expression */
-  alloc::allocator_base* d_payload_memory[OP_LAST];
-
-  /** Generic term constructor */
-  template <term_op op, typename iterator_type>
-  term_ref_strong mk_term_internal(const typename term_op_traits<op>::payload_type& payload, iterator_type children_begin, iterator_type children_end);
-
   /**
    * A term with all the information in the package.
    */
   template <term_op op, typename iterator_type>
-  class term_constructor : public term_ref_strong {
+  class term_ref_constructor : public term_ref_strong {
 
     typedef typename term_op_traits<op>::payload_type payload_type;
+
+    /** The hash of the reference */
+    size_t d_hash;
 
     /** The term manager */
     term_manager& d_tm;
@@ -204,8 +203,9 @@ private:
 
   public:
 
-    term_constructor(term_manager& tm, const payload_type& payload, iterator_type begin, iterator_type end)
-    : term_ref_strong(term_ref(), tm.term_hash<op, iterator_type>(payload, begin, end))
+    term_ref_constructor(term_manager& tm, const payload_type& payload, iterator_type begin, iterator_type end)
+    : term_ref_strong()
+    , d_hash(tm.term_hash<op, iterator_type>(payload, begin, end))
     , d_tm(tm)
     , d_payload(payload)
     , d_begin(begin)
@@ -220,10 +220,25 @@ private:
      * calling more than once.
      */
     virtual term_ref_strong finalize() const {
-      return d_tm.mk_term_internal<op, iterator_type>(d_payload, d_begin, d_end);
+      return d_tm.mk_term_internal<op, iterator_type>(d_payload, d_begin, d_end, d_hash);
     }
 
   };
+
+private:
+
+  /** Whether to typecheck or not */
+  bool d_typecheck;
+
+  /** Memory where the terms are kept */
+  alloc::allocator<term, term_ref> d_memory;
+
+  /** Memory for the payloads, one for each kind of expression */
+  alloc::allocator_base* d_payload_memory[OP_LAST];
+
+  /** Generic term constructor */
+  template <term_op op, typename iterator_type>
+  term_ref_strong mk_term_internal(const typename term_op_traits<op>::payload_type& payload, iterator_type children_begin, iterator_type children_end, size_t hash);
 
   /** The underlying hash set */
   typedef boost::unordered_set<term_ref_strong, utils::hash<term_ref_strong> > term_ref_hash_set;
@@ -418,7 +433,7 @@ size_t term_manager::term_hash(const typename term_op_traits<op>::payload_type& 
 
   // If there are children, add to the hash
   for (iterator_type it = begin; it != end; ++ it) {
-    hasher.add(id_of(*it));
+    hasher.add(term_of(*it).hash());
   }
 
   // If there is a payload, add it to the hash
@@ -430,7 +445,7 @@ size_t term_manager::term_hash(const typename term_op_traits<op>::payload_type& 
 }
 
 template <term_op op, typename iterator_type>
-term_ref_strong term_manager::mk_term_internal(const typename term_op_traits<op>::payload_type& payload, iterator_type begin, iterator_type end) {
+term_ref_strong term_manager::mk_term_internal(const typename term_op_traits<op>::payload_type& payload, iterator_type begin, iterator_type end, size_t hash) {
 
   typedef typename term_op_traits<op>::payload_type payload_type;
   typedef alloc::allocator<payload_type, alloc::empty_type> payload_allocator;
@@ -451,10 +466,10 @@ term_ref_strong term_manager::mk_term_internal(const typename term_op_traits<op>
   term_ref t_ref;
   if (alloc::type_traits<payload_type>::is_empty) {
     // No payload, 0 for extras
-    t_ref = d_memory.allocate(term(op), begin, end, 0);
+    t_ref = d_memory.allocate(term(op, hash), begin, end, 0);
   } else {
     // Pyaload active, add a child
-    t_ref = d_memory.allocate(term(op), begin, end, 1);
+    t_ref = d_memory.allocate(term(op, hash), begin, end, 1);
     *alloc::allocator<term, term_ref>::object_end(d_memory.object_of(t_ref)) = p_ref;
   }
 
@@ -470,18 +485,18 @@ term_ref_strong term_manager::mk_term_internal(const typename term_op_traits<op>
   d_term_ids[t_ref] = id;
 
   // Get the reference
-  return term_ref_strong(t_ref, id);
+  return term_ref_strong(t_ref, id, hash);
 }
 
 template <term_op op, typename iterator_type>
 term_ref_strong term_manager::mk_term(const typename term_op_traits<op>::payload_type& payload, iterator_type begin, iterator_type end) {
   // Insert and return the actual term_ref
-  return *d_pool.insert(term_constructor<op, iterator_type>(*this, payload, begin, end)).first;
+  return *d_pool.insert(term_ref_constructor<op, iterator_type>(*this, payload, begin, end)).first;
 }
 
 /** Compare to a term op without using the hash. */
 template <term_op op, typename iterator_type>
-bool term_manager::term_constructor<op, iterator_type>::cmp(const term_ref_strong& other_ref) const {
+bool term_manager::term_ref_constructor<op, iterator_type>::cmp(const term_ref_strong& other_ref) const {
 
   // If the other reference is null, we're comparing to default => not equal
   if (other_ref.is_null()) {
@@ -490,6 +505,11 @@ bool term_manager::term_constructor<op, iterator_type>::cmp(const term_ref_stron
 
   // The actual term we are comparing with
   const term& other = d_tm.term_of(other_ref);
+
+  // Compare hashes first
+  if (d_hash != other.hash()) {
+    return false;
+  }
 
   // Different ops => not equal
   if (op != d_tm.term_of(other_ref).op()) {

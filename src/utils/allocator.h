@@ -216,7 +216,11 @@ private:
 
 public:
 
-  /** Allocate T with children from begin .. end, with potentially extra children */
+  /**
+   * Allocate T with children from begin .. end, with potentially extra
+   * children. The extras are not destructed automatically so use only for
+   * simple types E.
+   */
   template<typename iterator>
   ref allocate(const T& t, iterator begin, iterator end, size_t extras) {
     data* full;
