@@ -19,7 +19,7 @@ namespace expr {
  * a marker that this is a term constructor, in which case the comparison is
  * done by hand.
  */
-bool term_ref_strong::operator == (const term_ref_strong& other) const {
+bool term_ref_fat::operator == (const term_ref_fat& other) const {
   if (this->is_null()) {
     return cmp(other);
   }
@@ -31,8 +31,10 @@ bool term_ref_strong::operator == (const term_ref_strong& other) const {
 
 term_manager::term_manager(bool typecheck)
 : d_typecheck(typecheck)
-, d_term_ids_max(1)
 {
+  // The null id
+  new_term_id();
+
   // Initialize all payload memories to 0
   for (unsigned i = 0; i < OP_LAST; ++ i) {
     d_payload_memory[i] = 0;
@@ -190,6 +192,45 @@ term_ref term_manager::type_of(const term& t) const {
   return term_ref();
 }
 
+term_ref_strong::term_ref_strong(term_manager* tm, const term_ref_fat& ref)
+: term_ref_fat(ref)
+, d_tm(tm)
+{
+  if (d_tm != 0) {
+    d_tm->attach(id());
+  }
+}
+
+term_ref_strong::term_ref_strong(const term_ref_strong& other)
+: term_ref_fat(other)
+, d_tm(other.d_tm)
+{
+  if (d_tm != 0) {
+    d_tm->attach(id());
+  }
+}
+
+term_ref_strong::~term_ref_strong() {
+  if (d_tm != 0) {
+    d_tm->detach(id());
+  }
+}
+
+term_ref_strong& term_ref_strong::operator =(const term_ref_strong& other) {
+  if (this != &other) {
+    if (d_tm != 0) {
+      d_tm->detach(id());
+    }
+    d_tm = other.d_tm;
+    term_ref_fat::operator=(other);
+    if (d_tm != 0) {
+      d_tm->attach(id());
+    }
+  }
+  return *this;
+}
+
+
 term_ref term_manager::tcc_of(const term& t) const {
   tcc_map::const_iterator find = d_tcc_map.find(ref_of(t));
   if (find == d_tcc_map.end()) {
@@ -298,7 +339,7 @@ void term_manager::to_stream(std::ostream& out) const {
 
   out << "Terms:" << std::endl;
   for (term_ref_hash_set::const_iterator it = d_pool.begin(); it != d_pool.end(); ++ it) {
-    out << it->id() << ": " << *it << std::endl;
+    out << "[id: " << it->id() << ", ref_count = " << d_term_refcount[it->id()] << "] : " << *it << std::endl;
   }
 }
 

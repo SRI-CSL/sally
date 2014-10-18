@@ -22,6 +22,10 @@
 namespace sal2 {
 namespace expr {
 
+// Forward declaration
+class term_manager;
+class term_ref_strong;
+
 /** Term references */
 class term_ref : public alloc::allocator_base::ref {
   typedef alloc::allocator_base::ref base_ref;
@@ -41,6 +45,86 @@ std::ostream& operator << (std::ostream& out, const term_ref& t_ref) {
   t_ref.to_stream(out);
   return out;
 }
+
+/**
+ * References with additional data, mainly for internal term manager use.
+ */
+class term_ref_fat : public term_ref {
+
+protected:
+
+  /** Id of the term in the expression manager */
+  size_t d_id;
+
+  /** Hash of the term */
+  size_t d_hash;
+
+  friend class term_manager;
+
+  term_ref_fat(const term_ref& ref, size_t id, size_t hash)
+  : term_ref(ref), d_id(id), d_hash(hash) {}
+
+public:
+
+  /** Construct null reference */
+  term_ref_fat()
+  : term_ref(), d_id(0), d_hash(0) {}
+  /** Construct a copy, while finalizing the other reference if needed */
+  term_ref_fat(const term_ref_fat& other) {
+    *this = other.finalize();
+  }
+
+  virtual ~term_ref_fat() {}
+
+  /** Return the "real" version of self. Default, just self. */
+  virtual term_ref_fat finalize() const {
+    return term_ref_fat(*this, d_id, d_hash);
+  }
+
+  /** The ID of the term. Doesn't change during lifetime */
+  size_t id() const { return d_id; }
+
+  /** Returns the hash of the reference */
+  size_t hash() const { return d_hash; }
+
+  /** By default we compare with references */
+  virtual bool cmp(const term_ref_fat& other) const {
+    assert(index() != 0);
+    assert(other.index() != 0);
+    return index() == other.index();
+  }
+
+  /** Comparison with cmp. If any is null, we use it for this->cmp */
+  bool operator == (const term_ref_fat& ref) const;
+};
+
+/**
+ * Strong reference that also does reference counting.
+ */
+class term_ref_strong : public term_ref_fat {
+
+    /** Responsible term manager */
+    term_manager* d_tm;
+
+    friend class term_manager;
+
+    term_ref_strong(term_manager* tm, const term_ref_fat& ref);
+
+  public:
+
+    /** Construct null reference */
+    term_ref_strong()
+    : term_ref_fat(), d_tm(0) {}
+
+    /** Construct a copy */
+    term_ref_strong(const term_ref_strong& other);
+
+    /** Destruct */
+    ~term_ref_strong();
+
+    /** Assignment */
+    term_ref_strong& operator = (const term_ref_strong& other);
+};
 
 /** Terms */
 class term {
@@ -104,68 +188,6 @@ std::ostream& operator << (std::ostream& out, const term& t) {
 }
 
 /**
- * Strong references.
- */
-class term_ref_strong : public term_ref {
-
-  /** Id of the term in the expression manager */
-  size_t d_id;
-
-  /** Hash of the term */
-  size_t d_hash;
-
-  friend class term_manager;
-
-  term_ref_strong(const term_ref& ref, size_t id, size_t hash)
-  : term_ref(ref), d_id(id), d_hash(hash) {}
-
-public:
-
-  term_ref_strong()
-  : term_ref(), d_id(0), d_hash(0) {}
-  term_ref_strong(const term_ref_strong& other)
-  { *this = other.finalize(); }
-
-  virtual ~term_ref_strong() {}
-
-  /** Return the "real" version of self. Default, just self. */
-  virtual term_ref_strong finalize() const {
-    return term_ref_strong(*this, d_id, d_hash);
-  }
-
-  /** The ID of the term. Doesn't change during lifetime */
-  size_t id() const { return d_id; }
-
-  /** Returns the hash of the reference */
-  size_t hash() const { return d_hash; }
-
-  /** By default we compare with references */
-  virtual bool cmp(const term_ref_strong& other) const {
-    assert(index() != 0);
-    assert(other.index() != 0);
-    return index() == other.index();
-  }
-
-  /** Comparison with cmp. If any is null, we use it for this->cmp */
-  bool operator == (const term_ref_strong& ref) const;
-};
-
-}
-
-namespace utils {
-
-template<>
-struct hash<expr::term_ref_strong> {
-  size_t operator () (const expr::term_ref_strong& ref) const {
-    return ref.hash();
-  }
-};
-
-}
-
-namespace expr {
-
-/**
  * Term manager controls the terms, allocation and garbage collection. All
  * terms are defined in term_ops.h.
  */
@@ -186,16 +208,20 @@ public:
     }
   };
 
+  struct term_ref_fat_hasher {
+    size_t operator () (const term_ref_fat& ref) const {
+      return ref.hash();
+    }
+  };
+
   /**
    * A term with all the information in the package.
    */
   template <term_op op, typename iterator_type>
-  class term_ref_constructor : public term_ref_strong {
+  class term_ref_constructor : public term_ref_fat {
 
     typedef typename term_op_traits<op>::payload_type payload_type;
 
-    /** The term manager */
-    term_manager& d_tm;
     /** The payload */
     const payload_type& d_payload;
     /** The first child */
@@ -203,24 +229,26 @@ public:
     /** One past last child */
     iterator_type d_end;
 
+    term_manager& d_tm;
+
   public:
 
     term_ref_constructor(term_manager& tm, const payload_type& payload, iterator_type begin, iterator_type end)
-    : term_ref_strong(term_ref(), 0, tm.term_hash<op, iterator_type>(payload, begin, end))
-    , d_tm(tm)
+    : term_ref_fat(term_ref(), 0, tm.term_hash<op, iterator_type>(payload, begin, end))
     , d_payload(payload)
     , d_begin(begin)
     , d_end(end)
+    , d_tm(tm)
     {}
 
     /** Compare to a term op without using the hash. */
-    bool cmp(const term_ref_strong& other_ref) const;
+    bool cmp(const term_ref_fat& other_ref) const;
 
     /**
      * Actually construct the reference. This is remembered and guarded from
      * calling more than once.
      */
-    virtual term_ref_strong finalize() const {
+    virtual term_ref_fat finalize() const {
       return d_tm.mk_term_internal<op, iterator_type>(d_payload, d_begin, d_end, d_hash);
     }
 
@@ -239,10 +267,10 @@ private:
 
   /** Generic term constructor */
   template <term_op op, typename iterator_type>
-  term_ref_strong mk_term_internal(const typename term_op_traits<op>::payload_type& payload, iterator_type children_begin, iterator_type children_end, size_t hash);
+  term_ref_fat mk_term_internal(const typename term_op_traits<op>::payload_type& payload, iterator_type children_begin, iterator_type children_end, size_t hash);
 
   /** The underlying hash set */
-  typedef boost::unordered_set<term_ref_strong, utils::hash<term_ref_strong> > term_ref_hash_set;
+  typedef boost::unordered_set<term_ref_fat, term_ref_fat_hasher> term_ref_hash_set;
 
   /** The pool of existing terms */
   term_ref_hash_set d_pool;
@@ -256,7 +284,7 @@ private:
   /** Real type */
   term_ref d_realType;
 
-  typedef boost::unordered_map<term_ref, term_ref, term_ref_hasher > tcc_map;
+  typedef boost::unordered_map<term_ref, term_ref, term_ref_hasher> tcc_map;
 
   /**
    * Map from terms to their type-checking conditions. If the entry is empty
@@ -264,20 +292,39 @@ private:
    */
   tcc_map d_tcc_map;
 
-  /** Typecheck the term (adds to TCC if needed) */
+  /** Type-check the term (adds to TCC if needed) */
   bool typecheck(term_ref t);
 
-  /** Compute the has of the term parts */
+  /** Compute the hash of the term parts */
   template <term_op op, typename iterator_type>
   size_t term_hash(const typename term_op_traits<op>::payload_type& payload, iterator_type begin, iterator_type end);
 
-  /** Max id of any term */
-  size_t d_term_ids_max;
-
-  typedef boost::unordered_map<term_ref, size_t, term_ref_hasher > tref_id_map;
+  typedef boost::unordered_map<term_ref, size_t, term_ref_hasher> tref_id_map;
 
   /** Map from term references to their ids */
   tref_id_map d_term_ids;
+
+
+  /** Reference counts */
+  std::vector<size_t> d_term_refcount;
+
+  friend class term_ref_strong;
+
+  void attach(size_t id) {
+    d_term_refcount[id] ++;
+  }
+
+  void detach(size_t id) {
+    assert(d_term_refcount[id] > 0);
+    d_term_refcount[id] --;
+  }
+
+  /** Get a new id of the term */
+  size_t new_term_id() {
+    size_t id = d_term_refcount.size();
+    d_term_refcount.push_back(0);
+    return id;
+  }
 
 public:
 
@@ -446,7 +493,7 @@ size_t term_manager::term_hash(const typename term_op_traits<op>::payload_type& 
 }
 
 template <term_op op, typename iterator_type>
-term_ref_strong term_manager::mk_term_internal(const typename term_op_traits<op>::payload_type& payload, iterator_type begin, iterator_type end, size_t hash) {
+term_ref_fat term_manager::mk_term_internal(const typename term_op_traits<op>::payload_type& payload, iterator_type begin, iterator_type end, size_t hash) {
 
   typedef typename term_op_traits<op>::payload_type payload_type;
   typedef alloc::allocator<payload_type, alloc::empty_type> payload_allocator;
@@ -477,27 +524,29 @@ term_ref_strong term_manager::mk_term_internal(const typename term_op_traits<op>
   // Type-check the term
   if (d_typecheck) {
     if (!typecheck(t_ref)) {
-      return term_ref_strong();
+      return term_ref_fat();
     }
   }
 
   // Set the id of the term and add to terms
-  size_t id = d_term_ids_max ++;
+  size_t id = new_term_id();
   d_term_ids[t_ref] = id;
 
+
   // Get the reference
-  return term_ref_strong(t_ref, id, hash);
+  return term_ref_fat(t_ref, id, hash);
 }
 
 template <term_op op, typename iterator_type>
 term_ref_strong term_manager::mk_term(const typename term_op_traits<op>::payload_type& payload, iterator_type begin, iterator_type end) {
   // Insert and return the actual term_ref
-  return *d_pool.insert(term_ref_constructor<op, iterator_type>(*this, payload, begin, end)).first;
+  term_ref_fat fat_ref = *d_pool.insert(term_ref_constructor<op, iterator_type>(*this, payload, begin, end)).first;
+  return term_ref_strong(this, fat_ref);
 }
 
 /** Compare to a term op without using the hash. */
 template <term_op op, typename iterator_type>
-bool term_manager::term_ref_constructor<op, iterator_type>::cmp(const term_ref_strong& other_ref) const {
+bool term_manager::term_ref_constructor<op, iterator_type>::cmp(const term_ref_fat& other_ref) const {
 
   // If the other reference is null, we're comparing to default => not equal
   if (other_ref.is_null()) {

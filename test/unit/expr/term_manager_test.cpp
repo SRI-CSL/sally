@@ -114,12 +114,12 @@ BOOST_AUTO_TEST_CASE(term_manager_hashconsing) {
     number[i] = rational(i, i + 1);
   }
 
-  term_ref_strong number_ref[2][n];
+  term_ref number_ref[2][n];
   for (int k = 0; k < 2; ++ k) {
     for (int i = 0; i < n; ++ i) {
-      term_ref_strong ref = tm.mk_term<CONST_RATIONAL>(number[i]);
+      term_ref ref = tm.mk_term<CONST_RATIONAL>(number[i]);
       number_ref[k][i] = ref;
-      cout << ref << ": " << ref.id() << ", " << ref.hash() << endl;
+      cout << ref << endl;
     }
   }
 
@@ -145,6 +145,8 @@ BOOST_AUTO_TEST_CASE(term_manager_hashconsing) {
     }
     BOOST_CHECK_EQUAL(add_ref[0][i], add_ref[1][i]);
   }
+
+  cout << "Term manager pre-destructor: " << tm << endl;
 
 }
 
