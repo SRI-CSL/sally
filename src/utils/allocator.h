@@ -73,10 +73,10 @@ public:
     friend class allocator_base;
     static const size_t null_value = (size_t)-1;
 
+  public:
+
     /** Only for descendants */
     size_t index() const { return d_ref; }
-
-  public:
 
     /** Create undefined reference */
     ref(): d_ref(null_value) {}
