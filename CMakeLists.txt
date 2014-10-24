@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 2.6)
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 project(sal2 CXX)
 enable_testing()
@@ -23,6 +24,14 @@ if (GMP_LIBRARY)
   message(STATUS "GMP library: " ${GMP_LIBRARY})
 else()
   MESSAGE(FATAL_ERROR "Could not the GMP number library (sudo apt-get libgmp-dev)")
+endif()
+
+# Find Yices
+find_package(Yices2)
+if (YICES2_LIBRARY)
+  message(STATUS "Yices2 library: " ${YICES2_LIBRARY})
+else()
+  MESSAGE(FATAL_ERROR "Could not find the yices2")
 endif()
 
 # Add our sources to the include

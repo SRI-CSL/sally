@@ -27,7 +27,7 @@ class term_manager;
 class term_ref_strong;
 
 /** Term references */
-class term_ref : protected alloc::allocator_base::ref {
+class term_ref : public alloc::allocator_base::ref {
   typedef alloc::allocator_base::ref base_ref;
 public:
   term_ref(): base_ref() {}
