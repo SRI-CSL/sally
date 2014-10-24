@@ -37,20 +37,23 @@ public:
   : d_tm(tm)
   {}
 
-  virtual ~solver() = 0;
+  virtual
+  ~solver() {};
 
   /** Assert the formula */
-  void assert_formula(const expr::term_ref& f) = 0;
+  virtual
+  void add(const expr::term_ref& f) = 0;
 
   /** Check for satisfiability */
-  result check_sat() = 0;
+  virtual
+  result check() = 0;
 
   /** Generalize a satisfiable answer */
+  virtual
   expr::term_ref_strong generalize() = 0;
 
-  /**
-   * Interpolate an unsatisfiable answer, i.e. get
-   */
+  /** Interpolate an unsatisfiable answer */
+  virtual
   void interpolate(std::vector<expr::term_ref_strong>& ) = 0;
 };
 

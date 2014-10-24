@@ -1,4 +1,4 @@
-set(sal2_SRC_DIRS utils expr)
+set(sal2_SRC_DIRS utils expr smt)
 
 foreach(DIR ${sal2_SRC_DIRS})
   add_subdirectory(${DIR})
@@ -12,4 +12,4 @@ foreach(DIR ${sal2_SRC_DIRS})
   set(sal2_LIBS ${DIR} ${sal2_LIBS})
 endforeach(DIR)
 
-target_link_libraries(sal2 ${sal2_LIBS} ${Boost_LIBRARIES} ${GMP_LIBRARY})
+target_link_libraries(sal2 ${sal2_LIBS} ${Boost_LIBRARIES} ${GMP_LIBRARY} ${YICES2_LIBRARY})

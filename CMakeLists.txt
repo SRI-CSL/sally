@@ -35,7 +35,7 @@ else()
 endif()
 
 # Add our sources to the include
-include_directories(${sal2_SOURCE_DIR}/src)
+include_directories(${sal2_SOURCE_DIR}/src ${YICES2_INCLUDE_DIR})
 
 # Configure the subdirectories
 add_subdirectory(src)

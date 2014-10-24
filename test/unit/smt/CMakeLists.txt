@@ -1,0 +1,1 @@
+add_library(smt_test yices2_test.cpp)

@@ -7,13 +7,13 @@ add_executable(sal2_test test_runner.cpp)
 add_dependencies(check sal2_test)
 
 # Original sal2 libraries
-foreach (DIR utils expr)
+foreach (DIR utils expr smt)
   link_directories(${sal2_BINARY_DIR}/src/${DIR})
   set(sal2_test_LIBS ${DIR} ${sal2_test_LIBS})
 endforeach(DIR)
 
 # The test libraries
-foreach (DIR expr)
+foreach (DIR expr smt)
   add_subdirectory(${DIR})
   # We need to add the options, to include the whole library, otherwise boost
   # auto-registration of tests doesn't work.
@@ -21,7 +21,7 @@ foreach (DIR expr)
 endforeach(DIR)
 
 # Link the thing
-target_link_libraries(sal2_test ${sal2_test_LIBS} ${Boost_LIBRARIES} ${GMP_LIBRARY})
+target_link_libraries(sal2_test ${sal2_test_LIBS} ${Boost_LIBRARIES} ${GMP_LIBRARY} ${YICES2_LIBRARY})
 
 # Add the test
 add_test(unit_tests sal2_test -i)
