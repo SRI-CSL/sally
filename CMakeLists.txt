@@ -31,7 +31,7 @@ find_package(Yices2)
 if (YICES2_LIBRARY)
   message(STATUS "Yices2 library: " ${YICES2_LIBRARY})
 else()
-  MESSAGE(FATAL_ERROR "Could not find the yices2")
+  MESSAGE(FATAL_ERROR "Could not find the yices2 library")
 endif()
 
 # Add our sources to the include
