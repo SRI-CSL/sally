@@ -5,29 +5,209 @@
  *      Author: dejan
  */
 
+#include "expr/term.h"
+
+#include <boost/unordered_map.hpp>
+
 #include "smt/yices2.h"
 
 #include "yices.h"
 
-using namespace sal2;
-using namespace smt;
+namespace sal2 {
+namespace smt {
+
+class yices2_internal {
+
+  expr::term_manager& d_tm;
+
+  static int instances;
+
+  type_t d_bool_type;
+  type_t d_int_type;
+  type_t d_real_type;
+
+  context_t *d_ctx;
+
+  std::vector<expr::term_ref_strong> d_assertions;
+
+  typedef boost::unordered_map<expr::term_ref, term_t, expr::term_ref_hasher> term_cache;
+
+  term_cache d_term_cache;
+
+public:
+
+  yices2_internal(expr::term_manager& tm);
+  ~yices2_internal();
+
+  term_t to_yices2_term(const expr::term_ref& ref);
+  term_t mk_yices2_term(expr::term_op op, size_t n, term_t* children);
+
+  void add(const expr::term_ref_strong& ref);
+  solver::result check();
+};
+
+int yices2_internal::instances = 0;
+
+yices2_internal::yices2_internal(expr::term_manager& tm)
+: d_tm(tm)
+{
+  // Initialize
+  if (instances == 0) {
+    yices_init();
+    instances ++;
+  }
+
+  // The basic types
+  d_bool_type = yices_bool_type();
+  d_int_type = yices_int_type();
+  d_real_type = yices_real_type();
+
+  // The context
+  d_ctx = yices_new_context(NULL);
+}
+
+yices2_internal::~yices2_internal() {
+
+  // The context
+  yices_free_context(d_ctx);
+
+  // Cleanup if the last one
+  instances--;
+  if (instances == 0) {
+    yices_exit();
+  }
+}
+
+term_t yices2_internal::mk_yices2_term(expr::term_op op, size_t n, term_t* children) {
+  term_t result = NULL_TERM;
+
+  switch (op) {
+  case expr::TERM_AND:
+    result = yices_and(n, children);
+    break;
+  case expr::TERM_OR:
+    result = yices_or(n, children);
+    break;
+  case expr::TERM_NOT:
+    assert(n == 1);
+    result = yices_not(children[0]);
+    break;
+  case expr::TERM_IMPLIES:
+    assert(n == 2);
+    result = yices_implies(children[0], children[1]);
+    break;
+  case expr::TERM_XOR:
+    result = yices_xor(n, children);
+    break;
+  case expr::TERM_ADD:
+    result = yices_sum(n, children);
+    break;
+  case expr::TERM_SUB:
+    assert(n == 2);
+    result = yices_sub(children[0], children[1]);
+    break;
+  case expr::TERM_MUL:
+    result = yices_product(n, children);
+    break;
+  case expr::TERM_DIV:
+    result = yices_division(children[0], children[1]);
+    break;
+  default:
+    assert(false);
+  }
+
+  return result;
+}
+
+term_t yices2_internal::to_yices2_term(const expr::term_ref& ref) {
+
+  term_t result = NULL_TERM;
+
+  // Check if in cache already
+  term_cache::const_iterator find = d_term_cache.find(ref);
+  if (find != d_term_cache.end()) {
+    return find->second;
+  }
+
+  // The term
+  const expr::term& t = d_tm.term_of(ref);
+
+  switch (t.op()) {
+  case expr::TYPE_BOOL:
+    result = d_bool_type;
+    break;
+  case expr::TYPE_INTEGER:
+    result = d_int_type;
+    break;
+  case expr::TYPE_REAL:
+    result = d_real_type;
+    break;
+  case expr::VARIABLE:
+    // Should have been added using new_var()
+    assert(false);
+    break;
+  case expr::CONST_BOOL:
+    result = d_tm.payload_of<bool>(t) ? yices_true() : yices_false();
+    break;
+  case expr::TERM_AND:
+  case expr::TERM_OR:
+  case expr::TERM_NOT:
+  case expr::TERM_IMPLIES:
+  case expr::TERM_XOR:
+  case expr::TERM_ADD:
+  case expr::TERM_SUB:
+  case expr::TERM_MUL:
+  case expr::TERM_DIV: {
+    term_t children[t.size()];
+    for (size_t i = 0; i < t.size(); ++ i) {
+      children[i] = to_yices2_term(t[i]);
+    }
+    result = mk_yices2_term(t.op(), t.size(), children);
+    break;
+  }
+  case expr::CONST_RATIONAL:
+    result = yices_mpq(d_tm.payload_of<expr::rational>(t).mpq().get_mpq_t());
+    break;
+  default:
+    assert(false);
+  }
+
+  return result;
+}
+
+void yices2_internal::add(const expr::term_ref_strong& ref) {
+  d_assertions.push_back(ref);
+  term_t yices_term = to_yices2_term(ref);
+  yices_assert_formula(d_ctx, yices_term);
+}
+
+solver::result yices2_internal::check() {
+  smt_status_t status = yices_check_context(d_ctx, 0);
+  if (status == STATUS_SAT) {
+    return solver::SAT;
+  } else if (status == STATUS_UNSAT) {
+    return solver::UNSAT;
+  } else {
+    return solver::UNKNOWN;
+  }
+}
 
 yices2::yices2(expr::term_manager& tm)
 : solver(tm)
 {
-
+  d_internal = new yices2_internal(tm);
 }
 
 yices2::~yices2() {
-
+  delete d_internal;
 }
 
-void yices2::add(const expr::term_ref& f) {
-
+void yices2::add(const expr::term_ref_strong& f) {
+  d_internal->add(f);
 }
 
 solver::result yices2::check() {
-  return UNKNOWN;
+  return d_internal->check();
 }
 
 expr::term_ref_strong yices2::generalize() {
@@ -37,3 +217,8 @@ expr::term_ref_strong yices2::generalize() {
 void yices2::interpolate(std::vector<expr::term_ref_strong>& ) {
 
 }
+
+}
+}
+
+

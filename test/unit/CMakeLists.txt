@@ -21,7 +21,7 @@ foreach (DIR expr smt)
 endforeach(DIR)
 
 # Link the thing
-target_link_libraries(sal2_test ${sal2_test_LIBS} ${Boost_LIBRARIES} ${GMP_LIBRARY} ${YICES2_LIBRARY})
+target_link_libraries(sal2_test ${sal2_test_LIBS} ${Boost_LIBRARIES} ${GMP_LIBRARY} ${YICES_LIBRARY})
 
 # Add the test
 add_test(unit_tests sal2_test -i)

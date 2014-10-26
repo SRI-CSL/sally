@@ -45,6 +45,10 @@ public:
 
   /** Comparison */
   bool operator == (const rational& q) const { return this->cmp(q) == 0; }
+
+  const mpq_class& mpq() const {
+    return d_gmp_rat;
+  }
 };
 
 inline

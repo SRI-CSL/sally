@@ -47,6 +47,10 @@ enum term_op {
   TERM_SUB,
   TERM_MUL,
   TERM_DIV,
+  TERM_LEQ,
+  TERM_LT,
+  TERM_GEQ,
+  TERM_GT,
 
   // Marker for the last
   OP_LAST
@@ -112,6 +116,10 @@ std::ostream& operator << (std::ostream& out, term_op op) {
     SWITCH_TO_STRING(TERM_SUB)
     SWITCH_TO_STRING(TERM_MUL)
     SWITCH_TO_STRING(TERM_DIV)
+    SWITCH_TO_STRING(TERM_LEQ)
+    SWITCH_TO_STRING(TERM_LT)
+    SWITCH_TO_STRING(TERM_GEQ)
+    SWITCH_TO_STRING(TERM_GT)
     SWITCH_TO_STRING(OP_LAST)
   default:
     out << "unknown";

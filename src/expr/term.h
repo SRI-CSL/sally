@@ -36,6 +36,17 @@ public:
   void to_stream(std::ostream& out) const;
 };
 
+/**
+ * Hasher for term references.
+ * Do not use for permanent caches unless you plan to do garbage collection
+ * manually.
+ */
+struct term_ref_hasher {
+  size_t operator () (const term_ref& ref) const {
+    return ref.index();
+  }
+};
+
 /** Output operator for term references */
 inline
 std::ostream& operator << (std::ostream& out, const term_ref& t_ref) {
@@ -121,6 +132,13 @@ class term_ref_strong : public term_ref_fat {
 
     /** Assignment */
     term_ref_strong& operator = (const term_ref_strong& other);
+};
+
+/** Hashing for terms. */
+struct term_ref_strong_hasher {
+  size_t operator () (const term_ref_strong& ref) const {
+    return ref.hash();
+  }
 };
 
 /** Terms */

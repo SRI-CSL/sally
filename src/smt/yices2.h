@@ -12,13 +12,15 @@
 namespace sal2 {
 namespace smt {
 
+class yices2_internal;
+
 class yices2 : public solver {
-  void* yices_context;
+  yices2_internal* d_internal;
 public:
   yices2(expr::term_manager& tm);
   ~yices2();
 
-  void add(const expr::term_ref& f);
+  void add(const expr::term_ref_strong& f);
   result check();
   expr::term_ref_strong generalize();
   void interpolate(std::vector<expr::term_ref_strong>& out);

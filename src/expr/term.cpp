@@ -92,6 +92,14 @@ std::string get_smt_keyword(term_op op) {
     return "*";
   case TERM_DIV:
     return "/";
+  case TERM_LEQ:
+    return "<=";
+  case TERM_LT:
+    return "<";
+  case TERM_GEQ:
+    return ">=";
+  case TERM_GT:
+    return ">";
   case TYPE_BOOL:
     return "Bool";
   case TYPE_INTEGER:
@@ -125,7 +133,12 @@ void term::to_stream_smt(std::ostream& out, const term_manager& tm) const {
   case TERM_ADD:
   case TERM_SUB:
   case TERM_MUL:
-  case TERM_DIV: {
+  case TERM_DIV:
+  case TERM_LEQ:
+  case TERM_LT:
+  case TERM_GEQ:
+  case TERM_GT:
+  {
     if (size() > 0) {
       out << "(";
     }
@@ -186,6 +199,11 @@ term_ref term_manager::type_of(const term& t) const {
   case TERM_SUB:
   case TERM_DIV:
     return d_realType;
+  case TERM_LEQ:
+  case TERM_LT:
+  case TERM_GEQ:
+  case TERM_GT:
+    return d_booleanType;
   default:
     assert(false);
   }
@@ -303,6 +321,10 @@ bool term_manager::typecheck(term_ref t_ref) {
     }
     break;
   case TERM_SUB:
+  case TERM_LEQ:
+  case TERM_LT:
+  case TERM_GEQ:
+  case TERM_GT:
     if (t.size() != 2) {
       ok = false;
     } else {

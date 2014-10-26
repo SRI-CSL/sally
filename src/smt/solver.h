@@ -42,7 +42,7 @@ public:
 
   /** Assert the formula */
   virtual
-  void add(const expr::term_ref& f) = 0;
+  void add(const expr::term_ref_strong& f) = 0;
 
   /** Check for satisfiability */
   virtual
