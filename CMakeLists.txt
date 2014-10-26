@@ -27,15 +27,11 @@ else()
 endif()
 
 # Find Yices
+SET(YICES_HOME CACHE STRING "Yices2 installation directory")
 find_package(Yices2)
-if (YICES2_LIBRARY)
-  message(STATUS "Yices2 library: " ${YICES2_LIBRARY})
-else()
-  MESSAGE(FATAL_ERROR "Could not find the yices2 library")
-endif()
 
 # Add our sources to the include
-include_directories(${sal2_SOURCE_DIR}/src ${YICES2_INCLUDE_DIR})
+include_directories(${sal2_SOURCE_DIR}/src ${YICES_INCLUDE_DIR})
 
 # Configure the subdirectories
 add_subdirectory(src)
