@@ -57,6 +57,22 @@ public:
   void interpolate(std::vector<expr::term_ref_strong>& ) = 0;
 };
 
+inline
+std::ostream& operator << (std::ostream& out, solver::result result) {
+  switch (result) {
+  case solver::SAT:
+    out << "sat";
+    break;
+  case solver::UNSAT:
+    out << "unsat";
+    break;
+  case solver::UNKNOWN:
+    out << "unknown";
+    break;
+  }
+  return out;
+}
+
 /**
  * Factory for creating SMT solvers.
  */

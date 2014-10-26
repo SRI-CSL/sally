@@ -40,6 +40,8 @@ public:
   ~yices2_internal();
 
   term_t to_yices2_term(const expr::term_ref& ref);
+  type_t to_yices2_type(const expr::term_ref& ref);
+
   term_t mk_yices2_term(expr::term_op op, size_t n, term_t* children);
 
   void add(const expr::term_ref_strong& ref);
@@ -119,6 +121,27 @@ term_t yices2_internal::mk_yices2_term(expr::term_op op, size_t n, term_t* child
   return result;
 }
 
+type_t yices2_internal::to_yices2_type(const expr::term_ref& ref) {
+
+  type_t result = NULL_TERM;
+
+  switch (d_tm.term_of(ref).op()) {
+  case expr::TYPE_BOOL:
+    result = d_bool_type;
+    break;
+  case expr::TYPE_INTEGER:
+    result = d_int_type;
+    break;
+  case expr::TYPE_REAL:
+    result = d_real_type;
+    break;
+  default:
+    assert(false);
+  }
+
+  return result;
+}
+
 term_t yices2_internal::to_yices2_term(const expr::term_ref& ref) {
 
   term_t result = NULL_TERM;
@@ -133,21 +156,15 @@ term_t yices2_internal::to_yices2_term(const expr::term_ref& ref) {
   const expr::term& t = d_tm.term_of(ref);
 
   switch (t.op()) {
-  case expr::TYPE_BOOL:
-    result = d_bool_type;
-    break;
-  case expr::TYPE_INTEGER:
-    result = d_int_type;
-    break;
-  case expr::TYPE_REAL:
-    result = d_real_type;
-    break;
   case expr::VARIABLE:
-    // Should have been added using new_var()
-    assert(false);
+    result = yices_new_uninterpreted_term(to_yices2_type(t[0]));
+    yices_set_term_name(result, d_tm.payload_of<std::string>(t).c_str());
     break;
   case expr::CONST_BOOL:
     result = d_tm.payload_of<bool>(t) ? yices_true() : yices_false();
+    break;
+  case expr::CONST_RATIONAL:
+    result = yices_mpq(d_tm.payload_of<expr::rational>(t).mpq().get_mpq_t());
     break;
   case expr::TERM_AND:
   case expr::TERM_OR:
@@ -157,7 +174,12 @@ term_t yices2_internal::to_yices2_term(const expr::term_ref& ref) {
   case expr::TERM_ADD:
   case expr::TERM_SUB:
   case expr::TERM_MUL:
-  case expr::TERM_DIV: {
+  case expr::TERM_DIV:
+  case expr::TERM_LEQ:
+  case expr::TERM_LT:
+  case expr::TERM_GEQ:
+  case expr::TERM_GT:
+  {
     term_t children[t.size()];
     for (size_t i = 0; i < t.size(); ++ i) {
       children[i] = to_yices2_term(t[i]);
@@ -165,9 +187,6 @@ term_t yices2_internal::to_yices2_term(const expr::term_ref& ref) {
     result = mk_yices2_term(t.op(), t.size(), children);
     break;
   }
-  case expr::CONST_RATIONAL:
-    result = yices_mpq(d_tm.payload_of<expr::rational>(t).mpq().get_mpq_t());
-    break;
   default:
     assert(false);
   }

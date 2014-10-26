@@ -88,7 +88,7 @@ struct term_op_traits<CONST_RATIONAL> {
 
 /**
  * Variables have a payload that is their name, and one child, which is the
- * name of the variable.
+ * type of the variable.
  */
 template<>
 struct term_op_traits<VARIABLE> {
