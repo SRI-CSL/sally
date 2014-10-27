@@ -114,6 +114,23 @@ term_t yices2_internal::mk_yices2_term(expr::term_op op, size_t n, term_t* child
   case expr::TERM_DIV:
     result = yices_division(children[0], children[1]);
     break;
+  case expr::TERM_LEQ:
+    assert(n == 2);
+    result = yices_arith_leq_atom(children[0], children[1]);
+    break;
+  case expr::TERM_LT:
+    assert(n == 2);
+    result = yices_arith_lt_atom(children[0], children[1]);
+    break;
+  case expr::TERM_GEQ:
+    assert(n == 2);
+    result = yices_arith_geq_atom(children[0], children[1]);
+    break;
+  case expr::TERM_GT:
+    assert(n == 2);
+    result = yices_arith_gt_atom(children[0], children[1]);
+    break;
+
   default:
     assert(false);
   }
@@ -180,16 +197,20 @@ term_t yices2_internal::to_yices2_term(const expr::term_ref& ref) {
   case expr::TERM_GEQ:
   case expr::TERM_GT:
   {
-    term_t children[t.size()];
-    for (size_t i = 0; i < t.size(); ++ i) {
+    size_t size = t.size();
+    term_t children[size];
+    for (size_t i = 0; i < size; ++ i) {
       children[i] = to_yices2_term(t[i]);
     }
-    result = mk_yices2_term(t.op(), t.size(), children);
+    result = mk_yices2_term(t.op(), size, children);
     break;
   }
   default:
     assert(false);
   }
+
+  assert (result != NULL_TERM);
+  d_term_cache[ref] = result;
 
   return result;
 }
@@ -203,6 +224,9 @@ void yices2_internal::add(const expr::term_ref_strong& ref) {
 solver::result yices2_internal::check() {
   smt_status_t status = yices_check_context(d_ctx, 0);
   if (status == STATUS_SAT) {
+    model_t *model = yices_get_model(d_ctx, 1);
+    yices_print_model(stdout, model);
+    yices_free_model(model);
     return solver::SAT;
   } else if (status == STATUS_UNSAT) {
     return solver::UNSAT;
