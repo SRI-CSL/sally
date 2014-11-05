@@ -34,13 +34,16 @@ find_package(Yices2)
 include(ExternalProject) 
 ExternalProject_Add(
    libantlr3c-3.4
-   URL http://www.antlr3.org/download/C/libantlr3c-3.4.tar.gz
+   URL "${sal2_SOURCE_DIR}/antlr/libantlr3c-3.4.tar.gz"
    CONFIGURE_COMMAND <SOURCE_DIR>/configure --disable-shared --disable-antlrdebug --prefix=<INSTALL_DIR>
    BUILD_IN_SOURCE 1
 )
 ExternalProject_Get_Property(libantlr3c-3.4 INSTALL_DIR)
 set(LIBANTLR_INCLUDE_DIR "${INSTALL_DIR}/include")
 set(LIBANTLR_LIB_DIR "${INSTALL_DIR}/lib")
+
+# The antl2 binary
+set(ANTLR "${sal2_SOURCE_DIR}/antlr/antlr3")
 
 # Add includes 
 include_directories(${sal2_SOURCE_DIR}/src ${YICES_INCLUDE_DIR} ${LIBANTLR_INCLUDE_DIR})
