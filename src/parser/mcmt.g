@@ -19,5 +19,5 @@ command returns [sal2::parser::command* cmd = 0]
     
 /** Comments */
 COMMENT
-: ';' (~('\n' | '\r'))* { SKIP(); }
-;
+  : ';' (~('\n' | '\r'))* { SKIP(); }
+  ; 
