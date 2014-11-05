@@ -44,18 +44,20 @@ ExternalProject_Add(
    libantlr3c-3.4
    URL "${sal2_SOURCE_DIR}/antlr/libantlr3c-3.4.tar.gz"
    URL_MD5 08b1420129d5dccd0f4461cedf2a0d7d
-   CONFIGURE_COMMAND <SOURCE_DIR>/configure ${ANTLR_CONFIG_FLAG} --disable-shared --disable-antlrdebug --prefix=<INSTALL_DIR>
+   CONFIGURE_COMMAND <SOURCE_DIR>/configure ${ANTLR_CONFIG_FLAG} --disable-antlrdebug --prefix=<INSTALL_DIR>
    BUILD_IN_SOURCE 1
 )
 ExternalProject_Get_Property(libantlr3c-3.4 INSTALL_DIR)
-set(LIBANTLR_INCLUDE_DIR "${INSTALL_DIR}/include")
-set(LIBANTLR_LIB_DIR "${INSTALL_DIR}/lib")
+set(ANTLR3C_INCLUDE_DIR "${INSTALL_DIR}/include")
+set(ANTLR3C_LIBRARY_DIR "${INSTALL_DIR}/lib")
+set(ANTLR3C_LIBRARY "antlr3c")
+link_directories(${ANTLR3C_LIBRARY_DIR})
 
 # The antl2 binary
 set(ANTLR "${sal2_SOURCE_DIR}/antlr/antlr3")
 
 # Add includes 
-include_directories(${sal2_SOURCE_DIR}/src ${YICES_INCLUDE_DIR} ${LIBANTLR_INCLUDE_DIR})
+include_directories(${sal2_SOURCE_DIR}/src ${YICES_INCLUDE_DIR} ${ANTLR3C_INCLUDE_DIR})
 
 # Configure the subdirectories
 add_subdirectory(src)

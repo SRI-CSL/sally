@@ -1,10 +1,10 @@
 add_custom_command(
    OUTPUT 
-     ${CMAKE_CURRENT_SOURCE_DIR}/mcmtParser.h
-     ${CMAKE_CURRENT_SOURCE_DIR}/mcmtParser.c
-     ${CMAKE_CURRENT_SOURCE_DIR}/mcmtLexer.h
-     ${CMAKE_CURRENT_SOURCE_DIR}/mcmtLexer.c
-     ${CMAKE_CURRENT_SOURCE_DIR}/mcmt.tokens
+     mcmtParser.h
+     mcmtParser.c
+     mcmtLexer.h
+     mcmtLexer.c
+     mcmt.tokens
    COMMAND 
      ${ANTLR} -fo ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/mcmt.g 
    DEPENDS 
@@ -12,4 +12,3 @@ add_custom_command(
 )
 
 add_library(parser parser.cpp mcmtParser.c mcmtLexer.c)
-
