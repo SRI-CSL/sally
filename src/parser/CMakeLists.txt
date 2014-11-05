@@ -15,7 +15,7 @@ set_source_files_properties(
   mcmtParser.c mcmtLexer.c 
   PROPERTIES 
     LANGUAGE CXX
-    COMPILE_FLAGS -Wno-unused-function
+    COMPILE_FLAGS "-Wno-unused-function -Wno-unused-variable"
 )
 
 add_library(parser parser.cpp mcmtParser.c mcmtLexer.c)

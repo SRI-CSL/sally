@@ -34,5 +34,11 @@ language get_output_language(std::ostream& out);
 /** Set the output language associated with out */
 void set_term_manager(std::ostream& out, language lang);
 
+/** Get the verbosity of the output */
+size_t get_verbosity(std::ostream& out);
+
+/** Set the verbosity */
+void set_verbosity(std::ostream& out, size_t verbosity);
+
 }
 }

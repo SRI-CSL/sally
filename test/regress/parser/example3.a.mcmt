@@ -1,0 +1,37 @@
+;; State type
+(declare-state-type state_type (
+  (x Real) 
+  (y Real)
+  (n Real)
+))
+
+;; Initial states 
+(define-states initial_states state_type) 
+  ;; Implicit variable state
+  (and 
+    (= state.x 0)
+    (= state.y 0)
+    (> n 0)
+  )
+)
+
+;; One transition 
+(define-transition transition state_type
+  ;; Implicit variables next, state
+  (and 
+    (= next.x (ite (= state.y 0) 0 (+ state.x 1)))
+    (= next.y (ite (= state.y 0) state.x (- state.y 1)))
+    (= next.n n)
+  )  
+)
+
+;; The system
+(define-transition-system T 
+  state_type
+  initial_states
+  (transition)
+)
+
+;; Query
+(query T (= (+ T.x T.y) T.n))
+

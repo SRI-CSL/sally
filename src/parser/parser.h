@@ -10,9 +10,15 @@
 #include "parser/command.h"
 
 namespace sal2 {
+
+namespace expr {
+class term_manager;
+}
+
 namespace parser {
 
 class parser_internal;
+
 
 class parser {
 
@@ -20,7 +26,7 @@ class parser {
 
 public:
 
-  parser(const char* filename);
+  parser(expr::term_manager& tm, const char* filename);
   ~parser();
 
   /** Parse the next command from the input */

@@ -8,6 +8,7 @@
 #include "parser/parser.h"
 #include "parser/mcmtLexer.h"
 #include "parser/mcmtParser.h"
+#include "parser/mcmtParser_state.h"
 
 namespace sal2 {
 namespace parser {
@@ -26,9 +27,14 @@ class parser_internal {
   /** The parser */
   pmcmtParser d_parser;
 
+  /** The state of the solver */
+  mcmt_parser_state d_state;
+
 public:
 
-  parser_internal(const char* file_to_parse) {
+  parser_internal(expr::term_manager& tm, const char* file_to_parse)
+  : d_state(tm)
+  {
     // Create the input stream for the file
     d_input = antlr3FileStreamNew((pANTLR3_UINT8) file_to_parse, ANTLR3_ENC_8BIT);
 
@@ -40,10 +46,13 @@ public:
 
     // Create the parser
     d_parser = mcmtParserNew(d_token_stream);
+
+    // Attach the sal2 state (see mcmt.g @parser::context)
+    d_parser->sal2_state = &d_state;
   }
 
   ~parser_internal() {
-    // TODO: How do I dellocate these bastards
+    // TODO: How do I deallocate these bastards
   }
 
   command* parse_command() {
@@ -52,8 +61,8 @@ public:
 
 };
 
-parser::parser(const char* filename)
-: d_internal(new parser_internal(filename))
+parser::parser(expr::term_manager& tm, const char* filename)
+: d_internal(new parser_internal(tm, filename))
 {
 }
 
