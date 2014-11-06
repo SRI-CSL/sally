@@ -53,11 +53,16 @@ int main(int argc, char* argv[]) {
 
       // Parse an process each command
       for (parser::command* cmd = mcmt_parser.parse_command(); cmd != 0; cmd = mcmt_parser.parse_command()) {
-        // TODO
+
+        // If only parsing, just ignore the command
+        if (options.count("parse-only") > 0) {
+          continue;
+        }
       }
 
     } catch (sal2::exception& e) {
       cerr << e << std::endl;
+      exit(1);
     }
   }
 }
@@ -67,9 +72,10 @@ void getOptions(int argc, char* argv[], variables_map& variables)
   // Define the options
   options_description description("Options");
   description.add_options()
-      ("help,h", "Prints this help message")
+      ("help,h", "Prints this help message.")
       ("verbosity,v", value<size_t>()->default_value(0), "Set the verbosity of the output.")
-      ("input,i", value<vector<string> >()->required(), "A problem to solve")
+      ("input,i", value<vector<string> >()->required(), "A problem to solve.")
+      ("parse-only", "Just parse, don't solve.")
       ;
 
   // The input files can be positional
