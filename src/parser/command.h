@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <iostream>
+
 namespace sal2 {
 namespace parser {
 

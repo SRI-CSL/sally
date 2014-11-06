@@ -39,18 +39,22 @@ int main(int argc, char* argv[]) {
   // Go through all the files and run them
   for (size_t i = 0; i < files.size(); ++ i) {
 
-    if (output::get_verbosity(cout) > 0) {
-      cout << "Processing " << files[i] << endl;
+    try {
+      if (output::get_verbosity(cout) > 0) {
+        cout << "Processing " << files[i] << endl;
+      }
+
+      // Create the term manager
+      expr::term_manager tm(type_check);
+
+      // Create the parser
+      parser::parser mcmt_parser(tm, files[i].c_str());
+
+      // Parse an process
+      mcmt_parser.parse_command();
+    } catch (sal2::exception& e) {
+      cerr << e << std::endl;
     }
-
-    // Create the term manager
-    expr::term_manager tm(type_check);
-
-    // Create the parser
-    parser::parser mcmt_parser(tm, files[i].c_str());
-
-    // Parse an process
-    mcmt_parser.parse_command();
   }
 }
 

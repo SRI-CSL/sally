@@ -13,6 +13,18 @@
 namespace sal2 {
 namespace parser {
 
+static void sal2_parser_reportError(pANTLR3_BASE_RECOGNIZER recognizer) {
+  throw parser_exception("parse error");
+}
+
+static void sal2_lexer_reportError(pANTLR3_BASE_RECOGNIZER recognizer) {
+  pANTLR3_LEXER lexer = (pANTLR3_LEXER) recognizer->super;
+  std::string filename = (const char*) recognizer->state->tokSource->fileName->chars;
+  int line = lexer->getLine(lexer);
+  int pos = lexer->getCharPositionInLine(lexer);
+  throw parser_exception("Lexer error: can't find next token.", filename, line, pos);
+}
+
 class parser_internal {
 
   /** The input */
@@ -37,18 +49,36 @@ public:
   {
     // Create the input stream for the file
     d_input = antlr3FileStreamNew((pANTLR3_UINT8) file_to_parse, ANTLR3_ENC_8BIT);
+    if (d_input == 0) {
+      throw parser_exception(std::string("can't open") + file_to_parse);
+    }
 
     // Create a lexer
     d_lexer = mcmtLexerNew(d_input);
+    if (d_lexer == 0) {
+      throw parser_exception("can't create the lexer");
+    }
+
+    // Report the error
+    d_lexer->pLexer->rec->reportError = sal2_lexer_reportError;
 
     // Create the token stream
     d_token_stream = antlr3CommonTokenStreamSourceNew(ANTLR3_SIZE_HINT, TOKENSOURCE(d_lexer));
+    if (d_token_stream == 0) {
+      throw parser_exception("can't create the token stream");
+    }
 
     // Create the parser
     d_parser = mcmtParserNew(d_token_stream);
+    if (d_parser == 0) {
+      throw parser_exception("can't create the parser");
+    }
 
     // Attach the sal2 state (see mcmt.g @parser::context)
     d_parser->sal2_state = &d_state;
+
+    // Add error reporting
+    d_parser->pParser->rec->reportError = sal2_parser_reportError;
   }
 
   ~parser_internal() {

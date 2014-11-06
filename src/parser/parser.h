@@ -7,6 +7,9 @@
 
 #pragma once
 
+#include <sstream>
+
+#include "utils/exception.h"
 #include "parser/command.h"
 
 namespace sal2 {
@@ -17,8 +20,21 @@ class term_manager;
 
 namespace parser {
 
-class parser_internal;
+class parser_exception : public exception {
+public:
+  parser_exception(std::string msg)
+  : exception(msg) {}
 
+  parser_exception(std::string msg, std::string filename, int line, int pos)
+  {
+    std::stringstream ss;
+    ss << filename << ":" << line << ":" << pos << ": " << msg;
+    d_msg = ss.str();
+  }
+
+};
+
+class parser_internal;
 
 class parser {
 
