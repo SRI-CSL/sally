@@ -52,7 +52,9 @@ public:
   }
 
   ~parser_internal() {
-    // TODO: How do I deallocate these bastards
+    d_parser->free(d_parser);
+    d_token_stream->free(d_token_stream);
+    d_lexer->free(d_lexer);
   }
 
   command* parse_command() {

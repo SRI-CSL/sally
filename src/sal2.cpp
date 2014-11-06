@@ -28,14 +28,7 @@ int main(int argc, char* argv[]) {
   getOptions(argc, argv, options);
 
   // Get the files to run
-  vector<string> files;
-  if (options.count("input") > 0) {
-    // We have filenames
-    files = options.at("input").as< vector<string> >();
-  } else {
-    // Otherwise read from standard input
-    files.push_back("-");
-  }
+  vector<string> files = options.at("input").as< vector<string> >();
 
   // Set the verbosity
   output::set_verbosity(cout, options.at("verbosity").as<size_t>());
@@ -68,7 +61,7 @@ void getOptions(int argc, char* argv[], variables_map& variables)
   description.add_options()
       ("help,h", "Prints this help message")
       ("verbosity,v", value<size_t>()->default_value(0), "Set the verbosity of the output.")
-      ("input,i", value<vector<string> >(), "A problem to solve")
+      ("input,i", value<vector<string> >()->required(), "A problem to solve")
       ;
 
   // The input files can be positional
@@ -84,10 +77,11 @@ void getOptions(int argc, char* argv[], variables_map& variables)
   }
 
   // If help needed, print it out
-  if (parseError || variables.count("help") > 0) {
+  if (parseError || variables.count("help") > 0 || variables.count("input") == 0) {
     if (parseError) {
       cout << "Error parsing command line!" << endl;
     }
+    cout << "Usage: " << argv[0] << " [options] input ..." << endl;
     cout << description << endl;
     if (parseError) {
       exit(1);

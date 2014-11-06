@@ -26,6 +26,7 @@ enum term_op {
   TYPE_BOOL,
   TYPE_INTEGER,
   TYPE_REAL,
+  TYPE_STRUCT,
 
   // Variables
   VARIABLE,
@@ -103,6 +104,7 @@ std::ostream& operator << (std::ostream& out, term_op op) {
     SWITCH_TO_STRING(TYPE_BOOL)
     SWITCH_TO_STRING(TYPE_INTEGER)
     SWITCH_TO_STRING(TYPE_REAL)
+    SWITCH_TO_STRING(TYPE_STRUCT)
     SWITCH_TO_STRING(VARIABLE)
     SWITCH_TO_STRING(TERM_EQ)
     SWITCH_TO_STRING(CONST_BOOL)
