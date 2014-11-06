@@ -32,6 +32,7 @@ int main(int argc, char* argv[]) {
 
   // Set the verbosity
   output::set_verbosity(cout, options.at("verbosity").as<size_t>());
+  output::set_verbosity(cerr, options.at("verbosity").as<size_t>());
 
   // Typecheck by default
   bool type_check = true;

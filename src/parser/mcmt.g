@@ -14,17 +14,21 @@ options {
 @parser::context
 {
   /** The sal2 part of the parser state */
-  sal2::parser::mcmt_parser_state* sal2_state;
+  sal2::parser::mcmt_parser_state* pState;
 }
 
 /** Parses a command */
 command returns [sal2::parser::command* cmd = 0] 
-  : c = declare_state_type_commmand { $cmd = c; }
+  : c = declare_state_type       { $cmd = c; }
+  | c = define_states            { $cmd = c; }
+  | c = define_transition        { $cmd = c; }
+  | c = define_transition_system { $cmd = c; }
+  | c = query                    { $cmd = c; }
   | EOF { $cmd = 0; } 
   ;
   
 /** Declaration of a state type */
-declare_state_type_commmand returns [sal2::parser::command* cmd = 0]
+declare_state_type returns [sal2::parser::command* cmd = 0]
 @declarations {
   std::string id;
 }
@@ -34,20 +38,20 @@ declare_state_type_commmand returns [sal2::parser::command* cmd = 0]
     ')'
   ; 
 
-/** Declaration of state set  */
-declare_states returns [sal2::parser::command* cmd = 0]
+/** Definition of a state set  */
+define_states returns [sal2::parser::command* cmd = 0]
 @declarations {
   std::string id;
   std::string type_id;  
 }
-  : '(' 'declare-states'
+  : '(' 'define-states'
       simple_symbol[id]
       simple_symbol[type_id]
       term
     ')'
   ; 
 
-/** Declaration of a transition  */
+/** Definition of a transition  */
 define_transition returns [sal2::parser::command* cmd = 0]
 @declarations {
   std::string id;
@@ -60,7 +64,7 @@ define_transition returns [sal2::parser::command* cmd = 0]
     ')'
   ; 
 
-/** Declaration of a transition  */
+/** Definition of a transition system  */
 define_transition_system returns [sal2::parser::command* cmd = 0]
 @declarations {
   std::string id;
@@ -74,6 +78,18 @@ define_transition_system returns [sal2::parser::command* cmd = 0]
       term
     ')'
   ; 
+
+/** Query  */
+query returns [sal2::parser::command* cmd = 0]
+@declarations {
+  std::string id;
+}
+  : '(' 'query'
+      simple_symbol[id]
+      term
+    ')'
+  ; 
+
 
 /** SMT2 formula */
 term 
@@ -109,6 +125,10 @@ term_op
   | '-'
   | '*'
   | '/'
+  | '>='
+  | '>'
+  | '<='
+  | '<'
   ;
 
 /** Parse a list of variables with types */
@@ -144,12 +164,12 @@ WHITESPACE
   
 /** Matches a simple_symbol. */
 SIMPLE_SYMBOL
-  : ALPHA (ALPHA | DIGIT | '_' | '@')+
+  : ALPHA (ALPHA | DIGIT | '_' | '@')*
   ;
 
 /** Matches a simple_symbol. */
 TERM_SYMBOL
-  : ALPHA (ALPHA | DIGIT | '_' | '@' | '.')+
+  : ALPHA (ALPHA | DIGIT | '_' | '@' | '.')*
   ;
 
 /** Matches a letter. */

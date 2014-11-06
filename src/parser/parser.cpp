@@ -13,17 +13,8 @@
 namespace sal2 {
 namespace parser {
 
-static void sal2_parser_reportError(pANTLR3_BASE_RECOGNIZER recognizer) {
-  throw parser_exception("parse error");
-}
-
-static void sal2_lexer_reportError(pANTLR3_BASE_RECOGNIZER recognizer) {
-  pANTLR3_LEXER lexer = (pANTLR3_LEXER) recognizer->super;
-  std::string filename = (const char*) recognizer->state->tokSource->fileName->chars;
-  int line = lexer->getLine(lexer);
-  int pos = lexer->getCharPositionInLine(lexer);
-  throw parser_exception("Lexer error: can't find next token.", filename, line, pos);
-}
+static void sal2_parser_reportError(pANTLR3_BASE_RECOGNIZER recognizer);
+static void sal2_lexer_reportError(pANTLR3_BASE_RECOGNIZER recognizer);
 
 class parser_internal {
 
@@ -74,8 +65,12 @@ public:
       throw parser_exception("can't create the parser");
     }
 
-    // Attach the sal2 state (see mcmt.g @parser::context)
-    d_parser->sal2_state = &d_state;
+    // Mark the internals in the super fields
+    d_parser->pParser->super = this;
+    d_lexer->pLexer->super = this;
+
+    // Mark the state
+    d_parser->pState = &d_state;
 
     // Add error reporting
     d_parser->pParser->rec->reportError = sal2_parser_reportError;
@@ -91,6 +86,10 @@ public:
     return d_parser->command(d_parser);
   }
 
+  /** Returns true if the parser is in error state */
+  bool parser_in_error() const {
+    return d_parser->pParser->rec->state->error == ANTLR3_TRUE;
+  }
 };
 
 parser::parser(expr::term_manager& tm, const char* filename)
@@ -104,6 +103,33 @@ parser::~parser() {
 
 command* parser::parse_command() {
   return d_internal->parse_command();
+}
+
+static void sal2_lexer_reportError(pANTLR3_BASE_RECOGNIZER recognizer) {
+
+  if (output::get_verbosity(std::cerr) > 0) {
+    recognizer->displayRecognitionError(recognizer, recognizer->state->tokenNames);
+  }
+
+  // Get the ANTLR lexer
+  pANTLR3_LEXER lexer = (pANTLR3_LEXER) recognizer->super;
+
+  // Get the actual parser
+  parser_internal* parser = (parser_internal*) lexer->super;
+
+  // Only report error if the parser is not already in error, otherwise
+  // parser should pick it up for better error reporting
+  if (!parser->parser_in_error()) {
+    // Throw the exception
+    std::string filename = (const char*) recognizer->state->tokSource->fileName->chars;
+    int line = lexer->getLine(lexer);
+    int pos = lexer->getCharPositionInLine(lexer);
+    throw parser_exception("Lexer error: can't find next token.", filename, line, pos);
+  }
+}
+
+static void sal2_parser_reportError(pANTLR3_BASE_RECOGNIZER recognizer) {
+  throw parser_exception("parse error");
 }
 
 }
