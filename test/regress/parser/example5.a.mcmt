@@ -5,7 +5,7 @@
 ))
 
 ;; Initial states 
-(define-states initial_states state_type) 
+(define-states initial_states state_type
   ;; Implicit variable state
   (and 
     (= state.x (/ 9 10))
@@ -17,8 +17,8 @@
 (define-transition transition state_type
   ;; Implicit variables next, state
   (and 
-    (= state.x (+ (* (/ 3 5) x) (* (/ 2 5) y)))
-    (= state.y (+ (* (/ 4 7) y) (* (/ 3 7) x)))
+    (= next.x (+ (* (/ 3 5) state.x) (* (/ 2 5) state.y)))
+    (= next.y (+ (* (/ 4 7) state.y) (* (/ 3 7) state.x)))
   )  
 )
 

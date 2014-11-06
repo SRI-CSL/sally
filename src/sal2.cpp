@@ -51,8 +51,11 @@ int main(int argc, char* argv[]) {
       // Create the parser
       parser::parser mcmt_parser(tm, files[i].c_str());
 
-      // Parse an process
-      mcmt_parser.parse_command();
+      // Parse an process each command
+      for (parser::command* cmd = mcmt_parser.parse_command(); cmd != 0; cmd = mcmt_parser.parse_command()) {
+        // TODO
+      }
+
     } catch (sal2::exception& e) {
       cerr << e << std::endl;
     }

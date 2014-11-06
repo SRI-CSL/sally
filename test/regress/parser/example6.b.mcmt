@@ -6,7 +6,7 @@
 ))
 
 ;; Initial states 
-(define-states initial_states state_type) 
+(define-states initial_states state_type
   ;; Implicit variable state
   (and 
     (< state.x 1) (> state.x (- 1)) 
@@ -36,7 +36,7 @@
 (query T 
   (and 
     (> (+ x y z) (- 3)) 
-    (< (+ x y z) 3))  
+    (< (+ x y z) 3)  
   )
 )
 

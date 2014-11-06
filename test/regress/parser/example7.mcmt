@@ -6,11 +6,11 @@
 ))
 
 ;; Initial states 
-(define-states initial_states state_type) 
+(define-states initial_states state_type
   ;; Implicit variable state
   (and 
     (= state.x 0)
-    (= state.y (/ 1 2)
+    (= state.y (/ 1 2))
   )
 )
 
@@ -18,7 +18,7 @@
 (define-transition transition state_type
   ;; Implicit variables next, state
   (and 
-    (= next.x (+ state.x state.y) 
+    (= next.x (+ state.x state.y)) 
     (= next.y (/ state.y 2))
   )
 )

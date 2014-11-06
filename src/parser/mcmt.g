@@ -19,11 +19,11 @@ options {
 
 /** Parses a command */
 command returns [sal2::parser::command* cmd = 0] 
-  : c = declare_state_type       { $cmd = c; }
-  | c = define_states            { $cmd = c; }
-  | c = define_transition        { $cmd = c; }
-  | c = define_transition_system { $cmd = c; }
-  | c = query                    { $cmd = c; }
+  : c = declare_state_type       { $cmd = c + 1; }
+  | c = define_states            { $cmd = c + 1; }
+  | c = define_transition        { $cmd = c + 1; }
+  | c = define_transition_system { $cmd = c + 1; }
+  | c = query                    { $cmd = c + 1; }
   | EOF { $cmd = 0; } 
   ;
   
@@ -33,7 +33,7 @@ declare_state_type returns [sal2::parser::command* cmd = 0]
   std::string id;
 }
   : '(' 'declare-state-type'
-      simple_symbol[id]
+      symbol[id]
       variable_list { $cmd = 0; }
     ')'
   ; 
@@ -45,8 +45,8 @@ define_states returns [sal2::parser::command* cmd = 0]
   std::string type_id;  
 }
   : '(' 'define-states'
-      simple_symbol[id]
-      simple_symbol[type_id]
+      symbol[id]
+      symbol[type_id]
       term
     ')'
   ; 
@@ -58,8 +58,8 @@ define_transition returns [sal2::parser::command* cmd = 0]
   std::string type_id;  
 }
   : '(' 'define-transition'
-      simple_symbol[id]
-      simple_symbol[type_id]
+      symbol[id]
+      symbol[type_id]
       term
     ')'
   ; 
@@ -72,20 +72,27 @@ define_transition_system returns [sal2::parser::command* cmd = 0]
   std::string initial_id;  
 }
   : '(' 'define-transition-system'
-      simple_symbol[id]
-      simple_symbol[type_id]
-      simple_symbol[initial_id]
-      term
+      symbol[id]
+      symbol[type_id]
+      symbol[initial_id]
+      transition_list
     ')'
   ; 
 
+/** A list of transitions */
+transition_list
+@declarations {
+  std::string id;
+} 
+  : '(' symbol[id]+ ')'
+  ;
 /** Query  */
 query returns [sal2::parser::command* cmd = 0]
 @declarations {
   std::string id;
 }
   : '(' 'query'
-      simple_symbol[id]
+      symbol[id]
       term
     ')'
   ; 
@@ -96,10 +103,23 @@ term
 @declarations{
   std::string id;
 } 
-  : term_symbol
+  : structured_symbol
   | constant
   | '(' term_op term_list ')'
   ; 
+  
+/** A symbol */
+symbol[std::string& id]
+  : SYMBOL
+  ;
+  
+/** Structured symbol (i.e a.b.c) */
+structured_symbol
+@declarations {
+  std::string id;
+}
+  : symbol[id] ( '.' symbol[id])*
+  ;
   
 term_list
   : term+
@@ -120,15 +140,21 @@ decimal_constant
   ; 
 
 term_op
-  : '='
+  : 'and'
+  | 'or'
+  | 'not'
+  | 'implies'
+  | 'xor'
+  | 'ite'
+  | '='
   | '+'
   | '-'
   | '*'
   | '/'
-  | '>='
   | '>'
-  | '<='
+  | '>='
   | '<'
+  | '<='
   ;
 
 /** Parse a list of variables with types */
@@ -138,20 +164,10 @@ variable_list
 	std::string type_id;
 } 
   : '('
-      ( '(' simple_symbol[var_id] simple_symbol[type_id] ')' )+ 
+      ( '(' symbol[var_id] symbol[type_id] ')' )+ 
     ')'
   ; 
-
-/** Match a simple simple_symbol. */
-simple_symbol[std::string& id]
-  : SIMPLE_SYMBOL
-  ;
-    
-/** Match a full term simple_symbol */
-term_symbol
-  : TERM_SYMBOL
-  ;
-    
+        
 /** Comments (skip) */
 COMMENT
   : ';' (~('\n' | '\r'))* { SKIP(); }
@@ -162,14 +178,9 @@ WHITESPACE
   : (' ' | '\t' | '\f' | '\r' | '\n')+ { SKIP(); }
   ;
   
-/** Matches a simple_symbol. */
-SIMPLE_SYMBOL
+/** Matches a symbol. */
+SYMBOL
   : ALPHA (ALPHA | DIGIT | '_' | '@')*
-  ;
-
-/** Matches a simple_symbol. */
-TERM_SYMBOL
-  : ALPHA (ALPHA | DIGIT | '_' | '@' | '.')*
   ;
 
 /** Matches a letter. */
