@@ -23,6 +23,7 @@ target_link_libraries(sal2 ${sal2_LIBS} ${Boost_LIBRARIES} ${GMP_LIBRARY} ${YICE
 # Add tests
 
 file(GLOB_RECURSE regressions ${sal2_SOURCE_DIR}/test/regress/*.mcmt)
+list(SORT regressions)
 
 foreach(FILE ${regressions})
   file(STRINGS "${FILE}.options" ALL_OPTIONS)
