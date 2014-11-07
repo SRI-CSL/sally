@@ -31,7 +31,7 @@ class parser_internal {
   pmcmtParser d_parser;
 
   /** The state of the solver */
-  mcmt_parser_state d_state;
+  parser_state d_state;
 
 public:
 

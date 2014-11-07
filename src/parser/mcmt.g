@@ -8,7 +8,7 @@ options {
 @parser::includes {
 #include <string>
 #include "parser/command.h"
-#include "parser/mcmtParser_state.h"
+#include "parser/parser_state.h"
 }
 
 @parser::context
@@ -19,7 +19,7 @@ options {
 
 /** Parses a command */
 command returns [sal2::parser::command* cmd = 0] 
-  : c = declare_state_type       { $cmd = c + 1; }
+  : c = declare_state_type       { $cmd = c; }
   | c = define_states            { $cmd = c + 1; }
   | c = define_transition        { $cmd = c + 1; }
   | c = define_transition_system { $cmd = c + 1; }
@@ -31,11 +31,11 @@ command returns [sal2::parser::command* cmd = 0]
 declare_state_type returns [sal2::parser::command* cmd = 0]
 @declarations {
   std::string id;
+  std::vector<std::vector> vars;  
+  std::vector<expr::term_ref_strong> types;
 }
-  : '(' 'declare-state-type'
-      symbol[id]
-      variable_list { $cmd = 0; }
-    ')'
+  : '(' 'declare-state-type' symbol[id] variable_list[vars] ')'
+    { STATE->declare_state_type(id, vars, types); $cmd = 0; }  
   ; 
 
 /** Definition of a state set  */
@@ -47,7 +47,7 @@ define_states returns [sal2::parser::command* cmd = 0]
   : '(' 'define-states'
       symbol[id]
       symbol[type_id]
-      term
+      state_formula
     ')'
   ; 
 
@@ -60,7 +60,7 @@ define_transition returns [sal2::parser::command* cmd = 0]
   : '(' 'define-transition'
       symbol[id]
       symbol[type_id]
-      term
+      state_transition_formula
     ')'
   ; 
 
@@ -86,6 +86,7 @@ transition_list
 } 
   : '(' symbol[id]+ ')'
   ;
+  
 /** Query  */
 query returns [sal2::parser::command* cmd = 0]
 @declarations {
@@ -93,12 +94,21 @@ query returns [sal2::parser::command* cmd = 0]
 }
   : '(' 'query'
       symbol[id]
-      term
+      state_formula
     ')'
   ; 
 
+/** A state formula */
+state_formula 
+  : term
+  ;
 
-/** SMT2 formula */
+/** A state transition formula */
+state_transition_formula 
+  : term
+  ;
+
+/** SMT2 term */
 term 
 @declarations{
   std::string id;
