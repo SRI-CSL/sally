@@ -210,22 +210,20 @@ term_ref term_manager::type_of(const term& t) const {
   return term_ref();
 }
 
-term_ref_strong::term_ref_strong(term_manager* tm, const term_ref_fat& ref)
-: term_ref_fat(ref)
-, d_tm(tm)
+term_ref_strong::term_ref_strong(const term_ref_strong& other)
+: term_ref(other)
+, d_tm(other.d_tm)
 {
   if (d_tm != 0) {
     d_tm->attach(id());
   }
 }
 
-term_ref_strong::term_ref_strong(const term_ref_strong& other)
-: term_ref_fat(other)
-, d_tm(other.d_tm)
+term_ref_strong::term_ref_strong(term_manager& tm, term_ref ref)
+: term_ref(ref)
+, d_tm(&tm)
 {
-  if (d_tm != 0) {
-    d_tm->attach(id());
-  }
+  d_tm->attach(id());
 }
 
 term_ref_strong::~term_ref_strong() {
@@ -240,7 +238,7 @@ term_ref_strong& term_ref_strong::operator =(const term_ref_strong& other) {
       d_tm->detach(id());
     }
     d_tm = other.d_tm;
-    term_ref_fat::operator=(other);
+    term_ref::operator=(other);
     if (d_tm != 0) {
       d_tm->attach(id());
     }
@@ -248,6 +246,21 @@ term_ref_strong& term_ref_strong::operator =(const term_ref_strong& other) {
   return *this;
 }
 
+size_t term_ref_strong::hash() const {
+  if (d_tm == 0) {
+    return 0;
+  } else {
+    return d_tm->hash_of(*this);
+  }
+}
+
+size_t term_ref_strong::id() const {
+  if (d_tm == 0) {
+    return 0;
+  } else {
+    return d_tm->id_of(*this);
+  }
+}
 
 term_ref term_manager::tcc_of(const term& t) const {
   tcc_map::const_iterator find = d_tcc_map.find(ref_of(t));

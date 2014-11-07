@@ -36,12 +36,7 @@ void parser_state::declare_state_type(string id, const vector<string>& vars, con
   expr::state_type result(id);
 
   for(size_t i = 0; i < vars.size(); ++ i) {
-    if (result.contains())
     result.add_variable(vars[i], types[i]);
   }
-
-
-  d_state_types.add_entry(id, expr::state_type())
-
 
 }

@@ -42,7 +42,7 @@ public:
 
   /** Assert the formula */
   virtual
-  void add(const expr::term_ref_strong& f) = 0;
+  void add(expr::term_ref f) = 0;
 
   /** Check for satisfiability */
   virtual
@@ -50,11 +50,11 @@ public:
 
   /** Generalize a satisfiable answer */
   virtual
-  expr::term_ref_strong generalize() = 0;
+  expr::term_ref generalize() = 0;
 
   /** Interpolate an unsatisfiable answer */
   virtual
-  void interpolate(std::vector<expr::term_ref_strong>& ) = 0;
+  void interpolate(std::vector<expr::term_ref>& ) = 0;
 };
 
 inline

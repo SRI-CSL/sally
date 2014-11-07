@@ -14,7 +14,7 @@ options {
 @parser::context
 {
   /** The sal2 part of the parser state */
-  sal2::parser::mcmt_parser_state* pState;
+  sal2::parser::parser_state* pState;
 }
 
 /** Parses a command */
@@ -31,11 +31,10 @@ command returns [sal2::parser::command* cmd = 0]
 declare_state_type returns [sal2::parser::command* cmd = 0]
 @declarations {
   std::string id;
-  std::vector<std::vector> vars;  
-  std::vector<expr::term_ref_strong> types;
+  std::vector<std::string> vars;  
+  std::vector<sal2::expr::term_ref> types;
 }
-  : '(' 'declare-state-type' symbol[id] variable_list[vars] ')'
-    { STATE->declare_state_type(id, vars, types); $cmd = 0; }  
+  : '(' 'declare-state-type' symbol[id] variable_list[vars, types] ')'
   ; 
 
 /** Definition of a state set  */
@@ -168,7 +167,7 @@ term_op
   ;
 
 /** Parse a list of variables with types */
-variable_list
+variable_list[std::vector<std::string>& out_vars, std::vector<sal2::expr::term_ref>& out_types]
 @declarations {
 	std::string var_id;
 	std::string type_id;

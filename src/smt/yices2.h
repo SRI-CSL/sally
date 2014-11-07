@@ -20,10 +20,10 @@ public:
   yices2(expr::term_manager& tm);
   ~yices2();
 
-  void add(const expr::term_ref_strong& f);
+  void add(expr::term_ref f);
   result check();
-  expr::term_ref_strong generalize();
-  void interpolate(std::vector<expr::term_ref_strong>& out);
+  expr::term_ref generalize();
+  void interpolate(std::vector<expr::term_ref>& out);
 };
 
 }

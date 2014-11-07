@@ -109,29 +109,36 @@ public:
 /**
  * Strong reference that also does reference counting.
  */
-class term_ref_strong : public term_ref_fat {
+class term_ref_strong : public term_ref {
 
     /** Responsible term manager */
     term_manager* d_tm;
 
     friend class term_manager;
 
-    term_ref_strong(term_manager* tm, const term_ref_fat& ref);
-
   public:
 
     /** Construct null reference */
     term_ref_strong()
-    : term_ref_fat(), d_tm(0) {}
+    : term_ref(), d_tm(0) {}
 
     /** Construct a copy */
     term_ref_strong(const term_ref_strong& other);
+
+    /** Construct from a weak reference */
+    term_ref_strong(term_manager& tm, term_ref ref);
 
     /** Destruct */
     ~term_ref_strong();
 
     /** Assignment */
     term_ref_strong& operator = (const term_ref_strong& other);
+
+    /** Hash of the term */
+    size_t hash() const;
+
+    /** Id of the term */
+    size_t id() const;
 };
 
 /** Hashing for terms. */
@@ -319,7 +326,6 @@ private:
   /** Map from term references to their ids */
   tref_id_map d_term_ids;
 
-
   /** Reference counts */
   std::vector<size_t> d_term_refcount;
 
@@ -363,44 +369,44 @@ public:
 
   /** Generic term constructor */
   template <term_op op, typename iterator_type>
-  term_ref_strong mk_term(const typename term_op_traits<op>::payload_type& payload, iterator_type children_begin, iterator_type children_end);
+  term_ref mk_term(const typename term_op_traits<op>::payload_type& payload, iterator_type children_begin, iterator_type children_end);
 
   /** Make a term from just payload (for constants) */
   template<term_op op>
-  term_ref_strong mk_term(const typename term_op_traits<op>::payload_type& payload) {
+  term_ref mk_term(const typename term_op_traits<op>::payload_type& payload) {
     return mk_term<op, term_ref*>(payload, 0, 0);
   }
 
   /** Make a term from one child and no payload */
   template<term_op op>
-  term_ref_strong mk_term(term_ref child) {
+  term_ref mk_term(term_ref child) {
     term_ref children[1] = { child };
     return mk_term<op, term_ref*>(alloc::empty_type(), children, children + 1);
   }
 
   /** Make a term from two children and no payload */
   template<term_op op>
-  term_ref_strong mk_term(term_ref child1, term_ref child2) {
+  term_ref mk_term(term_ref child1, term_ref child2) {
     term_ref children[2] = { child1, child2 };
     return mk_term<op, term_ref*>(alloc::empty_type(), children, children + 2);
   }
 
   /** Make a term with a list of children and no payload */
   template <term_op op, typename iterator_type>
-  term_ref_strong mk_term(iterator_type children_begin, iterator_type children_end) {
+  term_ref mk_term(iterator_type children_begin, iterator_type children_end) {
     return mk_term<op, iterator_type>(alloc::empty_type(), children_begin, children_end);
   }
 
   /** Make a term from one child and payload */
   template<term_op op>
-  term_ref_strong mk_term(const typename term_op_traits<op>::payload_type& payload, term_ref child) {
+  term_ref mk_term(const typename term_op_traits<op>::payload_type& payload, term_ref child) {
     term_ref children[1] = { child };
     return mk_term<op, term_ref*>(payload, children, children + 1);
   }
 
   /** Make a term from two children and payload */
   template<term_op op>
-  term_ref_strong mk_term(const typename term_op_traits<op>::payload_type& payload, term_ref child1, term_ref child2) {
+  term_ref mk_term(const typename term_op_traits<op>::payload_type& payload, term_ref child1, term_ref child2) {
     term_ref children[2] = { child1, child2 };
     return mk_term<op, term_ref*>(payload, children, children + 2);
   }
@@ -456,12 +462,16 @@ public:
   }
 
   /** Get the id of the term */
-  size_t id_of(const term_ref& t) const {
-    if (t.is_null()) return 0;
-    assert(d_term_ids.find(t) != d_term_ids.end());
-    return d_term_ids.find(t)->second;
+  size_t id_of(term_ref ref) const {
+    if (ref.is_null()) return 0;
+    assert(d_term_ids.find(ref) != d_term_ids.end());
+    return d_term_ids.find(ref)->second;
   }
 
+  size_t hash_of(term_ref ref) const {
+    if (ref.is_null()) return 0;
+    return term_of(ref).hash();
+  }
 };
 
 inline
@@ -553,10 +563,10 @@ term_ref_fat term_manager::mk_term_internal(const typename term_op_traits<op>::p
 }
 
 template <term_op op, typename iterator_type>
-term_ref_strong term_manager::mk_term(const typename term_op_traits<op>::payload_type& payload, iterator_type begin, iterator_type end) {
+term_ref term_manager::mk_term(const typename term_op_traits<op>::payload_type& payload, iterator_type begin, iterator_type end) {
   // Insert and return the actual term_ref
   term_ref_fat fat_ref = *d_pool.insert(term_ref_constructor<op, iterator_type>(*this, payload, begin, end)).first;
-  return term_ref_strong(this, fat_ref);
+  return fat_ref;
 }
 
 /** Compare to a term op without using the hash. */

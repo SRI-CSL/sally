@@ -42,7 +42,7 @@ BOOST_AUTO_TEST_CASE(basic_asserts) {
   // x + y <= 0
   term_ref leq = tm.mk_term<TERM_LEQ>(sum, zero);
 
-  term_ref_strong f = tm.mk_term<TERM_AND>(b, leq);
+  term_ref f = tm.mk_term<TERM_AND>(b, leq);
 
   cout << "Adding: " << f << endl;
   yices2->add(f);
@@ -52,7 +52,7 @@ BOOST_AUTO_TEST_CASE(basic_asserts) {
 
   BOOST_CHECK_EQUAL(result, solver::SAT);
 
-  term_ref_strong g = tm.mk_term<TERM_NOT>(b);
+  term_ref g = tm.mk_term<TERM_NOT>(b);
 
   cout << "Adding: " << g << endl;
   yices2->add(g);

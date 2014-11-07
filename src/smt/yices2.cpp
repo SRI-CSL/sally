@@ -39,12 +39,12 @@ public:
   yices2_internal(expr::term_manager& tm);
   ~yices2_internal();
 
-  term_t to_yices2_term(const expr::term_ref& ref);
-  type_t to_yices2_type(const expr::term_ref& ref);
+  term_t to_yices2_term(expr::term_ref ref);
+  type_t to_yices2_type(expr::term_ref ref);
 
   term_t mk_yices2_term(expr::term_op op, size_t n, term_t* children);
 
-  void add(const expr::term_ref_strong& ref);
+  void add(expr::term_ref ref);
   solver::result check();
 };
 
@@ -138,7 +138,7 @@ term_t yices2_internal::mk_yices2_term(expr::term_op op, size_t n, term_t* child
   return result;
 }
 
-type_t yices2_internal::to_yices2_type(const expr::term_ref& ref) {
+type_t yices2_internal::to_yices2_type(expr::term_ref ref) {
 
   type_t result = NULL_TERM;
 
@@ -159,7 +159,7 @@ type_t yices2_internal::to_yices2_type(const expr::term_ref& ref) {
   return result;
 }
 
-term_t yices2_internal::to_yices2_term(const expr::term_ref& ref) {
+term_t yices2_internal::to_yices2_term(expr::term_ref ref) {
 
   term_t result = NULL_TERM;
 
@@ -215,8 +215,9 @@ term_t yices2_internal::to_yices2_term(const expr::term_ref& ref) {
   return result;
 }
 
-void yices2_internal::add(const expr::term_ref_strong& ref) {
-  d_assertions.push_back(ref);
+void yices2_internal::add(expr::term_ref ref) {
+  expr::term_ref_strong ref_strong(d_tm, ref);
+  d_assertions.push_back(ref_strong);
   term_t yices_term = to_yices2_term(ref);
   yices_assert_formula(d_ctx, yices_term);
 }
@@ -245,7 +246,7 @@ yices2::~yices2() {
   delete d_internal;
 }
 
-void yices2::add(const expr::term_ref_strong& f) {
+void yices2::add(expr::term_ref f) {
   d_internal->add(f);
 }
 
@@ -253,11 +254,11 @@ solver::result yices2::check() {
   return d_internal->check();
 }
 
-expr::term_ref_strong yices2::generalize() {
-  return expr::term_ref_strong();
+expr::term_ref yices2::generalize() {
+  return expr::term_ref();
 }
 
-void yices2::interpolate(std::vector<expr::term_ref_strong>& ) {
+void yices2::interpolate(std::vector<expr::term_ref>& ) {
 
 }
 
