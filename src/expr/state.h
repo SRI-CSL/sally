@@ -44,7 +44,16 @@ public:
   bool contains(std::string name) const {
     return d_var_to_type_map.find(name) != d_var_to_type_map.end();
   }
+
+  /** Print it to the stream */
+  void to_stream(std::ostream& out) const;
 };
+
+inline
+std::ostream& operator << (std::ostream& out, const state_type& st) {
+  st.to_stream(out);
+  return out;
+}
 
 class state_formula {
 
@@ -65,8 +74,15 @@ public:
     return d_formula;
   }
 
+  /** Print it to the stream */
+  void to_stream(std::ostream& out) const;
 };
 
+inline
+std::ostream& operator << (std::ostream& out, const state_formula& sf) {
+  sf.to_stream(out);
+  return out;
+}
 
 class state_transition_formula {
 
@@ -87,7 +103,16 @@ public:
     return d_transition_formula;
   }
 
+  /** Print it to the stream */
+  void to_stream(std::ostream& out) const;
 };
+
+inline
+std::ostream& operator << (std::ostream& out, const state_transition_formula& stf) {
+  stf.to_stream(out);
+  return out;
+}
+
 
 }
 }

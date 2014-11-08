@@ -22,6 +22,8 @@ namespace smt {
  */
 class solver {
 
+protected:
+
   expr::term_manager& d_tm;
 
 public:
