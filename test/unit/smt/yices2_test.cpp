@@ -9,25 +9,25 @@ using namespace sal2;
 using namespace expr;
 using namespace smt;
 
-struct term_manager_test_fixture {
+struct term_manager_with_yices_test_fixture {
 
   term_manager tm;
   solver* yices2;
 
 public:
-  term_manager_test_fixture()
+  term_manager_with_yices_test_fixture()
   : tm(true)
   {
     yices2 = factory::mk_solver("yices2", tm);
     cout << set_tm(tm);
   }
 
-  ~term_manager_test_fixture() {
+  ~term_manager_with_yices_test_fixture() {
     delete yices2;
   }
 };
 
-BOOST_FIXTURE_TEST_SUITE(term_manager_construction, term_manager_test_fixture)
+BOOST_FIXTURE_TEST_SUITE(term_manager_construction, term_manager_with_yices_test_fixture)
 
 BOOST_AUTO_TEST_CASE(basic_asserts) {
 
