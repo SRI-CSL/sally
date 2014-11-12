@@ -144,18 +144,21 @@ term_list[std::vector<sal2::expr::term_ref>& out]
   : ( t = term { out.push_back(t); } )+
   ;
   
-constant 
-  : bool_constant
-  | decimal_constant
+constant returns [sal2::expr::term_ref t = sal2::expr::term_ref()] 
+  : bc = bool_constant     { t = bc; } 
+  | dc = decimal_constant  { t = dc; } 
   ; 
 
-bool_constant
-  : 'true'
-  | 'false'
+bool_constant returns [sal2::expr::term_ref t = sal2::expr::term_ref()]
+  : 'true'   { t = STATE->tm().mk_term<sal2::expr::CONST_BOOL>(true); }
+  | 'false'  { t = STATE->tm().mk_term<sal2::expr::CONST_BOOL>(false); }
   ;
   
-decimal_constant
-  : NUMERAL
+decimal_constant returns [sal2::expr::term_ref t = sal2::expr::term_ref()]
+  : NUMERAL { 
+     sal2::expr::rational value(STATE->token_text($NUMERAL));
+     t = STATE->tm().mk_term<sal2::expr::CONST_RATIONAL>(value);
+    }
   ; 
 
 term_op returns [sal2::expr::term_op op = sal2::expr::OP_LAST]
