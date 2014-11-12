@@ -124,7 +124,7 @@ term returns [sal2::expr::term_ref t = sal2::expr::term_ref()]
         op = term_op 
         term_list[children] 
      ')'   
-     { STATE->mk_term(op, children); }
+     { STATE->tm().mk_term(op, children); }
   ; 
   
 /** A symbol */

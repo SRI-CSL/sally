@@ -49,9 +49,6 @@ public:
 
   /** Get the string of a token begin parsed */
   std::string token_text(pANTLR3_COMMON_TOKEN token);
-
-  /** Make an expression */
-  expr::term_ref mk_term(expr::term_op op, const std::vector<expr::term_ref>& children);
 };
 
 }
