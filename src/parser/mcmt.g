@@ -11,6 +11,11 @@ options {
 #include "parser/parser_state.h"
 }
 
+@parser::postinclude {
+#define STATE (ctx->pState)
+}
+
+
 @parser::context
 {
   /** The sal2 part of the parser state */
@@ -108,18 +113,23 @@ state_transition_formula
   ;
 
 /** SMT2 term */
-term 
+term returns [sal2::expr::term_ref t = sal2::expr::term_ref()]
 @declarations{
   std::string id;
+  std::vector<sal2::expr::term_ref> children;
 } 
-  : structured_symbol
+  : structured_symbol                 
   | constant
-  | '(' term_op term_list ')'
+  | '(' 
+        op = term_op 
+        term_list[children] 
+     ')'   
+     { STATE->mk_term(op, children); }
   ; 
   
 /** A symbol */
 symbol[std::string& id]
-  : SYMBOL
+  : SYMBOL { id = STATE->token_text($SYMBOL); }
   ;
   
 /** Structured symbol (i.e a.b.c) */
@@ -127,11 +137,11 @@ structured_symbol
 @declarations {
   std::string id;
 }
-  : symbol[id] ( '.' symbol[id])*
+  : (symbol[id] '.')* symbol[id]
   ;
   
-term_list
-  : term+
+term_list[std::vector<sal2::expr::term_ref>& out]
+  : ( t = term { out.push_back(t); } )+
   ;
   
 constant 
@@ -148,22 +158,22 @@ decimal_constant
   : NUMERAL
   ; 
 
-term_op
-  : 'and'
-  | 'or'
-  | 'not'
-  | 'implies'
-  | 'xor'
-  | 'ite'
-  | '='
-  | '+'
-  | '-'
-  | '*'
-  | '/'
-  | '>'
-  | '>='
-  | '<'
-  | '<='
+term_op returns [sal2::expr::term_op op = sal2::expr::OP_LAST]
+  : 'and'            { op = sal2::expr::TERM_AND; } 
+  | 'or'             { op = sal2::expr::TERM_OR; }
+  | 'not'            { op = sal2::expr::TERM_NOT; }
+  | 'implies'        { op = sal2::expr::TERM_IMPLIES; } 
+  | 'xor'            { op = sal2::expr::TERM_XOR; }
+  | 'ite'            { op = sal2::expr::TERM_ITE; }
+  | '='              { op = sal2::expr::TERM_EQ;  }
+  | '+'              { op = sal2::expr::TERM_ADD; }
+  | '-'              { op = sal2::expr::TERM_SUB; }
+  | '*'              { op = sal2::expr::TERM_MUL; }
+  | '/'              { op = sal2::expr::TERM_DIV; }
+  | '>'              { op = sal2::expr::TERM_GT; }
+  | '>='             { op = sal2::expr::TERM_GEQ; }
+  | '<'              { op = sal2::expr::TERM_LT; }
+  | '<='             { op = sal2::expr::TERM_LEQ; }
   ;
 
 /** Parse a list of variables with types */
@@ -173,7 +183,11 @@ variable_list[std::vector<std::string>& out_vars, std::vector<sal2::expr::term_r
 	std::string type_id;
 } 
   : '('
-      ( '(' symbol[var_id] symbol[type_id] ')' )+ 
+      ( '(' 
+        symbol[var_id]   { out_vars.push_back(var_id); } 
+        symbol[type_id]  
+        ')'       
+      )+ 
     ')'
   ; 
         

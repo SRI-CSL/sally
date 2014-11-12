@@ -27,7 +27,7 @@ public:
   }
 };
 
-BOOST_FIXTURE_TEST_SUITE(term_manager_construction, term_manager_with_yices_test_fixture)
+BOOST_FIXTURE_TEST_SUITE(smt_tests, term_manager_with_yices_test_fixture)
 
 BOOST_AUTO_TEST_CASE(basic_asserts) {
 

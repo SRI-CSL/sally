@@ -411,6 +411,10 @@ public:
     return mk_term<op, term_ref*>(payload, children, children + 2);
   }
 
+
+  /** Make a term, given children */
+  term_ref mk_term(term_op op, const std::vector<term_ref>& children);
+
   /** Get a reference for the term */
   term_ref ref_of(const term& term) const {
     return d_memory.ref_of(term);

@@ -12,6 +12,8 @@
 
 #include "utils/symbol_table.h"
 
+#include <antlr3.h>
+
 namespace sal2 {
 
 namespace parser {
@@ -44,6 +46,12 @@ public:
 
   /** Declare a new state type */
   void declare_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types);
+
+  /** Get the string of a token begin parsed */
+  std::string token_text(pANTLR3_COMMON_TOKEN token);
+
+  /** Make an expression */
+  expr::term_ref mk_term(expr::term_op op, const std::vector<expr::term_ref>& children);
 };
 
 }

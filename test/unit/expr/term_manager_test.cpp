@@ -20,7 +20,7 @@ public:
   }
 };
 
-BOOST_FIXTURE_TEST_SUITE(term_manager_construction, term_manager_test_fixture)
+BOOST_FIXTURE_TEST_SUITE(term_manager_tests, term_manager_test_fixture)
 
 BOOST_AUTO_TEST_CASE(mk_term) {
 

@@ -100,6 +100,8 @@ std::string get_smt_keyword(term_op op) {
     return ">=";
   case TERM_GT:
     return ">";
+  case TERM_ITE:
+    return "ite";
   case TYPE_BOOL:
     return "Bool";
   case TYPE_INTEGER:
@@ -130,6 +132,7 @@ void term::to_stream_smt(std::ostream& out, const term_manager& tm) const {
   case TERM_NOT:
   case TERM_IMPLIES:
   case TERM_XOR:
+  case TERM_ITE:
   case TERM_ADD:
   case TERM_SUB:
   case TERM_MUL:
@@ -183,7 +186,9 @@ term_ref term_manager::type_of(const term& t) const {
   case TERM_EQ:
     return booleanType();
     break;
-
+  // ITE
+  case TERM_ITE:
+    return type_of(t[1]);
   // Boolean terms
   case CONST_BOOL:
   case TERM_AND:
@@ -284,7 +289,12 @@ bool term_manager::typecheck(term_ref t_ref) {
     break;
   // Equality
   case TERM_EQ:
-    ok = (type_of(t) == type_of(t));
+    ok = (t.size() == 2 && type_of(t[0]) == type_of(t[1]));
+    break;
+  // ITE
+  case TERM_ITE:
+    ok = (t.size() == 3 && type_of(t[0]) == booleanType() &&
+        type_of(t[1]) == type_of(t[2]));
     break;
   // Boolean terms
   case CONST_BOOL:
@@ -376,6 +386,40 @@ void term_manager::to_stream(std::ostream& out) const {
   for (term_ref_hash_set::const_iterator it = d_pool.begin(); it != d_pool.end(); ++ it) {
     out << "[id: " << it->id() << ", ref_count = " << d_term_refcount[it->id()] << "] : " << *it << std::endl;
   }
+}
+
+term_ref term_manager::mk_term(term_op op, const std::vector<term_ref>& children) {
+
+  term_ref result;
+
+#define SWITCH_TO_TERM(OP) case OP: result = mk_term<OP>(children.begin(), children.end()); break;
+
+  switch (op) {
+    SWITCH_TO_TERM(TYPE_BOOL)
+    SWITCH_TO_TERM(TYPE_INTEGER)
+    SWITCH_TO_TERM(TYPE_REAL)
+    SWITCH_TO_TERM(TERM_EQ)
+    SWITCH_TO_TERM(TERM_ITE)
+    SWITCH_TO_TERM(TERM_AND)
+    SWITCH_TO_TERM(TERM_OR)
+    SWITCH_TO_TERM(TERM_NOT)
+    SWITCH_TO_TERM(TERM_IMPLIES)
+    SWITCH_TO_TERM(TERM_XOR)
+    SWITCH_TO_TERM(TERM_ADD)
+    SWITCH_TO_TERM(TERM_SUB)
+    SWITCH_TO_TERM(TERM_MUL)
+    SWITCH_TO_TERM(TERM_DIV)
+    SWITCH_TO_TERM(TERM_LEQ)
+    SWITCH_TO_TERM(TERM_LT)
+    SWITCH_TO_TERM(TERM_GEQ)
+    SWITCH_TO_TERM(TERM_GT)
+  default:
+    assert(false);
+  }
+
+#undef SWITCH_TO_TERM
+
+  return result;
 }
 
 }
