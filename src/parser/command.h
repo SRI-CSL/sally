@@ -52,11 +52,11 @@ std::ostream& operator << (std::ostream& out, const command& cmd) {
 
 class declare_state_type_command : public command {
 
-  expr::state_type d_state_type;
+  expr::term_ref d_state_type;
 
 public:
 
-  declare_state_type_command(expr::state_type& state_type)
+  declare_state_type_command(expr::term_ref state_type)
   : command(DECLARE_STATE_TYPE)
   , d_state_type(state_type)
   {}

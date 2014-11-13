@@ -26,7 +26,7 @@ class parser_state {
   expr::term_manager& d_term_manager;
 
   /** Symbol table for state types */
-  utils::symbol_table<expr::state_type> d_state_types;
+  utils::symbol_table<expr::term_ref> d_state_types;
 
   /** Symbol table for variables */
   utils::symbol_table<expr::term_ref> d_variables;

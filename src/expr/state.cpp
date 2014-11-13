@@ -10,15 +10,6 @@
 using namespace sal2;
 using namespace expr;
 
-void state_type::to_stream(std::ostream& out) const {
-  out << "[" << d_name << ":";
-  std::map<std::string, term_ref>::const_iterator it;
-  for (it = d_var_to_type_map.begin(); it != d_var_to_type_map.end(); ++ it) {
-    out << " (" << it->first << " " << it->second << ")";
-  }
-  out << "]";
-}
-
 void state_formula::to_stream(std::ostream& out) const {
   out << "[" << d_state_type << " " << d_formula << "]";
 }

@@ -121,6 +121,18 @@ void term::to_stream_smt(std::ostream& out, const term_manager& tm) const {
   case TYPE_REAL:
     out << get_smt_keyword(d_op);
     break;
+  case TYPE_STRUCT:
+  {
+    out << "(";
+    for (size_t i = 0; i < size(); ++ i) {
+      if (i%2) { out << " "; }
+      else { out << " ("; }
+      out << this->operator [](i);
+      if (i%2) { out << ")"; }
+    }
+    out << ")";
+    break;
+  }
   case VARIABLE:
     out << tm.payload_of<std::string>(*this);
     break;
@@ -158,6 +170,9 @@ void term::to_stream_smt(std::ostream& out, const term_manager& tm) const {
     // Stream is already in SMT mode
     out << tm.payload_of<rational>(*this);
     break;
+  case CONST_STRING:
+    out << tm.payload_of<std::string>(*this);
+    break;
   default:
     assert(false);
   }
@@ -174,11 +189,24 @@ std::ostream& operator << (std::ostream& out, const set_tm& stm) {
   return out;
 }
 
+bool is_type(term_op op) {
+  switch (op) {
+  case TYPE_BOOL:
+  case TYPE_INTEGER:
+  case TYPE_REAL:
+  case TYPE_STRUCT:
+    return true;
+  default:
+    return false;
+  }
+}
+
 term_ref term_manager::type_of(const term& t) const {
   switch (t.op()) {
   case TYPE_BOOL:
   case TYPE_INTEGER:
   case TYPE_REAL:
+  case TYPE_STRUCT:
     return term_ref();
   case VARIABLE:
     return t[0];
@@ -209,6 +237,8 @@ term_ref term_manager::type_of(const term& t) const {
   case TERM_GEQ:
   case TERM_GT:
     return d_booleanType;
+  case CONST_STRING:
+    return term_ref();
   default:
     assert(false);
   }
@@ -278,15 +308,26 @@ term_ref term_manager::tcc_of(const term& t) const {
 
 bool term_manager::typecheck(term_ref t_ref) {
   const term& t = term_of(t_ref);
+  term_op op = t.op();
 
   bool ok = true;
 
-  switch (t.op()) {
+  switch (op) {
   case TYPE_BOOL:
   case TYPE_INTEGER:
   case TYPE_REAL:
   case VARIABLE:
     break;
+  case TYPE_STRUCT: {
+    for (size_t i = 0; ok && i < t.size(); ++ i) {
+      if (i%2) {
+        ok = term_of(t[i]).op() == CONST_STRING;
+      } else {
+        ok = is_type(term_of(t[i]).op());
+      }
+    }
+    break;
+  }
   // Equality
   case TERM_EQ:
     ok = (t.size() == 2 && type_of(t[0]) == type_of(t[1]));
@@ -361,6 +402,9 @@ bool term_manager::typecheck(term_ref t_ref) {
       ok = type_of(t[0]) == realType() && type_of(t[1]) == realType();
       // TODO: make TCC
     }
+    break;
+  case CONST_STRING:
+    ok = true;
     break;
   default:
     assert(false);

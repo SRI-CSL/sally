@@ -16,63 +16,28 @@
 namespace sal2 {
 namespace expr {
 
-class state_type {
-
-  /** Map from variable names to their types */
-  std::map<std::string, term_ref> d_var_to_type_map;
-
-  /** The id of the state */
-  std::string d_name;
-
-public:
-
-  state_type(std::string name)
-  : d_name(name)
-  {}
-
-  /** Get the name of the state type */
-  std::string get_name() const {
-    return d_name;
-  }
-
-  /** Ads a new variable to the state */
-  void add_variable(std::string name, term_ref type) {
-    d_var_to_type_map[name] = type;
-  }
-
-  /** Check if the variable is in the state */
-  bool contains(std::string name) const {
-    return d_var_to_type_map.find(name) != d_var_to_type_map.end();
-  }
-
-  /** Print it to the stream */
-  void to_stream(std::ostream& out) const;
-
-};
-
-inline
-std::ostream& operator << (std::ostream& out, const state_type& st) {
-  st.to_stream(out);
-  return out;
-}
-
 class state_formula {
 
   /** The state information */
-  const state_type& d_state_type;
+  term_ref_strong d_state_type;
 
   /** The actual formula */
   term_ref_strong d_formula;
 
 public:
 
-  state_formula(const state_type& state_type)
-  : d_state_type(state_type)
+  state_formula(term_manager& tm, term_ref state_type, term_ref formula)
+  : d_state_type(tm, state_type)
+  , d_formula(tm, formula)
   {}
 
   /** Get the state formula */
-  term_ref_strong get_formula() const {
+  term_ref get_formula() const {
     return d_formula;
+  }
+
+  term_ref get_state_type() const {
+    return d_state_type;
   }
 
   /** Print it to the stream */
@@ -88,20 +53,25 @@ std::ostream& operator << (std::ostream& out, const state_formula& sf) {
 class state_transition_formula {
 
   /** The state information */
-  const state_type& d_state_type;
+  term_ref_strong d_state_type;
 
-  /** The transition formula */
+  /** The actual formula */
   term_ref_strong d_transition_formula;
 
 public:
 
-  state_transition_formula(const state_type& state_type)
-  : d_state_type(state_type)
+  state_transition_formula(term_manager& tm, term_ref state_type, term_ref transition_formula)
+  : d_state_type(tm, state_type)
+  , d_transition_formula(tm, transition_formula)
   {}
 
-  /** Get the transition relation */
-  term_ref_strong get_formula() const {
+  /** Get the state formula */
+  term_ref get_transition_formula() const {
     return d_transition_formula;
+  }
+
+  term_ref get_state_type() const {
+    return d_state_type;
   }
 
   /** Print it to the stream */
@@ -109,11 +79,10 @@ public:
 };
 
 inline
-std::ostream& operator << (std::ostream& out, const state_transition_formula& stf) {
-  stf.to_stream(out);
+std::ostream& operator << (std::ostream& out, const state_transition_formula& sf) {
+  sf.to_stream(out);
   return out;
 }
-
 
 }
 }

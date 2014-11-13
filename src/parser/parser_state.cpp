@@ -34,11 +34,18 @@ command* parser_state::declare_state_type(string id, const vector<string>& vars,
   assert(vars.size() == types.size());
   assert(vars.size() > 0);
 
-  expr::state_type type(id);
+  size_t n = vars.size();
 
-  for(size_t i = 0; i < vars.size(); ++ i) {
-    type.add_variable(vars[i], types[i]);
+  // Create the variable names
+  vector<term_ref> type_argumens;
+  for (size_t i = 0; i < n; ++ i) {
+    type_argumens.push_back(d_term_manager.mk_term<CONST_STRING>(vars[i]));
+    type_argumens.push_back(types[i]);
   }
+
+  // TODO: sort the arrays
+  term_ref type = d_term_manager.mk_term<TYPE_STRUCT>(type_argumens.begin(), type_argumens.end());
+
 
   cout << "Adding state type: " << type << endl;
   d_state_types.add_entry(id, type);
@@ -64,9 +71,6 @@ void parser_state::use_state_type(std::string id) {
   if (!d_state_types.has_entry(id)) {
     report_error("unknown state type: " + id);
   }
-
-  // Get the state type
-  const expr::state_type& type = d_state_types.get_entry(id);
 
 
 }

@@ -52,8 +52,8 @@ define_states returns [sal2::parser::command* cmd = 0]
   std::string type_id;  
 }
   : '(' 'define-states'
-      symbol[id]
-      symbol[type_id]
+      symbol[id]       
+      symbol[type_id]    { STATE->use_state_type(type_id); }
       f = state_formula
     ')'
   ; 

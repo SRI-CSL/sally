@@ -26,6 +26,7 @@ enum term_op {
   TYPE_BOOL,
   TYPE_INTEGER,
   TYPE_REAL,
+  TYPE_STRUCT,
 
   // Variables
   VARIABLE,
@@ -54,6 +55,9 @@ enum term_op {
   TERM_LT,
   TERM_GEQ,
   TERM_GT,
+
+  // Constant strings
+  CONST_STRING,
 
   // Marker for the last
   OP_LAST
@@ -98,6 +102,15 @@ struct term_op_traits<VARIABLE> {
   typedef std::string payload_type;
 };
 
+/**
+ * Strings just have string payloads.
+ */
+template<>
+struct term_op_traits<CONST_STRING> {
+  typedef std::string payload_type;
+};
+
+
 inline
 std::ostream& operator << (std::ostream& out, term_op op) {
 
@@ -106,6 +119,7 @@ std::ostream& operator << (std::ostream& out, term_op op) {
     SWITCH_TO_STRING(TYPE_BOOL)
     SWITCH_TO_STRING(TYPE_INTEGER)
     SWITCH_TO_STRING(TYPE_REAL)
+    SWITCH_TO_STRING(TYPE_STRUCT)
     SWITCH_TO_STRING(VARIABLE)
     SWITCH_TO_STRING(TERM_EQ)
     SWITCH_TO_STRING(TERM_ITE)
@@ -124,6 +138,7 @@ std::ostream& operator << (std::ostream& out, term_op op) {
     SWITCH_TO_STRING(TERM_LT)
     SWITCH_TO_STRING(TERM_GEQ)
     SWITCH_TO_STRING(TERM_GT)
+    SWITCH_TO_STRING(CONST_STRING);
     SWITCH_TO_STRING(OP_LAST)
   default:
     out << "unknown";
