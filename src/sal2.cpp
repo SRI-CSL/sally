@@ -47,12 +47,21 @@ int main(int argc, char* argv[]) {
 
       // Create the term manager
       expr::term_manager tm(type_check);
+      cout << expr::set_tm(tm);
+      cerr << expr::set_tm(tm);
 
       // Create the parser
       parser::parser mcmt_parser(tm, files[i].c_str());
 
       // Parse an process each command
       for (parser::command* cmd = mcmt_parser.parse_command(); cmd != 0; cmd = mcmt_parser.parse_command()) {
+
+        if (output::get_verbosity(cout) > 0) {
+          if (cmd != ((parser::command*)0) + 1) {
+            cout << "Got command " << *cmd << endl;
+            delete cmd;
+          }
+        }
 
         // If only parsing, just ignore the command
         if (options.count("parse-only") > 0) {

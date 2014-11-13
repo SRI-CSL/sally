@@ -39,7 +39,10 @@ declare_state_type returns [sal2::parser::command* cmd = 0]
   std::vector<std::string> vars;  
   std::vector<sal2::expr::term_ref> types;
 }
-  : '(' 'declare-state-type' symbol[id] variable_list[vars, types] ')'
+  : '(' 'declare-state-type' symbol[id] variable_list[vars, types] ')' 
+    {
+      $cmd = STATE->declare_state_type(id, vars, types);
+    }
   ; 
 
 /** Definition of a state set  */
@@ -188,7 +191,7 @@ variable_list[std::vector<std::string>& out_vars, std::vector<sal2::expr::term_r
   : '('
       ( '(' 
         symbol[var_id]   { out_vars.push_back(var_id); } 
-        symbol[type_id]  
+        symbol[type_id]  { out_types.push_back(STATE->get_type(type_id)); }
         ')'       
       )+ 
     ')'

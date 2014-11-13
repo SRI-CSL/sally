@@ -18,4 +18,4 @@ set_source_files_properties(
     COMPILE_FLAGS "-Wno-unused-function -Wno-unused-variable -Wno-tautological-compare -x c++"
 )
 
-add_library(parser parser.cpp parser_state.cpp mcmtParser.c mcmtLexer.c)
+add_library(parser command.cpp parser_state.cpp mcmtParser.c mcmtLexer.c parser.cpp)

@@ -20,7 +20,7 @@ class symbol_table {
   typedef std::list<T> T_list;
   typedef boost::unordered_map<std::string, T_list, utils::hash<std::string> > id_to_T_map;
   typedef typename id_to_T_map::iterator iterator;
-
+  typedef typename id_to_T_map::const_iterator const_iterator;
 
   /** Map from names to lists of entries */
   id_to_T_map d_table;
@@ -60,10 +60,25 @@ public:
 
   /** Get the value associated to id -> value */
   const T& get_entry(std::string id) const {
-    assert(d_table.find(id) != d_table.end(id));
-    const T_list& list = d_table.find(id)->second;
+    const_iterator find = d_table.find(id);
+    assert(find != d_table.end());
+    const T_list& list = find->second;
     assert(!list.empty());
     return list.front();
+  }
+
+  /** Does the id have an entry */
+  bool has_entry(std::string id) const {
+    const_iterator find = d_table.find(id);
+    if (find == d_table.end()) {
+      return false;
+    }
+    const T_list& list = find->second;
+    if (list.empty()) {
+      return false;
+    } else {
+      return true;
+    }
   }
 };
 

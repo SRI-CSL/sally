@@ -10,6 +10,7 @@
 #include "expr/term.h"
 #include "expr/state.h"
 
+#include "parser/command.h"
 #include "utils/symbol_table.h"
 
 #include <antlr3.h>
@@ -45,7 +46,9 @@ public:
   void report_error(std::string msg);
 
   /** Declare a new state type */
-  void declare_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types);
+  command* declare_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types);
+
+  expr::term_ref get_type(std::string id);
 
   /** Get the string of a token begin parsed */
   std::string token_text(pANTLR3_COMMON_TOKEN token);
