@@ -47,6 +47,7 @@ public:
 
   /** Print it to the stream */
   void to_stream(std::ostream& out) const;
+
 };
 
 inline

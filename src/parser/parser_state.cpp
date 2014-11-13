@@ -53,10 +53,20 @@ string parser_state::token_text(pANTLR3_COMMON_TOKEN token) {
 }
 
 expr::term_ref parser_state::get_type(std::string id) {
-  if (d_types.has_entry(id)) {
-    return d_types.get_entry(id);
-  } else {
+  if (!d_types.has_entry(id)) {
     report_error("unknown type: " + id);
     return expr::term_ref();
   }
+  return d_types.get_entry(id);
+}
+
+void parser_state::use_state_type(std::string id) {
+  if (!d_state_types.has_entry(id)) {
+    report_error("unknown state type: " + id);
+  }
+
+  // Get the state type
+  const expr::state_type& type = d_state_types.get_entry(id);
+
+
 }

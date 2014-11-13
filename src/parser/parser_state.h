@@ -48,6 +48,10 @@ public:
   /** Declare a new state type */
   command* declare_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types);
 
+  /** Use the state type, i.e. declare the variables state.x and next.x */
+  void use_state_type(std::string id);
+
+  /** Returns the type with the given id */
   expr::term_ref get_type(std::string id);
 
   /** Get the string of a token begin parsed */

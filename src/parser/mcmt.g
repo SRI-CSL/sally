@@ -25,7 +25,7 @@ options {
 /** Parses a command */
 command returns [sal2::parser::command* cmd = 0] 
   : c = declare_state_type       { $cmd = c; }
-  | c = define_states            { $cmd = c + 1; }
+  | c = define_states            { $cmd = c; }
   | c = define_transition        { $cmd = c + 1; }
   | c = define_transition_system { $cmd = c + 1; }
   | c = query                    { $cmd = c + 1; }
@@ -54,7 +54,7 @@ define_states returns [sal2::parser::command* cmd = 0]
   : '(' 'define-states'
       symbol[id]
       symbol[type_id]
-      state_formula
+      f = state_formula
     ')'
   ; 
 
