@@ -46,7 +46,6 @@ command* parser_state::declare_state_type(string id, const vector<string>& vars,
   // TODO: sort the arrays
   term_ref type = d_term_manager.mk_term<TYPE_STRUCT>(type_argumens.begin(), type_argumens.end());
 
-
   cout << "Adding state type: " << type << endl;
   d_state_types.add_entry(id, type);
 

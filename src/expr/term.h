@@ -217,6 +217,12 @@ class term_manager {
 
 public:
 
+  enum type_checking_style {
+    // Throw exceptions
+    STRONG,
+    //
+  };
+
   /** Base references */
   typedef alloc::allocator_base::ref base_ref;
 
