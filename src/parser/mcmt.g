@@ -121,28 +121,20 @@ term returns [sal2::expr::term_ref t = sal2::expr::term_ref()]
   std::string id;
   std::vector<sal2::expr::term_ref> children;
 } 
-  : structured_symbol                 
+  : symbol[id] { t = STATE->get_variable(id); }                
   | constant
   | '(' 
         op = term_op 
         term_list[children] 
      ')'   
-     { STATE->tm().mk_term(op, children); }
+     { t = STATE->tm().mk_term(op, children); std::cerr << "Parsed: " << t << std::endl; }
   ; 
   
 /** A symbol */
-symbol[std::string& id]
+symbol[std::string& id] 
   : SYMBOL { id = STATE->token_text($SYMBOL); }
   ;
-  
-/** Structured symbol (i.e a.b.c) */
-structured_symbol
-@declarations {
-  std::string id;
-}
-  : (symbol[id] '.')* symbol[id]
-  ;
-  
+    
 term_list[std::vector<sal2::expr::term_ref>& out]
   : ( t = term { out.push_back(t); } )+
   ;
@@ -209,7 +201,7 @@ WHITESPACE
   
 /** Matches a symbol. */
 SYMBOL
-  : ALPHA (ALPHA | DIGIT | '_' | '@')*
+  : ALPHA (ALPHA | DIGIT | '_' | '@' | '.')*
   ;
 
 /** Matches a letter. */

@@ -478,10 +478,14 @@ public:
     return d_term_ids.find(ref)->second;
   }
 
+  /** Get the hash of the term */
   size_t hash_of(term_ref ref) const {
     if (ref.is_null()) return 0;
     return term_of(ref).hash();
   }
+
+  /** Get the string representation of the term */
+  std::string to_string(term_ref ref) const;
 };
 
 inline

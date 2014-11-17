@@ -54,6 +54,9 @@ public:
   /** Returns the type with the given id */
   expr::term_ref get_type(std::string id);
 
+  /** Returns the a variable with the given id */
+  expr::term_ref get_variable(std::string id);
+
   /** Get the string of a token begin parsed */
   std::string token_text(pANTLR3_COMMON_TOKEN token);
 };

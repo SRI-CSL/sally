@@ -60,10 +60,18 @@ string parser_state::token_text(pANTLR3_COMMON_TOKEN token) {
 
 expr::term_ref parser_state::get_type(std::string id) {
   if (!d_types.has_entry(id)) {
-    report_error("unknown type: " + id);
+    report_error("undeclared type: " + id);
     return expr::term_ref();
   }
   return d_types.get_entry(id);
+}
+
+expr::term_ref parser_state::get_variable(std::string id) {
+  if (!d_variables.has_entry(id)) {
+    report_error("undeclared variable: " + id);
+    return expr::term_ref();
+  }
+  return d_variables.get_entry(id);
 }
 
 void parser_state::use_state_type(std::string id) {
@@ -71,5 +79,11 @@ void parser_state::use_state_type(std::string id) {
     report_error("unknown state type: " + id);
   }
 
+  expr::term_ref state_type_ref = d_state_types.get_entry(id);
+  const expr::term& state_type = d_term_manager.term_of(state_type_ref);
+
+  for (size_t i = 0; i < state_type.size(); ++ i) {
+    std::string id = state_type.
+  }
 
 }

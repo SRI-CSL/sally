@@ -10,6 +10,7 @@
 
 #include <iomanip>
 #include <cassert>
+#include <sstream>
 
 namespace sal2 {
 namespace expr {
@@ -74,6 +75,8 @@ void term::to_stream(std::ostream& out) const {
 static inline
 std::string get_smt_keyword(term_op op) {
   switch (op) {
+  case TERM_EQ:
+    return "=";
   case TERM_AND:
     return "and";
   case TERM_OR:
@@ -125,8 +128,8 @@ void term::to_stream_smt(std::ostream& out, const term_manager& tm) const {
   {
     out << "(";
     for (size_t i = 0; i < size(); ++ i) {
-      if (i%2) { out << " "; }
-      else { out << " ("; }
+      if (i) { out << " ";}
+      if (i%2==0) { out << "("; }
       out << this->operator [](i);
       if (i%2) { out << ")"; }
     }
@@ -139,6 +142,7 @@ void term::to_stream_smt(std::ostream& out, const term_manager& tm) const {
   case CONST_BOOL:
     out << (tm.payload_of<bool>(*this) ? "true" : "false");
     break;
+  case TERM_EQ:
   case TERM_AND:
   case TERM_OR:
   case TERM_NOT:
@@ -321,9 +325,9 @@ bool term_manager::typecheck(term_ref t_ref) {
   case TYPE_STRUCT: {
     for (size_t i = 0; ok && i < t.size(); ++ i) {
       if (i%2) {
-        ok = term_of(t[i]).op() == CONST_STRING;
-      } else {
         ok = is_type(term_of(t[i]).op());
+      } else {
+        ok = term_of(t[i]).op() == CONST_STRING;
       }
     }
     break;
@@ -410,6 +414,11 @@ bool term_manager::typecheck(term_ref t_ref) {
     assert(false);
   }
 
+  if (!ok) {
+    std::cerr << "Can't typecheck: " << t_ref << std::endl;
+  }
+  assert(ok);
+
   return ok;
 }
 
@@ -464,6 +473,12 @@ term_ref term_manager::mk_term(term_op op, const std::vector<term_ref>& children
 #undef SWITCH_TO_TERM
 
   return result;
+}
+
+std::string term_manager::to_string(term_ref ref) const {
+  std::stringstream ss;
+  ss << set_tm(*this) << ref;
+  return ss.str();
 }
 
 }
