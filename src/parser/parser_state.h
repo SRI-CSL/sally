@@ -8,6 +8,8 @@
 #pragma once
 
 #include "expr/term.h"
+#include "expr/term_manager.h"
+
 #include "expr/state.h"
 
 #include "parser/command.h"

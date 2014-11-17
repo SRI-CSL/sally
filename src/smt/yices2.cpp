@@ -6,6 +6,7 @@
  */
 
 #include "expr/term.h"
+#include "expr/term_manager.h"
 
 #include <boost/unordered_map.hpp>
 
@@ -175,13 +176,13 @@ term_t yices2_internal::to_yices2_term(expr::term_ref ref) {
   switch (t.op()) {
   case expr::VARIABLE:
     result = yices_new_uninterpreted_term(to_yices2_type(t[0]));
-    yices_set_term_name(result, d_tm.payload_of<std::string>(t).c_str());
+    yices_set_term_name(result, d_tm.get_variable_name(t).c_str());
     break;
   case expr::CONST_BOOL:
-    result = d_tm.payload_of<bool>(t) ? yices_true() : yices_false();
+    result = d_tm.get_boolean_constant(t) ? yices_true() : yices_false();
     break;
   case expr::CONST_RATIONAL:
-    result = yices_mpq(d_tm.payload_of<expr::rational>(t).mpq().get_mpq_t());
+    result = yices_mpq(d_tm.get_rational_constant(t).mpq().get_mpq_t());
     break;
   case expr::TERM_AND:
   case expr::TERM_OR:

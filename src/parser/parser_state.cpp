@@ -8,6 +8,8 @@
 #include "parser/parser_state.h"
 #include "parser/parser.h"
 
+#include "expr/term_manager.h"
+
 #include <cassert>
 
 using namespace sal2;
@@ -43,12 +45,12 @@ command* parser_state::declare_state_type(string id, const vector<string>& vars,
   // Create the variable names
   vector<term_ref> type_argumens;
   for (size_t i = 0; i < n; ++ i) {
-    type_argumens.push_back(d_term_manager.mk_term<CONST_STRING>(vars[i]));
+    type_argumens.push_back(d_term_manager.mk_string_constant(vars[i]));
     type_argumens.push_back(types[i]);
   }
 
   // Make the struct type
-  term_ref type = d_term_manager.mk_term<TYPE_STRUCT>(type_argumens.begin(), type_argumens.end());
+  term_ref type = d_term_manager.mk_term(TYPE_STRUCT, type_argumens);
 
   // Add the mapping id -> type
   d_state_types.add_entry(id, term_ref_strong(d_term_manager, type));
@@ -93,7 +95,7 @@ void parser_state::use_state_type(std::string id, std::string prefix) {
 
   for (size_t i = 0; i < state_type.size(); i += 2) {
     // Get the variable id
-    std::string var_id = d_term_manager.payload_of<std::string>(state_type[i]);
+    std::string var_id = d_term_manager.get_string_constant(d_term_manager.term_of(state_type[i]));
     expr::term_ref var_type = state_type[i+1];
 
     // Create the complete name
@@ -103,7 +105,7 @@ void parser_state::use_state_type(std::string id, std::string prefix) {
     // Not there before, add it
     if (!d_variables_global.has_entry(var_global_name)) {
       // Create it
-      expr::term_ref var = d_term_manager.mk_term<VARIABLE>(var_global_name, var_type);
+      expr::term_ref var = d_term_manager.mk_variable(var_global_name, var_type);
       d_variables_global.add_entry(var_global_name, expr::term_ref_strong(d_term_manager, var));
     }
 

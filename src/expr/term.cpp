@@ -6,6 +6,9 @@
  */
 
 #include "expr/term.h"
+#include "expr/term_manager.h"
+#include "expr/term_manager_internal.h"
+#include "utils/allocator.h"
 #include "utils/output.h"
 
 #include <iomanip>
@@ -30,28 +33,11 @@ bool term_ref_fat::operator == (const term_ref_fat& other) const {
   return cmp(other);
 }
 
-term_manager::term_manager(bool typecheck)
-: d_typecheck(typecheck)
-{
-  // The null id
-  new_term_id();
-
-  // Initialize all payload memories to 0
-  for (unsigned i = 0; i < OP_LAST; ++ i) {
-    d_payload_memory[i] = 0;
-  }
-
-  // Create the types
-  d_booleanType = term_ref_strong(*this, mk_term<TYPE_BOOL>(alloc::empty_type()));
-  d_integerType = term_ref_strong(*this, mk_term<TYPE_INTEGER>(alloc::empty_type()));
-  d_realType = term_ref_strong(*this, mk_term<TYPE_REAL>(alloc::empty_type()));
-}
-
 void term_ref::to_stream(std::ostream& out) const {
   if (is_null()) {
     out << "null";
   } else {
-    const term_manager* tm = output::get_term_manager(out);
+    const term_manager_internal* tm = output::get_term_manager(out);
     if (tm == 0) {
       out << d_ref;
     } else {
@@ -62,7 +48,7 @@ void term_ref::to_stream(std::ostream& out) const {
 
 void term::to_stream(std::ostream& out) const {
   output::language lang = output::get_output_language(out);
-  const term_manager* tm = output::get_term_manager(out);
+  const term_manager_internal* tm = output::get_term_manager(out);
   switch (lang) {
   case output::SMTLIB:
     to_stream_smt(out, *tm);
@@ -117,7 +103,7 @@ std::string get_smt_keyword(term_op op) {
   }
 }
 
-void term::to_stream_smt(std::ostream& out, const term_manager& tm) const {
+void term::to_stream_smt(std::ostream& out, const term_manager_internal& tm) const {
   switch (d_op) {
   case TYPE_BOOL:
   case TYPE_INTEGER:
@@ -182,71 +168,9 @@ void term::to_stream_smt(std::ostream& out, const term_manager& tm) const {
   }
 }
 
-term_manager::~term_manager() {
-  for (unsigned i = 0; i < OP_LAST; ++ i) {
-    delete d_payload_memory[i];
-  }
-}
-
 std::ostream& operator << (std::ostream& out, const set_tm& stm) {
-  output::set_term_manager(out, stm.tm);
+  output::set_term_manager(out, stm.d_tm);
   return out;
-}
-
-bool is_type(term_op op) {
-  switch (op) {
-  case TYPE_BOOL:
-  case TYPE_INTEGER:
-  case TYPE_REAL:
-  case TYPE_STRUCT:
-    return true;
-  default:
-    return false;
-  }
-}
-
-term_ref term_manager::type_of(const term& t) const {
-  switch (t.op()) {
-  case TYPE_BOOL:
-  case TYPE_INTEGER:
-  case TYPE_REAL:
-  case TYPE_STRUCT:
-    return term_ref();
-  case VARIABLE:
-    return t[0];
-  // Equality
-  case TERM_EQ:
-    return booleanType();
-    break;
-  // ITE
-  case TERM_ITE:
-    return type_of(t[1]);
-  // Boolean terms
-  case CONST_BOOL:
-  case TERM_AND:
-  case TERM_OR:
-  case TERM_XOR:
-  case TERM_NOT:
-  case TERM_IMPLIES:
-    return booleanType();
-  // Arithmetic terms
-  case CONST_RATIONAL:
-  case TERM_ADD:
-  case TERM_MUL:
-  case TERM_SUB:
-  case TERM_DIV:
-    return d_realType;
-  case TERM_LEQ:
-  case TERM_LT:
-  case TERM_GEQ:
-  case TERM_GT:
-    return d_booleanType;
-  case CONST_STRING:
-    return term_ref();
-  default:
-    assert(false);
-  }
-  return term_ref();
 }
 
 term_ref_strong::term_ref_strong(const term_ref_strong& other)
@@ -258,9 +182,16 @@ term_ref_strong::term_ref_strong(const term_ref_strong& other)
   }
 }
 
-term_ref_strong::term_ref_strong(term_manager& tm, term_ref ref)
+term_ref_strong::term_ref_strong(term_manager_internal& tm, term_ref ref)
 : term_ref(ref)
 , d_tm(&tm)
+{
+  d_tm->attach(id());
+}
+
+term_ref_strong::term_ref_strong(term_manager& tm, term_ref ref)
+: term_ref(ref)
+, d_tm(tm.get_internal())
 {
   d_tm->attach(id());
 }
@@ -301,194 +232,21 @@ size_t term_ref_strong::id() const {
   }
 }
 
-term_ref term_manager::tcc_of(const term& t) const {
-  tcc_map::const_iterator find = d_tcc_map.find(ref_of(t));
-  if (find == d_tcc_map.end()) {
-    return term_ref();
-  } else {
-    return find->second;
-  }
+/** Number of children, if any */
+size_t term::size() const {
+  return alloc::allocator<term, term_ref>::object_size(*this);
 }
 
-bool term_manager::typecheck(term_ref t_ref) {
-  const term& t = term_of(t_ref);
-  term_op op = t.op();
-
-  bool ok = true;
-
-  switch (op) {
-  case TYPE_BOOL:
-  case TYPE_INTEGER:
-  case TYPE_REAL:
-  case VARIABLE:
-    break;
-  case TYPE_STRUCT: {
-    for (size_t i = 0; ok && i < t.size(); ++ i) {
-      if (i%2) {
-        ok = is_type(term_of(t[i]).op());
-      } else {
-        ok = term_of(t[i]).op() == CONST_STRING;
-      }
-    }
-    break;
-  }
-  // Equality
-  case TERM_EQ:
-    ok = (t.size() == 2 && type_of(t[0]) == type_of(t[1]));
-    break;
-  // ITE
-  case TERM_ITE:
-    ok = (t.size() == 3 && type_of(t[0]) == booleanType() &&
-        type_of(t[1]) == type_of(t[2]));
-    break;
-  // Boolean terms
-  case CONST_BOOL:
-    break;
-  case TERM_AND:
-  case TERM_OR:
-  case TERM_XOR:
-    if (t.size() < 2) {
-      ok = false;
-    } else {
-      for (const term_ref* it = t.begin(); it != t.end(); ++ it) {
-        if (type_of(*it) != booleanType()) {
-          ok = false;
-          break;
-        }
-      }
-    }
-    break;
-  case TERM_NOT:
-    if (t.size() != 1) {
-      ok = false;
-    } else {
-      ok = type_of(t[0]) == booleanType();
-    }
-    break;
-  case TERM_IMPLIES:
-    if (t.size() != 2) {
-      ok = false;
-    } else {
-      ok = type_of(t[0]) == booleanType() && type_of(t[1]) == booleanType();
-    }
-    break;
-  // Arithmetic terms
-  case CONST_RATIONAL:
-    break;
-  case TERM_ADD:
-  case TERM_MUL:
-    if (t.size() < 2) {
-      ok = false;
-    } else {
-      for (const term_ref* it = t.begin(); it != t.end(); ++ it) {
-        if (type_of(*it) != realType()) {
-          ok = false;
-          break;
-        }
-      }
-    }
-    break;
-  case TERM_SUB:
-    // 1 child is OK
-    if (t.size() == 1) {
-      ok = type_of(t[0]) == realType();
-    } else if (t.size() != 2) {
-      ok = false;
-    } else {
-      ok = type_of(t[0]) == realType() && type_of(t[1]) == realType();
-    }
-    break;
-  case TERM_LEQ:
-  case TERM_LT:
-  case TERM_GEQ:
-  case TERM_GT:
-    if (t.size() != 2) {
-      ok = false;
-    } else {
-      ok = type_of(t[0]) == realType() && type_of(t[1]) == realType();
-    }
-    break;
-  case TERM_DIV:
-    if (t.size() != 2) {
-      ok = false;
-    } else {
-      ok = type_of(t[0]) == realType() && type_of(t[1]) == realType();
-      // TODO: make TCC
-    }
-    break;
-  case CONST_STRING:
-    ok = true;
-    break;
-  default:
-    assert(false);
-  }
-
-  if (!ok) {
-    std::cerr << "Can't typecheck: " << t_ref << std::endl;
-  }
-  assert(ok);
-
-  return ok;
+/** Returns the first child */
+const term_ref* term::begin() const {
+  return alloc::allocator<term, term_ref>::object_begin(*this);
 }
 
-void term_manager::to_stream(std::ostream& out) const {
-  out << "Term memory:" << std::endl;
-  out << d_memory << std::endl;
-
-  for (int op = 0; op < OP_LAST; ++ op) {
-    out << "Payloads of :" << (term_op) op << std::endl;
-    if (d_payload_memory[op]) {
-      out << *d_payload_memory[op] << std::endl;
-    } else {
-      out << "null" << std::endl;
-    }
-  }
-
-  out << "Terms:" << std::endl;
-  for (term_ref_hash_set::const_iterator it = d_pool.begin(); it != d_pool.end(); ++ it) {
-    out << "[id: " << it->id() << ", ref_count = " << d_term_refcount[it->id()] << "] : " << *it << std::endl;
-  }
+/** The one past last child */
+const term_ref* term::end() const {
+  return alloc::allocator<term, term_ref>::object_end(*this);
 }
 
-term_ref term_manager::mk_term(term_op op, const std::vector<term_ref>& children) {
-
-  term_ref result;
-
-#define SWITCH_TO_TERM(OP) case OP: result = mk_term<OP>(children.begin(), children.end()); break;
-
-  switch (op) {
-    SWITCH_TO_TERM(TYPE_BOOL)
-    SWITCH_TO_TERM(TYPE_INTEGER)
-    SWITCH_TO_TERM(TYPE_REAL)
-    SWITCH_TO_TERM(TERM_EQ)
-    SWITCH_TO_TERM(TERM_ITE)
-    SWITCH_TO_TERM(TERM_AND)
-    SWITCH_TO_TERM(TERM_OR)
-    SWITCH_TO_TERM(TERM_NOT)
-    SWITCH_TO_TERM(TERM_IMPLIES)
-    SWITCH_TO_TERM(TERM_XOR)
-    SWITCH_TO_TERM(TERM_ADD)
-    SWITCH_TO_TERM(TERM_SUB)
-    SWITCH_TO_TERM(TERM_MUL)
-    SWITCH_TO_TERM(TERM_DIV)
-    SWITCH_TO_TERM(TERM_LEQ)
-    SWITCH_TO_TERM(TERM_LT)
-    SWITCH_TO_TERM(TERM_GEQ)
-    SWITCH_TO_TERM(TERM_GT)
-  default:
-    assert(false);
-  }
-
-#undef SWITCH_TO_TERM
-
-  return result;
-}
-
-std::string term_manager::to_string(term_ref ref) const {
-  std::stringstream ss;
-  ss << set_tm(*this) << ref;
-  return ss.str();
-}
 
 }
 }

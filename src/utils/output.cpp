@@ -8,6 +8,7 @@
 #include <string>
 
 #include "utils/output.h"
+#include "expr/term_manager.h"
 
 namespace sal2 {
 namespace output {
@@ -30,11 +31,15 @@ long& __get_verbosity(std::ostream& out) {
   return out.iword(x_index);
 }
 
-const expr::term_manager* get_term_manager(std::ostream& out) {
-  return (expr::term_manager*) __get_term_manager(out);
+const expr::term_manager_internal* get_term_manager(std::ostream& out) {
+  return (expr::term_manager_internal*) __get_term_manager(out);
 }
 
 void set_term_manager(std::ostream& out, const expr::term_manager* tm) {
+  __get_term_manager(out) = (void*) const_cast<expr::term_manager*>(tm)->get_internal();
+}
+
+void set_term_manager(std::ostream& out, const expr::term_manager_internal* tm) {
   __get_term_manager(out) = (void*) tm;
 }
 

@@ -147,14 +147,14 @@ constant returns [sal2::expr::term_ref t = sal2::expr::term_ref()]
   ; 
 
 bool_constant returns [sal2::expr::term_ref t = sal2::expr::term_ref()]
-  : 'true'   { t = STATE->tm().mk_term<sal2::expr::CONST_BOOL>(true); }
-  | 'false'  { t = STATE->tm().mk_term<sal2::expr::CONST_BOOL>(false); }
+  : 'true'   { t = STATE->tm().mk_boolean_constant(true); }
+  | 'false'  { t = STATE->tm().mk_boolean_constant(false); }
   ;
   
 decimal_constant returns [sal2::expr::term_ref t = sal2::expr::term_ref()]
   : NUMERAL { 
      sal2::expr::rational value(STATE->token_text($NUMERAL));
-     t = STATE->tm().mk_term<sal2::expr::CONST_RATIONAL>(value);
+     t = STATE->tm().mk_rational_constant(value);
     }
   ; 
 

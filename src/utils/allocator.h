@@ -14,35 +14,9 @@
 #include <cassert>
 
 #include "utils/hash.h"
+#include "utils/allocator_types.h"
 
 namespace sal2 {
-namespace alloc {
-
-struct empty_type {
-  bool operator == (empty_type other) const { return true; }
-};
-
-template<typename T>
-struct type_traits {
-  static const bool is_empty = false;
-};
-
-template<>
-struct type_traits<empty_type> {
-  static const bool is_empty = true;
-};
-
-}
-
-namespace utils {
-
-template<>
-struct hash<alloc::empty_type> {
-  size_t operator()(alloc::empty_type e) const { return 0; }
-};
-
-}
-
 namespace alloc {
 
 /**
@@ -60,38 +34,6 @@ class allocator_base {
   size_t d_capacity;
 
 public:
-
-  /**
-   * References to the allocated memoty, just indices into the memory. There
-   * are two special values: the null reference (for default values and bad
-   * results) and lazy reference (meant for references not yet allocated).
-   */
-  class ref {
-  protected:
-    size_t d_ref;
-    ref(size_t ref): d_ref(ref) {}
-    friend class allocator_base;
-    static const size_t null_value = (size_t)-1;
-
-  public:
-
-    /** Only for descendants */
-    size_t index() const { return d_ref; }
-
-    /** Create undefined reference */
-    ref(): d_ref(null_value) {}
-    /** Copy construct */
-    ref(const ref& r): d_ref(r.d_ref) {}
-
-    /** Is this null reference */
-    bool is_null() const { return d_ref == null_value; }
-
-    /** Compare */
-    bool operator == (const ref& r) const { return d_ref == r.d_ref; }
-
-    /** Compare */
-    bool operator != (const ref& r) const { return d_ref != r.d_ref; }
-};
 
   /** Constructor */
   allocator_base(size_t initial_size = 10000)
@@ -180,12 +122,12 @@ public:
   /**
    * The reference class for the <T, E> type of objects.
    */
-  class ref : public allocator_base::ref {
+  class ref : public alloc::ref {
     friend class allocator<T, E>;
-    ref(size_t ref): allocator_base::ref(ref) {}
+    ref(size_t ref): alloc::ref(ref) {}
   public:
-    ref(): allocator_base::ref(-1) {}
-    ref(const allocator_base::ref& ref): allocator_base::ref(ref) {}
+    ref(): alloc::ref(-1) {}
+    ref(const alloc::ref& ref): alloc::ref(ref) {}
     static const ref null;
   };
 
@@ -212,7 +154,7 @@ private:
   };
 
   /** All the allocated objects, so that we can destruct it later */
-  std::vector<allocator_base::ref> d_allocated;
+  std::vector<alloc::ref> d_allocated;
 
 public:
 
@@ -286,7 +228,7 @@ public:
   /** Destructor, destructs all Ts and Es */
   ~allocator() {
     for (unsigned i = 0; i < d_allocated.size(); ++ i) {
-      allocator_base::ref o_ref = d_allocated[i];
+      alloc::ref o_ref = d_allocated[i];
       data& d = allocator_base::object_of<data>(o_ref);
       // Destruct Es
       if (!type_traits<E>::is_empty) {

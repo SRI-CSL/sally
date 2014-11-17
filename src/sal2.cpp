@@ -9,6 +9,7 @@
 #include <boost/program_options.hpp>
 
 #include "expr/term.h"
+#include "expr/term_manager.h"
 #include "parser/parser.h"
 #include "utils/output.h"
 
