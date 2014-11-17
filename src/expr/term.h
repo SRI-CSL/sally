@@ -303,15 +303,6 @@ private:
   /** The pool of existing terms */
   term_ref_hash_set d_pool;
 
-  /** Boolean type */
-  term_ref d_booleanType;
-
-  /** Integer type */
-  term_ref d_integerType;
-
-  /** Real type */
-  term_ref d_realType;
-
   typedef boost::unordered_map<term_ref, term_ref, term_ref_hasher> tcc_map;
 
   /**
@@ -352,6 +343,19 @@ private:
     d_term_refcount.push_back(0);
     return id;
   }
+
+  //
+  // These below should be last, so that they are destructed first
+  //
+
+  /** Boolean type */
+  term_ref_strong d_booleanType;
+
+  /** Integer type */
+  term_ref_strong d_integerType;
+
+  /** Real type */
+  term_ref_strong d_realType;
 
 public:
 
@@ -436,6 +440,13 @@ public:
   const payload_type& payload_of(const term& t) const {
     assert(d_payload_memory[t.d_op] != 0);
     return d_payload_memory[t.d_op]->object_of<payload_type>(*t.end());
+  }
+
+  /** Get a term payload */
+  template<typename payload_type>
+  const payload_type& payload_of(term_ref t_ref) const {
+    const term& t = term_of(t_ref);
+    return payload_of<payload_type>(t);
   }
 
   /**

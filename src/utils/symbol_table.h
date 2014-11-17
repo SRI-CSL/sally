@@ -33,10 +33,19 @@ class symbol_table {
 
   /** Remove an entry id -> value */
   void remove_entry(std::string id) {
+    assert(d_table.find(id) != d_table.end());
+    assert(d_table[id].size() > 0);
     d_table[id].pop_front();
   }
 
+  /** Name of the symbol table for debugging */
+  std::string d_name;
+
 public:
+
+  symbol_table(std::string name)
+  : d_name(name)
+  {}
 
   /** Start a new scope */
   void new_scope() {
@@ -47,8 +56,9 @@ public:
   void pop_scope() {
     size_t pop_to_size = d_entries_added_size_per_push.back();
     d_entries_added_size_per_push.pop_back();
-    while (d_entries_added.size() >= pop_to_size) {
+    while (d_entries_added.size() > pop_to_size) {
       remove_entry(d_entries_added.back());
+      d_entries_added.pop_back();
     }
   }
 

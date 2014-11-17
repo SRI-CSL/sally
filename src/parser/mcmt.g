@@ -53,8 +53,10 @@ define_states returns [sal2::parser::command* cmd = 0]
 }
   : '(' 'define-states'
       symbol[id]       
-      symbol[type_id]    { STATE->use_state_type(type_id); }
+      symbol[type_id]    
+      { STATE->use_state_type(type_id, "state"); }
       f = state_formula
+      { STATE->pop_local(); }
     ')'
   ; 
 
@@ -122,12 +124,12 @@ term returns [sal2::expr::term_ref t = sal2::expr::term_ref()]
   std::vector<sal2::expr::term_ref> children;
 } 
   : symbol[id] { t = STATE->get_variable(id); }                
-  | constant
+  | c = constant { t = c; } 
   | '(' 
         op = term_op 
         term_list[children] 
      ')'   
-     { t = STATE->tm().mk_term(op, children); std::cerr << "Parsed: " << t << std::endl; }
+     { t = STATE->tm().mk_term(op, children); }
   ; 
   
 /** A symbol */

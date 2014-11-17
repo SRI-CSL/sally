@@ -26,13 +26,16 @@ class parser_state {
   expr::term_manager& d_term_manager;
 
   /** Symbol table for state types */
-  utils::symbol_table<expr::term_ref> d_state_types;
+  utils::symbol_table<expr::term_ref_strong> d_state_types;
 
   /** Symbol table for variables */
-  utils::symbol_table<expr::term_ref> d_variables;
+  utils::symbol_table<expr::term_ref> d_variables_local;
+
+  /** Symbol table for variables */
+  utils::symbol_table<expr::term_ref_strong> d_variables_global;
 
   /** Symbol table for types */
-  utils::symbol_table<expr::term_ref> d_types;
+  utils::symbol_table<expr::term_ref_strong> d_types;
 
 public:
 
@@ -43,22 +46,25 @@ public:
   }
 
   /** Report an error */
-  void report_error(std::string msg);
+  void report_error(std::string msg) const;
 
   /** Declare a new state type */
   command* declare_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types);
 
-  /** Use the state type, i.e. declare the variables state.x and next.x */
-  void use_state_type(std::string id);
+  /** Use the state type, i.e. declare the variables prefix.x, prefix.y, ... */
+  void use_state_type(std::string id, std::string prefix);
+
+  /** Pop the locate declarations */
+  void pop_local();
 
   /** Returns the type with the given id */
-  expr::term_ref get_type(std::string id);
+  expr::term_ref get_type(std::string id) const;
 
   /** Returns the a variable with the given id */
-  expr::term_ref get_variable(std::string id);
+  expr::term_ref get_variable(std::string id) const;
 
   /** Get the string of a token begin parsed */
-  std::string token_text(pANTLR3_COMMON_TOKEN token);
+  std::string token_text(pANTLR3_COMMON_TOKEN token) const;
 };
 
 }

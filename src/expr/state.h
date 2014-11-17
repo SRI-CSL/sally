@@ -16,19 +16,6 @@
 namespace sal2 {
 namespace expr {
 
-/**
- * The state just keeps the list of variables of the state, including
- */
-class state_type {
-
-  term_ref_strong d_state_type;
-
-  std::vector<std::string> names;
-  std::vector<term_ref_strong> vars;
-
-};
-
-
 class state_formula {
 
   /** The state information */

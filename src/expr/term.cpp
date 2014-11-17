@@ -42,9 +42,9 @@ term_manager::term_manager(bool typecheck)
   }
 
   // Create the types
-  d_booleanType = mk_term<TYPE_BOOL>(alloc::empty_type());
-  d_integerType = mk_term<TYPE_INTEGER>(alloc::empty_type());
-  d_realType = mk_term<TYPE_REAL>(alloc::empty_type());
+  d_booleanType = term_ref_strong(*this, mk_term<TYPE_BOOL>(alloc::empty_type()));
+  d_integerType = term_ref_strong(*this, mk_term<TYPE_INTEGER>(alloc::empty_type()));
+  d_realType = term_ref_strong(*this, mk_term<TYPE_REAL>(alloc::empty_type()));
 }
 
 void term_ref::to_stream(std::ostream& out) const {
@@ -389,6 +389,15 @@ bool term_manager::typecheck(term_ref t_ref) {
     }
     break;
   case TERM_SUB:
+    // 1 child is OK
+    if (t.size() == 1) {
+      ok = type_of(t[0]) == realType();
+    } else if (t.size() != 2) {
+      ok = false;
+    } else {
+      ok = type_of(t[0]) == realType() && type_of(t[1]) == realType();
+    }
+    break;
   case TERM_LEQ:
   case TERM_LT:
   case TERM_GEQ:
