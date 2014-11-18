@@ -88,6 +88,18 @@ public:
   /** Returns the string constant value */
   std::string get_string_constant(const term& t) const;
 
+  /** Make a new struct type */
+  term_ref mk_struct(const std::vector<std::string>& names, const std::vector<term_ref>& types);
+
+  /** Get the id of the struct element */
+  size_t get_struct_size(const term& t) const;
+
+  /** Get the id of the struct element */
+  std::string get_struct_element_id(const term& t, size_t i) const;
+
+  /** Get the type of the struct element */
+  term_ref get_struct_element_type(const term& t, size_t i) const;
+
   /** Get a reference for the term */
   term_ref ref_of(const term& term) const;
 

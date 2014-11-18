@@ -113,11 +113,12 @@ void term::to_stream_smt(std::ostream& out, const term_manager_internal& tm) con
   case TYPE_STRUCT:
   {
     out << "(";
-    for (size_t i = 0; i < size(); ++ i) {
-      if (i) { out << " ";}
-      if (i%2==0) { out << "("; }
-      out << this->operator [](i);
-      if (i%2) { out << ")"; }
+    size_t struct_size = size() / 2;
+    for (size_t i = 0; i < struct_size; ++ i) {
+      term_ref id = this->operator [](i);
+      term_ref type = this->operator [](i + struct_size);
+      if (i) { out << " "; }
+      out << "(" << id << " " << type << ")";
     }
     out << ")";
     break;

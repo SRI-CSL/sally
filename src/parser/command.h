@@ -20,7 +20,8 @@ public:
 
   /** Enumeration of all possible commands */
   enum type {
-    DECLARE_STATE_TYPE
+    DECLARE_STATE_TYPE,
+    DEFINE_STATES
   };
 
   /** Construct the command */
@@ -50,20 +51,43 @@ std::ostream& operator << (std::ostream& out, const command& cmd) {
   return out;
 }
 
+
+/**
+ * Command to declare a state type.
+ */
 class declare_state_type_command : public command {
 
-  expr::term_ref d_state_type;
+  /** The state type */
+  expr::state_type d_state_type;
 
 public:
 
-  declare_state_type_command(expr::term_ref state_type)
+  declare_state_type_command(std::string id, expr::term_ref state_type)
   : command(DECLARE_STATE_TYPE)
-  , d_state_type(state_type)
+  , d_state_type(id, state_type)
   {}
 
   void to_stream(std::ostream& out) const {
     out << "[" << get_type_string() << ": " << d_state_type << "]";
   }
+};
+
+class define_states_command : public command {
+
+  /** The state formula defining the set of states */
+  expr::state_formula d_state_formula;
+
+public:
+
+  define_states_command(const expr::state_formula& state_formula)
+  : command(DEFINE_STATES)
+  , d_state_formula(state_formula)
+  {}
+
+  void to_stream(std::ostream& out) const {
+    out << "[" << get_type_string() << ": " << d_state_formula << "]";
+  }
+
 };
 
 }

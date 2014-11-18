@@ -69,11 +69,15 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
   case VARIABLE:
     break;
   case TYPE_STRUCT: {
-    for (size_t i = 0; ok && i < t.size(); ++ i) {
-      if (i%2) {
-        ok = is_type(term_of(t[i]).op());
-      } else {
-        ok = term_of(t[i]).op() == CONST_STRING;
+    if (t.size() % 2) {
+      ok = false;
+    } else {
+      for (size_t i = 0; ok && i < t.size(); ++ i) {
+        if (i < t.size()) {
+          ok = term_of(t[i]).op() == CONST_STRING;
+        } else {
+          ok = is_type(term_of(t[i]).op());
+        }
       }
     }
     break;

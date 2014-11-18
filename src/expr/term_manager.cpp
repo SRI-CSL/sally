@@ -95,6 +95,32 @@ std::string term_manager::get_string_constant(const term& t) const {
   return d_tm->payload_of<std::string>(t);
 }
 
+term_ref term_manager::mk_struct(const std::vector<std::string>& names, const std::vector<term_ref>& types) {
+
+  std::vector<term_ref> type_argumens;
+
+  for (size_t i = 0; i < names.size(); ++ i) {
+    type_argumens.push_back(mk_string_constant(names[i]));
+  }
+  for (size_t i = 0; i < types.size(); ++ i) {
+    type_argumens.push_back(types[i]);
+  }
+
+  return mk_term(TYPE_STRUCT, type_argumens);
+}
+
+size_t term_manager::get_struct_size(const term& t) const {
+  return t.size() / 2;
+}
+
+std::string term_manager::get_struct_element_id(const term& t, size_t i) const {
+  const term& id_term = term_of(t[i]);
+  return get_string_constant(id_term);
+}
+
+term_ref term_manager::get_struct_element_type(const term& t, size_t i) const {
+  return t[i + get_struct_size(t)];
+}
 
 term_ref term_manager::ref_of(const term& term) const {
   return d_tm->ref_of(term);

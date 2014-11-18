@@ -49,14 +49,12 @@ declare_state_type returns [sal2::parser::command* cmd = 0]
 define_states returns [sal2::parser::command* cmd = 0]
 @declarations {
   std::string id;
-  std::string type_id;  
+  std::string type_id;
 }
   : '(' 'define-states'
       symbol[id]       
-      symbol[type_id]    
-      { STATE->use_state_type(type_id, "state"); }
-      f = state_formula
-      { STATE->pop_local(); }
+      symbol[type_id]     { STATE->use_state_type(type_id, "state"); }
+      sf = state_formula  { $cmd = STATE->define_states(id, type_id, sf); STATE->pop_local(); }
     ')'
   ; 
 
@@ -108,8 +106,8 @@ query returns [sal2::parser::command* cmd = 0]
   ; 
 
 /** A state formula */
-state_formula 
-  : term
+state_formula returns [sal2::expr::term_ref sf = sal2::expr::term_ref()]
+  : t = term { $sf = t; }
   ;
 
 /** A state transition formula */

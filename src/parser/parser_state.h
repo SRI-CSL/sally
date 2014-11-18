@@ -41,20 +41,26 @@ class parser_state {
 
 public:
 
+  /** Construct the parser state */
   parser_state(expr::term_manager& tm);
 
-  expr::term_manager& tm() {
-    return d_term_manager;
-  }
+  /** Returns the term manager for the parser */
+  expr::term_manager& tm() { return d_term_manager; }
 
   /** Report an error */
   void report_error(std::string msg) const;
 
-  /** Declare a new state type */
+  /** Create a command to declare a new state type */
   command* declare_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types);
 
+  /** Create a command to define a set of states given by the formula */
+  command* define_states(std::string id, std::string type_id, expr::term_ref sf);
+
+  /** Returns the variables assoicated with the given state */
+  void get_state_variables(std::string id, expr::state::var_class vc, std::vector<expr::term_ref>& vars) const;
+
   /** Use the state type, i.e. declare the variables prefix.x, prefix.y, ... */
-  void use_state_type(std::string id, std::string prefix);
+  void use_state_type(std::string id, expr::state::var_class var_class);
 
   /** Pop the locate declarations */
   void pop_local();
