@@ -112,9 +112,6 @@ void parser_state::use_state_type(std::string id, expr::state_type::var_class va
     report_error("unknown state type: " + id);
   }
 
-  // Mark a new scope
-  d_variables_local.new_scope();
-
   // Get the information about the state types
   const expr::state_type& st = d_state_types.get_entry(id);
 
@@ -145,8 +142,11 @@ command* parser_state::define_states(std::string id, std::string type_id, expr::
   return new define_states_command(sf);
 }
 
+void parser_state::push_scope() {
+  d_variables_local.push_scope();
+}
 
-void parser_state::pop_local() {
-  // Pop the local scope
+void parser_state::pop_scope() {
   d_variables_local.pop_scope();
 }
+

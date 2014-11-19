@@ -65,8 +65,11 @@ public:
   /** Use the state type, i.e. declare the variables prefix.x, prefix.y, ... */
   void use_state_type(std::string id, expr::state_type::var_class var_class);
 
+  /** Push a new scope for local declarations */
+  void push_scope();
+
   /** Pop the locate declarations */
-  void pop_local();
+  void pop_scope();
 
   /** Returns the type with the given id */
   expr::term_ref get_type(std::string id) const;

@@ -48,7 +48,7 @@ public:
   {}
 
   /** Start a new scope */
-  void new_scope() {
+  void push_scope() {
     d_entries_added_size_per_push.push_back(d_entries_added.size());
   }
 
