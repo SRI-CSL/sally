@@ -37,7 +37,7 @@ public:
   type get_type() const { return d_type; }
 
   /** Get the type as string */
-  std::string get_type_string() const;
+  std::string get_command_type_string() const;
 
 protected:
 
@@ -62,13 +62,13 @@ class declare_state_type_command : public command {
 
 public:
 
-  declare_state_type_command(std::string id, expr::term_ref state_type)
+  declare_state_type_command(expr::state_type& state_type)
   : command(DECLARE_STATE_TYPE)
-  , d_state_type(id, state_type)
+  , d_state_type(state_type)
   {}
 
   void to_stream(std::ostream& out) const {
-    out << "[" << get_type_string() << ": " << d_state_type << "]";
+    out << "[" << get_command_type_string() << ": " << d_state_type << "]";
   }
 };
 
@@ -85,7 +85,7 @@ public:
   {}
 
   void to_stream(std::ostream& out) const {
-    out << "[" << get_type_string() << ": " << d_state_formula << "]";
+    out << "[" << get_command_type_string() << ": " << d_state_formula << "]";
   }
 
 };

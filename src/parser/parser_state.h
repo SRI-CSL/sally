@@ -28,16 +28,19 @@ class parser_state {
   expr::term_manager& d_term_manager;
 
   /** Symbol table for state types */
-  utils::symbol_table<expr::term_ref_strong> d_state_types;
+  utils::symbol_table<expr::state_type> d_state_types;
 
   /** Symbol table for variables */
   utils::symbol_table<expr::term_ref> d_variables_local;
 
-  /** Symbol table for variables */
-  utils::symbol_table<expr::term_ref_strong> d_variables_global;
-
   /** Symbol table for types */
   utils::symbol_table<expr::term_ref_strong> d_types;
+
+  /**
+   * Declare the variables from the (possibly struct) variable var into the
+   * variables symbol table.
+   */
+  void expand_vars(std::string prefix, expr::term_ref var);
 
 public:
 
@@ -56,11 +59,8 @@ public:
   /** Create a command to define a set of states given by the formula */
   command* define_states(std::string id, std::string type_id, expr::term_ref sf);
 
-  /** Returns the variables assoicated with the given state */
-  void get_state_variables(std::string id, expr::state::var_class vc, std::vector<expr::term_ref>& vars) const;
-
   /** Use the state type, i.e. declare the variables prefix.x, prefix.y, ... */
-  void use_state_type(std::string id, expr::state::var_class var_class);
+  void use_state_type(std::string id, expr::state_type::var_class var_class);
 
   /** Pop the locate declarations */
   void pop_local();

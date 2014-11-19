@@ -22,7 +22,6 @@ parser_state::parser_state(term_manager& tm)
 : d_term_manager(tm)
 , d_state_types("state types")
 , d_variables_local("local vars")
-, d_variables_global("global vars")
 , d_types("types")
 {
   // Add the basic types
@@ -51,34 +50,14 @@ command* parser_state::declare_state_type(string id, const vector<string>& vars,
   // Create the type
   term_ref type = d_term_manager.mk_struct(vars, types);
 
+  // Create the state type
+  expr::state_type state_type(d_term_manager, id, type);
+
   // Add the mapping id -> type
-  d_state_types.add_entry(id, term_ref_strong(d_term_manager, type));
+  d_state_types.add_entry(id, state_type);
 
-  std::string var_name;
-  expr::term_ref var;
-  for (size_t i = 0; i < vars.size(); ++ i) {
-
-    // Current state variables
-    var_name = expr::state::get_var_name(id, vars[i], expr::state::CURRENT, true);
-    var = d_term_manager.mk_variable(var_name, types[i]);
-    if (d_variables_global.has_entry(var_name)) {
-      throw parser_exception("variable " + var_name + " already declared");
-    } else {
-      d_variables_global.add_entry(var_name, expr::term_ref_strong(d_term_manager, var));
-    }
-
-    // Next state variables
-    var_name = expr::state::get_var_name(id, vars[i], expr::state::NEXT, true);
-    var = d_term_manager.mk_variable(var_name, types[i]);
-    if (d_variables_global.has_entry(var_name)) {
-      throw parser_exception("variable " + var_name + " already declared");
-    } else {
-      d_variables_global.add_entry(var_name, expr::term_ref_strong(d_term_manager, var));
-    }
-
-  }
-
-  return new declare_state_type_command(type);
+  // Return the command
+  return new declare_state_type_command(state_type);
 }
 
 string parser_state::token_text(pANTLR3_COMMON_TOKEN token) const {
@@ -103,25 +82,31 @@ expr::term_ref parser_state::get_variable(std::string id) const {
   return d_variables_local.get_entry(id);
 }
 
-void parser_state::get_state_variables(std::string id, expr::state::var_class var_class, std::vector<expr::term_ref>& vars) const {
-  assert(d_state_types.has_entry(id));
 
-  // Get the information about the state types
-  expr::term_ref state_type_ref = d_state_types.get_entry(id);
-  const expr::term& state_type = d_term_manager.term_of(state_type_ref);
+void parser_state::expand_vars(std::string prefix, expr::term_ref var_ref) {
 
-  for (size_t i = 0; i < d_term_manager.get_struct_size(state_type); i ++) {
-    // Get the id of the struct element
-    std::string var_id = d_term_manager.get_struct_element_id(state_type, i);
-    // Create the complete name
-    std::string var_global_name = state::get_var_name(id, var_id, var_class, true);
-    // Add variable to the output
-    vars.push_back(d_variables_global.get_entry(var_global_name));
+  // The variable content
+  const term& var_term = d_term_manager.term_of(var_ref);
+
+  // The name of the variable
+  prefix = prefix + "." + d_term_manager.get_variable_name(var_term);
+
+  // Number of subfields
+  size_t size = d_term_manager.get_struct_size(var_term);
+
+  if (size == 0) {
+    // Atomic, just put into the symbol table
+    d_variables_local.add_entry(prefix, var_ref);
+  } else {
+    // Register all the field variables
+    for (size_t i = 0; i < size; ++ i) {
+      term_ref var_field = d_term_manager.get_struct_field(var_term, i);
+      expand_vars(prefix, var_field);
+    }
   }
-
 }
 
-void parser_state::use_state_type(std::string id, expr::state::var_class var_class) {
+void parser_state::use_state_type(std::string id, expr::state_type::var_class var_class) {
 
   if (!d_state_types.has_entry(id)) {
     report_error("unknown state type: " + id);
@@ -131,47 +116,29 @@ void parser_state::use_state_type(std::string id, expr::state::var_class var_cla
   d_variables_local.new_scope();
 
   // Get the information about the state types
-  expr::term_ref state_type_ref = d_state_types.get_entry(id);
-  const expr::term& state_type = d_term_manager.term_of(state_type_ref);
+  const expr::state_type& st = d_state_types.get_entry(id);
 
-  for (size_t i = 0; i < d_term_manager.get_struct_size(state_type); i ++) {
-    // Get the id of the struct element
-    std::string var_id = d_term_manager.get_struct_element_id(state_type, i);
-    // Create the complete name
-    std::string var_global_name = state::get_var_name(id, var_id, var_class, true);
-    // Create the local name
-    std::string var_local_name = state::get_var_name(id, var_id, var_class, false);
-    // Get the actual variable
-    term_ref var = d_variables_global.get_entry(var_global_name);
-    // Add to local scope
-    d_variables_local.add_entry(var_local_name, var);
-  }
+  /** Get the state */
+  term_ref state_var_ref = st.get_state(var_class);
 
+  /** Declare the variable */
+  expand_vars(expr::state_type::to_string(var_class), state_var_ref);
 }
 
-command* parser_state::define_states(std::string id, std::string type_id, expr::term_ref sf) {
+command* parser_state::define_states(std::string id, std::string type_id, expr::term_ref f) {
 
   if (!d_state_types.has_entry(id)) {
     report_error("unknown state type: " + id);
   }
 
   // Get the information about the state types
-  expr::term_ref state_type_ref = d_state_types.get_entry(id);
-  const expr::term& state_type = d_term_manager.term_of(state_type_ref);
+  expr::state_type state_type = d_state_types.get_entry(id);
 
-  for (size_t i = 0; i < d_term_manager.get_struct_size(state_type); i ++) {
-    // Get the id of the struct element
-    std::string var_id = d_term_manager.get_struct_element_id(state_type, i);
-    // Create the complete name
-    std::string var_global_name = state::get_var_name(id, var_id, var_class, true);
-    // Create the local name
-    std::string var_local_name = state::get_var_name(id, var_id, var_class, false);
-    // Get the actual variable
-    term_ref var = d_variables_global.get_entry(var_global_name);
-    // Add to local scope
-    d_variables_local.add_entry(var_local_name, var);
-  }
+  // Cretate the state formula
+  expr::state_formula sf(d_term_manager, state_type, f);
 
+  /** Return thecommand */
+  return new define_states_command(sf);
 }
 
 

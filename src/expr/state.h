@@ -16,11 +16,14 @@
 namespace sal2 {
 namespace expr {
 
-class state {
+/**
+ * A state type identified by it's id (name) and it's type
+ */
+class state_type {
 
 public:
 
-  /** Class of state variabels */
+  /** Class of state variables */
   enum var_class {
     /** Current state */
     CURRENT,
@@ -28,34 +31,38 @@ public:
     NEXT
   };
 
-  /**
-   * Return the name of the variable in the given type. If full is true, the
-   * id of the state is prepended to the name.
-   */
-  static
-  std::string get_var_name(std::string state_type_id, std::string var_name, var_class vc, bool full);
+  /** String representation of the variable class */
+  static std::string to_string(var_class vc);
 
-};
+  /** Create a new state type of the given type and name */
+  state_type(term_manager& tm, std::string id, term_ref type);
 
-/**
- * A state type identified by it's id (name) and it's type
- */
-class state_type {
+  /** Print the state type to stream */
+  void to_stream(std::ostream& out) const;
+
+  /** Get the state variable(s) of the class */
+  term_ref get_state(var_class vc) const;
+
+private:
 
   /** The name of the type */
   std::string d_id;
 
-  /** The actual structure describing the state */
+  /** The actual type describing the state */
   term_ref_strong d_type;
 
-public:
+  /** The current state */
+  term_ref_strong d_current_state;
 
-  state_type(term_manager& tm, std::string id, term_ref type)
-  : d_id(id)
-  , d_type(tm, type)
-  {}
-
+  /** The next state */
+  term_ref_strong d_next_state;
 };
+
+inline
+std::ostream& operator << (std::ostream& out, const state_type& st) {
+  st.to_stream(out);
+  return out;
+}
 
 /**
  * A formula where over a state type.
@@ -63,24 +70,31 @@ public:
 class state_formula {
 
   /** The state variables */
-  std::vector<term_ref_strong> d_state_variables;
+  state_type d_state_type;
 
   /** The formula itself */
-  expr::term_ref_strong d_state_formula;
+  term_ref_strong d_state_formula;
 
 public:
 
-  state_formula()
+  state_formula(term_manager& tm, const state_type& st, term_ref formula)
+  : d_state_type(st)
+  , d_state_formula(tm, formula)
   {}
 
   state_formula(const state_formula& sf)
-  : d_state_variables(sf.d_state_variables)
+  : d_state_type(sf.d_state_type)
   , d_state_formula(sf.d_state_formula)
   {}
 
   /** Get the state formula */
   term_ref get_formula() const {
     return d_state_formula;
+  }
+
+  /** Get the state type */
+  const state_type& get_state_type() const {
+    return d_state_type;
   }
 
   /** Print it to the stream */

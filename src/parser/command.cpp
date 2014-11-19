@@ -16,7 +16,7 @@ command::command(command::type t)
 : d_type(t)
 {}
 
-std::string command::get_type_string() const {
+std::string command::get_command_type_string() const {
 
 #define CASE_TO_STRING(TYPE) case TYPE: return #TYPE; break;
 switch (d_type) {

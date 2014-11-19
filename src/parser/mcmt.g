@@ -53,7 +53,7 @@ define_states returns [sal2::parser::command* cmd = 0]
 }
   : '(' 'define-states'
       symbol[id]       
-      symbol[type_id]     { STATE->use_state_type(type_id, "state"); }
+      symbol[type_id]     { STATE->use_state_type(type_id, sal2::expr::state_type::CURRENT); }
       sf = state_formula  { $cmd = STATE->define_states(id, type_id, sf); STATE->pop_local(); }
     ')'
   ; 

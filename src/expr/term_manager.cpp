@@ -55,17 +55,33 @@ term_ref term_manager::mk_term(term_op op, term_ref c1, term_ref c2) {
 }
 
 term_ref term_manager::mk_variable(std::string name, term_ref type) {
-  return d_tm->mk_term<VARIABLE>(name, type);
+  if (term_of(type).op() == TYPE_STRUCT) {
+    // Size of the struct
+    size_t fields_count = get_struct_type_size(term_of(type));
+    // For a struct type, we create the variable, with with sub-variables
+    std::vector<term_ref> children;
+    // First child is the type itself
+    children.push_back(type);
+    // Other children are the field variables
+    for (size_t field_i = 0; field_i < fields_count; ++ field_i) {
+      // Name of the field
+      std::string field_id = get_struct_type_field_id(term_of(type), field_i);
+      // Type of the field
+      term_ref field_type = get_struct_type_field_type(term_of(type), field_i);
+      // Add the variable
+      children.push_back(d_tm->mk_term<VARIABLE>(field_id, field_type));
+    }
+    // Make the struct variable
+    return d_tm->mk_term<VARIABLE>(name, children.begin(), children.end());
+  } else {
+    // If this is not a struct type, we just create the variable
+    return d_tm->mk_term<VARIABLE>(name, type);
+  }
 }
 
 std::string term_manager::get_variable_name(const term& t) const {
   assert(t.op() == VARIABLE);
   return d_tm->payload_of<std::string>(t);
-}
-
-term_ref term_manager::get_variable_type(const term& t) const {
-  assert(t.op() == VARIABLE);
-  return t[0];
 }
 
 term_ref term_manager::mk_boolean_constant(bool value) {
@@ -109,17 +125,31 @@ term_ref term_manager::mk_struct(const std::vector<std::string>& names, const st
   return mk_term(TYPE_STRUCT, type_argumens);
 }
 
-size_t term_manager::get_struct_size(const term& t) const {
+size_t term_manager::get_struct_type_size(const term& t) const {
+  assert(t.op() == TYPE_STRUCT);
   return t.size() / 2;
 }
 
-std::string term_manager::get_struct_element_id(const term& t, size_t i) const {
+std::string term_manager::get_struct_type_field_id(const term& t, size_t i) const {
+  assert(t.op() == TYPE_STRUCT);
   const term& id_term = term_of(t[i]);
   return get_string_constant(id_term);
 }
 
-term_ref term_manager::get_struct_element_type(const term& t, size_t i) const {
-  return t[i + get_struct_size(t)];
+term_ref term_manager::get_struct_type_field_type(const term& t, size_t i) const {
+  assert(t.op() == TYPE_STRUCT);
+  return t[i + get_struct_type_size(t)];
+}
+
+size_t term_manager::get_struct_size(const term& t) const {
+  assert(t.op() == VARIABLE);
+  return t.size() - 1;
+}
+
+term_ref term_manager::get_struct_field(const term& t, size_t i) const {
+  assert(t.op() == VARIABLE);
+  assert(i + 1 < t.size());
+  return t[i + 1];
 }
 
 term_ref term_manager::ref_of(const term& term) const {

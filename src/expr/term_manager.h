@@ -67,9 +67,6 @@ public:
   /** Get the name of this variable */
   std::string get_variable_name(const term& t) const;
 
-  /** Get the type of this variable */
-  term_ref get_variable_type(const term& t) const;
-
   /** Make a new boolean constant */
   term_ref mk_boolean_constant(bool value);
 
@@ -91,14 +88,20 @@ public:
   /** Make a new struct type */
   term_ref mk_struct(const std::vector<std::string>& names, const std::vector<term_ref>& types);
 
-  /** Get the id of the struct element */
-  size_t get_struct_size(const term& t) const;
+  /** Get the size of the type */
+  size_t get_struct_type_size(const term& t) const;
 
-  /** Get the id of the struct element */
-  std::string get_struct_element_id(const term& t, size_t i) const;
+  /** Get the id of i-th struct element */
+  std::string get_struct_type_field_id(const term& t, size_t i) const;
 
   /** Get the type of the struct element */
-  term_ref get_struct_element_type(const term& t, size_t i) const;
+  term_ref get_struct_type_field_type(const term& t, size_t i) const;
+
+  /** Get the field of a struct variable */
+  size_t get_struct_size(const term& t) const;
+
+  /** Get the field of a struct variable */
+  term_ref get_struct_field(const term& t, size_t i) const;
 
   /** Get a reference for the term */
   term_ref ref_of(const term& term) const;
