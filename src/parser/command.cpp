@@ -21,6 +21,7 @@ std::string command::get_command_type_string() const {
 #define CASE_TO_STRING(TYPE) case TYPE: return #TYPE; break;
 switch (d_type) {
   CASE_TO_STRING(DECLARE_STATE_TYPE)
+  CASE_TO_STRING(DEFINE_STATES)
 default:
   assert(false);
 }

@@ -90,7 +90,23 @@ public:
       return true;
     }
   }
+
+  /** Print the table to stream */
+  void to_stream(std::ostream& out) const {
+    out << "[" << d_name << ":";
+    for (const_iterator it = d_table.begin(); it != d_table.end(); ++ it) {
+      out << " " << it->first << " -> " << it->second.back();
+    }
+    out << "]";
+  }
+
 };
+
+template<typename T>
+std::ostream& operator << (std::ostream& out, const symbol_table<T>& table) {
+  table.to_stream(out);
+  return out;
+}
 
 }
 }

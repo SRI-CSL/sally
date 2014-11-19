@@ -117,8 +117,6 @@ term_ref term_manager::mk_struct(const std::vector<std::string>& names, const st
 
   for (size_t i = 0; i < names.size(); ++ i) {
     type_argumens.push_back(mk_string_constant(names[i]));
-  }
-  for (size_t i = 0; i < types.size(); ++ i) {
     type_argumens.push_back(types[i]);
   }
 
@@ -132,13 +130,13 @@ size_t term_manager::get_struct_type_size(const term& t) const {
 
 std::string term_manager::get_struct_type_field_id(const term& t, size_t i) const {
   assert(t.op() == TYPE_STRUCT);
-  const term& id_term = term_of(t[i]);
+  const term& id_term = term_of(t[2*i]);
   return get_string_constant(id_term);
 }
 
 term_ref term_manager::get_struct_type_field_type(const term& t, size_t i) const {
   assert(t.op() == TYPE_STRUCT);
-  return t[i + get_struct_type_size(t)];
+  return t[2*i + 1];
 }
 
 size_t term_manager::get_struct_size(const term& t) const {

@@ -73,7 +73,7 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
       ok = false;
     } else {
       for (size_t i = 0; ok && i < t.size(); ++ i) {
-        if (i < t.size()) {
+        if (i % 2 == 0) {
           ok = term_of(t[i]).op() == CONST_STRING;
         } else {
           ok = is_type(term_of(t[i]).op());

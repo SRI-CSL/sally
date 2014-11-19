@@ -30,6 +30,9 @@ class parser_state {
   /** Symbol table for state types */
   utils::symbol_table<expr::state_type> d_state_types;
 
+  /** Symbol table for state formulas */
+  utils::symbol_table<expr::state_formula> d_state_formulas;
+
   /** Symbol table for variables */
   utils::symbol_table<expr::term_ref> d_variables_local;
 
@@ -40,7 +43,7 @@ class parser_state {
    * Declare the variables from the (possibly struct) variable var into the
    * variables symbol table.
    */
-  void expand_vars(std::string prefix, expr::term_ref var);
+  void expand_vars(std::string name, expr::term_ref var);
 
 public:
 

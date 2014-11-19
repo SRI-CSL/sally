@@ -46,7 +46,7 @@ std::string state_type::to_string(var_class vc) {
 }
 
 void state_formula::to_stream(std::ostream& out) const {
-  out << "[" << out << d_state_type << ": " << d_state_formula << "]";
+  out << "[" << d_state_type << ": " << d_state_formula << "]";
 }
 
 void state_transition_formula::to_stream(std::ostream& out) const {
