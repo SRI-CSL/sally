@@ -7,11 +7,10 @@
 
 ;; Initial states 
 (define-states initial_states state_type
-  ;; Implicit variable state 
   (and 
-    (= state.x 0)
-    (= state.y 0)
-    (> state.n 0)
+    (= x 0)
+    (= y 0)
+    (> n 0)
   )
 )
 
@@ -33,5 +32,5 @@
 )
 
 ;; Query
-(query T (= (+ T.x T.y) T.n))
+(query T (= (+ x y) n))
 

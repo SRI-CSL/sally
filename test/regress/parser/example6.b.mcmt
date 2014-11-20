@@ -7,11 +7,10 @@
 
 ;; Initial states 
 (define-states initial_states state_type
-  ;; Implicit variable state
   (and 
-    (< state.x 1) (> state.x (- 1)) 
-    (< state.y 1) (> state.y (- 1)) 
-    (< state.z 1) (> state.z (- 1)) 
+    (< x 1) (> x (- 1)) 
+    (< y 1) (> y (- 1)) 
+    (< z 1) (> z (- 1)) 
   )
 )
 

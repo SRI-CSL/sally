@@ -6,10 +6,9 @@
 
 ;; Initial states 
 (define-states initial_states state_type
-  ;; Implicit variable state
   (and 
-    (= state.x (/ 9 10))
-    (= state.y (- (/ 9 10)))
+    (= x (/ 9 10))
+    (= y (- (/ 9 10)))
   )
 )
 
@@ -32,8 +31,8 @@
 ;; Query
 (query T 
   (and 
-    (> (+ T.x T.y) (- 2)) 
-    (< (+ T.x T.y) 2)
+    (> (+ x y) (- 2)) 
+    (< (+ x y) 2)
   )
 )
 

@@ -3,7 +3,6 @@
 
 ;; Initial states (a state formula over state_type)
 (define-states initial_states state_type 
-  ;; Implicit variable state
   (= x 0)
 )
 
@@ -21,6 +20,6 @@
 )
 
 ;; Query (any state formula over state_type)
-(query T (>= T.x 0))
+(query T (>= x 0))
 
 

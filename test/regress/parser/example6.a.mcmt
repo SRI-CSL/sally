@@ -7,11 +7,10 @@
 
 ;; Initial states 
 (define-states initial_states state_type
-  ;; Implicit variable state
   (and 
-    (= state.x (- (/ 9 10)))
-    (= state.y 0)
-    (= state.z (/ 9 10))
+    (= x (- (/ 9 10)))
+    (= y 0)
+    (= z (/ 9 10))
   ) 
 )
 
