@@ -58,7 +58,7 @@ expr::term_ref parser_state::get_variable(std::string id) const {
   return d_variables_local.get_entry(id);
 }
 
-command* parser_state::declare_state_type(string id, const vector<string>& vars, const vector<term_ref>& types) {
+expr::state_type parser_state::new_state_type(string id, const vector<string>& vars, const vector<term_ref>& types) {
   assert(vars.size() == types.size());
   assert(vars.size() > 0);
 
@@ -76,7 +76,7 @@ command* parser_state::declare_state_type(string id, const vector<string>& vars,
   d_state_types.add_entry(id, state_type);
 
   // Return the command
-  return new declare_state_type_command(state_type);
+  return state_type;
 }
 
 void parser_state::expand_vars(std::string name, expr::term_ref var_ref) {
@@ -123,7 +123,7 @@ void parser_state::use_state_type(std::string id, expr::state_type::var_class va
   expand_vars(expr::state_type::to_string(var_class), state_var_ref);
 }
 
-command* parser_state::define_states(std::string id, std::string type_id, expr::term_ref f) {
+expr::state_formula parser_state::new_state_formula(std::string id, std::string type_id, expr::term_ref f) {
 
   if (!d_state_types.has_entry(type_id)) {
     report_error("unknown state type: " + id);
@@ -139,10 +139,10 @@ command* parser_state::define_states(std::string id, std::string type_id, expr::
   d_state_formulas.add_entry(id, sf);
 
   /** Return thecommand */
-  return new define_states_command(sf);
+  return sf;
 }
 
-command* parser_state::define_transition(std::string id, std::string type_id, expr::term_ref f) {
+expr::state_transition_formula parser_state::new_state_transition_formula(std::string id, std::string type_id, expr::term_ref f) {
 
   if (!d_state_types.has_entry(type_id)) {
     report_error("unknown state type: " + id);
@@ -158,7 +158,7 @@ command* parser_state::define_transition(std::string id, std::string type_id, ex
   d_transition_formulas.add_entry(id, tf);
 
   /** Return thecommand */
-  return new define_transition_command(tf);
+  return tf;
 }
 
 

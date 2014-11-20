@@ -59,14 +59,14 @@ public:
   /** Report an error */
   void report_error(std::string msg) const;
 
-  /** Create a command to declare a new state type */
-  command* declare_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types);
+  /** Create a new state type */
+  expr::state_type new_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types);
 
-  /** Create a command to define a set of states id given by the formula */
-  command* define_states(std::string id, std::string type_id, expr::term_ref sf);
+  /** Create a new state formula */
+  expr::state_formula new_state_formula(std::string id, std::string type_id, expr::term_ref sf);
 
-  /** Create a command to define a transition formula id for given state types*/
-  command* define_transition(std::string id, std::string type_id, expr::term_ref stf);
+  /** Create a new state transition formula */
+  expr::state_transition_formula new_state_transition_formula(std::string id, std::string type_id, expr::term_ref stf);
 
   /** Use the state type, i.e. declare the variables prefix.x, prefix.y, ... */
   void use_state_type(std::string id, expr::state_type::var_class var_class);
