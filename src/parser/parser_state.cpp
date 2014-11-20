@@ -91,9 +91,6 @@ void parser_state::expand_vars(expr::term_ref var_ref) {
   size_t size = d_term_manager.get_struct_size(var_term);
 
   if (size == 0) {
-
-    std::cerr << "Declaring variable " << var_ref << " as " << var_name << std::endl;
-
     // Atomic, just put into the symbol table
     d_variables_local.add_entry(var_name, var_ref);
   } else {

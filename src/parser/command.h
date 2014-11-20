@@ -78,15 +78,19 @@ class define_states_command : public command {
   /** The state formula defining the set of states */
   expr::state_formula d_state_formula;
 
+  /** Id of the formula (if any) */
+  std::string d_id;
+
 public:
 
-  define_states_command(const expr::state_formula& state_formula)
+  define_states_command(const expr::state_formula& state_formula, std::string id)
   : command(DEFINE_STATES)
   , d_state_formula(state_formula)
+  , d_id(id)
   {}
 
   void to_stream(std::ostream& out) const {
-    out << "[" << get_command_type_string() << ": " << d_state_formula << "]";
+    out << "[" << get_command_type_string() << "(" << d_id << "): " << d_state_formula << "]";
   }
 
 };
@@ -96,15 +100,19 @@ class define_transition_command : public command {
   /** The state formula defining the set of states */
   expr::state_transition_formula d_transition_formula;
 
+  /** Id of the formula (if any) */
+  std::string d_id;
+
 public:
 
-  define_transition_command(const expr::state_transition_formula& transition_formula)
+  define_transition_command(const expr::state_transition_formula& transition_formula, std::string id)
   : command(DEFINE_TRANSITION)
   , d_transition_formula(transition_formula)
+  , d_id(id)
   {}
 
   void to_stream(std::ostream& out) const {
-    out << "[" << get_command_type_string() << ": " << d_transition_formula << "]";
+    out << "[" << get_command_type_string() << "(" << d_id << "): " << d_transition_formula << "]";
   }
 
 };

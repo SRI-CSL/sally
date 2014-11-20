@@ -1,1 +1,1 @@
-add_library(expr term_manager_internal.cpp term_manager.cpp term.cpp rational.cpp state.cpp)
+add_library(expr term_manager_internal.cpp term.cpp rational.cpp state.cpp term_manager.cpp)

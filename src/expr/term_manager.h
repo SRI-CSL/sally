@@ -167,7 +167,12 @@ struct set_tm {
 };
 
 /** IO manipulator to set the term manager on the stream */
-std::ostream& operator << (std::ostream& out, const set_tm& stm);
+inline
+std::ostream& operator << (std::ostream& out, const set_tm& stm) {
+  output::set_term_manager(out, stm.d_tm);
+  return out;
+}
+
 
 }
 }

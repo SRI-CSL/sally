@@ -195,4 +195,3 @@ void term_manager::use_namespace(std::string ns) {
 void term_manager::pop_namespace() {
   d_tm->pop_namespace();
 }
-

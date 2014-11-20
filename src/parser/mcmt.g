@@ -59,7 +59,7 @@ define_states returns [parser::command* cmd = 0]
                             STATE->use_state_type(type_id, expr::state_type::CURRENT, true); 
                           }
       f = state_formula  { expr::state_formula sf = STATE->new_state_formula(id, type_id, f);
-                           $cmd = new parser::define_states_command(sf); 
+                           $cmd = new parser::define_states_command(sf, id); 
                            STATE->pop_scope(); 
                           }
     ')'
@@ -78,7 +78,7 @@ define_transition returns [parser::command* cmd = 0]
                                        STATE->use_state_type(type_id, expr::state_type::NEXT, false); 
                                      }
       f = state_transition_formula   { expr::state_transition_formula stf = STATE->new_state_transition_formula(id, type_id, f);
-                                       $cmd = new parser::define_transition_command(stf); 
+                                       $cmd = new parser::define_transition_command(stf, id); 
                                        STATE->pop_scope(); 
                                      }
     ')'

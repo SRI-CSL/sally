@@ -177,11 +177,6 @@ void term::to_stream_smt(std::ostream& out, const term_manager_internal& tm) con
   }
 }
 
-std::ostream& operator << (std::ostream& out, const set_tm& stm) {
-  output::set_term_manager(out, stm.d_tm);
-  return out;
-}
-
 term_ref_strong::term_ref_strong(const term_ref_strong& other)
 : term_ref(other)
 , d_tm(other.d_tm)
