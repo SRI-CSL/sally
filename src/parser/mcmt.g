@@ -6,17 +6,14 @@ options {
 }
  
 @parser::includes {
-#include <string>
-#include "parser/command.h"
-#include "parser/parser_state.h"
+  #include <string>
+  #include "parser/command.h"
+  #include "parser/parser_state.h"
+  using namespace sal2;
 }
 
 @parser::postinclude {
-
-#define STATE (ctx->pState)
-
-using namespace sal2;
-
+  #define STATE (ctx->pState)
 }
 
 
