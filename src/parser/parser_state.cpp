@@ -22,6 +22,7 @@ parser_state::parser_state(term_manager& tm)
 : d_term_manager(tm)
 , d_state_types("state types")
 , d_state_formulas("state formulas")
+, d_transition_formulas("state transition formulas")
 , d_variables_local("local vars")
 , d_types("types")
 {
@@ -125,7 +126,6 @@ void parser_state::use_state_type(std::string id, expr::state_type::var_class va
 command* parser_state::define_states(std::string id, std::string type_id, expr::term_ref f) {
 
   if (!d_state_types.has_entry(type_id)) {
-    std::cerr << d_state_types << std::endl;
     report_error("unknown state type: " + id);
   }
 
@@ -141,6 +141,26 @@ command* parser_state::define_states(std::string id, std::string type_id, expr::
   /** Return thecommand */
   return new define_states_command(sf);
 }
+
+command* parser_state::define_transition(std::string id, std::string type_id, expr::term_ref f) {
+
+  if (!d_state_types.has_entry(type_id)) {
+    report_error("unknown state type: " + id);
+  }
+
+  // Get the information about the state types
+  const expr::state_type& state_type = d_state_types.get_entry(type_id);
+
+  // Create the state formula
+  expr::state_transition_formula tf(d_term_manager, state_type, f);
+
+  // Add to the symbol table
+  d_transition_formulas.add_entry(id, tf);
+
+  /** Return thecommand */
+  return new define_transition_command(tf);
+}
+
 
 void parser_state::push_scope() {
   d_variables_local.push_scope();

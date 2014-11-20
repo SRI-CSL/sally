@@ -26,7 +26,7 @@ options {
 command returns [sal2::parser::command* cmd = 0] 
   : c = declare_state_type       { $cmd = c; }
   | c = define_states            { $cmd = c; }
-  | c = define_transition        { $cmd = c + 1; }
+  | c = define_transition        { $cmd = c; }
   | c = define_transition_system { $cmd = c + 1; }
   | c = query                    { $cmd = c + 1; }
   | EOF { $cmd = 0; } 
@@ -57,7 +57,8 @@ define_states returns [sal2::parser::command* cmd = 0]
                             STATE->use_state_type(type_id, sal2::expr::state_type::CURRENT); 
                           }
       sf = state_formula  { $cmd = STATE->define_states(id, type_id, sf); 
-                            STATE->pop_scope(); }
+                            STATE->pop_scope(); 
+                          }
     ')'
   ; 
 
@@ -69,10 +70,13 @@ define_transition returns [sal2::parser::command* cmd = 0]
 }
   : '(' 'define-transition'
       symbol[id]
-      symbol[type_id]           { STATE->push_scope();
-                                  STATE->use_state_type(type_id, sal2::expr::state_type::CURRENT); 
-                                  STATE->use_state_type(type_id, sal2::expr::state_type::NEXT); }
-      state_transition_formula { STATE->pop_scope(); }
+      symbol[type_id]                { STATE->push_scope();
+                                       STATE->use_state_type(type_id, sal2::expr::state_type::CURRENT); 
+                                       STATE->use_state_type(type_id, sal2::expr::state_type::NEXT); 
+                                     }
+      stf = state_transition_formula { $cmd = STATE->define_transition(id, type_id, stf);
+                                       STATE->pop_scope(); 
+                                     }
     ')'
   ; 
 
@@ -116,8 +120,8 @@ state_formula returns [sal2::expr::term_ref sf = sal2::expr::term_ref()]
   ;
 
 /** A state transition formula */
-state_transition_formula 
-  : term
+state_transition_formula returns [sal2::expr::term_ref stf = sal2::expr::term_ref()]
+  : t = term { $stf = t; }
   ;
 
 /** SMT2 term */

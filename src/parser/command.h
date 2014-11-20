@@ -21,7 +21,8 @@ public:
   /** Enumeration of all possible commands */
   enum type {
     DECLARE_STATE_TYPE,
-    DEFINE_STATES
+    DEFINE_STATES,
+    DEFINE_TRANSITION
   };
 
   /** Construct the command */
@@ -89,6 +90,25 @@ public:
   }
 
 };
+
+class define_transition_command : public command {
+
+  /** The state formula defining the set of states */
+  expr::state_transition_formula d_transition_formula;
+
+public:
+
+  define_transition_command(const expr::state_transition_formula& transition_formula)
+  : command(DEFINE_TRANSITION)
+  , d_transition_formula(transition_formula)
+  {}
+
+  void to_stream(std::ostream& out) const {
+    out << "[" << get_command_type_string() << ": " << d_transition_formula << "]";
+  }
+
+};
+
 
 }
 }

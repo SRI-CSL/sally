@@ -33,6 +33,9 @@ class parser_state {
   /** Symbol table for state formulas */
   utils::symbol_table<expr::state_formula> d_state_formulas;
 
+  /** Symbol table for state transition formulas */
+  utils::symbol_table<expr::state_transition_formula> d_transition_formulas;
+
   /** Symbol table for variables */
   utils::symbol_table<expr::term_ref> d_variables_local;
 
@@ -59,8 +62,11 @@ public:
   /** Create a command to declare a new state type */
   command* declare_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types);
 
-  /** Create a command to define a set of states given by the formula */
+  /** Create a command to define a set of states id given by the formula */
   command* define_states(std::string id, std::string type_id, expr::term_ref sf);
+
+  /** Create a command to define a transition formula id for given state types*/
+  command* define_transition(std::string id, std::string type_id, expr::term_ref stf);
 
   /** Use the state type, i.e. declare the variables prefix.x, prefix.y, ... */
   void use_state_type(std::string id, expr::state_type::var_class var_class);

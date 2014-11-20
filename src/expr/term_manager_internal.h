@@ -452,6 +452,11 @@ bool term_manager_internal::term_ref_constructor<op, iterator_type>::cmp(const t
     return false;
   }
 
+  // Variables are always different, even variables with the same name
+  if (op == VARIABLE) {
+    return false;
+  }
+
   // Different sizes => not equal
   size_t size = std::distance(d_begin, d_end);
   if (size != other.size()) {

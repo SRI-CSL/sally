@@ -110,16 +110,16 @@ std::ostream& operator << (std::ostream& out, const state_formula& sf) {
 class state_transition_formula {
 
   /** The state information */
-  term_ref_strong d_state_type;
+  state_type d_state_type;
 
   /** The actual formula */
   term_ref_strong d_transition_formula;
 
 public:
 
-  state_transition_formula(term_manager& tm, term_ref state_type, term_ref transition_formula)
-  : d_state_type(tm, state_type)
-  , d_transition_formula(tm, transition_formula)
+  state_transition_formula(term_manager& tm, const state_type& st, term_ref tf)
+  : d_state_type(st)
+  , d_transition_formula(tm, tf)
   {}
 
   /** Get the state formula */
@@ -127,7 +127,7 @@ public:
     return d_transition_formula;
   }
 
-  term_ref get_state_type() const {
+  const state_type&  get_state_type() const {
     return d_state_type;
   }
 
