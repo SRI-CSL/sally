@@ -100,9 +100,9 @@ void parser_state::expand_vars(std::string name, expr::term_ref var_ref) {
       term_ref var_field_ref = d_term_manager.get_struct_field(var_term, i);
       // And the name
       const term& var_field_term = d_term_manager.term_of(var_field_ref);
-      name = name + "." + d_term_manager.get_variable_name(var_field_term);
+      string expanded_name = name + "." + d_term_manager.get_variable_name(var_field_term);
       // Expand
-      expand_vars(name, var_field_ref);
+      expand_vars(expanded_name, var_field_ref);
     }
   }
 }
