@@ -43,7 +43,7 @@ declare_state_type returns [parser::command* cmd = 0]
   : '(' 'declare-state-type' symbol[id] variable_list[vars, types] ')' 
     {
       expr::state_type state_type = STATE->new_state_type(id, vars, types); 
-      $cmd = new parser::declare_state_type_command(state_type);
+      $cmd = new parser::declare_state_type_command(id, state_type);
     }
   ; 
 
@@ -59,7 +59,7 @@ define_states returns [parser::command* cmd = 0]
                             STATE->use_state_type(type_id, expr::state_type::CURRENT, true); 
                           }
       f = state_formula  { expr::state_formula sf = STATE->new_state_formula(id, type_id, f);
-                           $cmd = new parser::define_states_command(sf, id); 
+                           $cmd = new parser::define_states_command(id, sf); 
                            STATE->pop_scope(); 
                           }
     ')'
@@ -78,7 +78,7 @@ define_transition returns [parser::command* cmd = 0]
                                        STATE->use_state_type(type_id, expr::state_type::NEXT, false); 
                                      }
       f = state_transition_formula   { expr::state_transition_formula stf = STATE->new_state_transition_formula(id, type_id, f);
-                                       $cmd = new parser::define_transition_command(stf, id); 
+                                       $cmd = new parser::define_transition_command(id, stf); 
                                        STATE->pop_scope(); 
                                      }
     ')'
@@ -89,22 +89,25 @@ define_transition_system returns [parser::command* cmd = 0]
 @declarations {
   std::string id;
   std::string type_id;  
-  std::string initial_id;  
+  std::string initial_id;
+  std::vector<std::string> transitions;  
 }
   : '(' 'define-transition-system'
       symbol[id]                    
-      symbol[type_id]
-      symbol[initial_id]           
-      transition_list               
+      symbol[type_id]                
+      symbol[initial_id]            
+      transition_list[transitions]  { expr::state_transition_system T = STATE->new_state_transition_system(id, type_id, initial_id, transitions); 
+                                      $cmd = new parser::define_transition_system_command(id, T);
+                                    } 
     ')'
   ; 
 
 /** A list of transitions */
-transition_list
+transition_list[std::vector<std::string>& transitions] 
 @declarations {
   std::string id;
 } 
-  : '(' symbol[id]+ ')'
+  : '(' symbol[id]+ ')' { transitions.push_back(id); }
   ;
   
 /** Query  */

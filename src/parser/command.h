@@ -22,7 +22,8 @@ public:
   enum type {
     DECLARE_STATE_TYPE,
     DEFINE_STATES,
-    DEFINE_TRANSITION
+    DEFINE_TRANSITION,
+    DEFINE_TRANSITION_SYSTEM
   };
 
   /** Construct the command */
@@ -58,35 +59,39 @@ std::ostream& operator << (std::ostream& out, const command& cmd) {
  */
 class declare_state_type_command : public command {
 
+  /** Id if any */
+  std::string d_id;
+
   /** The state type */
   expr::state_type d_state_type;
 
 public:
 
-  declare_state_type_command(expr::state_type& state_type)
+  declare_state_type_command(std::string id, expr::state_type& state_type)
   : command(DECLARE_STATE_TYPE)
+  , d_id(id)
   , d_state_type(state_type)
   {}
 
   void to_stream(std::ostream& out) const {
-    out << "[" << get_command_type_string() << ": " << d_state_type << "]";
+    out << "[" << get_command_type_string() << "(" << d_id << "): " << d_state_type << "]";
   }
 };
 
 class define_states_command : public command {
 
+  /** Id of the set (if any) */
+  std::string d_id;
+
   /** The state formula defining the set of states */
   expr::state_formula d_state_formula;
 
-  /** Id of the formula (if any) */
-  std::string d_id;
-
 public:
 
-  define_states_command(const expr::state_formula& state_formula, std::string id)
+  define_states_command(std::string id, const expr::state_formula& state_formula)
   : command(DEFINE_STATES)
-  , d_state_formula(state_formula)
   , d_id(id)
+  , d_state_formula(state_formula)
   {}
 
   void to_stream(std::ostream& out) const {
@@ -97,24 +102,45 @@ public:
 
 class define_transition_command : public command {
 
+  /** Id of the transition (if any) */
+  std::string d_id;
+
   /** The state formula defining the set of states */
   expr::state_transition_formula d_transition_formula;
 
-  /** Id of the formula (if any) */
-  std::string d_id;
-
 public:
 
-  define_transition_command(const expr::state_transition_formula& transition_formula, std::string id)
+  define_transition_command(std::string id, const expr::state_transition_formula& transition_formula)
   : command(DEFINE_TRANSITION)
-  , d_transition_formula(transition_formula)
   , d_id(id)
+  , d_transition_formula(transition_formula)
   {}
 
   void to_stream(std::ostream& out) const {
     out << "[" << get_command_type_string() << "(" << d_id << "): " << d_transition_formula << "]";
   }
 
+};
+
+class define_transition_system_command : public command {
+
+  /** Id of the system */
+  std::string d_id;
+
+  /** The state formula defining the set of states */
+  expr::state_transition_system d_T;
+
+public:
+
+  define_transition_system_command(std::string id, const expr::state_transition_system& T)
+  : command(DEFINE_TRANSITION_SYSTEM)
+  , d_id(id)
+  , d_T(T)
+  {}
+
+  void to_stream(std::ostream& out) const {
+    out << "[" << get_command_type_string() << "(" << d_id << "): " << d_T << "]";
+  }
 };
 
 

@@ -23,6 +23,7 @@ parser_state::parser_state(term_manager& tm)
 , d_state_types("state types")
 , d_state_formulas("state formulas")
 , d_transition_formulas("state transition formulas")
+, d_transition_systems("state transition systems")
 , d_variables_local("local vars")
 , d_types("types")
 {
@@ -63,7 +64,7 @@ expr::state_type parser_state::new_state_type(string id, const vector<string>& v
   assert(vars.size() > 0);
 
   if (d_state_types.has_entry(id)) {
-    throw parser_exception("state type " + id + " already declared");
+    throw parser_exception(id + " already declared");
   }
 
   // Create the type
@@ -75,8 +76,14 @@ expr::state_type parser_state::new_state_type(string id, const vector<string>& v
   // Add the mapping id -> type
   d_state_types.add_entry(id, state_type);
 
-  // Return the command
   return state_type;
+}
+
+expr::state_type parser_state::get_state_type(string id) const {
+  if (!d_state_types.has_entry(id)) {
+    throw parser_exception("undeclared state type: " + id);
+  }
+  return d_state_types.get_entry(id);
 }
 
 void parser_state::expand_vars(expr::term_ref var_ref) {
@@ -106,12 +113,8 @@ void parser_state::expand_vars(expr::term_ref var_ref) {
 
 void parser_state::use_state_type(std::string id, expr::state_type::var_class var_class, bool use_namespace) {
 
-  if (!d_state_types.has_entry(id)) {
-    report_error("unknown state type: " + id);
-  }
-
   // Get the information about the state types
-  const expr::state_type& st = d_state_types.get_entry(id);
+  expr::state_type st = get_state_type(id);
 
   // Use the apropriate namespace
   st.use_namespace(d_term_manager);
@@ -131,12 +134,8 @@ void parser_state::use_state_type(std::string id, expr::state_type::var_class va
 
 expr::state_formula parser_state::new_state_formula(std::string id, std::string type_id, expr::term_ref f) {
 
-  if (!d_state_types.has_entry(type_id)) {
-    report_error("unknown state type: " + id);
-  }
-
   // Get the information about the state types
-  const expr::state_type& state_type = d_state_types.get_entry(type_id);
+  expr::state_type state_type = get_state_type(type_id);
 
   // Create the state formula
   expr::state_formula sf(d_term_manager, state_type, f);
@@ -144,18 +143,28 @@ expr::state_formula parser_state::new_state_formula(std::string id, std::string 
   // Add to the symbol table
   d_state_formulas.add_entry(id, sf);
 
-  /** Return thecommand */
   return sf;
 }
 
+expr::state_formula parser_state::get_state_formula(string id) const {
+  if (!d_state_formulas.has_entry(id)) {
+    throw parser_exception("undeclared state set: " + id);
+  }
+  return d_state_formulas.get_entry(id);
+}
+
 expr::state_transition_formula parser_state::new_state_transition_formula(std::string id, std::string type_id, expr::term_ref f) {
+
+  if (d_transition_formulas.has_entry(id)) {
+    report_error(id + " already declared");
+  }
 
   if (!d_state_types.has_entry(type_id)) {
     report_error("unknown state type: " + id);
   }
 
   // Get the information about the state types
-  const expr::state_type& state_type = d_state_types.get_entry(type_id);
+  expr::state_type state_type = get_state_type(type_id);
 
   // Create the state formula
   expr::state_transition_formula tf(d_term_manager, state_type, f);
@@ -163,10 +172,51 @@ expr::state_transition_formula parser_state::new_state_transition_formula(std::s
   // Add to the symbol table
   d_transition_formulas.add_entry(id, tf);
 
-  /** Return thecommand */
   return tf;
 }
 
+expr::state_transition_formula parser_state::get_state_transition_formula(string id) const {
+  if (!d_transition_formulas.has_entry(id)) {
+    throw parser_exception("undeclared transition: " + id);
+  }
+  return d_transition_formulas.get_entry(id);
+}
+
+expr::state_transition_system parser_state::new_state_transition_system(std::string id, std::string type_id, std::string initial_id, std::vector<std::string>& transitions) {
+
+  if (d_transition_systems.has_entry(id)) {
+    report_error(id + " already declared");
+  }
+
+  // Get the information about the state types
+  expr::state_type state_type = get_state_type(type_id);
+
+  // Get the initial states
+  expr::state_formula initial_states = get_state_formula(initial_id);
+
+  // Get the transition relations
+  std::vector<expr::state_transition_formula> transition_formulas;
+  for (size_t i = 0; i < transitions.size(); ++ i) {
+    // Create the state formula
+    transition_formulas.push_back(get_state_transition_formula(transitions[i]));
+  }
+
+  // Create the transition sytem
+  expr::state_transition_system T(state_type, initial_states, transition_formulas);
+
+  // Put it into the symbol table
+  d_transition_systems.add_entry(id, T);
+
+  // REturn
+  return T;
+}
+
+expr::state_transition_system parser_state::get_state_transition_system(string id) const {
+  if (!d_transition_systems.has_entry(id)) {
+    throw parser_exception("undeclared transition system: " + id);
+  }
+  return d_transition_systems.get_entry(id);
+}
 
 void parser_state::push_scope() {
   d_variables_local.push_scope();

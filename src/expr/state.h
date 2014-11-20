@@ -40,6 +40,11 @@ public:
   /** Print the state type to stream */
   void to_stream(std::ostream& out) const;
 
+  /** Get the actual type */
+  term_ref get_type() const {
+    return d_type;
+  }
+
   /** Get the state variable(s) of the class */
   term_ref get_state(var_class vc) const;
 
@@ -129,7 +134,7 @@ public:
   {}
 
   /** Get the state formula */
-  term_ref get_transition_formula() const {
+  term_ref get_formula() const {
     return d_transition_formula;
   }
 
@@ -146,6 +151,62 @@ std::ostream& operator << (std::ostream& out, const state_transition_formula& sf
   sf.to_stream(out);
   return out;
 }
+
+class state_transition_system {
+
+  /** The state information */
+  state_type d_state_type;
+
+  /** The intial states */
+  state_formula d_initial_states;
+
+  /** The transition formula */
+  std::vector<state_transition_formula> d_transition_relation;
+
+public:
+
+  state_transition_system(const state_type& state_type, const state_formula& initial_states, const std::vector<state_transition_formula>& transition_relation)
+  : d_state_type(state_type)
+  , d_initial_states(initial_states)
+  , d_transition_relation(transition_relation)
+  {}
+
+  state_transition_system(const state_transition_system& T)
+  : d_state_type(T.d_state_type)
+  , d_initial_states(T.d_initial_states)
+  , d_transition_relation(T.d_transition_relation)
+  {}
+
+  /** Get the state type */
+  const state_type&  get_state_type() const {
+    return d_state_type;
+  }
+
+  /** Get the intial states */
+  term_ref get_initial_states() const {
+    return d_initial_states.get_formula();
+  }
+
+  /** Get the number of transitions */
+  size_t get_transitions_count() const {
+    return d_transition_relation.size();
+  }
+
+  /** Get the transition relation */
+  term_ref get_transition(size_t i) const {
+    return d_transition_relation[i].get_formula();
+  }
+
+  /** Print it to the stream */
+  void to_stream(std::ostream& out) const;
+};
+
+inline
+std::ostream& operator << (std::ostream& out, const state_transition_system& T) {
+  T.to_stream(out);
+  return out;
+}
+
 
 }
 }

@@ -36,6 +36,9 @@ class parser_state {
   /** Symbol table for state transition formulas */
   utils::symbol_table<expr::state_transition_formula> d_transition_formulas;
 
+  /** Symbol table for transition systems */
+  utils::symbol_table<expr::state_transition_system> d_transition_systems;
+
   /** Symbol table for variables */
   utils::symbol_table<expr::term_ref> d_variables_local;
 
@@ -62,11 +65,26 @@ public:
   /** Create a new state type */
   expr::state_type new_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types);
 
+  /** Get the state type with the given id */
+  expr::state_type get_state_type(std::string id) const;
+
   /** Create a new state formula */
   expr::state_formula new_state_formula(std::string id, std::string type_id, expr::term_ref sf);
 
+  /** Get the state formula with the given id */
+  expr::state_formula get_state_formula(std::string id) const;
+
   /** Create a new state transition formula */
   expr::state_transition_formula new_state_transition_formula(std::string id, std::string type_id, expr::term_ref stf);
+
+  /** Get the state transition formula with the given id */
+  expr::state_transition_formula get_state_transition_formula(std::string id) const;
+
+  /** Create a new state transition system */
+  expr::state_transition_system new_state_transition_system(std::string id, std::string type_id, std::string initial_id, std::vector<std::string>& transitions);
+
+  /** Get the transition system with the given id */
+  expr::state_transition_system get_state_transition_system(std::string id) const;
 
   /**
    * Use the state type, i.e. declare the variables var_class.x, var_class.y, ...
