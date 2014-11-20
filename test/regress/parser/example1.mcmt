@@ -4,7 +4,7 @@
 ;; Initial states (a state formula over state_type)
 (define-states initial_states state_type 
   ;; Implicit variable state
-  (= state.x 0)
+  (= x 0)
 )
 
 ;; One transition 
