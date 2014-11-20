@@ -249,3 +249,26 @@ term_ref term_manager_internal::type_of(const term& t) const {
   }
   return term_ref();
 }
+
+/** Add a namespace entry (will be removed from prefix when printing. */
+void term_manager_internal::use_namespace(std::string ns) {
+  d_namespaces.push_back(ns);
+}
+
+/** Pop the last added namespace */
+void term_manager_internal::pop_namespace() {
+  d_namespaces.pop_back();
+}
+
+/** Returns the id normalized with resepct to the current namespaces */
+std::string term_manager_internal::namespace_normalize(std::string id) const {
+  for (size_t i = 0; i < d_namespaces.size(); ++ i) {
+    std::string ns = d_namespaces[i];
+    std::cerr << "ns: " << ns << ": " << id << std::endl;
+    if (ns.size() < id.size() && id.substr(0, ns.size()) == ns) {
+      id = id.substr(ns.size());
+    }
+  }
+  std::cerr << id << std::endl;
+  return id;
+}

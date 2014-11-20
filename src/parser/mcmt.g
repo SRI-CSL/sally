@@ -56,7 +56,7 @@ define_states returns [parser::command* cmd = 0]
   : '(' 'define-states'
       symbol[id]       
       symbol[type_id]     { STATE->push_scope(); 
-                            STATE->use_state_type(type_id, expr::state_type::CURRENT); 
+                            STATE->use_state_type(type_id, expr::state_type::CURRENT, true); 
                           }
       f = state_formula  { expr::state_formula sf = STATE->new_state_formula(id, type_id, f);
                            $cmd = new parser::define_states_command(sf); 
@@ -74,8 +74,8 @@ define_transition returns [parser::command* cmd = 0]
   : '(' 'define-transition'
       symbol[id]
       symbol[type_id]                { STATE->push_scope();
-                                       STATE->use_state_type(type_id, expr::state_type::CURRENT); 
-                                       STATE->use_state_type(type_id, expr::state_type::NEXT); 
+                                       STATE->use_state_type(type_id, expr::state_type::CURRENT, false); 
+                                       STATE->use_state_type(type_id, expr::state_type::NEXT, false); 
                                      }
       f = state_transition_formula   { expr::state_transition_formula stf = STATE->new_state_transition_formula(id, type_id, f);
                                        $cmd = new parser::define_transition_command(stf); 

@@ -43,6 +43,12 @@ public:
   /** Get the state variable(s) of the class */
   term_ref get_state(var_class vc) const;
 
+  /** Use the namespace for the type (pop the namespace yourself) */
+  void use_namespace(term_manager& tm) const;
+
+  /** Use the namespace for the the var class (pop the namespace yourself)  */
+  void use_namespace(term_manager& tm, var_class vc) const;
+
 private:
 
   /** The name of the type */

@@ -69,7 +69,7 @@ term_ref term_manager::mk_variable(std::string name, term_ref type) {
       // Type of the field
       term_ref field_type = get_struct_type_field_type(term_of(type), field_i);
       // Add the variable
-      children.push_back(d_tm->mk_term<VARIABLE>(field_id, field_type));
+      children.push_back(d_tm->mk_term<VARIABLE>(name + "." + field_id, field_type));
     }
     // Make the struct variable
     return d_tm->mk_term<VARIABLE>(name, children.begin(), children.end());
@@ -81,7 +81,8 @@ term_ref term_manager::mk_variable(std::string name, term_ref type) {
 
 std::string term_manager::get_variable_name(const term& t) const {
   assert(t.op() == VARIABLE);
-  return d_tm->payload_of<std::string>(t);
+  std::string name = d_tm->payload_of<std::string>(t);
+  return d_tm->namespace_normalize(name);
 }
 
 term_ref term_manager::mk_boolean_constant(bool value) {
@@ -186,4 +187,12 @@ std::string term_manager::to_string(term_ref ref) const {
   return d_tm->to_string(ref);
 }
 
+
+void term_manager::use_namespace(std::string ns) {
+  d_tm->use_namespace(ns);
+}
+
+void term_manager::pop_namespace() {
+  d_tm->pop_namespace();
+}
 

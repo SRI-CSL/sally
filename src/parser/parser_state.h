@@ -46,7 +46,7 @@ class parser_state {
    * Declare the variables from the (possibly struct) variable var into the
    * variables symbol table.
    */
-  void expand_vars(std::string name, expr::term_ref var);
+  void expand_vars(expr::term_ref var);
 
 public:
 
@@ -68,8 +68,11 @@ public:
   /** Create a new state transition formula */
   expr::state_transition_formula new_state_transition_formula(std::string id, std::string type_id, expr::term_ref stf);
 
-  /** Use the state type, i.e. declare the variables prefix.x, prefix.y, ... */
-  void use_state_type(std::string id, expr::state_type::var_class var_class);
+  /**
+   * Use the state type, i.e. declare the variables var_class.x, var_class.y, ...
+   * If use_namespace is true, then "var_class." is not used in the name.
+   */
+  void use_state_type(std::string id, expr::state_type::var_class var_class, bool use_namespace);
 
   /** Push a new scope for local declarations */
   void push_scope();

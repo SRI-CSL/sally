@@ -79,35 +79,35 @@ expr::state_type parser_state::new_state_type(string id, const vector<string>& v
   return state_type;
 }
 
-void parser_state::expand_vars(std::string name, expr::term_ref var_ref) {
+void parser_state::expand_vars(expr::term_ref var_ref) {
 
   // The variable content
   const term& var_term = d_term_manager.term_of(var_ref);
+
+  /// Variable name
+  std::string var_name = d_term_manager.get_variable_name(var_term);
 
   // Number of subfields
   size_t size = d_term_manager.get_struct_size(var_term);
 
   if (size == 0) {
 
-    std::cerr << "Declaring variable " << var_ref << " as " << name << std::endl;
+    std::cerr << "Declaring variable " << var_ref << " as " << var_name << std::endl;
 
     // Atomic, just put into the symbol table
-    d_variables_local.add_entry(name, var_ref);
+    d_variables_local.add_entry(var_name, var_ref);
   } else {
     // Register all the field variables
     for (size_t i = 0; i < size; ++ i) {
       // Get the field
       term_ref var_field_ref = d_term_manager.get_struct_field(var_term, i);
-      // And the name
-      const term& var_field_term = d_term_manager.term_of(var_field_ref);
-      string expanded_name = name + "." + d_term_manager.get_variable_name(var_field_term);
       // Expand
-      expand_vars(expanded_name, var_field_ref);
+      expand_vars(var_field_ref);
     }
   }
 }
 
-void parser_state::use_state_type(std::string id, expr::state_type::var_class var_class) {
+void parser_state::use_state_type(std::string id, expr::state_type::var_class var_class, bool use_namespace) {
 
   if (!d_state_types.has_entry(id)) {
     report_error("unknown state type: " + id);
@@ -116,11 +116,20 @@ void parser_state::use_state_type(std::string id, expr::state_type::var_class va
   // Get the information about the state types
   const expr::state_type& st = d_state_types.get_entry(id);
 
+  // Use the apropriate namespace
+  st.use_namespace(d_term_manager);
+  if (use_namespace) {
+    st.use_namespace(d_term_manager, var_class);
+  }
+
   /** Get the state */
   term_ref state_var_ref = st.get_state(var_class);
 
   /** Declare the variable */
-  expand_vars(expr::state_type::to_string(var_class), state_var_ref);
+  expand_vars(state_var_ref);
+
+  // Pop the namespace
+  d_term_manager.pop_namespace();
 }
 
 expr::state_formula parser_state::new_state_formula(std::string id, std::string type_id, expr::term_ref f) {

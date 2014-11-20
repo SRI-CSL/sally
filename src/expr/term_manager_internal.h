@@ -202,6 +202,9 @@ private:
   /** Real type */
   term_ref_strong d_realType;
 
+  /** Prefixes to be removed when printing variable names */
+  std::vector<std::string> d_namespaces;
+
 public:
 
   /** Construct them manager */
@@ -342,6 +345,15 @@ public:
 
   /** Get the string representation of the term */
   std::string to_string(term_ref ref) const;
+
+  /** Add a namespace entry (will be removed from prefix when printing. */
+  void use_namespace(std::string ns);
+
+  /** Pop the last added namespace */
+  void pop_namespace();
+
+  /** Returns the id normalized with resepct to the current namespaces */
+  std::string namespace_normalize(std::string id) const;
 };
 
 inline

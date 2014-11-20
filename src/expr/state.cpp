@@ -19,6 +19,23 @@ state_type::state_type(term_manager& tm, std::string id, term_ref type)
   d_next_state = term_ref_strong(tm, tm.mk_variable(id + "::next", type));
 }
 
+void state_type::use_namespace(term_manager& tm) const {
+  tm.use_namespace(d_id + "::");
+}
+
+void state_type::use_namespace(term_manager& tm, var_class vc) const {
+  switch (vc) {
+  case CURRENT:
+    tm.use_namespace("current.");
+    break;
+  case NEXT:
+    tm.use_namespace("next.");
+    break;
+  default:
+    assert(false);
+  }
+}
+
 void state_type::to_stream(std::ostream& out) const {
   out << "[" << d_id << ": " << d_type << "]";
 }
