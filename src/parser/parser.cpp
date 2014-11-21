@@ -80,6 +80,7 @@ public:
     d_parser->free(d_parser);
     d_token_stream->free(d_token_stream);
     d_lexer->free(d_lexer);
+    d_input->free(d_input);
   }
 
   command* parse_command() {
