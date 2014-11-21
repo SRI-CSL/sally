@@ -120,10 +120,10 @@ void parser_state::use_state_type(const state_type* st , state_type::var_class v
     st->use_namespace(d_term_manager, var_class);
   }
 
-  /** Get the state */
+  // Get the state
   term_ref state_var_ref = st->get_state(var_class);
 
-  /** Declare the variable */
+  // Declare the variables
   expand_vars(state_var_ref);
 
   // Pop the namespace

@@ -14,13 +14,26 @@
 namespace sal2 {
 namespace utils {
 
-template<typename T>
+template<typename T, bool free_pointers = true>
 class symbol_table {
 
   typedef std::list<T> T_list;
+  typedef typename T_list::iterator T_list_iterator;
   typedef boost::unordered_map<std::string, T_list, utils::hash<std::string> > id_to_T_map;
   typedef typename id_to_T_map::iterator iterator;
   typedef typename id_to_T_map::const_iterator const_iterator;
+
+  template<typename T1>
+  struct symbol_table_entry {
+    enum { is_pointer = false };
+    static void free(T& t) {}
+  };
+
+  template<typename T1>
+  struct symbol_table_entry<T1*> {
+    enum { is_pointer = true };
+    static void free(T& t) { delete t; t = 0; }
+  };
 
   /** Map from names to lists of entries */
   id_to_T_map d_table;
@@ -46,6 +59,16 @@ public:
   symbol_table(std::string name)
   : d_name(name)
   {}
+
+  ~symbol_table() {
+    if (free_pointers && symbol_table_entry<T>::is_pointer) {
+      for (iterator it = d_table.begin(); it != d_table.end(); ++ it) {
+        for (T_list_iterator l_it = it->second.begin(); l_it != it->second.end(); ++ l_it) {
+          symbol_table_entry<T>::free(*l_it);
+        }
+      }
+    }
+  }
 
   /** Start a new scope */
   void push_scope() {
