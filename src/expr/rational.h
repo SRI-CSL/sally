@@ -32,9 +32,9 @@ public:
   /** Construct p/q */
   rational(long p, unsigned long q) : d_gmp_rat(p, q) { d_gmp_rat.canonicalize(); }
   /** Construct from string representation */
-  rational(const char* s): d_gmp_rat(s, 10) { d_gmp_rat.canonicalize(); }
+  explicit rational(const char* s): d_gmp_rat(s, 10) { d_gmp_rat.canonicalize(); }
   /** Construct from string representation */
-  rational(std::string s): d_gmp_rat(s, 10) { d_gmp_rat.canonicalize(); }
+  explicit rational(std::string s): d_gmp_rat(s, 10) { d_gmp_rat.canonicalize(); }
 
   /** Hash of the rational */
   size_t hash() const;
@@ -51,11 +51,8 @@ public:
   }
 };
 
-inline
-std::ostream& operator << (std::ostream& out, const rational& q) {
-  q.to_stream(out);
-  return out;
-}
+/** Output operator */
+std::ostream& operator << (std::ostream& out, const rational& q);
 
 }
 

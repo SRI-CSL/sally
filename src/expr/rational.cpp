@@ -10,10 +10,11 @@
 #include "utils/hash.h"
 
 #include <cassert>
+#include <iostream>
 
-using namespace std;
-using namespace sal2;
-using namespace expr;
+namespace sal2 {
+namespace expr {
+
 
 size_t rational::hash() const {
   utils::sequence_hash hasher;
@@ -46,4 +47,12 @@ void rational::to_stream(std::ostream& out) const {
   default:
     assert(false);
   }
+}
+
+std::ostream& operator << (std::ostream& out, const rational& q) {
+  q.to_stream(out);
+  return out;
+}
+
+}
 }
