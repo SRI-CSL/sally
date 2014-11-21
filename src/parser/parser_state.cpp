@@ -15,7 +15,7 @@
 using namespace sal2;
 using namespace parser;
 using namespace expr;
-using namespace state;
+using namespace system;
 
 using namespace std;
 
@@ -144,7 +144,7 @@ const state_formula& parser_state::get_state_formula(string id) const {
   return d_state_formulas.get_entry(id);
 }
 
-const state_transition_formula& parser_state::new_state_transition_formula(std::string id, std::string type_id, term_ref f) {
+const transition_formula& parser_state::new_transition_formula(std::string id, std::string type_id, term_ref f) {
 
   if (d_transition_formulas.has_entry(id)) {
     report_error(id + " already declared");
@@ -154,17 +154,17 @@ const state_transition_formula& parser_state::new_state_transition_formula(std::
   const state_type& state_type = get_state_type(type_id);
 
   // Add to the symbol table
-  return d_transition_formulas.add_entry(id, state_transition_formula(d_term_manager, state_type, f));
+  return d_transition_formulas.add_entry(id, transition_formula(d_term_manager, state_type, f));
 }
 
-const state_transition_formula& parser_state::get_state_transition_formula(string id) const {
+const transition_formula& parser_state::get_transition_formula(string id) const {
   if (!d_transition_formulas.has_entry(id)) {
     throw parser_exception("undeclared transition: " + id);
   }
   return d_transition_formulas.get_entry(id);
 }
 
-const state_transition_system& parser_state::new_state_transition_system(std::string id, std::string type_id, std::string initial_id, std::vector<std::string>& transitions) {
+const transition_system& parser_state::new_transition_system(std::string id, std::string type_id, std::string initial_id, std::vector<std::string>& transitions) {
 
   if (d_transition_systems.has_entry(id)) {
     report_error(id + " already declared");
@@ -177,17 +177,17 @@ const state_transition_system& parser_state::new_state_transition_system(std::st
   const state_formula& initial_states = get_state_formula(initial_id);
 
   // Get the transition relations
-  std::vector<state_transition_formula> transition_formulas;
+  std::vector<transition_formula> transition_formulas;
   for (size_t i = 0; i < transitions.size(); ++ i) {
     // Create the state formula
-    transition_formulas.push_back(get_state_transition_formula(transitions[i]));
+    transition_formulas.push_back(get_transition_formula(transitions[i]));
   }
 
   // Put it into the symbol table
-  return d_transition_systems.add_entry(id, state_transition_system(state_type, initial_states, transition_formulas));
+  return d_transition_systems.add_entry(id, transition_system(state_type, initial_states, transition_formulas));
 }
 
-const state_transition_system& parser_state::get_state_transition_system(string id) const {
+const transition_system& parser_state::get_transition_system(string id) const {
   if (!d_transition_systems.has_entry(id)) {
     throw parser_exception("undeclared transition system: " + id);
   }
