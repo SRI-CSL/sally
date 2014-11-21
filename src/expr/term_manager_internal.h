@@ -8,6 +8,7 @@
 #pragma once
 
 #include "expr/term.h"
+#include "utils/allocator.h"
 
 #include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>

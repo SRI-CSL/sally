@@ -8,6 +8,7 @@
 #include "parser/command.h"
 
 #include <cassert>
+#include <iostream>
 
 using namespace sal2;
 using namespace parser;
@@ -32,4 +33,24 @@ default:
 return "unknown";
 
 #undef CASE_TO_STRING
+}
+
+void declare_state_type_command::to_stream(std::ostream& out) const  {
+  out << "[" << get_command_type_string() << "(" << d_id << "): " << *d_state_type << "]";
+}
+
+void define_states_command::to_stream(std::ostream& out) const  {
+  out << "[" << get_command_type_string() << "(" << d_id << "): " << *d_state_formula << "]";
+}
+
+void define_transition_command::to_stream(std::ostream& out) const {
+  out << "[" << get_command_type_string() << "(" << d_id << "): " << *d_transition_formula << "]";
+}
+
+void define_transition_system_command::to_stream(std::ostream& out) const  {
+  out << "[" << get_command_type_string() << "(" << d_id << "): " << *d_T << "]";
+}
+
+void query_command::to_stream(std::ostream& out) const  {
+  out << "[" << get_command_type_string() << " " << d_T << " : " << *d_query << "]";
 }

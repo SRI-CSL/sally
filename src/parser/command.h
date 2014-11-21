@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <iostream>
+#include <iosfwd>
 
 #include "system/state_type.h"
 #include "system/state_formula.h"
@@ -77,9 +77,7 @@ public:
   , d_state_type(state_type)
   {}
 
-  void to_stream(std::ostream& out) const {
-    out << "[" << get_command_type_string() << "(" << d_id << "): " << d_state_type << "]";
-  }
+  void to_stream(std::ostream& out) const;
 };
 
 class define_states_command : public command {
@@ -98,10 +96,7 @@ public:
   , d_state_formula(state_formula)
   {}
 
-  void to_stream(std::ostream& out) const {
-    out << "[" << get_command_type_string() << "(" << d_id << "): " << d_state_formula << "]";
-  }
-
+  void to_stream(std::ostream& out) const;
 };
 
 class define_transition_command : public command {
@@ -120,10 +115,7 @@ public:
   , d_transition_formula(transition_formula)
   {}
 
-  void to_stream(std::ostream& out) const {
-    out << "[" << get_command_type_string() << "(" << d_id << "): " << d_transition_formula << "]";
-  }
-
+  void to_stream(std::ostream& out) const;
 };
 
 class define_transition_system_command : public command {
@@ -142,9 +134,7 @@ public:
   , d_T(T)
   {}
 
-  void to_stream(std::ostream& out) const {
-    out << "[" << get_command_type_string() << "(" << d_id << "): " << d_T << "]";
-  }
+  void to_stream(std::ostream& out) const;
 };
 
 class query_command : public command {
@@ -153,19 +143,17 @@ class query_command : public command {
   std::string d_T;
 
   /** The formula we're querying */
-  system::state_formula d_query;
+  const system::state_formula* d_query;
 
 public:
 
-  query_command(std::string T, const system::state_formula& query)
+  query_command(std::string T, const system::state_formula* query)
   : command(QUERY)
   , d_T(T)
   , d_query(query)
   {}
 
-  void to_stream(std::ostream& out) const {
-    out << "[" << get_command_type_string() << " " << d_T << " : " << d_query << "]";
-  }
+  void to_stream(std::ostream& out) const;
 };
 
 }

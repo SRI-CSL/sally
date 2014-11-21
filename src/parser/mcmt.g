@@ -122,7 +122,7 @@ query returns [parser::command* cmd = 0]
                                      state_type = T->get_state_type();
                                      STATE->use_state_type(state_type, system::state_type::CURRENT, true); 
                                    }
-      f = state_formula            { $cmd = new parser::query_command(id, system::state_formula(STATE->tm(), state_type, f));
+      f = state_formula            { $cmd = new parser::query_command(id, new system::state_formula(STATE->tm(), state_type, f));
        					                     STATE->pop_scope(); 
                                    }
     ')'

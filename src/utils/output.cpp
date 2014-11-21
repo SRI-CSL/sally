@@ -6,9 +6,11 @@
  */
 
 #include <string>
+#include <iostream>
 
 #include "utils/output.h"
 #include "expr/term_manager.h"
+
 
 namespace sal2 {
 namespace output {

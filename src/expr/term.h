@@ -9,7 +9,7 @@
 
 #include <vector>
 #include <cassert>
-#include <iostream>
+#include <iosfwd>
 
 #include "expr/term_ops.h"
 

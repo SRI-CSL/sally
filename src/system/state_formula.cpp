@@ -7,6 +7,8 @@
 
 #include "system/state_formula.h"
 
+#include <iostream>
+
 using namespace sal2;
 using namespace system;
 

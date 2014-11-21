@@ -7,10 +7,10 @@
 
 #pragma once
 
-#include <iostream>
+#include <iosfwd>
 
 #include "expr/rational.h"
-#include "utils/allocator.h"
+#include "utils/allocator_types.h"
 
 namespace sal2 {
 namespace expr {

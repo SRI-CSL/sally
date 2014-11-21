@@ -9,9 +9,10 @@
 #include "smt/yices2.h"
 
 #include <cassert>
+#include <iostream>
 
-using namespace sal2;
-using namespace smt;
+namespace sal2 {
+namespace smt {
 
 solver* factory::mk_solver(std::string id, expr::term_manager& tm) {
   solver* new_solver = 0;
@@ -23,4 +24,22 @@ solver* factory::mk_solver(std::string id, expr::term_manager& tm) {
   }
 
   return new_solver;
+}
+
+std::ostream& operator << (std::ostream& out, solver::result result) {
+  switch (result) {
+  case solver::SAT:
+    out << "sat";
+    break;
+  case solver::UNSAT:
+    out << "unsat";
+    break;
+  case solver::UNKNOWN:
+    out << "unknown";
+    break;
+  }
+  return out;
+}
+
+}
 }

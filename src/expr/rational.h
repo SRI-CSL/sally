@@ -9,7 +9,7 @@
 
 #include <gmpxx.h>
 #include <string>
-#include <iostream>
+#include <iosfwd>
 
 #include "utils/hash.h"
 

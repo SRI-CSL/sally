@@ -7,6 +7,8 @@
 
 #include "system/transition_system.h"
 
+#include <iostream>
+
 using namespace sal2;
 using namespace system;
 

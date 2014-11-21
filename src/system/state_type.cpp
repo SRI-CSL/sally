@@ -5,8 +5,9 @@
  *      Author: dejan
  */
 
-#include "system/state_type.h"
+#include <iostream>
 
+#include "system/state_type.h"
 #include "expr/term_manager.h"
 
 using namespace sal2;
