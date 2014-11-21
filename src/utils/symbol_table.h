@@ -26,13 +26,13 @@ class symbol_table {
   template<typename T1>
   struct symbol_table_entry {
     enum { is_pointer = false };
-    static void free(T& t) {}
+    static void free(T1& t) {}
   };
 
   template<typename T1>
   struct symbol_table_entry<T1*> {
     enum { is_pointer = true };
-    static void free(T& t) { delete t; t = 0; }
+    static void free(T1*& t) { delete t; t = 0; }
   };
 
   /** Map from names to lists of entries */
