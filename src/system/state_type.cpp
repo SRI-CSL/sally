@@ -5,10 +5,12 @@
  *      Author: dejan
  */
 
-#include "expr/state.h"
+#include "system/state_type.h"
+
 #include "expr/term_manager.h"
 
 using namespace sal2;
+using namespace state;
 using namespace expr;
 
 state_type::state_type(term_manager& tm, std::string id, term_ref type)

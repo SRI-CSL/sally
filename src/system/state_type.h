@@ -14,7 +14,7 @@
 #include "expr/term.h"
 
 namespace sal2 {
-namespace expr {
+namespace state {
 
 /**
  * A state type identified by it's id (name) and it's type
@@ -38,24 +38,24 @@ public:
   state_type() {}
 
   /** Create a new state type of the given type and name */
-  state_type(term_manager& tm, std::string id, term_ref type);
+  state_type(expr::term_manager& tm, std::string id, expr::term_ref type);
 
   /** Print the state type to stream */
   void to_stream(std::ostream& out) const;
 
   /** Get the actual type */
-  term_ref get_type() const {
+  expr::term_ref get_type() const {
     return d_type;
   }
 
   /** Get the state variable(s) of the class */
-  term_ref get_state(var_class vc) const;
+  expr::term_ref get_state(var_class vc) const;
 
   /** Use the namespace for the type (pop the namespace yourself) */
-  void use_namespace(term_manager& tm) const;
+  void use_namespace(expr::term_manager& tm) const;
 
   /** Use the namespace for the the var class (pop the namespace yourself)  */
-  void use_namespace(term_manager& tm, var_class vc) const;
+  void use_namespace(expr::term_manager& tm, var_class vc) const;
 
 private:
 
@@ -63,13 +63,13 @@ private:
   std::string d_id;
 
   /** The actual type describing the state */
-  term_ref_strong d_type;
+  expr::term_ref_strong d_type;
 
   /** The current state */
-  term_ref_strong d_current_state;
+  expr::term_ref_strong d_current_state;
 
   /** The next state */
-  term_ref_strong d_next_state;
+  expr::term_ref_strong d_next_state;
 };
 
 inline
@@ -87,11 +87,11 @@ class state_formula {
   state_type d_state_type;
 
   /** The formula itself */
-  term_ref_strong d_state_formula;
+  expr::term_ref_strong d_state_formula;
 
 public:
 
-  state_formula(term_manager& tm, const state_type& st, term_ref formula)
+  state_formula(expr::term_manager& tm, const state_type& st, expr::term_ref formula)
   : d_state_type(st)
   , d_state_formula(tm, formula)
   {}
@@ -102,7 +102,7 @@ public:
   {}
 
   /** Get the state formula */
-  term_ref get_formula() const {
+  expr::term_ref get_formula() const {
     return d_state_formula;
   }
 
@@ -127,17 +127,17 @@ class state_transition_formula {
   state_type d_state_type;
 
   /** The actual formula */
-  term_ref_strong d_transition_formula;
+  expr::term_ref_strong d_transition_formula;
 
 public:
 
-  state_transition_formula(term_manager& tm, const state_type& st, term_ref tf)
+  state_transition_formula(expr::term_manager& tm, const state_type& st, expr::term_ref tf)
   : d_state_type(st)
   , d_transition_formula(tm, tf)
   {}
 
   /** Get the state formula */
-  term_ref get_formula() const {
+  expr::term_ref get_formula() const {
     return d_transition_formula;
   }
 
@@ -186,7 +186,7 @@ public:
   }
 
   /** Get the intial states */
-  term_ref get_initial_states() const {
+  expr::term_ref get_initial_states() const {
     return d_initial_states.get_formula();
   }
 
@@ -196,7 +196,7 @@ public:
   }
 
   /** Get the transition relation */
-  term_ref get_transition(size_t i) const {
+  expr::term_ref get_transition(size_t i) const {
     return d_transition_relation[i].get_formula();
   }
 

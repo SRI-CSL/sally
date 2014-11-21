@@ -10,7 +10,7 @@
 #include "expr/term.h"
 #include "expr/term_manager.h"
 
-#include "expr/state.h"
+#include "system/state_type.h"
 
 #include "parser/command.h"
 #include "utils/symbol_table.h"
@@ -28,16 +28,16 @@ class parser_state {
   expr::term_manager& d_term_manager;
 
   /** Symbol table for state types */
-  utils::symbol_table<expr::state_type> d_state_types;
+  utils::symbol_table<state::state_type> d_state_types;
 
   /** Symbol table for state formulas */
-  utils::symbol_table<expr::state_formula> d_state_formulas;
+  utils::symbol_table<state::state_formula> d_state_formulas;
 
   /** Symbol table for state transition formulas */
-  utils::symbol_table<expr::state_transition_formula> d_transition_formulas;
+  utils::symbol_table<state::state_transition_formula> d_transition_formulas;
 
   /** Symbol table for transition systems */
-  utils::symbol_table<expr::state_transition_system> d_transition_systems;
+  utils::symbol_table<state::state_transition_system> d_transition_systems;
 
   /** Symbol table for variables */
   utils::symbol_table<expr::term_ref> d_variables_local;
@@ -63,40 +63,40 @@ public:
   void report_error(std::string msg) const;
 
   /** Create a new state type */
-  const expr::state_type& new_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types);
+  const state::state_type& new_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types);
 
   /** Get the state type with the given id */
-  const expr::state_type& get_state_type(std::string id) const;
+  const state::state_type& get_state_type(std::string id) const;
 
   /** Create a new state formula */
-  const expr::state_formula& new_state_formula(std::string id, std::string type_id, expr::term_ref sf);
+  const state::state_formula& new_state_formula(std::string id, std::string type_id, expr::term_ref sf);
 
   /** Get the state formula with the given id */
-  const expr::state_formula& get_state_formula(std::string id) const;
+  const state::state_formula& get_state_formula(std::string id) const;
 
   /** Create a new state transition formula */
-  const expr::state_transition_formula& new_state_transition_formula(std::string id, std::string type_id, expr::term_ref stf);
+  const state::state_transition_formula& new_state_transition_formula(std::string id, std::string type_id, expr::term_ref stf);
 
   /** Get the state transition formula with the given id */
-  const expr::state_transition_formula& get_state_transition_formula(std::string id) const;
+  const state::state_transition_formula& get_state_transition_formula(std::string id) const;
 
   /** Create a new state transition system */
-  const expr::state_transition_system& new_state_transition_system(std::string id, std::string type_id, std::string initial_id, std::vector<std::string>& transitions);
+  const state::state_transition_system& new_state_transition_system(std::string id, std::string type_id, std::string initial_id, std::vector<std::string>& transitions);
 
   /** Get the transition system with the given id */
-  const expr::state_transition_system& get_state_transition_system(std::string id) const;
+  const state::state_transition_system& get_state_transition_system(std::string id) const;
 
   /**
    * Use the state type, i.e. declare the variables var_class.x, var_class.y, ...
    * If use_namespace is true, then "var_class." is not used in the name.
    */
-  void use_state_type(std::string id, expr::state_type::var_class var_class, bool use_namespace);
+  void use_state_type(std::string id, state::state_type::var_class var_class, bool use_namespace);
 
   /**
    * Use the state type, i.e. declare the variables var_class.x, var_class.y, ...
    * If use_namespace is true, then "var_class." is not used in the name.
    */
-  void use_state_type(const expr::state_type& state_type, expr::state_type::var_class var_class, bool use_namespace);
+  void use_state_type(const state::state_type& state_type, state::state_type::var_class var_class, bool use_namespace);
 
   /** Push a new scope for local declarations */
   void push_scope();

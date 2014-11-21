@@ -15,6 +15,7 @@
 using namespace sal2;
 using namespace parser;
 using namespace expr;
+using namespace state;
 
 using namespace std;
 

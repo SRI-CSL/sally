@@ -9,7 +9,7 @@
 
 #include <iostream>
 
-#include "expr/state.h"
+#include "system/state_type.h"
 
 namespace sal2 {
 namespace parser {
@@ -64,11 +64,11 @@ class declare_state_type_command : public command {
   std::string d_id;
 
   /** The state type */
-  expr::state_type d_state_type;
+  state::state_type d_state_type;
 
 public:
 
-  declare_state_type_command(std::string id, expr::state_type& state_type)
+  declare_state_type_command(std::string id, state::state_type& state_type)
   : command(DECLARE_STATE_TYPE)
   , d_id(id)
   , d_state_type(state_type)
@@ -85,11 +85,11 @@ class define_states_command : public command {
   std::string d_id;
 
   /** The state formula defining the set of states */
-  expr::state_formula d_state_formula;
+  state::state_formula d_state_formula;
 
 public:
 
-  define_states_command(std::string id, const expr::state_formula& state_formula)
+  define_states_command(std::string id, const state::state_formula& state_formula)
   : command(DEFINE_STATES)
   , d_id(id)
   , d_state_formula(state_formula)
@@ -107,11 +107,11 @@ class define_transition_command : public command {
   std::string d_id;
 
   /** The state formula defining the set of states */
-  expr::state_transition_formula d_transition_formula;
+  state::state_transition_formula d_transition_formula;
 
 public:
 
-  define_transition_command(std::string id, const expr::state_transition_formula& transition_formula)
+  define_transition_command(std::string id, const state::state_transition_formula& transition_formula)
   : command(DEFINE_TRANSITION)
   , d_id(id)
   , d_transition_formula(transition_formula)
@@ -129,11 +129,11 @@ class define_transition_system_command : public command {
   std::string d_id;
 
   /** The state formula defining the set of states */
-  expr::state_transition_system d_T;
+  state::state_transition_system d_T;
 
 public:
 
-  define_transition_system_command(std::string id, const expr::state_transition_system& T)
+  define_transition_system_command(std::string id, const state::state_transition_system& T)
   : command(DEFINE_TRANSITION_SYSTEM)
   , d_id(id)
   , d_T(T)
@@ -150,11 +150,11 @@ class query_command : public command {
   std::string d_T;
 
   /** The formula we're querying */
-  expr::state_formula d_query;
+  state::state_formula d_query;
 
 public:
 
-  query_command(std::string T, const expr::state_formula& query)
+  query_command(std::string T, const state::state_formula& query)
   : command(QUERY)
   , d_T(T)
   , d_query(query)
