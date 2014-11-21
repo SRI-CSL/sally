@@ -19,14 +19,14 @@ namespace system {
 class state_formula {
 
   /** The state variables */
-  state_type d_state_type;
+  const state_type* d_state_type;
 
   /** The formula itself */
   expr::term_ref_strong d_state_formula;
 
 public:
 
-  state_formula(expr::term_manager& tm, const state_type& st, expr::term_ref formula)
+  state_formula(expr::term_manager& tm, const state_type* st, expr::term_ref formula)
   : d_state_type(st)
   , d_state_formula(tm, formula)
   {}
@@ -42,7 +42,7 @@ public:
   }
 
   /** Get the state type */
-  const state_type& get_state_type() const {
+  const state_type* get_state_type() const {
     return d_state_type;
   }
 

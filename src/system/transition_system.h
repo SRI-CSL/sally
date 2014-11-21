@@ -17,17 +17,17 @@ namespace system {
 class transition_system {
 
   /** The state information */
-  state_type d_state_type;
+  const state_type* d_state_type;
 
   /** The intial states */
-  state_formula d_initial_states;
+  const state_formula* d_initial_states;
 
   /** The transition formula */
-  std::vector<transition_formula> d_transition_relation;
+  std::vector<const transition_formula*> d_transition_relation;
 
 public:
 
-  transition_system(const state_type& state_type, const state_formula& initial_states, const std::vector<transition_formula>& transition_relation)
+  transition_system(const state_type* state_type, const state_formula* initial_states, const std::vector<const transition_formula*>& transition_relation)
   : d_state_type(state_type)
   , d_initial_states(initial_states)
   , d_transition_relation(transition_relation)
@@ -40,13 +40,13 @@ public:
   {}
 
   /** Get the state type */
-  const state_type&  get_state_type() const {
+  const state_type*  get_state_type() const {
     return d_state_type;
   }
 
   /** Get the intial states */
   expr::term_ref get_initial_states() const {
-    return d_initial_states.get_formula();
+    return d_initial_states->get_formula();
   }
 
   /** Get the number of transitions */
@@ -56,7 +56,7 @@ public:
 
   /** Get the transition relation */
   expr::term_ref get_transition(size_t i) const {
-    return d_transition_relation[i].get_formula();
+    return d_transition_relation[i]->get_formula();
   }
 
   /** Print it to the stream */

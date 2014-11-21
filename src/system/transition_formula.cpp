@@ -11,5 +11,5 @@ using namespace sal2;
 using namespace system;
 
 void transition_formula::to_stream(std::ostream& out) const {
-  out << "[" << d_state_type << " " << d_transition_formula << "]";
+  out << "[" << *d_state_type << " " << d_transition_formula << "]";
 }

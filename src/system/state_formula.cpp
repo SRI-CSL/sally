@@ -11,6 +11,6 @@ using namespace sal2;
 using namespace system;
 
 void state_formula::to_stream(std::ostream& out) const {
-  out << "[" << d_state_type << ": " << d_state_formula << "]";
+  out << "[" << *d_state_type << ": " << d_state_formula << "]";
 }
 
