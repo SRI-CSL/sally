@@ -153,6 +153,10 @@ public:
   , d_query(query)
   {}
 
+  ~query_command() {
+    delete d_query;
+  }
+
   void to_stream(std::ostream& out) const;
 };
 
