@@ -23,7 +23,8 @@ public:
     DECLARE_STATE_TYPE,
     DEFINE_STATES,
     DEFINE_TRANSITION,
-    DEFINE_TRANSITION_SYSTEM
+    DEFINE_TRANSITION_SYSTEM,
+    QUERY
   };
 
   /** Construct the command */
@@ -143,6 +144,26 @@ public:
   }
 };
 
+class query_command : public command {
+
+  /** The state formula defining the set of states */
+  std::string d_T;
+
+  /** The formula we're querying */
+  expr::state_formula d_query;
+
+public:
+
+  query_command(std::string T, const expr::state_formula& query)
+  : command(QUERY)
+  , d_T(T)
+  , d_query(query)
+  {}
+
+  void to_stream(std::ostream& out) const {
+    out << "[" << get_command_type_string() << " " << d_T << " : " << d_query << "]";
+  }
+};
 
 }
 }

@@ -29,7 +29,7 @@ command returns [parser::command* cmd = 0]
   | c = define_states            { $cmd = c; }
   | c = define_transition        { $cmd = c; }
   | c = define_transition_system { $cmd = c; }
-  | c = query                    { $cmd = c + 1; }
+  | c = query                    { $cmd = c; }
   | EOF { $cmd = 0; } 
   ;
   
@@ -58,9 +58,9 @@ define_states returns [parser::command* cmd = 0]
       symbol[type_id]     { STATE->push_scope(); 
                             STATE->use_state_type(type_id, expr::state_type::CURRENT, true); 
                           }
-      f = state_formula  { expr::state_formula sf = STATE->new_state_formula(id, type_id, f);
-                           $cmd = new parser::define_states_command(id, sf); 
-                           STATE->pop_scope(); 
+      f = state_formula   { const expr::state_formula& sf = STATE->new_state_formula(id, type_id, f);
+                            $cmd = new parser::define_states_command(id, sf); 
+                            STATE->pop_scope(); 
                           }
     ')'
   ; 
@@ -77,7 +77,7 @@ define_transition returns [parser::command* cmd = 0]
                                        STATE->use_state_type(type_id, expr::state_type::CURRENT, false); 
                                        STATE->use_state_type(type_id, expr::state_type::NEXT, false); 
                                      }
-      f = state_transition_formula   { expr::state_transition_formula stf = STATE->new_state_transition_formula(id, type_id, f);
+      f = state_transition_formula   { const expr::state_transition_formula& stf = STATE->new_state_transition_formula(id, type_id, f);
                                        $cmd = new parser::define_transition_command(id, stf); 
                                        STATE->pop_scope(); 
                                      }
@@ -96,7 +96,7 @@ define_transition_system returns [parser::command* cmd = 0]
       symbol[id]                    
       symbol[type_id]                
       symbol[initial_id]            
-      transition_list[transitions]  { expr::state_transition_system T = STATE->new_state_transition_system(id, type_id, initial_id, transitions); 
+      transition_list[transitions]  { const expr::state_transition_system& T = STATE->new_state_transition_system(id, type_id, initial_id, transitions); 
                                       $cmd = new parser::define_transition_system_command(id, T);
                                     } 
     ')'
@@ -114,10 +114,17 @@ transition_list[std::vector<std::string>& transitions]
 query returns [parser::command* cmd = 0]
 @declarations {
   std::string id;
+  expr::state_type state_type;
 }
   : '(' 'query'
-      symbol[id]
-      state_formula
+      symbol[id]                   { STATE->push_scope(); 
+                                     const expr::state_transition_system& T = STATE->get_state_transition_system(id);
+                                     state_type = T.get_state_type();
+                                     STATE->use_state_type(state_type, expr::state_type::CURRENT, true); 
+                                   }
+      f = state_formula            { $cmd = new parser::query_command(id, expr::state_formula(STATE->tm(), state_type, f));
+       					                     STATE->pop_scope(); 
+                                   }
     ')'
   ; 
 

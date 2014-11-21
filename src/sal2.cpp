@@ -58,10 +58,8 @@ int main(int argc, char* argv[]) {
       for (parser::command* cmd = mcmt_parser.parse_command(); cmd != 0; cmd = mcmt_parser.parse_command()) {
 
         if (output::get_verbosity(cout) > 0) {
-          if (cmd != ((parser::command*)0) + 1) {
-            cout << "Got command " << *cmd << endl;
-            delete cmd;
-          }
+          cout << "Got command " << *cmd << endl;
+          delete cmd;
         }
 
         // If only parsing, just ignore the command

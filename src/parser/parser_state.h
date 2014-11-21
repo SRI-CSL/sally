@@ -63,34 +63,40 @@ public:
   void report_error(std::string msg) const;
 
   /** Create a new state type */
-  expr::state_type new_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types);
+  const expr::state_type& new_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types);
 
   /** Get the state type with the given id */
-  expr::state_type get_state_type(std::string id) const;
+  const expr::state_type& get_state_type(std::string id) const;
 
   /** Create a new state formula */
-  expr::state_formula new_state_formula(std::string id, std::string type_id, expr::term_ref sf);
+  const expr::state_formula& new_state_formula(std::string id, std::string type_id, expr::term_ref sf);
 
   /** Get the state formula with the given id */
-  expr::state_formula get_state_formula(std::string id) const;
+  const expr::state_formula& get_state_formula(std::string id) const;
 
   /** Create a new state transition formula */
-  expr::state_transition_formula new_state_transition_formula(std::string id, std::string type_id, expr::term_ref stf);
+  const expr::state_transition_formula& new_state_transition_formula(std::string id, std::string type_id, expr::term_ref stf);
 
   /** Get the state transition formula with the given id */
-  expr::state_transition_formula get_state_transition_formula(std::string id) const;
+  const expr::state_transition_formula& get_state_transition_formula(std::string id) const;
 
   /** Create a new state transition system */
-  expr::state_transition_system new_state_transition_system(std::string id, std::string type_id, std::string initial_id, std::vector<std::string>& transitions);
+  const expr::state_transition_system& new_state_transition_system(std::string id, std::string type_id, std::string initial_id, std::vector<std::string>& transitions);
 
   /** Get the transition system with the given id */
-  expr::state_transition_system get_state_transition_system(std::string id) const;
+  const expr::state_transition_system& get_state_transition_system(std::string id) const;
 
   /**
    * Use the state type, i.e. declare the variables var_class.x, var_class.y, ...
    * If use_namespace is true, then "var_class." is not used in the name.
    */
   void use_state_type(std::string id, expr::state_type::var_class var_class, bool use_namespace);
+
+  /**
+   * Use the state type, i.e. declare the variables var_class.x, var_class.y, ...
+   * If use_namespace is true, then "var_class." is not used in the name.
+   */
+  void use_state_type(const expr::state_type& state_type, expr::state_type::var_class var_class, bool use_namespace);
 
   /** Push a new scope for local declarations */
   void push_scope();

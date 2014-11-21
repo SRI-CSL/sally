@@ -34,6 +34,9 @@ public:
   /** String representation of the variable class */
   static std::string to_string(var_class vc);
 
+  /** Empty state type */
+  state_type() {}
+
   /** Create a new state type of the given type and name */
   state_type(term_manager& tm, std::string id, term_ref type);
 
