@@ -19,7 +19,7 @@ class term_manager {
   /** Internal term manager implementation */
   term_manager_internal* d_tm;
 
-  friend class set_tm;
+  friend struct set_tm;
 
 public:
 
