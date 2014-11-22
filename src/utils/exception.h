@@ -8,35 +8,39 @@
 #pragma once
 
 #include <string>
+#include <iosfwd>
 
 namespace sal2 {
 
+/**
+ * Generic exception class for SAL error reporting.
+ */
 class exception {
 
 protected:
 
+  /** The message */
   std::string d_msg;
 
+  /** No empty exceptions */
   exception() {}
 
 public:
 
+  /** Create an exception with the fiven message */
   exception(std::string msg)
   : d_msg(msg)
   {}
 
   virtual ~exception() {}
 
-  virtual void toStream(std::ostream& out) const {
-    out << d_msg;
-  }
+  /** Output the exception to the stream */
+  virtual void to_stream(std::ostream& out) const;
+
+  /** Return the message */
+  std::string get_message() const { return d_msg; }
 };
 
-inline
-std::ostream& operator << (std::ostream& out, const exception& e) {
-  e.toStream(out);
-  return out;
-}
-
+std::ostream& operator << (std::ostream& out, const exception& e);
 
 }

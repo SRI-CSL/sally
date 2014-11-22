@@ -22,6 +22,7 @@ namespace parser {
 
 class parser_exception : public exception {
 public:
+
   parser_exception(std::string msg)
   : exception(msg) {}
 

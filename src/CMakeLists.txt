@@ -1,4 +1,4 @@
-set(sal2_SRC_DIRS utils expr smt system parser)
+set(sal2_SRC_DIRS utils expr smt parser system)
 
 # Add all the subdirectories
 foreach(DIR ${sal2_SRC_DIRS})

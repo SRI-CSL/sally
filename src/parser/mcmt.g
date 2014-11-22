@@ -40,7 +40,10 @@ declare_state_type returns [parser::command* cmd = 0]
   std::vector<std::string> vars;  
   std::vector<expr::term_ref> types;
 }
-  : '(' 'declare-state-type' symbol[id] variable_list[vars, types] ')' 
+  : '(' 'declare-state-type' 
+        symbol[id, PARSER_STATE_TYPE, false]  
+        variable_list[vars, types] 
+    ')' 
     {
       const system::state_type* state_type = STATE->new_state_type(id, vars, types); 
       $cmd = new parser::declare_state_type_command(id, state_type);
@@ -153,9 +156,16 @@ term returns [expr::term_ref t = expr::term_ref()]
      { t = STATE->tm().mk_term(op, children); }
   ; 
   
-/** A symbol */
-symbol[std::string& id] 
-  : SYMBOL { id = STATE->token_text($SYMBOL); }
+/** 
+ * A symbol. Returns it in the id string. If obj_type is not PARSER_OBJECT_LAST
+ * we check whether it has been declared = true/false.
+ */
+symbol[std::string& id, ParserObject obj_type = PARSER_OBJECT_LAST, bool declared = false] 
+  : SYMBOL { id = STATE->token_text($SYMBOL);
+  					 if (obj_type != PARSER_OBJECT_LAST) {
+  					   STATE->ensure_declared(id, obj_type, declared);
+  					 } 
+           }
   ;
     
 term_list[std::vector<expr::term_ref>& out]
@@ -205,8 +215,8 @@ variable_list[std::vector<std::string>& out_vars, std::vector<expr::term_ref>& o
 } 
   : '('
       ( '(' 
-        symbol[var_id]   { out_vars.push_back(var_id); } 
-        symbol[type_id]  { out_types.push_back(STATE->get_type(type_id)); }
+        symbol[var_id]                      { out_vars.push_back(var_id); } 
+        symbol[type_id, PARSER_TYPE, true]  { out_types.push_back(STATE->get_type(type_id)); }
         ')'       
       )+ 
     ')'

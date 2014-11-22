@@ -84,7 +84,11 @@ public:
   }
 
   command* parse_command() {
-    return d_parser->command(d_parser);
+    try {
+      return d_parser->command(d_parser);
+    } catch (const sal2::exception& e) {
+      throw new parser_exception(e.get_message());
+    } catch (const sal2::parser:)
   }
 
   /** Returns true if the parser is in error state */

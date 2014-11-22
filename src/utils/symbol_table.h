@@ -86,10 +86,9 @@ public:
   }
 
   /** Add an entry id -> value, and return the reference to the table entry */
-  const T& add_entry(std::string id, const T& value) {
+  void add_entry(std::string id, const T& value) {
     d_table[id].push_front(value);
     d_entries_added.push_back(id);
-    return d_table[id].front();
   }
 
   /** Get the value associated to id -> value */
