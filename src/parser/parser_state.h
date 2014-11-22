@@ -10,9 +10,9 @@
 #include "expr/term.h"
 #include "expr/term_manager.h"
 #include "system/context.h"
-
-#include "parser/command.h"
 #include "utils/symbol_table.h"
+
+#include <iosfwd>
 
 #include <antlr3.h>
 
@@ -20,7 +20,7 @@ namespace sal2 {
 
 namespace parser {
 
-enum ParserObjects {
+enum parser_object {
   PARSER_VARIABLE,
   PARSER_TYPE,
   PARSER_STATE_TYPE,
@@ -90,7 +90,7 @@ public:
   std::string token_text(pANTLR3_COMMON_TOKEN token) const;
 
   /** Ensure that the object is declared = true/false locally, throw exception otherwise */
-  void ensure_declared(std::string id, ParserObjects type, bool declared);
+  void ensure_declared(std::string id, parser_object type, bool declared);
 };
 
 }

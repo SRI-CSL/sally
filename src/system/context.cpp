@@ -27,6 +27,11 @@ void context::add_state_type(std::string id, state_type* st) {
   d_state_types.add_entry(id, st);
 }
 
+void context::add_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types) {
+  expr::term_ref type = tm().mk_struct(vars, types);
+  add_state_type(id, new state_type(tm(), id, type));
+}
+
 const state_type* context::get_state_type(std::string id) const {
   if (!d_state_types.has_entry(id)) {
     throw context_exception(id + " not declared");
@@ -44,6 +49,11 @@ void context::add_state_formula(std::string id, state_formula* sf) {
     throw context_exception(id + "already declared");
   }
   return d_state_formulas.add_entry(id, sf);
+}
+
+void context::add_state_formula(std::string id, std::string type_id, expr::term_ref f) {
+  const state_type* st = get_state_type(type_id);
+  add_state_formula(id, new state_formula(tm(), st, f));
 }
 
 const state_formula* context::get_state_formula(std::string id) const {
@@ -65,6 +75,11 @@ void context::add_transition_formula(std::string id, transition_formula* tf) {
   d_transition_formulas.add_entry(id, tf);
 }
 
+void context::add_transition_formula(std::string id, std::string type_id, expr::term_ref f) {
+  const state_type* st = get_state_type(type_id);
+  add_transition_formula(id, new transition_formula(tm(), st, f));
+}
+
 const transition_formula* context::get_transition_formula(std::string id) const {
   if (!d_transition_formulas.has_entry(id)) {
     throw context_exception(id + " not declared");
@@ -82,6 +97,16 @@ void context::add_transition_system(std::string id, transition_system* ts) {
     throw context_exception(id + " already declared");
   }
   d_transition_systems.add_entry(id, ts);
+}
+
+void context::add_transition_system(std::string id, std::string type_id, std::string init_id, const std::vector<std::string>& transition_ids) {
+  const state_type* st = get_state_type(type_id);
+  const state_formula* init = get_state_formula(init_id);
+  std::vector<const transition_formula*> transitions;
+  for (size_t i = 0; i < transition_ids.size(); ++ i) {
+    transitions.push_back(get_transition_formula(transition_ids[i]));
+  }
+  add_transition_system(id, new transition_system(st, init, transitions));
 }
 
 const system::transition_system* context::get_transition_system(std::string id) const {

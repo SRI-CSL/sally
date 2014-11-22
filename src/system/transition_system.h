@@ -11,6 +11,8 @@
 #include "system/state_formula.h"
 #include "system/transition_formula.h"
 
+#include <iosfwd>
+
 namespace sal2 {
 namespace system {
 
@@ -40,7 +42,7 @@ public:
   {}
 
   /** Get the state type */
-  const state_type*  get_state_type() const {
+  const state_type* get_state_type() const {
     return d_state_type;
   }
 
@@ -63,11 +65,7 @@ public:
   void to_stream(std::ostream& out) const;
 };
 
-inline
-std::ostream& operator << (std::ostream& out, const transition_system& T) {
-  T.to_stream(out);
-  return out;
-}
+std::ostream& operator << (std::ostream& out, const transition_system& T);
 
 }
 }

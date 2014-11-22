@@ -13,8 +13,9 @@
 using namespace sal2;
 using namespace parser;
 
-command::command(command::type t)
-: d_type(t)
+command::command(const system::context& ctx, command::type t)
+: d_ctx(ctx)
+, d_type(t)
 {}
 
 std::string command::get_command_type_string() const {
@@ -36,21 +37,29 @@ return "unknown";
 }
 
 void declare_state_type_command::to_stream(std::ostream& out) const  {
-  out << "[" << get_command_type_string() << "(" << d_id << "): " << *d_state_type << "]";
+  out << "[" << get_command_type_string() << "(" << d_state_id << "): ";
+  out << *get_context().get_state_type(d_state_id);
+  out << "]";
 }
 
 void define_states_command::to_stream(std::ostream& out) const  {
-  out << "[" << get_command_type_string() << "(" << d_id << "): " << *d_state_formula << "]";
+  out << "[" << get_command_type_string() << "(" << d_id << "): ";
+  out << *get_context().get_state_formula(d_id);
+  out << "]";
 }
 
 void define_transition_command::to_stream(std::ostream& out) const {
-  out << "[" << get_command_type_string() << "(" << d_id << "): " << *d_transition_formula << "]";
+  out << "[" << get_command_type_string() << "(" << d_transition_id << "): ";
+  out << *get_context().get_transition_formula(d_transition_id);
+  out << "]";
 }
 
 void define_transition_system_command::to_stream(std::ostream& out) const  {
-  out << "[" << get_command_type_string() << "(" << d_id << "): " << *d_T << "]";
+  out << "[" << get_command_type_string() << "(" << d_system_id << "): ";
+  out << *get_context().get_transition_system(d_system_id);
+  out << "]";
 }
 
 void query_command::to_stream(std::ostream& out) const  {
-  out << "[" << get_command_type_string() << " " << d_T << " : " << *d_query << "]";
+  out << "[" << get_command_type_string() << " " << d_system_id << " " << *d_query << "]";
 }

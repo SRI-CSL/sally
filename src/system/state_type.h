@@ -72,11 +72,7 @@ private:
   expr::term_ref_strong d_next_state;
 };
 
-inline
-std::ostream& operator << (std::ostream& out, const state_type& st) {
-  st.to_stream(out);
-  return out;
-}
+std::ostream& operator << (std::ostream& out, const state_type& st);
 
 }
 }

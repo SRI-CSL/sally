@@ -10,8 +10,18 @@
 #include "parser/mcmtParser.h"
 #include "parser/parser_state.h"
 
+#include <iostream>
+
 namespace sal2 {
 namespace parser {
+
+void parser_exception::to_stream(std::ostream& out) const {
+  out << "Parse error: ";
+  if (d_line != -1) {
+    out << get_filename() << ":" << get_line() << ":" << get_position() << ": ";
+  }
+  out << get_message();
+}
 
 static void sal2_parser_reportError(pANTLR3_BASE_RECOGNIZER recognizer);
 static void sal2_lexer_reportError(pANTLR3_BASE_RECOGNIZER recognizer);
@@ -35,8 +45,8 @@ class parser_internal {
 
 public:
 
-  parser_internal(expr::term_manager& tm, const char* file_to_parse)
-  : d_state(tm)
+  parser_internal(system::context& ctx, const char* file_to_parse)
+  : d_state(ctx)
   {
     // Create the input stream for the file
     d_input = antlr3FileStreamNew((pANTLR3_UINT8) file_to_parse, ANTLR3_ENC_8BIT);
@@ -87,8 +97,8 @@ public:
     try {
       return d_parser->command(d_parser);
     } catch (const sal2::exception& e) {
-      throw new parser_exception(e.get_message());
-    } catch (const sal2::parser:)
+      throw parser_exception(e.get_message(), get_filename(), get_current_line(), get_current_position());
+    }
   }
 
   /** Returns true if the parser is in error state */
@@ -131,8 +141,8 @@ public:
 
 };
 
-parser::parser(expr::term_manager& tm, const char* filename)
-: d_internal(new parser_internal(tm, filename))
+parser::parser(system::context& ctx, const char* filename)
+: d_internal(new parser_internal(ctx, filename))
 {
 }
 

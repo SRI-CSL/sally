@@ -10,6 +10,8 @@
 #include "expr/term_manager.h"
 #include "system/state_type.h"
 
+#include <iosfwd>
+
 namespace sal2 {
 namespace system {
 
@@ -41,12 +43,7 @@ public:
   void to_stream(std::ostream& out) const;
 };
 
-inline
-std::ostream& operator << (std::ostream& out, const transition_formula& sf) {
-  sf.to_stream(out);
-  return out;
-}
-
+std::ostream& operator << (std::ostream& out, const transition_formula& sf);
 
 }
 }

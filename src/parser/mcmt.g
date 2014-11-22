@@ -41,12 +41,12 @@ declare_state_type returns [parser::command* cmd = 0]
   std::vector<expr::term_ref> types;
 }
   : '(' 'declare-state-type' 
-        symbol[id, PARSER_STATE_TYPE, false]  
+        symbol[id, parser::PARSER_STATE_TYPE, false]  
         variable_list[vars, types] 
     ')' 
     {
-      const system::state_type* state_type = STATE->new_state_type(id, vars, types); 
-      $cmd = new parser::declare_state_type_command(id, state_type);
+      STATE->ctx().add_state_type(id, vars, types);
+      $cmd = new parser::declare_state_type_command(STATE->ctx(), id);
     }
   ; 
 
@@ -57,14 +57,16 @@ define_states returns [parser::command* cmd = 0]
   std::string type_id;
 }
   : '(' 'define-states'
-      symbol[id]       
-      symbol[type_id]     { STATE->push_scope(); 
-                            STATE->use_state_type(type_id, system::state_type::CURRENT, true); 
-                          }
-      f = state_formula   { const system::state_formula* sf = STATE->new_state_formula(id, type_id, f);
-                            $cmd = new parser::define_states_command(id, sf); 
-                            STATE->pop_scope(); 
-                          }
+        symbol[id, parser::PARSER_STATE_FORMULA, false]       
+        symbol[type_id, parser::PARSER_STATE_TYPE, true] { 
+            STATE->push_scope(); 
+            STATE->use_state_type(type_id, system::state_type::CURRENT, true); 
+        }
+        f = state_formula { 
+        	STATE->ctx().add_state_formula(id, type_id, f);
+        	$cmd = new parser::define_states_command(STATE->ctx(), id); 
+            STATE->pop_scope(); 
+        }
     ')'
   ; 
 
@@ -75,15 +77,17 @@ define_transition returns [parser::command* cmd = 0]
   std::string type_id;  
 }
   : '(' 'define-transition'
-      symbol[id]
-      symbol[type_id]                { STATE->push_scope();
-                                       STATE->use_state_type(type_id, system::state_type::CURRENT, false); 
-                                       STATE->use_state_type(type_id, system::state_type::NEXT, false); 
-                                     }
-      f = state_transition_formula   { const system::transition_formula* stf = STATE->new_transition_formula(id, type_id, f);
-                                       $cmd = new parser::define_transition_command(id, stf); 
-                                       STATE->pop_scope(); 
-                                     }
+      symbol[id, parser::PARSER_TRANSITION_FORMULA, false]
+      symbol[type_id, parser::PARSER_STATE_TYPE, true] { 
+      	  STATE->push_scope();
+          STATE->use_state_type(type_id, system::state_type::CURRENT, true); 
+          STATE->use_state_type(type_id, system::state_type::NEXT, false); 
+      }
+      f = state_transition_formula   { 
+      	  STATE->ctx().add_transition_formula(id, type_id, f);
+          $cmd = new parser::define_transition_command(STATE->ctx(), id, type_id); 
+          STATE->pop_scope(); 
+      }
     ')'
   ; 
 
@@ -96,12 +100,13 @@ define_transition_system returns [parser::command* cmd = 0]
   std::vector<std::string> transitions;  
 }
   : '(' 'define-transition-system'
-      symbol[id]                    
-      symbol[type_id]                
-      symbol[initial_id]            
-      transition_list[transitions]  { const system::transition_system* T = STATE->new_transition_system(id, type_id, initial_id, transitions); 
-                                      $cmd = new parser::define_transition_system_command(id, T);
-                                    } 
+      symbol[id, parser::PARSER_TRANSITION_SYSTEM, false]                    
+      symbol[type_id, parser::PARSER_STATE_TYPE, true]
+      symbol[initial_id, parser::PARSER_STATE_FORMULA, true]            
+      transition_list[transitions]  { 
+      	STATE->ctx().add_transition_system(id, type_id, initial_id, transitions); 
+        $cmd = new parser::define_transition_system_command(STATE->ctx(), id, type_id, initial_id, transitions);
+      } 
     ')'
   ; 
 
@@ -110,7 +115,11 @@ transition_list[std::vector<std::string>& transitions]
 @declarations {
   std::string id;
 } 
-  : '(' symbol[id]+ ')' { transitions.push_back(id); }
+  : '(' (
+    symbol[id, parser::PARSER_TRANSITION_FORMULA, true] { 
+        transitions.push_back(id); 
+    }
+  	)+ ')'
   ;
   
 /** Query  */
@@ -120,14 +129,15 @@ query returns [parser::command* cmd = 0]
   const system::state_type* state_type;
 }
   : '(' 'query'
-      symbol[id]                   { STATE->push_scope(); 
-                                     const system::transition_system* T = STATE->get_transition_system(id);
-                                     state_type = T->get_state_type();
-                                     STATE->use_state_type(state_type, system::state_type::CURRENT, true); 
-                                   }
-      f = state_formula            { $cmd = new parser::query_command(id, new system::state_formula(STATE->tm(), state_type, f));
-       					                     STATE->pop_scope(); 
-                                   }
+    symbol[id, parser::PARSER_TRANSITION_SYSTEM, true] { 
+        STATE->push_scope();
+        state_type = STATE->ctx().get_transition_system(id)->get_state_type();
+        STATE->use_state_type(state_type, system::state_type::CURRENT, true); 
+    }
+    f = state_formula { 
+    	$cmd = new parser::query_command(STATE->ctx(), id, new system::state_formula(STATE->tm(), state_type, f));
+        STATE->pop_scope(); 
+    }
     ')'
   ; 
 
@@ -147,7 +157,7 @@ term returns [expr::term_ref t = expr::term_ref()]
   std::string id;
   std::vector<expr::term_ref> children;
 } 
-  : symbol[id] { t = STATE->get_variable(id); }                
+  : symbol[id, parser::PARSER_VARIABLE, true] { t = STATE->get_variable(id); }                
   | c = constant { t = c; } 
   | '(' 
         op = term_op 
@@ -160,12 +170,11 @@ term returns [expr::term_ref t = expr::term_ref()]
  * A symbol. Returns it in the id string. If obj_type is not PARSER_OBJECT_LAST
  * we check whether it has been declared = true/false.
  */
-symbol[std::string& id, ParserObject obj_type = PARSER_OBJECT_LAST, bool declared = false] 
-  : SYMBOL { id = STATE->token_text($SYMBOL);
-  					 if (obj_type != PARSER_OBJECT_LAST) {
-  					   STATE->ensure_declared(id, obj_type, declared);
-  					 } 
-           }
+symbol[std::string& id, parser::parser_object obj_type, bool declared] 
+  : SYMBOL { 
+  	    id = STATE->token_text($SYMBOL);
+        STATE->ensure_declared(id, obj_type, declared);
+    }
   ;
     
 term_list[std::vector<expr::term_ref>& out]
@@ -210,15 +219,18 @@ term_op returns [expr::term_op op = expr::OP_LAST]
 /** Parse a list of variables with types */
 variable_list[std::vector<std::string>& out_vars, std::vector<expr::term_ref>& out_types]
 @declarations {
-	std::string var_id;
-	std::string type_id;
+  std::string var_id;
+  std::string type_id;
 } 
-  : '('
-      ( '(' 
-        symbol[var_id]                      { out_vars.push_back(var_id); } 
-        symbol[type_id, PARSER_TYPE, true]  { out_types.push_back(STATE->get_type(type_id)); }
-        ')'       
-      )+ 
+  : '(' 
+    ( '(' 
+        symbol[var_id, parser::PARSER_OBJECT_LAST, false] { 
+        	out_vars.push_back(var_id); 
+        } 
+        symbol[type_id, parser::PARSER_TYPE, true] { 
+        	out_types.push_back(STATE->get_type(type_id)); 
+        }
+    ')' )+ 
     ')'
   ; 
         

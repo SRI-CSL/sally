@@ -8,10 +8,10 @@
 #include <iostream>
 #include <boost/program_options.hpp>
 
-#include "expr/term.h"
 #include "expr/term_manager.h"
-#include "parser/parser.h"
 #include "utils/output.h"
+#include "system/context.h"
+#include "parser/parser.h"
 
 using namespace std;
 using namespace boost::program_options;
@@ -38,6 +38,14 @@ int main(int argc, char* argv[]) {
   // Typecheck by default
   bool type_check = true;
 
+  // Create the term manager
+  expr::term_manager tm(type_check);
+  cout << expr::set_tm(tm);
+  cerr << expr::set_tm(tm);
+
+  // Create the context
+  system::context ctx(tm);
+
   // Go through all the files and run them
   for (size_t i = 0; i < files.size(); ++ i) {
 
@@ -46,13 +54,8 @@ int main(int argc, char* argv[]) {
         cout << "Processing " << files[i] << endl;
       }
 
-      // Create the term manager
-      expr::term_manager tm(type_check);
-      cout << expr::set_tm(tm);
-      cerr << expr::set_tm(tm);
-
       // Create the parser
-      parser::parser mcmt_parser(tm, files[i].c_str());
+      parser::parser mcmt_parser(ctx, files[i].c_str());
 
       // Parse an process each command
       for (parser::command* cmd = mcmt_parser.parse_command(); cmd != 0; cmd = mcmt_parser.parse_command()) {

@@ -9,8 +9,8 @@
 
 #include <iostream>
 
-using namespace sal2;
-using namespace system;
+namespace sal2 {
+namespace system {
 
 void transition_system::to_stream(std::ostream& out) const {
   out << "[" << std::endl;
@@ -23,4 +23,10 @@ void transition_system::to_stream(std::ostream& out) const {
   out << "]]";
 }
 
+std::ostream& operator << (std::ostream& out, const transition_system& T) {
+  T.to_stream(out);
+  return out;
+}
 
+}
+}

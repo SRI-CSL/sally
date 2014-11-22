@@ -31,10 +31,6 @@ parser_state::parser_state(system::context& context)
   d_types.add_entry("Integer", term_ref_strong(tm, tm.integerType()));
 }
 
-void parser_state::report_error(string msg) const {
-  throw parser_exception(msg);
-}
-
 string parser_state::token_text(pANTLR3_COMMON_TOKEN token) const {
   ANTLR3_MARKER start = token->getStartIndex(token);
   size_t size = token->getStopIndex(token) - start + 1;
@@ -43,16 +39,14 @@ string parser_state::token_text(pANTLR3_COMMON_TOKEN token) const {
 
 term_ref parser_state::get_type(std::string id) const {
   if (!d_types.has_entry(id)) {
-    report_error("undeclared type: " + id);
-    return term_ref();
+    throw parser_exception(id + " undeclared");
   }
   return d_types.get_entry(id);
 }
 
 term_ref parser_state::get_variable(std::string id) const {
   if (!d_variables_local.has_entry(id)) {
-    report_error("undeclared variable: " + id);
-    return term_ref();
+    throw parser_exception(id + "undeclared");
   }
   return d_variables_local.get_entry(id);
 }
@@ -83,11 +77,11 @@ void parser_state::expand_vars(term_ref var_ref) {
 }
 
 void parser_state::use_state_type(std::string id, state_type::var_class var_class, bool use_namespace) {
-  const state_type* st = d_context.get_state_type(id);
+  const system::state_type* st = d_context.get_state_type(id);
   use_state_type(st, var_class, use_namespace);
 }
 
-void parser_state::use_state_type(const state_type* st , state_type::var_class var_class, bool use_namespace) {
+void parser_state::use_state_type(const system::state_type* st, system::state_type::var_class var_class, bool use_namespace) {
 
   // Use the appropriate namespace
   st->use_namespace(tm());
@@ -113,7 +107,7 @@ void parser_state::pop_scope() {
   d_variables_local.pop_scope();
 }
 
-void parser_state::ensure_declared(std::string id, ParserObjects type, bool declared) {
+void parser_state::ensure_declared(std::string id, parser_object type, bool declared) {
   bool ok = declared;
   switch (type) {
   case PARSER_VARIABLE:
@@ -134,6 +128,9 @@ void parser_state::ensure_declared(std::string id, ParserObjects type, bool decl
   case PARSER_TRANSITION_SYSTEM:
     ok = d_context.has_transition_system(id);
     break;
+  case PARSER_OBJECT_LAST:
+    // Always noop
+    return;
   default:
     assert(false);
   }

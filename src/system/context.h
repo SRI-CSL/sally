@@ -54,6 +54,9 @@ public:
   /** Returns the term manager for the parser */
   expr::term_manager& tm() { return d_term_manager; }
 
+  /** Add a new state type with the given id (vars : types) */
+  void add_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types);
+
   /** Add a state type with the given id (to be managed by the context) */
   void add_state_type(std::string id, state_type* st);
 
@@ -64,6 +67,9 @@ public:
   bool has_state_type(std::string id) const;
 
   /** Add a new state formula with the given id (to be managed by the context) */
+  void add_state_formula(std::string id, std::string type_id, expr::term_ref sf);
+
+  /** Add a new state formula with the given id (to be managed by the context) */
   void add_state_formula(std::string id, state_formula* sf);
 
   /** Get the state formula with the given id */
@@ -71,6 +77,9 @@ public:
 
   /** True if id exists */
   bool has_state_formula(std::string id) const;
+
+  /** Add a new state transition with the given id (to be managed by the context) */
+  void add_transition_formula(std::string id, std::string type_id, expr::term_ref sf);
 
   /** Add a new state transition with the given id (to be managed by the context) */
   void add_transition_formula(std::string id, transition_formula* tf);
@@ -83,6 +92,9 @@ public:
 
   /** Add a new state transition system with the givwen id (to be managed by the context) */
   void add_transition_system(std::string id, transition_system* ts);
+
+  /** Add a new state transition system with the givwen id (to be managed by the context) */
+  void add_transition_system(std::string id, std::string type_id, std::string init_id, const std::vector<std::string>& transition_ids);
 
   /** Get the transition system with the given id */
   const transition_system* get_transition_system(std::string id) const;

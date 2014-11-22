@@ -7,32 +7,58 @@
 
 #pragma once
 
-#include <sstream>
-
 #include "utils/exception.h"
 #include "parser/command.h"
 
 namespace sal2 {
 
-namespace expr {
-class term_manager;
+namespace system {
+  class context;
 }
 
 namespace parser {
 
 class parser_exception : public exception {
+
+  /** Filename */
+  std::string d_filename;
+
+  /** Line of the error */
+  int d_line;
+
+  /** Position of the error */
+  int d_pos;
+
+
 public:
 
   parser_exception(std::string msg)
-  : exception(msg) {}
+  : exception(msg)
+  , d_filename("")
+  , d_line(-1)
+  , d_pos(-1)
+  {}
 
   parser_exception(std::string msg, std::string filename, int line, int pos)
-  {
-    std::stringstream ss;
-    ss << filename << ":" << line << ":" << pos << ": " << msg;
-    d_msg = ss.str();
+  : exception(msg)
+  , d_filename(filename)
+  , d_line(line)
+  , d_pos(pos)
+  {}
+
+  int get_line() const {
+    return d_line;
   }
 
+  int get_position() const {
+    return d_pos;
+  }
+
+  std::string get_filename() const {
+    return d_filename;
+  }
+
+  void to_stream(std::ostream& out) const;
 };
 
 class parser_internal;
@@ -43,7 +69,7 @@ class parser {
 
 public:
 
-  parser(expr::term_manager& tm, const char* filename);
+  parser(system::context& ctx, const char* filename);
   ~parser();
 
   /** Parse the next command from the input */

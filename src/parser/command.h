@@ -9,10 +9,7 @@
 
 #include <iosfwd>
 
-#include "system/state_type.h"
-#include "system/state_formula.h"
-#include "system/transition_formula.h"
-#include "system/transition_system.h"
+#include "system/context.h"
 
 namespace sal2 {
 namespace parser {
@@ -31,7 +28,7 @@ public:
   };
 
   /** Construct the command */
-  command(type t);
+  command(const system::context& ctx, type t);
 
   /** Virtual destructor */
   virtual ~command() {}
@@ -42,13 +39,20 @@ public:
   /** Get the type */
   type get_type() const { return d_type; }
 
+  /** Get the context */
+  const system::context& get_context() const    { return d_ctx; }
+
   /** Get the type as string */
   std::string get_command_type_string() const;
 
-protected:
+private:
+
+  /** The context that the command operates on */
+  const system::context& d_ctx;
 
   /** Type of command */
   type d_type;
+
 };
 
 inline
@@ -59,102 +63,131 @@ std::ostream& operator << (std::ostream& out, const command& cmd) {
 
 
 /**
- * Command to declare a state type.
+ * Command that declared a state type.
  */
 class declare_state_type_command : public command {
 
   /** Id if any */
-  std::string d_id;
-
-  /** The state type */
-  const system::state_type* d_state_type;
+  std::string d_state_id;
 
 public:
 
-  declare_state_type_command(std::string id, const system::state_type* state_type)
-  : command(DECLARE_STATE_TYPE)
-  , d_id(id)
-  , d_state_type(state_type)
+  declare_state_type_command(const system::context& ctx, std::string state_id)
+  : command(ctx, DECLARE_STATE_TYPE)
+  , d_state_id(state_id)
   {}
+
+  std::string get_state_type() const {
+    return d_state_id;
+  }
 
   void to_stream(std::ostream& out) const;
 };
 
+/** Command that declared a state formula */
 class define_states_command : public command {
 
-  /** Id of the set (if any) */
+  /** Id of the formula (if any) */
   std::string d_id;
-
-  /** The state formula defining the set of states */
-  const system::state_formula* d_state_formula;
 
 public:
 
-  define_states_command(std::string id, const system::state_formula* state_formula)
-  : command(DEFINE_STATES)
+  define_states_command(const system::context& ctx, std::string id)
+  : command(ctx, DEFINE_STATES)
   , d_id(id)
-  , d_state_formula(state_formula)
   {}
+
+  std::string get_state_formula_id() const {
+    return d_id;
+  }
 
   void to_stream(std::ostream& out) const;
 };
 
+/** Command that defined a transition */
 class define_transition_command : public command {
 
-  /** Id of the transition (if any) */
-  std::string d_id;
+  /** Id of the type */
+  std::string d_type_id;
 
-  /** The state formula defining the set of states */
-  const system::transition_formula* d_transition_formula;
+  /** Id of the transition */
+  std::string d_transition_id;
 
 public:
 
-  define_transition_command(std::string id, const system::transition_formula* transition_formula)
-  : command(DEFINE_TRANSITION)
-  , d_id(id)
-  , d_transition_formula(transition_formula)
+  define_transition_command(const system::context& ctx, std::string transition_id, std::string type_id)
+  : command(ctx, DEFINE_TRANSITION)
+  , d_transition_id(transition_id)
   {}
+
+  std::string get_transition_id() const {
+    return d_transition_id;
+  }
 
   void to_stream(std::ostream& out) const;
 };
 
+/** Command that defined a transition system */
 class define_transition_system_command : public command {
 
   /** Id of the system */
-  std::string d_id;
+  std::string d_system_id;
 
-  /** The state formula defining the set of states */
-  const system::transition_system* d_T;
+  /** Type id */
+  std::string d_type_id;
+
+  /** Initial states */
+  std::string d_initial_states;
+
+  /** The transitions */
+  std::vector<std::string> d_transitions;
 
 public:
 
-  define_transition_system_command(std::string id, const system::transition_system* T)
-  : command(DEFINE_TRANSITION_SYSTEM)
-  , d_id(id)
-  , d_T(T)
+  define_transition_system_command(const system::context& ctx, std::string system_id, std::string type_id,
+      std::string init_id, const std::vector<std::string>& transitions)
+  : command(ctx, DEFINE_TRANSITION_SYSTEM)
+  , d_system_id(system_id)
+  , d_type_id(type_id)
+  , d_initial_states(init_id)
+  , d_transitions(transitions)
   {}
+
+  std::string get_system_id() const {
+    return d_system_id;
+  }
 
   void to_stream(std::ostream& out) const;
 };
 
+/** Commmand declaring a query. */
 class query_command : public command {
 
-  /** The state formula defining the set of states */
-  std::string d_T;
+  /** Id of the system this query is about */
+  std::string d_system_id;
 
-  /** The formula we're querying */
-  const system::state_formula* d_query;
+  /** The formula in the query querying */
+  system::state_formula* d_query;
 
 public:
 
-  query_command(std::string T, const system::state_formula* query)
-  : command(QUERY)
-  , d_T(T)
+  /** Query takes over the state formula */
+  query_command(const system::context& ctx, std::string system_id, system::state_formula* query)
+  : command(ctx, QUERY)
+  , d_system_id(system_id)
   , d_query(query)
   {}
 
   ~query_command() {
     delete d_query;
+  }
+
+  std::string get_system_id() const {
+    return d_system_id;
+  }
+
+  const system::state_formula* get_query() const {
+    return d_query;
   }
 
   void to_stream(std::ostream& out) const;

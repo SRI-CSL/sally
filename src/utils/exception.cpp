@@ -15,7 +15,6 @@ void exception::to_stream(std::ostream& out) const {
   out << d_msg;
 }
 
-
 std::ostream& operator << (std::ostream& out, const exception& e) {
   e.to_stream(out);
   return out;
