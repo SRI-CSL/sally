@@ -21,7 +21,7 @@ using namespace std;
 
 parser_state::parser_state(system::context& context)
 : d_context(context)
-, d_variables_local("local vars")
+, d_variables("local vars")
 , d_types("types")
 {
   // Add the basic types
@@ -45,10 +45,10 @@ term_ref parser_state::get_type(std::string id) const {
 }
 
 term_ref parser_state::get_variable(std::string id) const {
-  if (!d_variables_local.has_entry(id)) {
+  if (!d_variables.has_entry(id)) {
     throw parser_exception(id + "undeclared");
   }
-  return d_variables_local.get_entry(id);
+  return d_variables.get_entry(id);
 }
 
 void parser_state::expand_vars(term_ref var_ref) {
@@ -64,7 +64,7 @@ void parser_state::expand_vars(term_ref var_ref) {
 
   if (size == 0) {
     // Atomic, just put into the symbol table
-    d_variables_local.add_entry(var_name, var_ref);
+    d_variables.add_entry(var_name, var_ref);
   } else {
     // Register all the field variables
     for (size_t i = 0; i < size; ++ i) {
@@ -100,21 +100,21 @@ void parser_state::use_state_type(const system::state_type* st, system::state_ty
 }
 
 void parser_state::push_scope() {
-  d_variables_local.push_scope();
+  d_variables.push_scope();
 }
 
 void parser_state::pop_scope() {
-  d_variables_local.pop_scope();
+  d_variables.pop_scope();
 }
 
 void parser_state::ensure_declared(std::string id, parser_object type, bool declared) {
   bool ok = declared;
   switch (type) {
   case PARSER_VARIABLE:
-    ok = d_variables_local.has_entry(id);
+    ok = d_variables.has_entry(id);
     break;
   case PARSER_TYPE:
-    ok = d_variables_local.has_entry(id);
+    ok = d_types.has_entry(id);
     break;
   case PARSER_STATE_TYPE:
     ok = d_context.has_state_type(id);

@@ -37,7 +37,7 @@ class parser_state {
   system::context& d_context;
 
   /** Symbol table for variables */
-  utils::symbol_table<expr::term_ref> d_variables_local;
+  utils::symbol_table<expr::term_ref> d_variables;
 
   /** Symbol table for types */
   utils::symbol_table<expr::term_ref_strong> d_types;

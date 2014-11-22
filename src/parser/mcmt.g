@@ -80,7 +80,7 @@ define_transition returns [parser::command* cmd = 0]
       symbol[id, parser::PARSER_TRANSITION_FORMULA, false]
       symbol[type_id, parser::PARSER_STATE_TYPE, true] { 
       	  STATE->push_scope();
-          STATE->use_state_type(type_id, system::state_type::CURRENT, true); 
+          STATE->use_state_type(type_id, system::state_type::CURRENT, false); 
           STATE->use_state_type(type_id, system::state_type::NEXT, false); 
       }
       f = state_transition_formula   { 
