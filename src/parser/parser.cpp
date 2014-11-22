@@ -96,8 +96,15 @@ public:
   command* parse_command() {
     try {
       return d_parser->command(d_parser);
+    } catch (const parser_exception& e) {
+      if (!e.has_line_info()) {
+        // Add line information
+        throw parser_exception(e.get_message(), get_filename(), get_current_parser_line(), get_current_parser_position());
+      } else {
+        throw e;
+      }
     } catch (const sal2::exception& e) {
-      throw parser_exception(e.get_message(), get_filename(), get_current_line(), get_current_position());
+      throw parser_exception(e.get_message(), get_filename(), get_current_parser_line(), get_current_parser_position());
     }
   }
 
@@ -111,13 +118,38 @@ public:
     return (const char*) d_lexer->pLexer->rec->state->tokSource->fileName->chars;
   }
 
+  pANTLR3_COMMON_TOKEN get_current_parser_token() const {
+    pANTLR3_PARSER pParser = d_parser->pParser;
+    pANTLR3_COMMON_TOKEN_STREAM cts = (pANTLR3_COMMON_TOKEN_STREAM)(pParser->tstream->super);
+    return cts->tstream->_LT(cts->tstream, 1);
+  }
+
+  static
+  std::string token_text(pANTLR3_COMMON_TOKEN token) {
+    ANTLR3_MARKER start = token->getStartIndex(token);
+    size_t size = token->getStopIndex(token) - start + 1;
+    return std::string((const char*) start, size);
+  }
+
   /** Returns the current line being parsed */
-  int get_current_line() const {
+  int get_current_parser_line() const {
+    pANTLR3_COMMON_TOKEN token = get_current_parser_token();
+    return token->getLine(token);
+  }
+
+  /** Returns the position in the curent line that is being parsed */
+  int get_current_parser_position() const {
+    pANTLR3_COMMON_TOKEN token = get_current_parser_token();
+    return token->getCharPositionInLine(token);
+  }
+
+  /** Returns the current line being parsed */
+  int get_current_lexer_line() const {
     return d_lexer->pLexer->getLine(d_lexer->pLexer);
   }
 
   /** Returns the position in the curent line that is being parsed */
-  int get_current_position() const {
+  int get_current_lexer_position() const {
     return d_lexer->pLexer->getCharPositionInLine(d_lexer->pLexer);
   }
 
@@ -168,9 +200,9 @@ static void sal2_lexer_reportError(pANTLR3_BASE_RECOGNIZER recognizer) {
   if (!parser->parser_in_error()) {
     // Throw the exception
     std::string filename = parser->get_filename();
-    int line = parser->get_current_line();
-    int pos = parser->get_current_position();
-    throw parser_exception("Lexer error: can't find next token.", filename, line, pos);
+    int line = parser->get_current_lexer_line();
+    int pos = parser->get_current_lexer_position();
+    throw parser_exception("Lexer error.", filename, line, pos);
   }
 }
 
@@ -185,8 +217,8 @@ static void sal2_parser_reportError(pANTLR3_BASE_RECOGNIZER recognizer) {
 
   // Throw the exception
   std::string filename = parser->get_filename();
-  int line = parser->get_current_line();
-  int pos = parser->get_current_position();
+  int line = parser->get_current_parser_line();
+  int pos = parser->get_current_parser_position();
   throw parser_exception("Parse error.", filename, line, pos);
 }
 

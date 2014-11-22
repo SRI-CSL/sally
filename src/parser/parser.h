@@ -46,6 +46,10 @@ public:
   , d_pos(pos)
   {}
 
+  bool has_line_info() const {
+    return d_line != -1;
+  }
+
   int get_line() const {
     return d_line;
   }

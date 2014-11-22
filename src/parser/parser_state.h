@@ -87,7 +87,8 @@ public:
   expr::term_ref get_variable(std::string id) const;
 
   /** Get the string of a token begin parsed */
-  std::string token_text(pANTLR3_COMMON_TOKEN token) const;
+  static
+  std::string token_text(pANTLR3_COMMON_TOKEN token);
 
   /** Ensure that the object is declared = true/false locally, throw exception otherwise */
   void ensure_declared(std::string id, parser_object type, bool declared);

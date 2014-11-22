@@ -31,7 +31,7 @@ parser_state::parser_state(system::context& context)
   d_types.add_entry("Integer", term_ref_strong(tm, tm.integerType()));
 }
 
-string parser_state::token_text(pANTLR3_COMMON_TOKEN token) const {
+string parser_state::token_text(pANTLR3_COMMON_TOKEN token) {
   ANTLR3_MARKER start = token->getStartIndex(token);
   size_t size = token->getStopIndex(token) - start + 1;
   return string((const char*) start, size);
