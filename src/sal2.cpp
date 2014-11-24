@@ -20,7 +20,7 @@ using namespace boost::program_options;
 using namespace sal2;
 using namespace sal2::expr;
 
-/* Parses the program arguments. */
+/** Parses the program arguments. */
 void getOptions(int argc, char* argv[], variables_map& variables);
 
 int main(int argc, char* argv[]) {
@@ -47,6 +47,17 @@ int main(int argc, char* argv[]) {
   // Create the context
   system::context ctx(tm);
 
+  // Create the engine
+  engine* engine_to_use = 0;
+  if (options.count("engine") > 0) {
+    try {
+      engine_to_use = engine::mk_engine(options.at("engine").as<string>());
+    } catch (const sal2::exception& e) {
+      cerr << e << endl;
+      exit(1);
+    }
+  }
+
   // Go through all the files and run them
   for (size_t i = 0; i < files.size(); ++ i) {
 
@@ -59,16 +70,20 @@ int main(int argc, char* argv[]) {
       parser::parser mcmt_parser(ctx, files[i].c_str());
 
       // Parse an process each command
-      for (parser::command* cmd = mcmt_parser.parse_command(); cmd != 0; cmd = mcmt_parser.parse_command()) {
+      for (parser::command* cmd = mcmt_parser.parse_command(); cmd != 0; delete cmd, cmd = mcmt_parser.parse_command()) {
 
         if (output::get_verbosity(cout) > 0) {
           cout << "Got command " << *cmd << endl;
-          delete cmd;
         }
 
         // If only parsing, just ignore the command
         if (options.count("parse-only") > 0) {
           continue;
+        }
+
+        // Run the command
+        if (engine_to_use) {
+          cmd->run(engine_to_use);
         }
       }
 

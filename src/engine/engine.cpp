@@ -12,9 +12,9 @@
 #include <vector>
 #include <map>
 
-using namespace sal2;
 using namespace boost::program_options;
 
+namespace sal2 {
 
 struct engine_info_dynamic {
   virtual void add_options(options_description& options) const = 0;
@@ -89,6 +89,24 @@ void engine::get_engines(std::vector<std::string>& out) {
   }
 }
 
+std::ostream& operator << (std::ostream& out, engine::result result) {
+
+  switch (result) {
+  case engine::VALID:
+    out << "valid"; break;
+  case engine::INVALID:
+    out << "invalid"; break;
+  case engine::INTERRUPTED:
+    out << "interrupted"; break;
+  case engine::UNSUPPORTED:
+    out << "unsupported"; break;
+  default:
+    out << "unknown";
+  }
+#undef SWITCH_TO_STRING
+  return out;
+}
+
 //
 // ADD ALL THE ENGINES HERE
 //
@@ -96,3 +114,4 @@ engine_data::engine_data() {
   add_engine_info<bmc::bmc_engine_info>();
 }
 
+}

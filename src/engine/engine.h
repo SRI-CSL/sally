@@ -53,4 +53,6 @@ public:
   ~engine() {};
 };
 
+std::ostream& operator << (std::ostream& out, engine::result result);
+
 }

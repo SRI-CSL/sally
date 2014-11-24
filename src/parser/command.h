@@ -10,10 +10,10 @@
 #include <iosfwd>
 
 #include "system/context.h"
+#include "engine/engine.h"
 
 namespace sal2 {
 namespace parser {
-
 
 class command {
 public:
@@ -44,6 +44,9 @@ public:
 
   /** Get the type as string */
   std::string get_command_type_string() const;
+
+  /** Run the command on an engine */
+  virtual void run(engine* e) const {};
 
 private:
 
@@ -191,6 +194,10 @@ public:
   }
 
   void to_stream(std::ostream& out) const;
+
+  /** Run the command on an engine */
+  void run(engine* e) const;
+
 };
 
 }

@@ -63,3 +63,9 @@ void define_transition_system_command::to_stream(std::ostream& out) const  {
 void query_command::to_stream(std::ostream& out) const  {
   out << "[" << get_command_type_string() << " " << d_system_id << " " << *d_query << "]";
 }
+
+void query_command::run(engine* e) const {
+  const system::transition_system* T = get_context().get_transition_system(d_system_id);
+  engine::result result = e->query(*T, d_query);
+  std::cout << result << std::endl;
+}
