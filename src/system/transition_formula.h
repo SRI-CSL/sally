@@ -17,6 +17,9 @@ namespace system {
 
 class transition_formula {
 
+  /** The term manager */
+  expr::term_manager& d_tm;
+
   /** The state information */
   const state_type* d_state_type;
 
@@ -25,16 +28,21 @@ class transition_formula {
 
 public:
 
-  transition_formula(expr::term_manager& tm, const state_type* st, expr::term_ref tf)
-  : d_state_type(st)
-  , d_transition_formula(tm, tf)
-  {}
+  /** Create a transition formula from the type and the actual formula */
+  transition_formula(expr::term_manager& tm, const state_type* st, expr::term_ref tf);
+
+  /** Create a copy of the given formula */
+  transition_formula(const transition_formula& tf);
+
+  /** Unroll the given formula n > 0 times */
+  transition_formula(const transition_formula& tf, size_t n);
 
   /** Get the state formula */
   expr::term_ref get_formula() const {
     return d_transition_formula;
   }
 
+  /** Get the state type */
   const state_type*  get_state_type() const {
     return d_state_type;
   }

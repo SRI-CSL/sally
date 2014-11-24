@@ -60,7 +60,7 @@ define_states returns [parser::command* cmd = 0]
         symbol[id, parser::PARSER_STATE_FORMULA, false]       
         symbol[type_id, parser::PARSER_STATE_TYPE, true] { 
             STATE->push_scope(); 
-            STATE->use_state_type(type_id, system::state_type::CURRENT, true); 
+            STATE->use_state_type(type_id, system::state_type::STATE_CURRENT, true); 
         }
         f = state_formula { 
         	STATE->ctx().add_state_formula(id, type_id, f);
@@ -80,8 +80,8 @@ define_transition returns [parser::command* cmd = 0]
       symbol[id, parser::PARSER_TRANSITION_FORMULA, false]
       symbol[type_id, parser::PARSER_STATE_TYPE, true] { 
       	  STATE->push_scope();
-          STATE->use_state_type(type_id, system::state_type::CURRENT, false); 
-          STATE->use_state_type(type_id, system::state_type::NEXT, false); 
+          STATE->use_state_type(type_id, system::state_type::STATE_CURRENT, false); 
+          STATE->use_state_type(type_id, system::state_type::STATE_NEXT, false); 
       }
       f = state_transition_formula   { 
       	  STATE->ctx().add_transition_formula(id, type_id, f);
@@ -132,7 +132,7 @@ query returns [parser::command* cmd = 0]
     symbol[id, parser::PARSER_TRANSITION_SYSTEM, true] { 
         STATE->push_scope();
         state_type = STATE->ctx().get_transition_system(id)->get_state_type();
-        STATE->use_state_type(state_type, system::state_type::CURRENT, true); 
+        STATE->use_state_type(state_type, system::state_type::STATE_CURRENT, true); 
     }
     f = state_formula { 
     	$cmd = new parser::query_command(STATE->ctx(), id, new system::state_formula(STATE->tm(), state_type, f));

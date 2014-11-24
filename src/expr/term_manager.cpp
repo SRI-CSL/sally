@@ -195,3 +195,17 @@ void term_manager::use_namespace(std::string ns) {
 void term_manager::pop_namespace() {
   d_tm->pop_namespace();
 }
+
+struct variable_matcher {
+  bool operator() (const term& t) const {
+    return t.op() == VARIABLE;
+  }
+};
+
+void term_manager::get_variables(term_ref ref, std::vector<term_ref>& out) const {
+  d_tm->get_subterms(ref, variable_matcher(), out);
+}
+
+void term_manager::get_variables(term_ref ref, std::set<term_ref>& out) const {
+  d_tm->get_subterms(ref, variable_matcher(), out);
+}

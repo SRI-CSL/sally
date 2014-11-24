@@ -28,15 +28,11 @@ class state_formula {
 
 public:
 
-  state_formula(expr::term_manager& tm, const state_type* st, expr::term_ref formula)
-  : d_state_type(st)
-  , d_state_formula(tm, formula)
-  {}
+  /** Construct a state formula over the state type with the explicit formula */
+  state_formula(expr::term_manager& tm, const state_type* st, expr::term_ref formula);
 
-  state_formula(const state_formula& sf)
-  : d_state_type(sf.d_state_type)
-  , d_state_formula(sf.d_state_formula)
-  {}
+  /** Construct a copy of the given formula */
+  state_formula(const state_formula& sf);
 
   /** Get the state formula */
   expr::term_ref get_formula() const {

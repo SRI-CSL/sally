@@ -9,6 +9,9 @@
 
 #include "expr/term.h"
 
+#include <set>
+#include <vector>
+
 namespace sal2 {
 namespace expr {
 
@@ -142,6 +145,12 @@ public:
     if (ref.is_null()) return 0;
     return term_of(ref).hash();
   }
+
+  /** Get the variables of the term */
+  void get_variables(term_ref ref, std::vector<term_ref>& out) const;
+
+  /** Get the variables of the term */
+  void get_variables(term_ref ref, std::set<term_ref>& out) const;
 
   /** Get the string representation of the term */
   std::string to_string(term_ref ref) const;

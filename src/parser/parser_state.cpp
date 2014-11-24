@@ -51,31 +51,6 @@ term_ref parser_state::get_variable(std::string id) const {
   return d_variables.get_entry(id);
 }
 
-void parser_state::expand_vars(term_ref var_ref) {
-
-  // The variable content
-  const term& var_term = tm().term_of(var_ref);
-
-  /// Variable name
-  std::string var_name = tm().get_variable_name(var_term);
-
-  // Number of subfields
-  size_t size = tm().get_struct_size(var_term);
-
-  if (size == 0) {
-    // Atomic, just put into the symbol table
-    d_variables.add_entry(var_name, var_ref);
-  } else {
-    // Register all the field variables
-    for (size_t i = 0; i < size; ++ i) {
-      // Get the field
-      term_ref var_field_ref = tm().get_struct_field(var_term, i);
-      // Expand
-      expand_vars(var_field_ref);
-    }
-  }
-}
-
 void parser_state::use_state_type(std::string id, state_type::var_class var_class, bool use_namespace) {
   const system::state_type* st = d_context.get_state_type(id);
   use_state_type(st, var_class, use_namespace);
@@ -84,16 +59,19 @@ void parser_state::use_state_type(std::string id, state_type::var_class var_clas
 void parser_state::use_state_type(const system::state_type* st, system::state_type::var_class var_class, bool use_namespace) {
 
   // Use the appropriate namespace
-  st->use_namespace(tm());
+  st->use_namespace();
   if (use_namespace) {
-    st->use_namespace(tm(), var_class);
+    st->use_namespace(var_class);
   }
 
-  // Get the state
-  term_ref state_var_ref = st->get_state(var_class);
-
   // Declare the variables
-  expand_vars(state_var_ref);
+  std::vector<expr::term_ref> vars;
+  st->get_variables(var_class, vars);
+  for (size_t i = 0; i < vars.size(); ++ i) {
+    const term& var_term = tm().term_of(vars[i]);
+    std::string var_name = tm().get_variable_name(var_term);
+    d_variables.add_entry(var_name, vars[i]);
+  }
 
   // Pop the namespace
   tm().pop_namespace();

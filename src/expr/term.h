@@ -33,6 +33,9 @@ public:
   term_ref(const base_ref& ref): base_ref(ref) {}
   term_ref(const alloc::empty_type& empty) {}
   void to_stream(std::ostream& out) const;
+
+  bool operator < (const term_ref& ref) const { return index() < ref.index(); }
+  bool operator == (const term_ref& ref) const { return index() == ref.index(); }
 };
 
 /**

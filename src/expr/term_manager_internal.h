@@ -13,6 +13,9 @@
 #include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
 
+#include <queue>
+#include <iterator>
+
 namespace sal2 {
 namespace expr {
 
@@ -353,6 +356,9 @@ public:
   /** Pop the last added namespace */
   void pop_namespace();
 
+  template<typename collection, typename matcher>
+  void get_subterms(term_ref t, const matcher& m, collection& out);
+
   /** Returns the id normalized with resepct to the current namespaces */
   std::string namespace_normalize(std::string id) const;
 };
@@ -527,6 +533,35 @@ term_ref term_manager_internal::mk_term(term_op op, iterator begin, iterator end
 #undef SWITCH_TO_TERM
 
   return result;
+}
+
+template<typename collection, typename matcher>
+void term_manager_internal::get_subterms(term_ref t, const matcher& m, collection& out) {
+  typedef boost::unordered_set<term_ref, term_ref_hasher> visited_set;
+
+  visited_set v;
+  std::queue<term_ref> queue;
+  queue.push(t);
+
+  std::insert_iterator<collection> insert(out, out.end());
+
+  while (!queue.empty()) {
+
+    // Process current
+    term_ref current = queue.front();
+    queue.pop();
+    if (m(term_of(current))) {
+      *insert = current;
+    }
+
+    // Add any unvisited children
+    const term& current_term = term_of(current);
+    for (size_t i = 0; i < current_term.size(); ++ i) {
+      if (v.find(current_term[i]) == v.end()) {
+        queue.push(current_term[i]);
+      }
+    }
+  }
 }
 
 

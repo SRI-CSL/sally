@@ -42,12 +42,6 @@ class parser_state {
   /** Symbol table for types */
   utils::symbol_table<expr::term_ref_strong> d_types;
 
-  /**
-   * Declare the variables from the (possibly struct) variable var into the
-   * variables symbol table.
-   */
-  void expand_vars(expr::term_ref var);
-
 public:
 
   /** Construct the parser state */
