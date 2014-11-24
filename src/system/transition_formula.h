@@ -34,9 +34,6 @@ public:
   /** Create a copy of the given formula */
   transition_formula(const transition_formula& tf);
 
-  /** Unroll the given formula n > 0 times */
-  transition_formula(const transition_formula& tf, size_t n);
-
   /** Get the state formula */
   expr::term_ref get_formula() const {
     return d_transition_formula;

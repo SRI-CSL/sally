@@ -63,9 +63,6 @@ public:
   /** Check whether the given formula is a transition formula for this type */
   bool is_transition_formula(expr::term_ref f) const;
 
-  /** Unroll the given transition formula n > 0 times using the state variables */
-  expr::term_ref unroll(expr::term_ref transition_f, size_t n) const;
-
 private:
 
   /** The term manager */

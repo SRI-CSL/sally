@@ -90,10 +90,5 @@ bool state_type::is_transition_formula(expr::term_ref f) const {
   return std::includes(state_variables.begin(), state_variables.end(), f_variables.begin(), f_variables.end());
 }
 
-expr::term_ref state_type::unroll(expr::term_ref transition_f, size_t n) const {
-  expr::term_ref f = transition_f;
-  return f;
-}
-
 }
 }

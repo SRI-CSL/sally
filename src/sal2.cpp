@@ -12,6 +12,7 @@
 #include "utils/output.h"
 #include "system/context.h"
 #include "parser/parser.h"
+#include "engine/engine.h"
 
 using namespace std;
 using namespace boost::program_options;
@@ -78,16 +79,32 @@ int main(int argc, char* argv[]) {
   }
 }
 
+std::string get_engines_list() {
+  std::vector<string> engines;
+  engine::get_engines(engines);
+  std::stringstream out;
+  out << "The engine to use: ";
+  for (size_t i = 0; i < engines.size(); ++ i) {
+    if (i) { out << ", "; }
+    out << engines[i];
+  }
+  return out.str();
+}
+
 void getOptions(int argc, char* argv[], variables_map& variables)
 {
-  // Define the options
-  options_description description("Options");
+  // Define the main options
+  options_description description("General options");
   description.add_options()
       ("help,h", "Prints this help message.")
       ("verbosity,v", value<size_t>()->default_value(0), "Set the verbosity of the output.")
       ("input,i", value<vector<string> >()->required(), "A problem to solve.")
       ("parse-only", "Just parse, don't solve.")
+      ("engine", value<string>(), get_engines_list().c_str())
       ;
+
+  // Get the individual engine options
+  engine::add_options(description);
 
   // The input files can be positional
   positional_options_description positional;

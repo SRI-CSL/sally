@@ -37,12 +37,5 @@ transition_formula::transition_formula(const transition_formula& tf)
 {
 }
 
-transition_formula::transition_formula(const transition_formula& tf, size_t n)
-: d_tm(tf.d_tm)
-, d_state_type(tf.d_state_type)
-, d_transition_formula(d_tm, tf.d_state_type->unroll(tf.get_formula(), n))
-{
-}
-
 }
 }
