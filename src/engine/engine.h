@@ -53,28 +53,4 @@ public:
   ~engine() {};
 };
 
-/** Each engine should also ingerit this one, for their particular T */
-template<typename T>
-class engine_info_static {
-
-  /** Add the options */
-  static
-  void add_options(boost::program_options::options_description& options) {
-    T::add_options(options);
-  }
-
-  /** Get the solver id */
-  static
-  std::string get_id() {
-    return T::get_id();
-  }
-
-  /** Construct a new solver instance */
-  static
-  engine* new_instance() {
-    return T::new_instance();
-  }
-
-};
-
 }

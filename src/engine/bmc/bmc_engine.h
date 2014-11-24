@@ -16,7 +16,7 @@ struct bmc_engine_info {
   static engine* new_instance();
 };
 
-class bmc_engine : public engine, public engine_info_static<bmc_engine_info> {
+class bmc_engine : public engine {
 
 public:
 
