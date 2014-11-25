@@ -47,11 +47,14 @@ int main(int argc, char* argv[]) {
   // Create the context
   system::context ctx(tm);
 
+  // Add options to the context
+  ctx.set_options(options);
+
   // Create the engine
   engine* engine_to_use = 0;
   if (options.count("engine") > 0) {
     try {
-      engine_to_use = engine::mk_engine(options.at("engine").as<string>());
+      engine_to_use = engine::mk_engine(options.at("engine").as<string>(), ctx);
     } catch (const sal2::exception& e) {
       cerr << e << endl;
       exit(1);
@@ -119,7 +122,7 @@ void getOptions(int argc, char* argv[], variables_map& variables)
       ;
 
   // Get the individual engine options
-  engine::add_options(description);
+  engine::setup_options(description);
 
   // The input files can be positional
   positional_options_description positional;

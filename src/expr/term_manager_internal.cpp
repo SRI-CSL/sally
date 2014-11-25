@@ -8,6 +8,8 @@
 #include "expr/term_manager_internal.h"
 #include "expr/term_manager.h"
 
+#include <stack>
+
 using namespace sal2;
 using namespace expr;
 
@@ -270,3 +272,40 @@ std::string term_manager_internal::namespace_normalize(std::string id) const {
   }
   return id;
 }
+
+// TODO: non-recursive
+term_ref term_manager_internal::substitute(term_ref t, substitution_map& subst) {
+
+  // Check if already there
+  substitution_map::const_iterator it = subst.find(t);
+  if (it != subst.end()) {
+    return it->second;
+  }
+
+  bool child_changed = false;
+  std::vector<term_ref> children;
+
+  for (size_t i = 0; i < term_of(t).size(); ++ i) {
+    // Substitute in the child
+    term_ref child = term_of(t)[i];
+    term_ref child_subst = substitute(child, subst);
+    if (child_subst != child) {
+      child_changed = true;
+    }
+    children.push_back(child_subst);
+  }
+
+  // Check if anything changed
+  if (!child_changed) {
+    subst[t] = t;
+    return t;
+  }
+
+  // Something changed
+  term_ref t_new = mk_term(term_of(t).op(), children.begin(), children.end());
+  subst[t] = t_new;
+
+  // Return the result
+  return t_new;
+}
+

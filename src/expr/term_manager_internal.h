@@ -356,8 +356,15 @@ public:
   /** Pop the last added namespace */
   void pop_namespace();
 
+  /** Return the subterms what return true on m(t) */
   template<typename collection, typename matcher>
   void get_subterms(term_ref t, const matcher& m, collection& out);
+
+  /** Map of substitutions */
+  typedef boost::unordered_map<term_ref, term_ref, term_ref_hasher> substitution_map;
+
+  /** Return t with subst applied */
+  term_ref substitute(term_ref t, substitution_map& subst);
 
   /** Returns the id normalized with resepct to the current namespaces */
   std::string namespace_normalize(std::string id) const;

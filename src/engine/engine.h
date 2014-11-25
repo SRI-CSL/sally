@@ -8,10 +8,10 @@
 #pragma once
 
 #include "expr/term_manager.h"
-#include "system/transition_system.h"
+#include "system/context.h"
 
 #include <string>
-#include <boost/program_options.hpp>
+#include <boost/program_options/options_description.hpp>
 
 namespace sal2 {
 
@@ -20,6 +20,9 @@ namespace sal2 {
  */
 class engine  {
 
+  /** The context */
+  const system::context& d_ctx;
+
 public:
 
   enum result {
@@ -27,6 +30,8 @@ public:
     VALID,
     /** The property is invalid */
     INVALID,
+    /** The result is inconclusive */
+    UNKNOWN,
     /** The query type is not supported by the engine */
     UNSUPPORTED,
     /** The engine was interrupted */
@@ -35,11 +40,11 @@ public:
 
   /** Construct an engine of the given name */
   static
-  engine* mk_engine(std::string id);
+  engine* mk_engine(std::string id, const system::context& ctx);
 
   /** Get all the engines to setup the options */
   static
-  void add_options(boost::program_options::options_description& options);
+  void setup_options(boost::program_options::options_description& options);
 
   /** Get the list of all engines */
   static
@@ -49,8 +54,18 @@ public:
   virtual
   result query(const system::transition_system& ts, const system::state_formula* sf) = 0;
 
+  /** Create the engine */
+  engine(const system::context& ctx);
+
   virtual
   ~engine() {};
+
+  /** Returns the context of the engine */
+  const system::context& ctx() const;
+
+  /** Returns the term manager of the engine */
+  expr::term_manager& tm() const;
+
 };
 
 std::ostream& operator << (std::ostream& out, engine::result result);

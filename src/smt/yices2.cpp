@@ -47,6 +47,8 @@ public:
 
   void add(expr::term_ref ref);
   solver::result check();
+  void push();
+  void pop();
 };
 
 int yices2_internal::instances = 0;
@@ -237,6 +239,14 @@ solver::result yices2_internal::check() {
   }
 }
 
+void yices2_internal::push() {
+  yices_push(d_ctx);
+}
+
+void yices2_internal::pop() {
+  yices_pop(d_ctx);
+}
+
 yices2::yices2(expr::term_manager& tm)
 : solver(tm)
 {
@@ -254,6 +264,15 @@ void yices2::add(expr::term_ref f) {
 solver::result yices2::check() {
   return d_internal->check();
 }
+
+void yices2::push() {
+  d_internal->push();
+}
+
+void yices2::pop() {
+  d_internal->pop();
+}
+
 
 expr::term_ref yices2::generalize() {
   return expr::term_ref();

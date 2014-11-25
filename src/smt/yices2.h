@@ -22,6 +22,8 @@ public:
 
   void add(expr::term_ref f);
   result check();
+  void push();
+  void pop();
   expr::term_ref generalize();
   void interpolate(std::vector<expr::term_ref>& out);
 };

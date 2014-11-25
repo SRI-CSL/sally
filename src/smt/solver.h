@@ -50,6 +50,14 @@ public:
   virtual
   result check() = 0;
 
+  /** Push a context */
+  virtual
+  void push() = 0;
+
+  /** Pop a context */
+  virtual
+  void pop() = 0;
+
   /** Generalize a satisfiable answer */
   virtual
   expr::term_ref generalize() = 0;
@@ -60,6 +68,20 @@ public:
 };
 
 std::ostream& operator << (std::ostream& out, solver::result result);
+
+/**
+ * Push/pop scope manager.
+ */
+class solver_scope {
+  int d_pushes;
+  solver* d_solver;
+public:
+  solver_scope(solver* s): d_pushes(0), d_solver(s) {}
+  ~solver_scope() { while (d_pushes-- > 0) { d_solver->pop(); } }
+  void push() { d_solver->push(); d_pushes ++; }
+  void pop() { d_solver->pop(); }
+};
+
 
 /**
  * Factory for creating SMT solvers.

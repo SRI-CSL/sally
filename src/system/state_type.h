@@ -63,6 +63,9 @@ public:
   /** Check whether the given formula is a transition formula for this type */
   bool is_transition_formula(expr::term_ref f) const;
 
+  /** Get the term manager for this type */
+  expr::term_manager& tm() const { return d_tm; }
+
 private:
 
   /** The term manager */

@@ -17,6 +17,8 @@
 #include "utils/exception.h"
 #include "utils/symbol_table.h"
 
+#include <boost/program_options/variables_map.hpp>
+
 namespace sal2 {
 namespace system {
 
@@ -31,28 +33,13 @@ public:
  */
 class context {
 
-  /** The term manager */
-  expr::term_manager& d_term_manager;
-
-  /** Symbol table for state types */
-  utils::symbol_table<state_type*> d_state_types;
-
-  /** Symbol table for state formulas */
-  utils::symbol_table<state_formula*> d_state_formulas;
-
-  /** Symbol table for state transition formulas */
-  utils::symbol_table<transition_formula*> d_transition_formulas;
-
-  /** Symbol table for transition systems */
-  utils::symbol_table<transition_system*> d_transition_systems;
-
 public:
 
   /** Construct the parser state */
   context(expr::term_manager& tm);
 
   /** Returns the term manager for the parser */
-  expr::term_manager& tm() { return d_term_manager; }
+  expr::term_manager& tm() const { return d_term_manager; }
 
   /** Add a new state type with the given id (vars : types) */
   void add_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types);
@@ -82,7 +69,7 @@ public:
   void add_transition_formula(std::string id, std::string type_id, expr::term_ref sf);
 
   /** Add a new state transition with the given id (to be managed by the context) */
-  void add_transition_formula(std::string id, transition_formula* tf);
+  void add_transition_formula(std::string id, const transition_formula* tf);
 
   /** Get the state transition formula with the given id */
   const transition_formula* get_transition_formula(std::string id) const;
@@ -91,7 +78,7 @@ public:
   bool has_transition_formula(std::string id) const;
 
   /** Add a new state transition system with the givwen id (to be managed by the context) */
-  void add_transition_system(std::string id, transition_system* ts);
+  void add_transition_system(std::string id, const transition_system* ts);
 
   /** Add a new state transition system with the givwen id (to be managed by the context) */
   void add_transition_system(std::string id, std::string type_id, std::string init_id, const std::vector<std::string>& transition_ids);
@@ -102,6 +89,33 @@ public:
   /** True if id exists */
   bool has_transition_system(std::string id) const;
 
+  typedef boost::program_options::variables_map options;
+
+  /** Set the command line options */
+  void set_options(const options& opts);
+
+  /** Get the command line options */
+  const options* get_options() const;
+
+private:
+
+  /** The term manager */
+  expr::term_manager& d_term_manager;
+
+  /** Symbol table for state types */
+  utils::symbol_table<const state_type*> d_state_types;
+
+  /** Symbol table for state formulas */
+  utils::symbol_table<const state_formula*> d_state_formulas;
+
+  /** Symbol table for state transition formulas */
+  utils::symbol_table<const transition_formula*> d_transition_formulas;
+
+  /** Symbol table for transition systems */
+  utils::symbol_table<const transition_system*> d_transition_systems;
+
+  /** Program options, if any */
+  const options* d_options;
 };
 
 

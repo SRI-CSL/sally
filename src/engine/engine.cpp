@@ -17,17 +17,17 @@ using namespace boost::program_options;
 namespace sal2 {
 
 struct engine_info_dynamic {
-  virtual void add_options(options_description& options) const = 0;
+  virtual void setup_options(options_description& options) const = 0;
   virtual std::string get_id() const = 0;
-  virtual engine* new_instance() const = 0;
+  virtual engine* new_instance(const system::context& ctx) const = 0;
   virtual ~engine_info_dynamic() {};
 };
 
 template <typename T>
 class engine_info_dynamic_instance : public engine_info_dynamic {
-  void add_options(options_description& options) const { T::add_options(options); }
+  void setup_options(options_description& options) const { T::setup_options(options); }
   std::string get_id() const { return T::get_id(); }
-  engine* new_instance() const { return T::new_instance(); }
+  engine* new_instance(const system::context& ctx) const { return T::new_instance(ctx); }
   ~engine_info_dynamic_instance() {}
 };
 
@@ -70,15 +70,15 @@ private:
 /** Map from id's to engine information */
 static engine_data s_engine_data;
 
-engine* engine::mk_engine(std::string id) {
-  return s_engine_data.get_engine_info(id).new_instance();
+engine* engine::mk_engine(std::string id, const system::context& ctx) {
+  return s_engine_data.get_engine_info(id).new_instance(ctx);
 }
 
-void engine::add_options(boost::program_options::options_description& options) {
+void engine::setup_options(boost::program_options::options_description& options) {
   for (engine_data::data_map::const_iterator it = s_engine_data.data().begin(); it != s_engine_data.data().end(); ++ it) {
     const engine_info_dynamic* info = it->second;
     boost::program_options::options_description engine_options(info->get_id() + " options");
-    it->second->add_options(engine_options);
+    it->second->setup_options(engine_options);
     options.add(engine_options);
   }
 }
@@ -89,6 +89,18 @@ void engine::get_engines(std::vector<std::string>& out) {
   }
 }
 
+engine::engine(const system::context& ctx)
+: d_ctx(ctx)
+{}
+
+const system::context& engine::ctx() const {
+  return d_ctx;
+}
+
+expr::term_manager& engine::tm() const {
+  return ctx().tm();
+}
+
 std::ostream& operator << (std::ostream& out, engine::result result) {
 
   switch (result) {
@@ -96,6 +108,8 @@ std::ostream& operator << (std::ostream& out, engine::result result) {
     out << "valid"; break;
   case engine::INVALID:
     out << "invalid"; break;
+  case engine::UNKNOWN:
+    out << "unknown"; break;
   case engine::INTERRUPTED:
     out << "interrupted"; break;
   case engine::UNSUPPORTED:

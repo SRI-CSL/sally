@@ -11,6 +11,7 @@
 
 #include <set>
 #include <vector>
+#include <boost/unordered_map.hpp>
 
 namespace sal2 {
 namespace expr {
@@ -160,6 +161,12 @@ public:
 
   /** Pop the last added namespace */
   void pop_namespace();
+
+  /** The substitution map */
+  typedef boost::unordered_map<term_ref, term_ref, term_ref_hasher> substitution_map;
+
+  /** Replaces terms from t that appear in the map. */
+  term_ref substitute(term_ref t, const substitution_map& subst);
 };
 
 inline

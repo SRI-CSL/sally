@@ -187,7 +187,6 @@ std::string term_manager::to_string(term_ref ref) const {
   return d_tm->to_string(ref);
 }
 
-
 void term_manager::use_namespace(std::string ns) {
   d_tm->use_namespace(ns);
 }
@@ -208,4 +207,9 @@ void term_manager::get_variables(term_ref ref, std::vector<term_ref>& out) const
 
 void term_manager::get_variables(term_ref ref, std::set<term_ref>& out) const {
   d_tm->get_subterms(ref, variable_matcher(), out);
+}
+
+term_ref term_manager::substitute(term_ref t, const substitution_map& subst) {
+  substitution_map subst_copy(subst);
+  return d_tm->substitute(t, subst_copy);
 }

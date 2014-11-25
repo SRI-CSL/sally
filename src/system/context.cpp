@@ -16,6 +16,7 @@ context::context(expr::term_manager& tm)
 , d_state_formulas("state formulas")
 , d_transition_formulas("state transition formulas")
 , d_transition_systems("state transition systems")
+, d_options(0)
 {
 }
 
@@ -67,7 +68,7 @@ bool context::has_state_formula(std::string id) const {
   return d_state_formulas.has_entry(id);
 }
 
-void context::add_transition_formula(std::string id, transition_formula* tf) {
+void context::add_transition_formula(std::string id, const transition_formula* tf) {
   if (d_transition_formulas.has_entry(id)) {
     delete tf;
     throw context_exception(id + " already declared");
@@ -91,7 +92,7 @@ bool context::has_transition_formula(std::string id) const {
   return d_transition_formulas.has_entry(id);
 }
 
-void context::add_transition_system(std::string id, transition_system* ts) {
+void context::add_transition_system(std::string id, const transition_system* ts) {
   if (d_transition_systems.has_entry(id)) {
     delete ts;
     throw context_exception(id + " already declared");
@@ -119,6 +120,15 @@ const system::transition_system* context::get_transition_system(std::string id) 
 bool context::has_transition_system(std::string id) const {
   return d_transition_systems.has_entry(id);
 }
+
+void context::set_options(const options& opts) {
+
+}
+
+const context::options* context::get_options() const {
+  return d_options;
+}
+
 
 }
 }
