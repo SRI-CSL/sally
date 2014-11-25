@@ -95,6 +95,11 @@ int main(int argc, char* argv[]) {
       exit(1);
     }
   }
+
+  // Delete the engine
+  if (engine_to_use != 0) {
+    delete engine_to_use;
+  }
 }
 
 std::string get_engines_list() {
