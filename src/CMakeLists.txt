@@ -29,9 +29,18 @@ foreach(FILE ${regressions})
   # Get the options for this tes
   file(READ "${FILE}.options" ALL_OPTIONS)
   # Remove newlines
-  STRING(REGEX REPLACE "(\r?\n)+$" "" ALL_OPTIONS "${ALL_OPTIONS}")
+  string(REGEX REPLACE "(\r?\n)+$" "" ALL_OPTIONS "${ALL_OPTIONS}")
   # Turn the options into a list 
   separate_arguments(ALL_OPTIONS)
   # Add the test with the options and the file
   add_test(${FILE} sal2 ${ALL_OPTIONS} ${FILE})
+  
+  # If there is a .gold file, compare the output
+  if(EXISTS "${FILE}.gold")
+    # Get the gold output
+    file(READ "${FILE}.gold" GOLD_OUTPUT)
+    # Set the output
+    set_tests_properties(${FILE} PROPERTIES PASS_REGULAR_EXPRESSION ${GOLD_OUTPUT})
+  endif()
+  
 endforeach(FILE)
