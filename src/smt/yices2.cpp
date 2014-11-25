@@ -133,7 +133,10 @@ term_t yices2_internal::mk_yices2_term(expr::term_op op, size_t n, term_t* child
     assert(n == 2);
     result = yices_arith_gt_atom(children[0], children[1]);
     break;
-
+  case expr::TERM_EQ:
+    assert(n == 2);
+    result = yices_eq(children[0], children[1]);
+    break;
   default:
     assert(false);
   }
@@ -174,8 +177,9 @@ term_t yices2_internal::to_yices2_term(expr::term_ref ref) {
 
   // The term
   const expr::term& t = d_tm.term_of(ref);
+  expr::term_op t_op = t.op();
 
-  switch (t.op()) {
+  switch (t_op) {
   case expr::VARIABLE:
     result = yices_new_uninterpreted_term(to_yices2_type(t[0]));
     yices_set_term_name(result, d_tm.get_variable_name(t).c_str());
@@ -186,6 +190,7 @@ term_t yices2_internal::to_yices2_term(expr::term_ref ref) {
   case expr::CONST_RATIONAL:
     result = yices_mpq(d_tm.get_rational_constant(t).mpq().get_mpq_t());
     break;
+  case expr::TERM_EQ:
   case expr::TERM_AND:
   case expr::TERM_OR:
   case expr::TERM_NOT:
@@ -219,6 +224,10 @@ term_t yices2_internal::to_yices2_term(expr::term_ref ref) {
 }
 
 void yices2_internal::add(expr::term_ref ref) {
+  if (output::get_verbosity(std::cout) > 1) {
+    std::cout << "yices2: adding " << ref << std::endl;
+  }
+
   expr::term_ref_strong ref_strong(d_tm, ref);
   d_assertions.push_back(ref_strong);
   term_t yices_term = to_yices2_term(ref);

@@ -92,11 +92,19 @@ bmc_engine::result bmc_engine::query(const system::transition_system& ts, const 
   unsigned k = 0;
   while (true) {
 
+    if (output::get_verbosity(std::cout) > 0) {
+      std::cout << "BMC: checking " << k << std::endl;
+    }
+
     // Check the current unrolling
     scope.push();
     expr::term_ref property_not = tm().mk_term(expr::TERM_NOT, property);
     d_solver->add(replace_vars(property_not, current_state_var, state_variables(k, type)));
     smt::solver::result r = d_solver->check();
+
+    if (output::get_verbosity(std::cout) > 0) {
+      std::cout << "BMC: got " << r << std::endl;
+    }
 
     // See what happened
     switch(r) {
@@ -117,19 +125,17 @@ bmc_engine::result bmc_engine::query(const system::transition_system& ts, const 
     // Did we go overboard
     if (ctx().get_options()->count("bmc_max") > 0) {
       unsigned max = ctx().get_options()->at("bmc_max").as<unsigned>();
-      if (max >= k) {
+      if (k >= max) {
         return UNKNOWN;
       }
     }
 
     // Unroll once more
     expr::term_ref transition_k = replace_vars(transition_fromula, current_state_var, state_variables(k, type));
-    k = k + 1;
-    transition_k = replace_vars(transition_k, next_state_var, state_variables(k + 1, type));
+    transition_k = replace_vars(transition_k, next_state_var, state_variables(k+1, type));
     d_solver->add(transition_k);
-
-
-  }
+    k = k + 1;
+}
 
   return UNKNOWN;
 }

@@ -122,13 +122,12 @@ bool context::has_transition_system(std::string id) const {
 }
 
 void context::set_options(const options& opts) {
-
+  d_options = &opts;
 }
 
 const context::options* context::get_options() const {
   return d_options;
 }
-
 
 }
 }
