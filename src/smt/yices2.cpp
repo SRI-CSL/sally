@@ -59,8 +59,8 @@ yices2_internal::yices2_internal(expr::term_manager& tm)
   // Initialize
   if (instances == 0) {
     yices_init();
-    instances ++;
   }
+  instances ++;
 
   // The basic types
   d_bool_type = yices_bool_type();

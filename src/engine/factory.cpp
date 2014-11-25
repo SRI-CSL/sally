@@ -6,8 +6,6 @@
  */
 
 #include "engine/factory.h"
-
-#include "engine/bmc/bmc_engine_info.h"
 #include "utils/exception.h"
 
 #include <vector>
@@ -90,12 +88,6 @@ void factory::get_engines(std::vector<std::string>& out) {
   }
 }
 
-//
-// ADD ALL THE ENGINES HERE
-//
-engine_data::engine_data() {
-  add_engine_info<bmc::bmc_engine_info>();
 }
 
-
-}
+#include "engine/engines_list.h"
