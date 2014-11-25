@@ -246,9 +246,11 @@ void yices2_internal::add(expr::term_ref ref) {
 solver::result yices2_internal::check() {
   smt_status_t status = yices_check_context(d_ctx, 0);
   if (status == STATUS_SAT) {
-    model_t *model = yices_get_model(d_ctx, 1);
-    yices_print_model(stdout, model);
-    yices_free_model(model);
+    if (output::get_verbosity(std::cout) > 1) {
+      model_t *model = yices_get_model(d_ctx, 1);
+      yices_print_model(stdout, model);
+      yices_free_model(model);
+    }
     return solver::SAT;
   } else if (status == STATUS_UNSAT) {
     return solver::UNSAT;

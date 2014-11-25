@@ -26,8 +26,12 @@ file(GLOB_RECURSE regressions ${sal2_SOURCE_DIR}/test/regress/*.mcmt)
 list(SORT regressions)
 
 foreach(FILE ${regressions})
-  file(STRINGS "${FILE}.options" ALL_OPTIONS)
-  foreach(OPTIONS ${ALL_OPTIONS})
-    add_test(${FILE} sal2 ${OPTIONS} ${FILE})
-  endforeach(OPTIONS)
+  # Get the options for this tes
+  file(READ "${FILE}.options" ALL_OPTIONS)
+  # Remove newlines
+  STRING(REGEX REPLACE "(\r?\n)+$" "" ALL_OPTIONS "${ALL_OPTIONS}")
+  # Turn the options into a list 
+  separate_arguments(ALL_OPTIONS)
+  # Add the test with the options and the file
+  add_test(${FILE} sal2 ${ALL_OPTIONS} ${FILE})
 endforeach(FILE)
