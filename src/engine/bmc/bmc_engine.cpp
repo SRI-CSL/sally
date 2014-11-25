@@ -21,7 +21,7 @@ engine* bmc_engine_info::new_instance(const system::context& ctx) {
 void bmc_engine_info::setup_options(boost::program_options::options_description& options) {
   using namespace boost::program_options;
   options.add_options()
-      ("bmc_max", value<unsigned>()->default_value(100), "Maximal unrolling length.")
+      ("bmc_max", value<unsigned>()->default_value(10), "Maximal unrolling length.")
       ;
 }
 
@@ -45,7 +45,7 @@ expr::term_ref bmc_engine::state_variables(unsigned k, expr::term_ref type) {
   // Ensure we have enough
   while (d_state_variables.size() <= k) {
     std::stringstream ss;
-    ss << "state" << d_state_variables.size();
+    ss << "s" << d_state_variables.size();
     expr::term_ref var = tm().mk_variable(ss.str(), type);
     d_state_variables.push_back(expr::term_ref_strong(tm(), var));
   }

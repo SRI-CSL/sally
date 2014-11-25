@@ -108,8 +108,12 @@ term_t yices2_internal::mk_yices2_term(expr::term_op op, size_t n, term_t* child
     result = yices_sum(n, children);
     break;
   case expr::TERM_SUB:
-    assert(n == 2);
-    result = yices_sub(children[0], children[1]);
+    assert(n == 2 || n == 1);
+    if (n == 1) {
+      result = yices_neg(children[0]);
+    } else {
+      result = yices_sub(children[0], children[1]);
+    }
     break;
   case expr::TERM_MUL:
     result = yices_product(n, children);
@@ -136,6 +140,10 @@ term_t yices2_internal::mk_yices2_term(expr::term_op op, size_t n, term_t* child
   case expr::TERM_EQ:
     assert(n == 2);
     result = yices_eq(children[0], children[1]);
+    break;
+  case expr::TERM_ITE:
+    assert(n == 3);
+    result = yices_ite(children[0], children[1], children[2]);
     break;
   default:
     assert(false);
@@ -190,6 +198,7 @@ term_t yices2_internal::to_yices2_term(expr::term_ref ref) {
   case expr::CONST_RATIONAL:
     result = yices_mpq(d_tm.get_rational_constant(t).mpq().get_mpq_t());
     break;
+  case expr::TERM_ITE:
   case expr::TERM_EQ:
   case expr::TERM_AND:
   case expr::TERM_OR:

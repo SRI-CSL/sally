@@ -55,7 +55,7 @@ public:
 
   const engine_info_dynamic& get_engine_info(std::string id) {
     if (d_data.find(id) == d_data.end()) {
-      throw new exception("unknown engine: " + id);
+      throw exception("unknown engine: " + id);
     }
     return *d_data[id];
   }

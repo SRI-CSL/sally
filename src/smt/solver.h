@@ -82,7 +82,6 @@ public:
   void pop() { d_solver->pop(); }
 };
 
-
 /**
  * Factory for creating SMT solvers.
  */
