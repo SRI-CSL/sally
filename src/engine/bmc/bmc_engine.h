@@ -15,12 +15,6 @@
 namespace sal2 {
 namespace bmc {
 
-struct bmc_engine_info {
-  static void setup_options(boost::program_options::options_description& options);
-  static std::string get_id() { return "bmc_engine"; }
-  static engine* new_instance(const system::context& ctx);
-};
-
 class bmc_engine : public engine {
 
   /** SMT solver we're using */

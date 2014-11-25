@@ -14,17 +14,6 @@
 namespace sal2 {
 namespace bmc {
 
-engine* bmc_engine_info::new_instance(const system::context& ctx) {
-  return new bmc_engine(ctx);
-}
-
-void bmc_engine_info::setup_options(boost::program_options::options_description& options) {
-  using namespace boost::program_options;
-  options.add_options()
-      ("bmc_max", value<unsigned>()->default_value(10), "Maximal unrolling length.")
-      ;
-}
-
 bmc_engine::bmc_engine(const system::context& ctx)
 : engine(ctx)
 {
@@ -123,8 +112,8 @@ bmc_engine::result bmc_engine::query(const system::transition_system& ts, const 
     scope.pop();
 
     // Did we go overboard
-    if (ctx().get_options()->count("bmc_max") > 0) {
-      unsigned max = ctx().get_options()->at("bmc_max").as<unsigned>();
+    if (ctx().get_options().has_option("bmc_max") > 0) {
+      unsigned max = ctx().get_options().get_unsigned("bmc_max");
       if (k >= max) {
         return UNKNOWN;
       }

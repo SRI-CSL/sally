@@ -10,13 +10,13 @@
 namespace sal2 {
 namespace system {
 
-context::context(expr::term_manager& tm)
+context::context(expr::term_manager& tm, const options& opts)
 : d_term_manager(tm)
 , d_state_types("state types")
 , d_state_formulas("state formulas")
 , d_transition_formulas("state transition formulas")
 , d_transition_systems("state transition systems")
-, d_options(0)
+, d_options(opts)
 {
 }
 
@@ -121,11 +121,7 @@ bool context::has_transition_system(std::string id) const {
   return d_transition_systems.has_entry(id);
 }
 
-void context::set_options(const options& opts) {
-  d_options = &opts;
-}
-
-const context::options* context::get_options() const {
+const options& context::get_options() const {
   return d_options;
 }
 

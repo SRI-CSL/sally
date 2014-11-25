@@ -11,7 +11,6 @@
 #include "system/context.h"
 
 #include <string>
-#include <boost/program_options/options_description.hpp>
 
 namespace sal2 {
 
@@ -37,18 +36,6 @@ public:
     /** The engine was interrupted */
     INTERRUPTED
   };
-
-  /** Construct an engine of the given name */
-  static
-  engine* mk_engine(std::string id, const system::context& ctx);
-
-  /** Get all the engines to setup the options */
-  static
-  void setup_options(boost::program_options::options_description& options);
-
-  /** Get the list of all engines */
-  static
-  void get_engines(std::vector<std::string>& out);
 
   /** Query the engine */
   virtual

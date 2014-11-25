@@ -12,7 +12,8 @@
 #include "utils/output.h"
 #include "system/context.h"
 #include "parser/parser.h"
-#include "engine/engine.h"
+#include "engine/factory.h"
+
 
 using namespace std;
 using namespace boost::program_options;
@@ -21,20 +22,21 @@ using namespace sal2;
 using namespace sal2::expr;
 
 /** Parses the program arguments. */
-void getOptions(int argc, char* argv[], variables_map& variables);
+void parseOptions(int argc, char* argv[], variables_map& variables);
 
 int main(int argc, char* argv[]) {
 
   // Get the options from command line and config files
-  variables_map options;
-  getOptions(argc, argv, options);
+  variables_map boost_opts;
+  parseOptions(argc, argv, boost_opts);
+  options opts(boost_opts);
 
   // Get the files to run
-  vector<string> files = options.at("input").as< vector<string> >();
+  vector<string>& files = boost_opts.at("input").as< vector<string> >();
 
   // Set the verbosity
-  output::set_verbosity(cout, options.at("verbosity").as<size_t>());
-  output::set_verbosity(cerr, options.at("verbosity").as<size_t>());
+  output::set_verbosity(cout, opts.get_unsigned("verbosity"));
+  output::set_verbosity(cerr, opts.get_unsigned("verbosity"));
 
   // Typecheck by default
   bool type_check = true;
@@ -45,16 +47,13 @@ int main(int argc, char* argv[]) {
   cerr << expr::set_tm(tm);
 
   // Create the context
-  system::context ctx(tm);
-
-  // Add options to the context
-  ctx.set_options(options);
+  system::context ctx(tm, opts);
 
   // Create the engine
   engine* engine_to_use = 0;
-  if (options.count("engine") > 0) {
+  if (opts.has_option("engine") > 0) {
     try {
-      engine_to_use = engine::mk_engine(options.at("engine").as<string>(), ctx);
+      engine_to_use = factory::mk_engine(boost_opts.at("engine").as<string>(), ctx);
     } catch (const sal2::exception& e) {
       cerr << e << endl;
       exit(1);
@@ -80,7 +79,7 @@ int main(int argc, char* argv[]) {
         }
 
         // If only parsing, just ignore the command
-        if (options.count("parse-only") > 0) {
+        if (opts.has_option("parse-only")) {
           continue;
         }
 
@@ -104,7 +103,7 @@ int main(int argc, char* argv[]) {
 
 std::string get_engines_list() {
   std::vector<string> engines;
-  engine::get_engines(engines);
+  factory::get_engines(engines);
   std::stringstream out;
   out << "The engine to use: ";
   for (size_t i = 0; i < engines.size(); ++ i) {
@@ -114,20 +113,20 @@ std::string get_engines_list() {
   return out.str();
 }
 
-void getOptions(int argc, char* argv[], variables_map& variables)
+void parseOptions(int argc, char* argv[], variables_map& variables)
 {
   // Define the main options
   options_description description("General options");
   description.add_options()
       ("help,h", "Prints this help message.")
-      ("verbosity,v", value<size_t>()->default_value(0), "Set the verbosity of the output.")
+      ("verbosity,v", value<unsigned>()->default_value(0), "Set the verbosity of the output.")
       ("input,i", value<vector<string> >()->required(), "A problem to solve.")
       ("parse-only", "Just parse, don't solve.")
       ("engine", value<string>(), get_engines_list().c_str())
       ;
 
   // Get the individual engine options
-  engine::setup_options(description);
+  factory::setup_options(description);
 
   // The input files can be positional
   positional_options_description positional;

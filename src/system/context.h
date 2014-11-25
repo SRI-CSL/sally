@@ -14,10 +14,10 @@
 #include "system/transition_formula.h"
 #include "system/transition_system.h"
 
+#include "utils/options.h"
 #include "utils/exception.h"
 #include "utils/symbol_table.h"
 
-#include <boost/program_options/variables_map.hpp>
 
 namespace sal2 {
 namespace system {
@@ -36,7 +36,7 @@ class context {
 public:
 
   /** Construct the parser state */
-  context(expr::term_manager& tm);
+  context(expr::term_manager& tm, const options& opts);
 
   /** Returns the term manager for the parser */
   expr::term_manager& tm() const { return d_term_manager; }
@@ -89,13 +89,8 @@ public:
   /** True if id exists */
   bool has_transition_system(std::string id) const;
 
-  typedef boost::program_options::variables_map options;
-
-  /** Set the command line options */
-  void set_options(const options& opts);
-
   /** Get the command line options */
-  const options* get_options() const;
+  const options& get_options() const;
 
 private:
 
@@ -115,7 +110,7 @@ private:
   utils::symbol_table<const transition_system*> d_transition_systems;
 
   /** Program options, if any */
-  const options* d_options;
+  const options& d_options;
 };
 
 
