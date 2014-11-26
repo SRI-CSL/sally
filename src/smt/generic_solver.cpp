@@ -63,20 +63,32 @@ class generic_solver_internal {
   /** Number of declared variables per push */
   std::vector<size_t> d_vars_list_size;
 
-  bool is_declared(expr::term_ref var) const { return d_vars_set.find(var) != d_vars_set.end(); }
+  /** Returns true if a variable is already declared */
+  bool is_declared(expr::term_ref var) const {
+    return d_vars_set.find(var) != d_vars_set.end();
+  }
 
+  /** Declares a variable to the solver */
   void declare(expr::term_ref var) {
+    // Declare in the solver
     *d_solver_input << "(declare-fun " << var << " () " << d_tm.type_of(var) << ")" << std::endl;
+    // Add to the list/set of declared variables
     d_vars_list.push_back(var);
     d_vars_set.insert(var);
   }
+
+  /** Number of solver instances */
+  static unsigned s_instances;
+
+  /** The options */
+  const options& d_options;
 
 public:
 
   /**
    * Create the files and fork the solver.
    */
-  generic_solver_internal(expr::term_manager& tm)
+  generic_solver_internal(expr::term_manager& tm, const options& opts)
   : d_tm(tm)
   , d_solver_response(0)
   , d_solver_input_fd(0)
@@ -84,7 +96,11 @@ public:
   , d_solver_input_tee(0)
   , d_copy_out(0)
   , d_solver_input(0)
+  , d_options(opts)
   {
+    // One more instance
+    s_instances ++;
+
     // Create pipe for sal -> solver
     int sal_to_solver_fds[2]; // [0]: solver read, [1]: sal write
     if (pipe(sal_to_solver_fds) == -1) {
@@ -125,17 +141,21 @@ public:
     close(sal_to_solver_fds[0]);
     close(solver_to_sal_fds[1]);
 
+    // Where we write SMT2 to the solver
+    d_solver_input_fd = new fd_write_stream(sal_to_solver_fds[1], boost::iostreams::close_handle);
+
     if (true) {
       // Where the SMT2 copy goes
       d_copy_out = new std::ofstream("copy.smt2");
-      // Where we write SMT2 to the solver
-      d_solver_input_fd = new fd_write_stream(sal_to_solver_fds[1], boost::iostreams::close_handle);
       // Make the device to tee to
       d_solver_input_tee_device = new tee_device(*d_solver_input_fd, *d_copy_out);
       // Where we write to get the double output
       d_solver_input_tee = new fd_write_stream_tee(*d_solver_input_tee_device);
-
+      // This is the one we use
       d_solver_input = d_solver_input_tee;
+    } else {
+      // We write to the solver directly
+      d_solver_input = d_solver_input_fd;
     }
 
     // Where we read from
@@ -193,12 +213,16 @@ public:
   }
 
   void push() {
+    // Push the solver
     *d_solver_input << "(push 1)" << std::endl;
+    // Remember the declared variables
     d_vars_list_size.push_back(d_vars_list.size());
   }
 
   void pop() {
+    // Pop the solver
     *d_solver_input << "(pop 1)" << std::endl;
+    // Forget all the variables declared since last push
     size_t size = d_vars_list_size.back();
     d_vars_list_size.pop_back();
     while (d_vars_list.size() > size) {
@@ -209,10 +233,12 @@ public:
   }
 };
 
-generic_solver::generic_solver(expr::term_manager& tm)
-: solver(tm, "generic smt2 solver")
+unsigned generic_solver_internal::s_instances = 0;
+
+generic_solver::generic_solver(expr::term_manager& tm, const options& opts)
+: solver(tm, "generic smt2 solver", opts)
 {
-  d_internal = new generic_solver_internal(tm);
+  d_internal = new generic_solver_internal(tm, opts);
 }
 
 generic_solver::~generic_solver() {

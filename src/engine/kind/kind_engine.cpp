@@ -18,8 +18,8 @@ kind_engine::kind_engine(const system::context& ctx)
 : engine(ctx)
 {
   // Make the solvers
-  d_solver_1 = smt::factory::mk_solver("yices2", ctx.tm());
-  d_solver_2 = smt::factory::mk_solver("yices2", ctx.tm());
+  d_solver_1 = smt::factory::mk_solver("yices2", ctx.tm(), ctx.get_options());
+  d_solver_2 = smt::factory::mk_solver("yices2", ctx.tm(), ctx.get_options());
 }
 
 kind_engine::~kind_engine() {

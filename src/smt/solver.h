@@ -9,17 +9,13 @@
 
 #include "expr/term.h"
 #include "utils/exception.h"
+#include "utils/options.h"
 
 namespace sal2 {
 namespace smt {
 
 /**
- * SMT solver interface for solving queries of the form
- *
- *  F(x, y) = A(x) & T(x, y) & B(y)
- *
- * If F is sat, we can generalize in terms of x.
- * If F is unsat, we can get an interpolant in terms of y.
+ * SMT solver interface for solving queries.
  */
 class solver {
 
@@ -31,6 +27,14 @@ protected:
   /** Name of the solver */
   std::string d_name;
 
+  /** The options */
+  const options& d_opts;
+
+  /** Get the options */
+  const options& get_options() const {
+    return d_opts;
+  }
+
 public:
 
   enum result {
@@ -40,9 +44,10 @@ public:
   };
 
   /** Construct with the given term manager */
-  solver(expr::term_manager& tm, std::string name)
+  solver(expr::term_manager& tm, std::string name, const options& opts)
   : d_tm(tm)
   , d_name(name)
+  , d_opts(opts)
   {}
 
   virtual
@@ -105,8 +110,9 @@ public:
    * Create a solver.
    * @param id id of the solver
    * @param tm the term manager
+   * @prarm opts the options
    */
-  static solver* mk_solver(std::string id, expr::term_manager& tm);
+  static solver* mk_solver(std::string id, expr::term_manager& tm, const options& opts);
 };
 
 

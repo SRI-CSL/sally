@@ -267,8 +267,8 @@ void yices2_internal::pop() {
   yices_pop(d_ctx);
 }
 
-yices2::yices2(expr::term_manager& tm)
-: solver(tm, "yices2")
+yices2::yices2(expr::term_manager& tm, const options& opts)
+: solver(tm, "yices2", opts)
 {
   d_internal = new yices2_internal(tm);
 }

@@ -5,6 +5,8 @@
 
 #include "smt/solver.h"
 
+#include "utils/options.h"
+
 #include <iostream>
 
 
@@ -17,12 +19,13 @@ struct term_manager_with_yices_test_fixture {
 
   term_manager tm;
   solver* yices2;
+  options opts;
 
 public:
   term_manager_with_yices_test_fixture()
   : tm(true)
   {
-    yices2 = factory::mk_solver("yices2", tm);
+    yices2 = factory::mk_solver("yices2", tm, opts);
     cout << set_tm(tm);
   }
 

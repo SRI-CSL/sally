@@ -14,10 +14,20 @@ namespace smt {
 
 class yices2_internal;
 
+/**
+ * Yices SMT solver.
+ */
 class yices2 : public solver {
+
+  /** Internal yices data */
   yices2_internal* d_internal;
+
 public:
-  yices2(expr::term_manager& tm);
+
+  /** Constructor */
+  yices2(expr::term_manager& tm, const options& opts);
+
+  /** Destructor */
   ~yices2();
 
   /** Add an assertion f to the solver */

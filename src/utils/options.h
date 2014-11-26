@@ -21,10 +21,11 @@ namespace sal2 {
  */
 class options {
 
-  const boost::program_options::variables_map& d_options;
+  const boost::program_options::variables_map* d_options;
 
 public:
 
+  options();
   options(const boost::program_options::variables_map& options);
 
   /** Check whether the option is present */

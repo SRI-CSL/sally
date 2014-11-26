@@ -21,11 +21,15 @@ class generic_solver_internal;
  */
 class generic_solver : public solver {
 
+  /** Internal implementation */
   generic_solver_internal* d_internal;
 
 public:
 
-  generic_solver(expr::term_manager& tm);
+  /** Constructor */
+  generic_solver(expr::term_manager& tm, const options& opts);
+
+  /** Destructor */
   ~generic_solver();
 
   /** Add an assertion f to the solver */

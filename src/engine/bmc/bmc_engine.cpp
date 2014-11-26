@@ -18,7 +18,7 @@ bmc_engine::bmc_engine(const system::context& ctx)
 : engine(ctx)
 {
   // Make the solver
-  d_solver = smt::factory::mk_solver("generic", ctx.tm());
+  d_solver = smt::factory::mk_solver("yices2", ctx.tm(), ctx.get_options());
 }
 
 bmc_engine::~bmc_engine() {

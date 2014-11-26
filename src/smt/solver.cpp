@@ -15,12 +15,12 @@
 namespace sal2 {
 namespace smt {
 
-solver* factory::mk_solver(std::string id, expr::term_manager& tm) {
+solver* factory::mk_solver(std::string id, expr::term_manager& tm, const options& opts) {
   if (id == "yices2") {
-    return new yices2(tm);
+    return new yices2(tm, opts);
   }
   if (id == "generic") {
-    return new generic_solver(tm);
+    return new generic_solver(tm, opts);
   }
   assert(false);
   return 0;
