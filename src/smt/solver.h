@@ -8,6 +8,7 @@
 #pragma once
 
 #include "expr/term.h"
+#include "utils/exception.h"
 
 namespace sal2 {
 namespace smt {
@@ -24,7 +25,11 @@ class solver {
 
 protected:
 
+  /** The term manager for the solver */
   expr::term_manager& d_tm;
+
+  /** Name of the solver */
+  std::string d_name;
 
 public:
 
@@ -35,8 +40,9 @@ public:
   };
 
   /** Construct with the given term manager */
-  solver(expr::term_manager& tm)
+  solver(expr::term_manager& tm, std::string name)
   : d_tm(tm)
+  , d_name(name)
   {}
 
   virtual
@@ -52,19 +58,27 @@ public:
 
   /** Push a context */
   virtual
-  void push() = 0;
+  void push() {
+    throw exception("push() not supported by solver " + d_name);
+  }
 
   /** Pop a context */
   virtual
-  void pop() = 0;
+  void pop() {
+    throw exception("pop() not supported by solver " + d_name);
+  }
 
   /** Generalize a satisfiable answer */
   virtual
-  expr::term_ref generalize() = 0;
+  expr::term_ref generalize() {
+    throw exception("generalize() not supported by solver " + d_name);
+  }
 
   /** Interpolate an unsatisfiable answer */
   virtual
-  void interpolate(std::vector<expr::term_ref>& ) = 0;
+  void interpolate(std::vector<expr::term_ref>& ) {
+    throw exception("interpolate() not supported by solver " + d_name);
+  };
 };
 
 std::ostream& operator << (std::ostream& out, solver::result result);

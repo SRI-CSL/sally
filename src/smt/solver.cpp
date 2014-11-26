@@ -7,6 +7,7 @@
 
 #include "smt/solver.h"
 #include "smt/yices2.h"
+#include "smt/smt2_solver.h"
 
 #include <cassert>
 #include <iostream>
@@ -15,15 +16,15 @@ namespace sal2 {
 namespace smt {
 
 solver* factory::mk_solver(std::string id, expr::term_manager& tm) {
-  solver* new_solver = 0;
-
   if (id == "yices2") {
-    new_solver= new yices2(tm);
-  } else {
-    assert(false);
+    return new yices2(tm);
+  }
+  if (id == "smt2_solver") {
+    return new smt2_solver(tm);
   }
 
-  return new_solver;
+  assert(false);
+  return 0;
 }
 
 std::ostream& operator << (std::ostream& out, solver::result result) {

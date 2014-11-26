@@ -268,7 +268,7 @@ void yices2_internal::pop() {
 }
 
 yices2::yices2(expr::term_manager& tm)
-: solver(tm)
+: solver(tm, "yices2")
 {
   d_internal = new yices2_internal(tm);
 }
