@@ -1,2 +1,2 @@
-add_library(smt solver.cpp yices2.cpp smt2_solver.cpp)
+add_library(smt solver.cpp yices2.cpp generic_solver.cpp)
 

@@ -7,7 +7,7 @@
 
 #include "smt/solver.h"
 #include "smt/yices2.h"
-#include "smt/smt2_solver.h"
+#include "smt/generic_solver.h"
 
 #include <cassert>
 #include <iostream>
@@ -19,10 +19,9 @@ solver* factory::mk_solver(std::string id, expr::term_manager& tm) {
   if (id == "yices2") {
     return new yices2(tm);
   }
-  if (id == "smt2_solver") {
-    return new smt2_solver(tm);
+  if (id == "generic") {
+    return new generic_solver(tm);
   }
-
   assert(false);
   return 0;
 }

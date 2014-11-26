@@ -13,6 +13,8 @@
 #include <vector>
 #include <boost/unordered_map.hpp>
 
+#include <iosfwd>
+
 namespace sal2 {
 namespace expr {
 
@@ -183,12 +185,16 @@ struct set_tm {
 };
 
 /** IO manipulator to set the term manager on the stream */
-inline
-std::ostream& operator << (std::ostream& out, const set_tm& stm) {
-  output::set_term_manager(out, stm.d_tm);
-  return out;
-}
+std::ostream& operator << (std::ostream& out, const set_tm& stm);
 
+/** IO modifier to set the output language */
+struct set_output_language {
+  output::language d_lang;
+  set_output_language(output::language lang): d_lang(lang) {}
+};
+
+/** IO manipulator to set the output language on the stream */
+std::ostream& operator << (std::ostream& out, const set_output_language& stm);
 
 }
 }

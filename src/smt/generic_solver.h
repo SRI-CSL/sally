@@ -14,19 +14,19 @@
 namespace sal2 {
 namespace smt {
 
-class smt2_solver_internal;
+class generic_solver_internal;
 
 /**
  * A generic solver that we interact through SMT2 file interface.
  */
-class smt2_solver : public solver {
+class generic_solver : public solver {
 
-  smt2_solver_internal* d_internal;
+  generic_solver_internal* d_internal;
 
 public:
 
-  smt2_solver(expr::term_manager& tm);
-  ~smt2_solver();
+  generic_solver(expr::term_manager& tm);
+  ~generic_solver();
 
   /** Add an assertion f to the solver */
   void add(expr::term_ref f);

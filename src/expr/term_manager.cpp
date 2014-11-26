@@ -8,8 +8,8 @@
 #include "expr/term_manager.h"
 #include "expr/term_manager_internal.h"
 
-using namespace sal2;
-using namespace expr;
+namespace sal2 {
+namespace expr {
 
 term_manager::term_manager(bool typecheck)
 : d_tm(new term_manager_internal(typecheck))
@@ -212,4 +212,17 @@ void term_manager::get_variables(term_ref ref, std::set<term_ref>& out) const {
 term_ref term_manager::substitute(term_ref t, const substitution_map& subst) {
   substitution_map subst_copy(subst);
   return d_tm->substitute(t, subst_copy);
+}
+
+std::ostream& operator << (std::ostream& out, const set_tm& stm) {
+  output::set_term_manager(out, stm.d_tm);
+  return out;
+}
+
+std::ostream& operator << (std::ostream& out, const set_output_language& stm) {
+  output::set_output_language(out, stm.d_lang);
+  return out;
+}
+
+}
 }
