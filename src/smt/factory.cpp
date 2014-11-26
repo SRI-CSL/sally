@@ -20,13 +20,16 @@ public:
 /** Map from id's to engine information */
 static solver_data s_solver_data;
 
-std::string factory::s_default_solver("yices2");
+std::string factory::s_default_solver;
 
 void factory::set_default_solver(std::string id) {
   s_default_solver = id;
 }
 
 solver* factory::mk_default_solver(expr::term_manager& tm, const options& opts) {
+  if (s_default_solver.size() == 0) {
+    throw exception("No default solver set.");
+  }
   return mk_solver(s_default_solver, tm, opts);
 }
 

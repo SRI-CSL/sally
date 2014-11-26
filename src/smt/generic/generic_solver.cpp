@@ -104,6 +104,11 @@ public:
     }
     std::string solver_script = opts.get_string("generic-solver-script");
 
+    if (!opts.has_option("generic-solver-logic")) {
+      throw exception("Use the 'generic-solver-logic' option to specify the SMT2 logic to use.");
+    }
+    std::string solver_logic = opts.get_string("generic-solver-logic");
+
     // Should we log the interaction
     bool solver_log_enabled = opts.has_option("generic-solver-log");
     std::string solver_log;
@@ -182,9 +187,8 @@ public:
     *d_solver_input << expr::set_output_language(output::SMTLIB);
 
     // SMT2 preamble
-    std::string logic = "QF_LRA"; // TODO: what goes here?
     *d_solver_input << "(set-info :smt-lib-version 2.0)" << std::endl;
-    *d_solver_input << "(set-logic " << logic << ")" << std::endl;
+    *d_solver_input << "(set-logic " << solver_logic << ")" << std::endl;
   }
 
   ~generic_solver_internal() {
