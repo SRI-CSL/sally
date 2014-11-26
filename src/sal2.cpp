@@ -13,7 +13,7 @@
 #include "system/context.h"
 #include "parser/parser.h"
 #include "engine/factory.h"
-
+#include "smt/factory.h"
 
 using namespace std;
 using namespace boost::program_options;
@@ -48,6 +48,11 @@ int main(int argc, char* argv[]) {
 
   // Create the context
   system::context ctx(tm, opts);
+
+  // Set the default solver for the solver factory
+  if (opts.has_option("solver")) {
+    smt::factory::set_default_solver(opts.get_string("solver"));
+  }
 
   // Create the engine
   engine* engine_to_use = 0;
@@ -113,6 +118,19 @@ std::string get_engines_list() {
   return out.str();
 }
 
+std::string get_solvers_list() {
+  std::vector<string> solvers;
+  smt::factory::get_solvers(solvers);
+  std::stringstream out;
+  out << "The SMT solver to use: ";
+  for (size_t i = 0; i < solvers.size(); ++ i) {
+    if (i) { out << ", "; }
+    out << solvers[i];
+  }
+  return out.str();
+}
+
+
 void parseOptions(int argc, char* argv[], variables_map& variables)
 {
   // Define the main options
@@ -123,10 +141,14 @@ void parseOptions(int argc, char* argv[], variables_map& variables)
       ("input,i", value<vector<string> >()->required(), "A problem to solve.")
       ("parse-only", "Just parse, don't solve.")
       ("engine", value<string>(), get_engines_list().c_str())
+      ("solver", value<string>(), get_solvers_list().c_str())
       ;
 
   // Get the individual engine options
   factory::setup_options(description);
+
+  // Get the individual solver options
+  smt::factory::setup_options(description);
 
   // The input files can be positional
   positional_options_description positional;

@@ -1,5 +1,5 @@
 # Find the Boost unit test library
-find_package(Boost 1.36.0 COMPONENTS unit_test_framework iostreams REQUIRED)
+find_package(Boost 1.36.0 COMPONENTS unit_test_framework iostreams program_options REQUIRED)
 
 # The binary
 ADD_DEFINITIONS(-DBOOST_TEST_DYN_LINK) 

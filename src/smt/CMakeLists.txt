@@ -1,2 +1,7 @@
-add_library(smt solver.cpp yices2.cpp generic_solver.cpp)
+add_library(smt 
+  solver.cpp
+  factory.cpp 
+  yices2/yices2.cpp 
+  generic/generic_solver.cpp
+)
 

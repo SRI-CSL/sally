@@ -7,10 +7,9 @@
 
 #include "expr/term.h"
 #include "expr/term_manager.h"
+#include "smt/yices2/yices2.h"
 
 #include <boost/unordered_map.hpp>
-
-#include "smt/yices2.h"
 
 #include "yices.h"
 
@@ -19,9 +18,14 @@ namespace smt {
 
 class yices2_internal {
 
+  /** The term manager */
   expr::term_manager& d_tm;
 
-  static int instances;
+  /** Options */
+  const options& d_opts;
+
+  /** Number of yices instances */
+  static int s_instances;
 
   type_t d_bool_type;
   type_t d_int_type;
@@ -37,7 +41,7 @@ class yices2_internal {
 
 public:
 
-  yices2_internal(expr::term_manager& tm);
+  yices2_internal(expr::term_manager& tm, const options& opts);
   ~yices2_internal();
 
   term_t to_yices2_term(expr::term_ref ref);
@@ -51,16 +55,17 @@ public:
   void pop();
 };
 
-int yices2_internal::instances = 0;
+int yices2_internal::s_instances = 0;
 
-yices2_internal::yices2_internal(expr::term_manager& tm)
+yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
 : d_tm(tm)
+, d_opts(opts)
 {
   // Initialize
-  if (instances == 0) {
+  if (s_instances == 0) {
     yices_init();
   }
-  instances ++;
+  s_instances ++;
 
   // The basic types
   d_bool_type = yices_bool_type();
@@ -77,8 +82,8 @@ yices2_internal::~yices2_internal() {
   yices_free_context(d_ctx);
 
   // Cleanup if the last one
-  instances--;
-  if (instances == 0) {
+  s_instances--;
+  if (s_instances == 0) {
     yices_exit();
   }
 }
@@ -268,9 +273,9 @@ void yices2_internal::pop() {
 }
 
 yices2::yices2(expr::term_manager& tm, const options& opts)
-: solver(tm, "yices2", opts)
+: solver("yices2", tm, opts)
 {
-  d_internal = new yices2_internal(tm);
+  d_internal = new yices2_internal(tm, opts);
 }
 
 yices2::~yices2() {

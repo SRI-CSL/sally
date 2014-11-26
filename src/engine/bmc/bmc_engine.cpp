@@ -7,7 +7,7 @@
 
 #include "engine/bmc/bmc_engine.h"
 
-#include "smt/solver.h"
+#include "smt/factory.h"
 
 #include <sstream>
 
@@ -18,7 +18,7 @@ bmc_engine::bmc_engine(const system::context& ctx)
 : engine(ctx)
 {
   // Make the solver
-  d_solver = smt::factory::mk_solver("yices2", ctx.tm(), ctx.get_options());
+  d_solver = smt::factory::mk_default_solver(ctx.tm(), ctx.get_options());
 }
 
 bmc_engine::~bmc_engine() {

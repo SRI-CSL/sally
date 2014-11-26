@@ -15,17 +15,27 @@ namespace sal2 {
 namespace smt {
 
 /**
+ * The context needed to create a solver.
+ */
+struct solver_context {
+  expr::term_manager& tm;
+  const options& opts;
+  solver_context(expr::term_manager& tm, const options& opts)
+  : tm(tm), opts(opts) {}
+};
+
+/**
  * SMT solver interface for solving queries.
  */
 class solver {
 
 protected:
 
-  /** The term manager for the solver */
-  expr::term_manager& d_tm;
-
   /** Name of the solver */
   std::string d_name;
+
+  /** The term manager for the solver */
+  expr::term_manager& d_tm;
 
   /** The options */
   const options& d_opts;
@@ -44,10 +54,17 @@ public:
   };
 
   /** Construct with the given term manager */
-  solver(expr::term_manager& tm, std::string name, const options& opts)
-  : d_tm(tm)
-  , d_name(name)
+  solver(std::string name, expr::term_manager& tm, const options& opts)
+  : d_name(name)
+  , d_tm(tm)
   , d_opts(opts)
+  {}
+
+  /** Construct with the given context */
+  solver(std::string name, const solver_context& ctx)
+  : d_name(name)
+  , d_tm(ctx.tm)
+  , d_opts(ctx.opts)
   {}
 
   virtual
@@ -100,22 +117,6 @@ public:
   void push() { d_solver->push(); d_pushes ++; }
   void pop() { d_solver->pop(); }
 };
-
-/**
- * Factory for creating SMT solvers.
- */
-class factory {
-public:
-  /**
-   * Create a solver.
-   * @param id id of the solver
-   * @param tm the term manager
-   * @prarm opts the options
-   */
-  static solver* mk_solver(std::string id, expr::term_manager& tm, const options& opts);
-};
-
-
 
 }
 }

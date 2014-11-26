@@ -3,7 +3,7 @@
 #include "expr/term.h"
 #include "expr/term_manager.h"
 
-#include "smt/solver.h"
+#include "smt/factory.h"
 
 #include "utils/options.h"
 

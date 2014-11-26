@@ -6,11 +6,11 @@
  */
 
 #include "expr/term_manager.h"
+#include "smt/generic/generic_solver.h"
 
 #include <boost/iostreams/stream.hpp>
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/tee.hpp>
-#include <smt/generic_solver.h>
 
 #include <fstream>
 #include <iostream>
@@ -98,6 +98,22 @@ public:
   , d_solver_input(0)
   , d_options(opts)
   {
+    // The solver to run
+    if (!opts.has_option("generic-solver-script")) {
+      throw exception("Use the 'generic-solver-script' option to specify the solver.");
+    }
+    std::string solver_script = opts.get_string("generic-solver-script");
+
+    // Should we log the interaction
+    bool solver_log_enabled = opts.has_option("generic-solver-log");
+    std::string solver_log;
+    if (solver_log_enabled) {
+      std::stringstream ss;
+      ss << opts.get_string("generic-solver-log");
+      ss << "." << s_instances << ".smt2";
+      solver_log = ss.str();
+    }
+
     // One more instance
     s_instances ++;
 
@@ -130,10 +146,10 @@ public:
       dup2(solver_to_sal_fds[1], 1);
 
       // Run the actual solver
-      char* const args[3] = { strdup("yices_smt2"), strdup("--incremental"), 0 };
-      execvp("/home/dejan/workspace/yices2/build/x86_64-unknown-linux-gnu-release/bin/yices_smt2", args);
+      char* const args[3] = { strdup(solver_script.c_str()), 0 };
+      execvp(solver_script.c_str(), args);
       // We're in child, on this error just exit
-      std::cerr << "failed to execute" << std::endl;
+      std::cerr << "failed to execute " << solver_script << "." << std::endl;
       exit(1);
     }
 
@@ -144,9 +160,9 @@ public:
     // Where we write SMT2 to the solver
     d_solver_input_fd = new fd_write_stream(sal_to_solver_fds[1], boost::iostreams::close_handle);
 
-    if (true) {
+    if (solver_log_enabled) {
       // Where the SMT2 copy goes
-      d_copy_out = new std::ofstream("copy.smt2");
+      d_copy_out = new std::ofstream(solver_log.c_str());
       // Make the device to tee to
       d_solver_input_tee_device = new tee_device(*d_solver_input_fd, *d_copy_out);
       // Where we write to get the double output
@@ -236,7 +252,7 @@ public:
 unsigned generic_solver_internal::s_instances = 0;
 
 generic_solver::generic_solver(expr::term_manager& tm, const options& opts)
-: solver(tm, "generic smt2 solver", opts)
+: solver("generic smt2 solver", tm, opts)
 {
   d_internal = new generic_solver_internal(tm, opts);
 }

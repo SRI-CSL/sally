@@ -9,7 +9,9 @@
 
 #include "engine/engine.h"
 
-#include <boost/program_options/options_description.hpp>
+namespace boost { namespace program_options {
+  class options_description;
+}}
 
 namespace sal2 {
 

@@ -9,7 +9,7 @@
 
 #include "engine/kind/kind_engine.h"
 
-#include <boost/program_options/options_description.hpp>
+#include <boost/program_options.hpp>
 
 namespace sal2 {
 namespace kind {
