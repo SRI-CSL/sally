@@ -31,7 +31,7 @@ find_library(GMP_LIBRARY gmp)
 if (GMP_LIBRARY)
   message(STATUS "GMP library: " ${GMP_LIBRARY})
 else()
-  MESSAGE(FATAL_ERROR "Could not the GMP number library (sudo apt-get libgmp-dev)")
+  MESSAGE(FATAL_ERROR "Could not the GMP number library (sudo apt-get install libgmp-dev)")
 endif()
 
 # Find Yices
