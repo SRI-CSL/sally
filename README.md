@@ -6,23 +6,34 @@ In order to compile SAL you will need the following
 
 * A reasonable c++ compiler such as g++ or clang
 
+    ```
     sudo apt-get install g++
+    ```
 
 * The CMake build system 
 
+    ```
     sudo apt-get install cmake
+    ```
+
 
 * The GMP library
 
+    ```
     sudo apt-get install libgmp-dev
+    ```
 
 * Some Boost libraries
 
+    ```
     sudo apt-get install libboost-program-options-dev libboost-iostreams-dev libboost-test-dev
+    ```
     
 * A working Java runtime 
 
+    ```
     sudo apt-get install default-jre
+    ```
 
 ## How to Compile
 
