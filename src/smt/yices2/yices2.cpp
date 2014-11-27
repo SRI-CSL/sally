@@ -74,6 +74,9 @@ yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
 
   // The context
   d_ctx = yices_new_context(NULL);
+  if (d_ctx == 0) {
+    throw exception("Yices error (context creation).");
+  }
 }
 
 yices2_internal::~yices2_internal() {
@@ -231,7 +234,10 @@ term_t yices2_internal::to_yices2_term(expr::term_ref ref) {
     assert(false);
   }
 
-  assert (result != NULL_TERM);
+  if (result < 0) {
+    throw exception("Yices error (term creation)");
+  }
+
   d_term_cache[ref] = result;
 
   return result;
@@ -245,7 +251,10 @@ void yices2_internal::add(expr::term_ref ref) {
   expr::term_ref_strong ref_strong(d_tm, ref);
   d_assertions.push_back(ref_strong);
   term_t yices_term = to_yices2_term(ref);
-  yices_assert_formula(d_ctx, yices_term);
+  int ret = yices_assert_formula(d_ctx, yices_term);
+  if (ret < 0) {
+    throw exception("Yices error (add).");
+  }
 }
 
 solver::result yices2_internal::check() {
@@ -259,17 +268,25 @@ solver::result yices2_internal::check() {
     return solver::SAT;
   } else if (status == STATUS_UNSAT) {
     return solver::UNSAT;
-  } else {
+  } else if (status == STATUS_UNKNOWN) {
     return solver::UNKNOWN;
+  } else {
+    throw exception("Yices error (check).");
   }
 }
 
 void yices2_internal::push() {
-  yices_push(d_ctx);
+  int ret = yices_push(d_ctx);
+  if (ret < 0) {
+    throw exception("Yices error (push).");
+  }
 }
 
 void yices2_internal::pop() {
-  yices_pop(d_ctx);
+  int ret = yices_pop(d_ctx);
+  if (ret < 0) {
+    throw exception("Yices error (pop).");
+  }
 }
 
 yices2::yices2(expr::term_manager& tm, const options& opts)

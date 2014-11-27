@@ -243,6 +243,9 @@ public:
     // Pop the solver
     *d_solver_input << "(pop 1)" << std::endl;
     // Forget all the variables declared since last push
+    if (d_vars_list_size.size() == 0) {
+      throw exception("Calls to push/pop don't match.");
+    }
     size_t size = d_vars_list_size.back();
     d_vars_list_size.pop_back();
     while (d_vars_list.size() > size) {

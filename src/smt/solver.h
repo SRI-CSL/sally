@@ -115,7 +115,7 @@ public:
   solver_scope(solver* s): d_pushes(0), d_solver(s) {}
   ~solver_scope() { while (d_pushes-- > 0) { d_solver->pop(); } }
   void push() { d_solver->push(); d_pushes ++; }
-  void pop() { d_solver->pop(); }
+  void pop() { d_solver->pop(); d_pushes --; }
 };
 
 }
