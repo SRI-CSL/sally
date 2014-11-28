@@ -61,7 +61,7 @@ public:
     return d_transition_relation[i]->get_formula();
   }
 
-  /** Get the whole transition relation (conjunction) */
+  /** Get the whole transition relation (disjunction) */
   expr::term_ref get_transition_relation() const;
 
   /** Print it to the stream */

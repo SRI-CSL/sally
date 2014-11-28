@@ -29,6 +29,9 @@ std::ostream& operator << (std::ostream& out, const transition_system& T) {
 }
 
 expr::term_ref transition_system::get_transition_relation() const {
+  if (d_transition_relation.size() == 0) {
+    return d_state_type->tm().mk_boolean_constant(false);
+  }
   std::vector<expr::term_ref> transitions;
   for (size_t i = 0; i < d_transition_relation.size(); ++ i) {
     transitions.push_back(d_transition_relation[i]->get_formula());
@@ -36,7 +39,7 @@ expr::term_ref transition_system::get_transition_relation() const {
   if (transitions.size() == 1) {
     return transitions[0];
   } else {
-    return d_state_type->tm().mk_term(expr::TERM_AND, transitions);
+    return d_state_type->tm().mk_term(expr::TERM_OR, transitions);
   }
 }
 
