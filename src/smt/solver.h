@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include "smt/model.h"
 #include "expr/term.h"
 #include "utils/exception.h"
 #include "utils/options.h"
@@ -77,6 +78,12 @@ public:
   /** Check for satisfiability */
   virtual
   result check() = 0;
+
+  /** Get the model */
+  virtual
+  void get_model(model& m) {
+    throw exception("get_model() not supported by solver " + d_name);
+  }
 
   /** Push a context */
   virtual

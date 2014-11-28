@@ -5,13 +5,14 @@
  *      Author: dejan
  */
 
-#include "expr/term.h"
-#include "expr/term_manager.h"
-#include "smt/yices2/yices2.h"
-
+#include <gmp.h>
+#include <yices.h>
 #include <boost/unordered_map.hpp>
 
-#include "yices.h"
+#include "expr/term.h"
+#include "expr/term_manager.h"
+#include "expr/rational.h"
+#include "smt/yices2/yices2.h"
 
 namespace sal2 {
 namespace smt {
@@ -27,17 +28,31 @@ class yices2_internal {
   /** Number of yices instances */
   static int s_instances;
 
+  /** Yices boolean type */
   type_t d_bool_type;
+
+  /** Yices integer type */
   type_t d_int_type;
+
+  /** Yices real type */
   type_t d_real_type;
 
+  /** The yices context */
   context_t *d_ctx;
 
+  /** All assertions we have in context (strong) TODO: push/pop */
   std::vector<expr::term_ref_strong> d_assertions;
 
   typedef boost::unordered_map<expr::term_ref, term_t, expr::term_ref_hasher> term_cache;
 
+  /** The map from terms to yices terms */
   term_cache d_term_cache;
+
+  /** List of variables, for model construction */
+  std::vector<expr::term_ref> d_variables;
+
+  /** Last check return */
+  smt_status_t d_last_check_status;
 
 public:
 
@@ -51,6 +66,7 @@ public:
 
   void add(expr::term_ref ref);
   solver::result check();
+  void get_model(model& m);
   void push();
   void pop();
 };
@@ -60,6 +76,7 @@ int yices2_internal::s_instances = 0;
 yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
 : d_tm(tm)
 , d_opts(opts)
+, d_last_check_status(STATUS_UNKNOWN)
 {
   // Initialize
   if (s_instances == 0) {
@@ -199,6 +216,8 @@ term_t yices2_internal::to_yices2_term(expr::term_ref ref) {
   case expr::VARIABLE:
     result = yices_new_uninterpreted_term(to_yices2_type(t[0]));
     yices_set_term_name(result, d_tm.get_variable_name(t).c_str());
+    // Remember, for model construction
+    d_variables.push_back(ref);
     break;
   case expr::CONST_BOOL:
     result = d_tm.get_boolean_constant(t) ? yices_true() : yices_false();
@@ -258,21 +277,79 @@ void yices2_internal::add(expr::term_ref ref) {
 }
 
 solver::result yices2_internal::check() {
-  smt_status_t status = yices_check_context(d_ctx, 0);
-  if (status == STATUS_SAT) {
-    if (output::get_verbosity(std::cout) > 1) {
-      model_t *model = yices_get_model(d_ctx, 1);
-      yices_print_model(stdout, model);
-      yices_free_model(model);
-    }
+  d_last_check_status = yices_check_context(d_ctx, 0);
+  if (d_last_check_status == STATUS_SAT) {
     return solver::SAT;
-  } else if (status == STATUS_UNSAT) {
+  } else if (d_last_check_status == STATUS_UNSAT) {
     return solver::UNSAT;
-  } else if (status == STATUS_UNKNOWN) {
+  } else if (d_last_check_status == STATUS_UNKNOWN) {
     return solver::UNKNOWN;
   } else {
     throw exception("Yices error (check).");
   }
+}
+
+void yices2_internal::get_model(model& m) {
+  assert(d_last_check_status == STATUS_SAT);
+
+  // Clear any data already there
+  m.clear();
+
+  // Get the model from yices
+  model_t* yices_model = yices_get_model(d_ctx, true);
+
+  for (size_t i = 0; i < d_variables.size(); ++ i) {
+    expr::term_ref var = d_variables[i];
+    term_t yices_var = d_term_cache[var];
+    expr::term_ref var_type = d_tm.type_of(var);
+
+    expr::term_ref var_value;
+    switch (d_tm.term_of(var_type).op()) {
+    case expr::TYPE_BOOL: {
+      int32_t value;
+      yices_get_bool_value(yices_model, yices_var, &value);
+      var_value = d_tm.mk_boolean_constant(value);
+      break;
+    }
+    case expr::TYPE_INTEGER: {
+      // The integer mpz_t value
+      mpz_t value;
+      mpz_init(value);
+      yices_get_mpz_value(yices_model, yices_var, value);
+      // The rational mpq_t value
+      mpq_t value_q;
+      mpq_init(value_q);
+      mpq_set_z(value_q, value);
+      // Now, the rational
+      expr::rational rational_value(value_q);
+      var_value = d_tm.mk_rational_constant(rational_value);;
+      // Clear the temps
+      mpq_clear(value_q);
+      mpz_clear(value);
+      break;
+    }
+    case expr::TYPE_REAL: {
+      // The integer mpz_t value
+      mpq_t value;
+      mpq_init(value);
+      yices_get_mpq_value(yices_model, yices_var, value);
+      // Now, the rational
+      expr::rational rational_value(value);
+      var_value = d_tm.mk_rational_constant(rational_value);;
+      // Clear the temps
+      mpq_clear(value);
+      break;
+    }
+    default:
+      assert(false);
+    }
+
+    // Add the association
+    m.set_value(var, var_value);
+  }
+
+  // Free the yices model
+  yices_free_model(yices_model);
 }
 
 void yices2_internal::push() {
@@ -305,6 +382,10 @@ void yices2::add(expr::term_ref f) {
 
 solver::result yices2::check() {
   return d_internal->check();
+}
+
+void yices2::get_model(model& m) const {
+  d_internal->get_model(m);
 }
 
 void yices2::push() {

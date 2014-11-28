@@ -36,6 +36,9 @@ public:
   /** Check the assertions for satisfiability */
   result check();
 
+  /** Get the model */
+  void get_model(model& m) const;
+
   /** Push the solving context */
   void push();
 
