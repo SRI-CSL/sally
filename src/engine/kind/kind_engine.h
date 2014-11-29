@@ -33,18 +33,6 @@ class kind_engine : public engine {
   /** SMT solver for proving (2) */
   smt::solver* d_solver_2;
 
-  /** The type of the state variables */
-  expr::term_ref d_state_type;
-
-  /** Unrolling state variables */
-  std::vector<expr::term_ref_strong> d_state_variables;
-
-  /** Returns state variabels for state k */
-  expr::term_ref state_variables(unsigned k, expr::term_ref type);
-
-  /** Replace the variabels in f from 'from' to 'to' */
-  expr::term_ref replace_vars(expr::term_ref f, expr::term_ref from, expr::term_ref to);
-
 public:
 
   kind_engine(const system::context& ctx);

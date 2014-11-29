@@ -37,7 +37,7 @@ public:
   result check();
 
   /** Get the model */
-  void get_model(model& m) const;
+  void get_model(expr::model& m) const;
 
   /** Push the solving context */
   void push();

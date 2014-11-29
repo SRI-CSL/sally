@@ -7,8 +7,8 @@
 
 #pragma once
 
-#include "smt/model.h"
 #include "expr/term.h"
+#include "expr/model.h"
 #include "utils/exception.h"
 #include "utils/options.h"
 
@@ -81,7 +81,7 @@ public:
 
   /** Get the model */
   virtual
-  void get_model(model& m) {
+  void get_model(expr::model& m) {
     throw exception("get_model() not supported by solver " + d_name);
   }
 

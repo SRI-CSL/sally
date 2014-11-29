@@ -8,6 +8,7 @@
 #include "engine/kind/kind_engine.h"
 
 #include "smt/factory.h"
+#include "system/state_trace.h"
 
 #include <sstream>
 
@@ -25,36 +26,6 @@ kind_engine::kind_engine(const system::context& ctx)
 kind_engine::~kind_engine() {
   delete d_solver_1;
   delete d_solver_2;
-}
-
-expr::term_ref kind_engine::state_variables(unsigned k, expr::term_ref type) {
-  // Make sure we're using the right variables
-  if (d_state_type != type) {
-    d_state_variables.clear();
-    d_state_type = type;
-  }
-  // Ensure we have enough
-  while (d_state_variables.size() <= k) {
-    std::stringstream ss;
-    ss << "s" << d_state_variables.size();
-    expr::term_ref var = tm().mk_variable(ss.str(), type);
-    d_state_variables.push_back(expr::term_ref_strong(tm(), var));
-  }
-  // Return the variable
-  return d_state_variables[k];
-}
-
-expr::term_ref kind_engine::replace_vars(expr::term_ref f, expr::term_ref from, expr::term_ref to) {
-  // Setup the substitution map
-  expr::term_manager::substitution_map subst;
-  std::vector<expr::term_ref> from_vars;
-  std::vector<expr::term_ref> to_vars;
-  tm().get_variables(from, from_vars);
-  tm().get_variables(to, to_vars);
-  for (size_t i = 0; i < from_vars.size(); ++ i) {
-    subst[from_vars[i]] = to_vars[i];
-  }
-  return tm().substitute(f, subst);
 }
 
 kind_engine::result kind_engine::query(const system::transition_system& ts, const system::state_formula* sf) {
@@ -76,21 +47,18 @@ kind_engine::result kind_engine::query(const system::transition_system& ts, cons
 
   */
 
+  // Scopes for solver push/pop
   smt::solver_scope scope1(d_solver_1);
   smt::solver_scope scope2(d_solver_2);
   scope1.push();
   scope2.push();
 
-  // The state type
-  expr::term_ref type = ts.get_state_type()->get_type();
-
-  // The state vars
-  expr::term_ref current_state_var = ts.get_state_type()->get_state(system::state_type::STATE_CURRENT);
-  expr::term_ref next_state_var = ts.get_state_type()->get_state(system::state_type::STATE_NEXT);
+  // The trace we're building
+  system::state_trace trace(ts.get_state_type());
 
   // Initial states go to solver 1
   expr::term_ref initial_states = ts.get_initial_states();
-  d_solver_1->add(replace_vars(initial_states, current_state_var, state_variables(0, type)));
+  d_solver_1->add(trace.get_state_formula(initial_states, 0));
 
   // Transition formula
   expr::term_ref transition_fromula = ts.get_transition_relation();
@@ -107,9 +75,12 @@ kind_engine::result kind_engine::query(const system::transition_system& ts, cons
       std::cout << "K-Inductino: checking intialization " << k << std::endl;
     }
 
+    // Negataed property at k
+    expr::term_ref property_not_k = trace.get_state_formula(property_not, k);
+
     // Check the current unrolling (1)
     scope1.push();
-    d_solver_1->add(replace_vars(property_not, current_state_var, state_variables(k, type)));
+    d_solver_1->add(property_not_k);
     smt::solver::result r_1 = d_solver_1->check();
 
     if (output::get_verbosity(std::cout) > 0) {
@@ -144,7 +115,7 @@ kind_engine::result kind_engine::query(const system::transition_system& ts, cons
     // Check the current unrolling (2)
     if (k > 0) {
       scope2.push();
-      d_solver_2->add(replace_vars(property_not, current_state_var, state_variables(k, type)));
+      d_solver_2->add(property_not_k);
       smt::solver::result r_2 = d_solver_2->check();
 
       if (output::get_verbosity(std::cout) > 0) {
@@ -171,9 +142,8 @@ kind_engine::result kind_engine::query(const system::transition_system& ts, cons
     }
 
     // Unroll once more
-    expr::term_ref transition_k = replace_vars(transition_fromula, current_state_var, state_variables(k, type));
-    transition_k = replace_vars(transition_k, next_state_var, state_variables(k+1, type));
-    expr::term_ref property_k = replace_vars(property, current_state_var, state_variables(k, type));
+    expr::term_ref property_k = trace.get_state_formula(property, k);
+    expr::term_ref transition_k = trace.get_transition_formula(transition_fromula, k, k+1);
 
     // For (1) just add the transition
     d_solver_1->add(transition_k);

@@ -13,7 +13,7 @@
 #include <vector>
 
 namespace sal2 {
-namespace smt {
+namespace expr {
 
 class model {
 

@@ -5,10 +5,10 @@
  *      Author: dejan
  */
 
-#include "smt/model.h"
+#include "expr/model.h"
 
 namespace sal2 {
-namespace smt {
+namespace expr {
 
 model::model(expr::term_manager& tm)
 : d_term_manager(tm)

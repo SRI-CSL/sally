@@ -66,7 +66,7 @@ public:
 
   void add(expr::term_ref ref);
   solver::result check();
-  void get_model(model& m);
+  void get_model(expr::model& m);
   void push();
   void pop();
 };
@@ -289,7 +289,7 @@ solver::result yices2_internal::check() {
   }
 }
 
-void yices2_internal::get_model(model& m) {
+void yices2_internal::get_model(expr::model& m) {
   assert(d_last_check_status == STATUS_SAT);
 
   // Clear any data already there
@@ -384,7 +384,7 @@ solver::result yices2::check() {
   return d_internal->check();
 }
 
-void yices2::get_model(model& m) const {
+void yices2::get_model(expr::model& m) const {
   d_internal->get_model(m);
 }
 
