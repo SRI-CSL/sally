@@ -20,8 +20,8 @@ class model {
 public:
 
   typedef std::map<expr::term_ref, expr::term_ref> variable_to_value_map;
-  typedef typename variable_to_value_map::const_iterator const_iterator;
-  typedef typename variable_to_value_map::iterator iterator;
+  typedef variable_to_value_map::const_iterator const_iterator;
+  typedef variable_to_value_map::iterator iterator;
 
   model(expr::term_manager& tm);
 

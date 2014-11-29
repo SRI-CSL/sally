@@ -22,9 +22,6 @@ class yices2_internal {
   /** The term manager */
   expr::term_manager& d_tm;
 
-  /** Options */
-  const options& d_opts;
-
   /** Number of yices instances */
   static int s_instances;
 
@@ -75,7 +72,6 @@ int yices2_internal::s_instances = 0;
 
 yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
 : d_tm(tm)
-, d_opts(opts)
 , d_last_check_status(STATUS_UNKNOWN)
 {
   // Initialize

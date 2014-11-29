@@ -99,18 +99,18 @@ public:
   , d_options(opts)
   {
     // The solver to run
-    if (!opts.has_option("generic-solver-script")) {
+    if (!d_options.has_option("generic-solver-script")) {
       throw exception("Use the 'generic-solver-script' option to specify the solver.");
     }
-    std::string solver_script = opts.get_string("generic-solver-script");
+    std::string solver_script = d_options.get_string("generic-solver-script");
 
-    if (!opts.has_option("generic-solver-logic")) {
+    if (!d_options.has_option("generic-solver-logic")) {
       throw exception("Use the 'generic-solver-logic' option to specify the SMT2 logic to use.");
     }
-    std::string solver_logic = opts.get_string("generic-solver-logic");
+    std::string solver_logic = d_options.get_string("generic-solver-logic");
 
     // Should we log the interaction
-    bool solver_log_enabled = opts.has_option("generic-solver-log");
+    bool solver_log_enabled = d_options.has_option("generic-solver-log");
     std::string solver_log;
     if (solver_log_enabled) {
       std::stringstream ss;
