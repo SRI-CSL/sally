@@ -14,13 +14,14 @@ namespace system {
 
 state_trace::state_trace(const state_type* st)
 : d_state_type(st)
+, d_model(st->tm())
 {}
 
 expr::term_manager& state_trace::tm() const {
   return d_state_type->tm();
 }
 
-expr::term_ref state_trace::get_state_variables(size_t k) {
+expr::term_ref state_trace::get_state_variable(size_t k) {
   // Ensure we have enough
   while (d_state_variables.size() <= k) {
     std::stringstream ss;
@@ -38,7 +39,7 @@ expr::term_ref state_trace::get_state_formula(expr::term_ref sf, size_t k) {
   std::vector<expr::term_ref> from_vars;
   std::vector<expr::term_ref> to_vars;
   tm().get_variables(d_state_type->get_state(state_type::STATE_CURRENT), from_vars);
-  tm().get_variables(get_state_variables(k), to_vars);
+  tm().get_variables(get_state_variable(k), to_vars);
   for (size_t i = 0; i < from_vars.size(); ++ i) {
     subst[from_vars[i]] = to_vars[i];
   }
@@ -54,14 +55,55 @@ expr::term_ref state_trace::get_transition_formula(expr::term_ref tf, size_t i, 
   std::vector<expr::term_ref> to_vars;
   tm().get_variables(d_state_type->get_state(state_type::STATE_CURRENT), from_vars);
   tm().get_variables(d_state_type->get_state(state_type::STATE_NEXT), from_vars);
-  tm().get_variables(get_state_variables(i), to_vars);
-  tm().get_variables(get_state_variables(j), to_vars);
+  tm().get_variables(get_state_variable(i), to_vars);
+  tm().get_variables(get_state_variable(j), to_vars);
   for (size_t i = 0; i < from_vars.size(); ++ i) {
     subst[from_vars[i]] = to_vars[i];
   }
   // Substitute
   return tm().substitute(tf, subst);
 }
+
+void state_trace::add_model(const expr::model& m) {
+  expr::model::const_iterator it = m.values_begin();
+  for (; it != m.values_end(); ++ it) {
+    d_model.set_value(it->first, it->second);
+  }
+}
+
+void state_trace::to_stream(std::ostream& out) const {
+
+  d_state_type->use_namespace();
+  d_state_type->use_namespace(state_type::STATE_CURRENT);
+
+  // Output the variables
+  std::vector<expr::term_ref> state_vars;
+  tm().get_variables(d_state_type->get_state(state_type::STATE_CURRENT), state_vars);
+  for (size_t i = 1; i < state_vars.size(); ++ i) {
+    out << "\t" << state_vars[i];
+  }
+  out << std::endl;
+
+  // Output the values
+  for (size_t k = 0; k < d_state_variables.size(); ++ k) {
+    state_vars.clear();
+    tm().get_variables(d_state_variables[k], state_vars);
+    out << k;
+    for (size_t i = 1; i < state_vars.size(); ++ i) {
+      out << "\t" << d_model.get_value(state_vars[i]);
+    }
+    out << std::endl;
+  }
+
+  d_state_type->tm().pop_namespace();
+  d_state_type->tm().pop_namespace();
+}
+
+std::ostream& operator << (std::ostream& out, const state_trace& trace) {
+  trace.to_stream(out);
+  return out;
+}
+
 
 }
 }

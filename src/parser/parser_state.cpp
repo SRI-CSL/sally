@@ -75,6 +75,9 @@ void parser_state::use_state_type(const system::state_type* st, system::state_ty
 
   // Pop the namespace
   tm().pop_namespace();
+  if (use_namespace) {
+    tm().pop_namespace();
+  }
 }
 
 void parser_state::push_scope() {

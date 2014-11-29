@@ -81,7 +81,7 @@ public:
 
   /** Get the model */
   virtual
-  void get_model(expr::model& m) {
+  void get_model(expr::model& m) const {
     throw exception("get_model() not supported by solver " + d_name);
   }
 

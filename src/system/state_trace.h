@@ -11,6 +11,7 @@
 #include "system/state_type.h"
 
 #include <vector>
+#include <iosfwd>
 
 namespace sal2 {
 namespace system {
@@ -23,8 +24,11 @@ class state_trace {
   /** Sequence of state variables, per step */
   std::vector<expr::term_ref_strong> d_state_variables;
 
+  /** Full model of the trace */
+  expr::model d_model;
+
   /** Returns the state variables for step k */
-  expr::term_ref get_state_variables(size_t k);
+  expr::term_ref get_state_variable(size_t k);
 
   /** Returns the term manager */
   expr::term_manager& tm() const;
@@ -45,8 +49,18 @@ public:
    */
   expr::term_ref get_transition_formula(expr::term_ref tf, size_t i, size_t j);
 
+  /**
+   * Add model to the trace.
+   */
+  void add_model(const expr::model& m);
+
+  /**
+   * Output the trace to the stream.
+   */
+  void to_stream(std::ostream& out) const;
 };
 
+std::ostream& operator << (std::ostream& out, const state_trace& trace);
 
 }
 }

@@ -32,7 +32,10 @@ void rational::to_stream(std::ostream& out) const {
     if (sgn == 0) {
       out << "0";
     } else {
-      out << "(/ ";
+      bool is_rational = !is_integer();
+      if (is_rational) {
+        out << "(/ ";
+      }
       if (sgn < 0) {
         // when printing gmp numerator skip the -, but wrap into (- )
         out << "(- " << (d_gmp_rat.get_num().get_str().c_str() + 1) << ")";
@@ -40,7 +43,9 @@ void rational::to_stream(std::ostream& out) const {
         // just regular print
         out << d_gmp_rat.get_num().get_str();
       }
-      out << " " << d_gmp_rat.get_den().get_str(10) << ")";
+      if (is_rational) {
+        out << " " << d_gmp_rat.get_den().get_str(10) << ")";
+      }
     }
     break;
   }
@@ -52,6 +57,11 @@ void rational::to_stream(std::ostream& out) const {
 std::ostream& operator << (std::ostream& out, const rational& q) {
   q.to_stream(out);
   return out;
+}
+
+bool rational::is_integer() const {
+  const mpz_class& den = d_gmp_rat.get_den();
+  return den == 1;
 }
 
 }

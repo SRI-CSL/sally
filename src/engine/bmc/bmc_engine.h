@@ -24,6 +24,9 @@ class bmc_engine : public engine {
   /** SMT solver we're using */
   smt::solver* d_solver;
 
+  /** The trace we're building */
+  system::state_trace* d_trace;
+
 public:
 
   bmc_engine(const system::context& ctx);
@@ -31,6 +34,9 @@ public:
 
   /** Query */
   result query(const system::transition_system& ts, const system::state_formula* sf);
+
+  /** Trace */
+  const system::state_trace* get_trace();
 
 };
 

@@ -65,7 +65,13 @@ void query_command::to_stream(std::ostream& out) const  {
 }
 
 void query_command::run(engine* e) const {
+  // Check the formula
   const system::transition_system* T = get_context().get_transition_system(d_system_id);
   engine::result result = e->query(*T, d_query);
   std::cout << result << std::endl;
+  // If invalid, show the trace
+  if (result == engine::INVALID && get_context().get_options().has_option("show-trace")) {
+    const system::state_trace* trace = e->get_trace();
+    std::cout << *trace << std::endl;
+  }
 }

@@ -17,6 +17,7 @@ namespace kind {
 
 kind_engine::kind_engine(const system::context& ctx)
 : engine(ctx)
+, d_trace(0)
 {
   // Make the solvers
   d_solver_1 = smt::factory::mk_default_solver(ctx.tm(), ctx.get_options());
@@ -26,6 +27,7 @@ kind_engine::kind_engine(const system::context& ctx)
 kind_engine::~kind_engine() {
   delete d_solver_1;
   delete d_solver_2;
+  delete d_trace;
 }
 
 kind_engine::result kind_engine::query(const system::transition_system& ts, const system::state_formula* sf) {
@@ -53,12 +55,13 @@ kind_engine::result kind_engine::query(const system::transition_system& ts, cons
   scope1.push();
   scope2.push();
 
-  // The trace we're building
-  system::state_trace trace(ts.get_state_type());
+  // The trace we are building
+  if (d_trace) { delete d_trace; }
+  d_trace = new system::state_trace(ts.get_state_type());
 
   // Initial states go to solver 1
   expr::term_ref initial_states = ts.get_initial_states();
-  d_solver_1->add(trace.get_state_formula(initial_states, 0));
+  d_solver_1->add(d_trace->get_state_formula(initial_states, 0));
 
   // Transition formula
   expr::term_ref transition_fromula = ts.get_transition_relation();
@@ -76,7 +79,7 @@ kind_engine::result kind_engine::query(const system::transition_system& ts, cons
     }
 
     // Negataed property at k
-    expr::term_ref property_not_k = trace.get_state_formula(property_not, k);
+    expr::term_ref property_not_k = d_trace->get_state_formula(property_not, k);
 
     // Check the current unrolling (1)
     scope1.push();
@@ -89,9 +92,12 @@ kind_engine::result kind_engine::query(const system::transition_system& ts, cons
 
     // See what happened
     switch(r_1) {
-    case smt::solver::SAT:
-      // Counterexample found
+    case smt::solver::SAT: {
+      expr::model m(tm());
+      d_solver_1->get_model(m);
+      d_trace->add_model(m);
       return INVALID;
+    }
     case smt::solver::UNKNOWN:
       return UNKNOWN;
     case smt::solver::UNSAT:
@@ -142,8 +148,8 @@ kind_engine::result kind_engine::query(const system::transition_system& ts, cons
     }
 
     // Unroll once more
-    expr::term_ref property_k = trace.get_state_formula(property, k);
-    expr::term_ref transition_k = trace.get_transition_formula(transition_fromula, k, k+1);
+    expr::term_ref property_k = d_trace->get_state_formula(property, k);
+    expr::term_ref transition_k = d_trace->get_transition_formula(transition_fromula, k, k+1);
 
     // For (1) just add the transition
     d_solver_1->add(transition_k);
@@ -158,6 +164,11 @@ kind_engine::result kind_engine::query(const system::transition_system& ts, cons
 
   return UNKNOWN;
 }
+
+const system::state_trace* kind_engine::get_trace() {
+  return d_trace;
+}
+
 
 }
 }

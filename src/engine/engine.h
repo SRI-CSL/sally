@@ -9,6 +9,7 @@
 
 #include "expr/term_manager.h"
 #include "system/context.h"
+#include "system/state_trace.h"
 
 #include <string>
 
@@ -37,10 +38,6 @@ public:
     INTERRUPTED
   };
 
-  /** Query the engine */
-  virtual
-  result query(const system::transition_system& ts, const system::state_formula* sf) = 0;
-
   /** Create the engine */
   engine(const system::context& ctx);
 
@@ -53,6 +50,13 @@ public:
   /** Returns the term manager of the engine */
   expr::term_manager& tm() const;
 
+  /** Query the engine */
+  virtual
+  result query(const system::transition_system& ts, const system::state_formula* sf) = 0;
+
+  /** Get the conter-example trace, if previous query allows it */
+  virtual
+  const system::state_trace* get_trace() = 0;
 };
 
 std::ostream& operator << (std::ostream& out, engine::result result);

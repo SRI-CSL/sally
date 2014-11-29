@@ -48,6 +48,9 @@ public:
   /** Comparison */
   bool operator == (const rational& q) const { return this->cmp(q) == 0; }
 
+  /** Returns true if it's an integer */
+  bool is_integer() const;
+
   const mpq_class& mpq() const {
     return d_gmp_rat;
   }

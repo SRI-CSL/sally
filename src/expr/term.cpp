@@ -122,11 +122,13 @@ void term::to_stream_smt(std::ostream& out, const term_manager_internal& tm) con
     out << ")";
     break;
   }
-  case VARIABLE:
+  case VARIABLE: {
+    std::string name = tm.payload_of<std::string>(*this);
+    name = tm.namespace_normalize(name);
     if (size() == 1) {
-      out << tm.payload_of<std::string>(*this);
+      out << name;
     } else {
-      out << "[" << tm.payload_of<std::string>(*this) << ":";
+      out << "[" << name << ":";
       // The variables of the struct
       for (size_t i = 1; i < size(); ++ i) {
         out << " " << this->operator [](i);
@@ -134,6 +136,7 @@ void term::to_stream_smt(std::ostream& out, const term_manager_internal& tm) con
       out << "]";
     }
     break;
+  }
   case CONST_BOOL:
     out << (tm.payload_of<bool>(*this) ? "true" : "false");
     break;

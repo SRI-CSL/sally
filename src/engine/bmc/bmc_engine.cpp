@@ -16,6 +16,7 @@ namespace bmc {
 
 bmc_engine::bmc_engine(const system::context& ctx)
 : engine(ctx)
+, d_trace(0)
 {
   // Make the solver
   d_solver = smt::factory::mk_default_solver(ctx.tm(), ctx.get_options());
@@ -23,6 +24,7 @@ bmc_engine::bmc_engine(const system::context& ctx)
 
 bmc_engine::~bmc_engine() {
   delete d_solver;
+  delete d_trace;
 }
 
 bmc_engine::result bmc_engine::query(const system::transition_system& ts, const system::state_formula* sf) {
@@ -32,11 +34,12 @@ bmc_engine::result bmc_engine::query(const system::transition_system& ts, const 
   scope.push();
 
   // The trace we are building
-  system::state_trace trace(ts.get_state_type());
+  if (d_trace) { delete d_trace; }
+  d_trace = new system::state_trace(ts.get_state_type());
 
   // Initial states
   expr::term_ref initial_states = ts.get_initial_states();
-  d_solver->add(trace.get_state_formula(initial_states, 0));
+  d_solver->add(d_trace->get_state_formula(initial_states, 0));
 
   // Transition formula
   expr::term_ref transition_formula = ts.get_transition_relation();
@@ -55,7 +58,7 @@ bmc_engine::result bmc_engine::query(const system::transition_system& ts, const 
     // Check the current unrolling
     scope.push();
     expr::term_ref property_not = tm().mk_term(expr::TERM_NOT, property);
-    d_solver->add(trace.get_state_formula(property_not, k));
+    d_solver->add(d_trace->get_state_formula(property_not, k));
     smt::solver::result r = d_solver->check();
 
     if (output::get_verbosity(std::cout) > 0) {
@@ -64,8 +67,12 @@ bmc_engine::result bmc_engine::query(const system::transition_system& ts, const 
 
     // See what happened
     switch(r) {
-    case smt::solver::SAT:
+    case smt::solver::SAT: {
+      expr::model m(tm());
+      d_solver->get_model(m);
+      d_trace->add_model(m);
       return INVALID;
+    }
     case smt::solver::UNKNOWN:
       return UNKNOWN;
     case smt::solver::UNSAT:
@@ -87,11 +94,15 @@ bmc_engine::result bmc_engine::query(const system::transition_system& ts, const 
     }
 
     // Unroll once more
-    d_solver->add(trace.get_transition_formula(transition_formula, k, k + 1));
+    d_solver->add(d_trace->get_transition_formula(transition_formula, k, k + 1));
     k = k + 1;
   }
 
   return UNKNOWN;
+}
+
+const system::state_trace* bmc_engine::get_trace() {
+  return d_trace;
 }
 
 }
