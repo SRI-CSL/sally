@@ -48,13 +48,25 @@ public:
   parser_state(system::context& context);
 
   /** Returns the term manager for the parser */
-  expr::term_manager& tm() { return d_context.tm(); }
+  expr::term_manager& tm() const { return d_context.tm(); }
 
   /** Returns the context for the parser */
-  system::context& ctx() { return d_context; }
+  system::context& ctx() const { return d_context; }
 
   /** Report an error */
   void report_error(std::string msg) const;
+
+  /** Create a new state type. */
+  system::state_type* mk_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types) const;
+
+  /** Create a new state formula */
+  system::state_formula* mk_state_formula(std::string id, std::string type_id, expr::term_ref sf) const;
+
+  /** Create a new transition formula */
+  system::transition_formula* mk_transition_formula(std::string id, std::string type_id, expr::term_ref tf) const;
+
+  /** Create a new transition system */
+  system::transition_system* mk_transition_system(std::string id, std::string type_id, std::string init_id, const std::vector<std::string>& transition_ids);
 
   /**
    * Use the state type, i.e. declare the variables var_class.x, var_class.y, ...

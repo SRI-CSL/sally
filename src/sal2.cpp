@@ -81,15 +81,8 @@ int main(int argc, char* argv[]) {
           cout << "Got command " << *cmd << endl;
         }
 
-        // If only parsing, just ignore the command
-        if (opts.has_option("parse-only")) {
-          continue;
-        }
-
         // Run the command
-        if (engine_to_use) {
-          cmd->run(engine_to_use);
-        }
+        cmd->run(&ctx, engine_to_use);
       }
 
     } catch (sal2::exception& e) {

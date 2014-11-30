@@ -45,8 +45,7 @@ declare_state_type returns [parser::command* cmd = 0]
         variable_list[vars, types] 
     ')' 
     {
-      STATE->ctx().add_state_type(id, vars, types);
-      $cmd = new parser::declare_state_type_command(STATE->ctx(), id);
+      $cmd = new parser::declare_state_type_command(id, STATE->mk_state_type(id, vars, types));
     }
   ; 
 
@@ -63,8 +62,7 @@ define_states returns [parser::command* cmd = 0]
             STATE->use_state_type(type_id, system::state_type::STATE_CURRENT, true); 
         }
         f = state_formula { 
-        	STATE->ctx().add_state_formula(id, type_id, f);
-        	$cmd = new parser::define_states_command(STATE->ctx(), id); 
+        	$cmd = new parser::define_states_command(id, STATE->mk_state_formula(id, type_id, f)); 
             STATE->pop_scope(); 
         }
     ')'
@@ -84,8 +82,7 @@ define_transition returns [parser::command* cmd = 0]
           STATE->use_state_type(type_id, system::state_type::STATE_NEXT, false); 
       }
       f = state_transition_formula   { 
-      	  STATE->ctx().add_transition_formula(id, type_id, f);
-          $cmd = new parser::define_transition_command(STATE->ctx(), id, type_id); 
+          $cmd = new parser::define_transition_command(id, STATE->mk_transition_formula(id, type_id, f)); 
           STATE->pop_scope(); 
       }
     ')'
@@ -103,9 +100,8 @@ define_transition_system returns [parser::command* cmd = 0]
       symbol[id, parser::PARSER_TRANSITION_SYSTEM, false]                    
       symbol[type_id, parser::PARSER_STATE_TYPE, true]
       symbol[initial_id, parser::PARSER_STATE_FORMULA, true]            
-      transition_list[transitions]  { 
-      	STATE->ctx().add_transition_system(id, type_id, initial_id, transitions); 
-        $cmd = new parser::define_transition_system_command(STATE->ctx(), id, type_id, initial_id, transitions);
+      transition_list[transitions]  {  
+        $cmd = new parser::define_transition_system_command(id, STATE->mk_transition_system(id, type_id, initial_id, transitions));
       } 
     ')'
   ; 

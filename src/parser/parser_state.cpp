@@ -51,6 +51,31 @@ term_ref parser_state::get_variable(std::string id) const {
   return d_variables.get_entry(id);
 }
 
+system::state_type* parser_state::mk_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types) const {
+  expr::term_ref type = tm().mk_struct(vars, types);
+  return new system::state_type(tm(), id, type);
+}
+
+system::state_formula* parser_state::mk_state_formula(std::string id, std::string type_id, expr::term_ref sf) const {
+  const system::state_type* st = ctx().get_state_type(type_id);
+  return new system::state_formula(tm(), st, sf);
+}
+
+system::transition_formula* parser_state::mk_transition_formula(std::string id, std::string type_id, expr::term_ref tf) const {
+  const system::state_type* st = ctx().get_state_type(type_id);
+  return new system::transition_formula(tm(), st, tf);
+}
+
+system::transition_system* parser_state::mk_transition_system(std::string id, std::string type_id, std::string init_id, const std::vector<std::string>& transition_ids) {
+  const system::state_type* st = ctx().get_state_type(type_id);
+  const system::state_formula* init = ctx().get_state_formula(init_id);
+  std::vector<const system::transition_formula*> transitions;
+  for (size_t i = 0; i < transition_ids.size(); ++ i) {
+    transitions.push_back(ctx().get_transition_formula(transition_ids[i]));
+  }
+  return new system::transition_system(st, init, transitions);
+}
+
 void parser_state::use_state_type(std::string id, state_type::var_class var_class, bool use_namespace) {
   const system::state_type* st = d_context.get_state_type(id);
   use_state_type(st, var_class, use_namespace);

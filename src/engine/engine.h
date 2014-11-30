@@ -23,6 +23,14 @@ class engine  {
   /** The context */
   const system::context& d_ctx;
 
+protected:
+
+  /** Returns the context of the engine */
+  const system::context& ctx() const;
+
+  /** Returns the term manager of the engine */
+  expr::term_manager& tm() const;
+
 public:
 
   enum result {
@@ -44,17 +52,11 @@ public:
   virtual
   ~engine() {};
 
-  /** Returns the context of the engine */
-  const system::context& ctx() const;
-
-  /** Returns the term manager of the engine */
-  expr::term_manager& tm() const;
-
   /** Query the engine */
   virtual
   result query(const system::transition_system& ts, const system::state_formula* sf) = 0;
 
-  /** Get the conter-example trace, if previous query allows it */
+  /** Get the counter-example trace, if previous query allows it */
   virtual
   const system::state_trace* get_trace() = 0;
 };
