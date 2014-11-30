@@ -45,8 +45,11 @@ public:
   /** Pop the solving context */
   void pop();
 
-  /** Generalize the last call to check assuming the result was SAT */
-  expr::term_ref generalize();
+  /**
+   * Generalize the last call to check assuming the result was SAT. The
+   * variables vars are eliminated from the assertions.
+   */
+  expr::term_ref generalize(const std::vector<expr::term_ref>& to_eliminate);
 
   /** Interpolate the last UNSAT result */
   void interpolate(std::vector<expr::term_ref>& out);

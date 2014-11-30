@@ -97,15 +97,18 @@ public:
     throw exception("pop() not supported by solver " + d_name);
   }
 
-  /** Generalize a satisfiable answer */
+  /**
+   * Generalize the last call to check assuming the result was SAT. The
+   * variables vars are eliminated from the assertions.
+   */
   virtual
-  expr::term_ref generalize() {
+  expr::term_ref generalize(const std::vector<expr::term_ref>& to_eliminate) {
     throw exception("generalize() not supported by solver " + d_name);
   }
 
   /** Interpolate an unsatisfiable answer */
   virtual
-  void interpolate(std::vector<expr::term_ref>& ) {
+  void interpolate(std::vector<expr::term_ref>& out) {
     throw exception("interpolate() not supported by solver " + d_name);
   };
 };

@@ -40,6 +40,9 @@ class yices2_internal {
   /** All assertions we have in context (strong) TODO: push/pop */
   std::vector<expr::term_ref_strong> d_assertions;
 
+  /** The assertions size per push/pop */
+  std::vector<size_t> d_assertions_size;
+
   typedef boost::unordered_map<expr::term_ref, term_t, expr::term_ref_hasher> term_cache;
 
   /** The map from terms to yices terms */
@@ -66,6 +69,8 @@ public:
   void get_model(expr::model& m);
   void push();
   void pop();
+
+  expr::term_ref generalize(const std::vector<expr::term_ref>& to_eliminate);
 };
 
 int yices2_internal::s_instances = 0;
@@ -259,12 +264,16 @@ term_t yices2_internal::to_yices2_term(expr::term_ref ref) {
 }
 
 void yices2_internal::add(expr::term_ref ref) {
-  if (output::get_verbosity(std::cout) > 1) {
+
+  if (output::get_verbosity(std::cout) > 2) {
     std::cout << "yices2: adding " << ref << std::endl;
   }
 
+  // Remember the assertions
   expr::term_ref_strong ref_strong(d_tm, ref);
   d_assertions.push_back(ref_strong);
+
+  // Assert to yices
   term_t yices_term = to_yices2_term(ref);
   int ret = yices_assert_formula(d_ctx, yices_term);
   if (ret < 0) {
@@ -353,6 +362,7 @@ void yices2_internal::push() {
   if (ret < 0) {
     throw exception("Yices error (push).");
   }
+  d_assertions_size.push_back(d_assertions.size());
 }
 
 void yices2_internal::pop() {
@@ -360,6 +370,47 @@ void yices2_internal::pop() {
   if (ret < 0) {
     throw exception("Yices error (pop).");
   }
+  size_t size = d_assertions_size.back();
+  d_assertions_size.pop_back();
+  while (d_assertions.size() > size) {
+    d_assertions.pop_back();
+  }
+}
+
+expr::term_ref yices2_internal::generalize(const std::vector<expr::term_ref>& to_eliminate) {
+
+  if (output::get_verbosity(std::cout) > 2) {
+    std::cout << "yices2: generalizing" << std::endl;
+  }
+
+  // Get the model
+  model_t* m = yices_get_model(d_ctx, true);
+
+  // Yices version of the assertions
+  term_t* assertions = new term_t[d_assertions.size()];
+  for (size_t i = 0; i < d_assertions.size(); ++ i) {
+    assertions[i] = to_yices2_term(d_assertions[i]);
+  }
+
+  // Yices version of the variables
+  term_t* variables = new term_t[to_eliminate.size()];
+  for (size_t i = 0; i < to_eliminate.size(); ++ i) {
+    variables[i] = to_yices2_term(to_eliminate[i]);
+  }
+
+  // Generalize
+  term_t G = yices_generalize_model_array(m,
+      d_assertions.size(), assertions,
+      to_eliminate.size(), variables);
+
+  std::cout << G << std::endl;
+
+  // Free temps
+  delete variables;
+  delete assertions;
+  yices_free_model(m);
+
+  return expr::term_ref();
 }
 
 yices2::yices2(expr::term_manager& tm, const options& opts)
@@ -393,8 +444,8 @@ void yices2::pop() {
 }
 
 
-expr::term_ref yices2::generalize() {
-  return expr::term_ref();
+expr::term_ref yices2::generalize(const std::vector<expr::term_ref>& to_eliminate) {
+  return d_internal->generalize(to_eliminate);
 }
 
 void yices2::interpolate(std::vector<expr::term_ref>& ) {
