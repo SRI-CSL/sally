@@ -22,11 +22,6 @@
 namespace sal2 {
 namespace system {
 
-class context_exception : public exception {
-public:
-  context_exception(std::string msg) : exception(msg) {}
-};
-
 /**
  * A context to create and keep track of transition systems, their types,
  * formulas, properties...

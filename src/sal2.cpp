@@ -86,7 +86,10 @@ int main(int argc, char* argv[]) {
       }
 
     } catch (sal2::exception& e) {
-      cerr << e << std::endl;
+      cerr << e << endl;
+      exit(1);
+    } catch (...) {
+      cerr << "Unexpected error!" << endl;
       exit(1);
     }
   }
