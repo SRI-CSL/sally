@@ -77,7 +77,7 @@ int main(int argc, char* argv[]) {
       // Parse an process each command
       for (parser::command* cmd = mcmt_parser.parse_command(); cmd != 0; delete cmd, cmd = mcmt_parser.parse_command()) {
 
-        if (output::get_verbosity(cout) > 0) {
+        if (output::get_verbosity(cout) > 2) {
           cout << "Got command " << *cmd << endl;
         }
 

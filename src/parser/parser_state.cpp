@@ -15,7 +15,6 @@
 using namespace sal2;
 using namespace parser;
 using namespace expr;
-using namespace system;
 
 using namespace std;
 
@@ -76,7 +75,7 @@ system::transition_system* parser_state::mk_transition_system(std::string id, st
   return new system::transition_system(st, init, transitions);
 }
 
-void parser_state::use_state_type(std::string id, state_type::var_class var_class, bool use_namespace) {
+void parser_state::use_state_type(std::string id, system::state_type::var_class var_class, bool use_namespace) {
   const system::state_type* st = d_context.get_state_type(id);
   use_state_type(st, var_class, use_namespace);
 }

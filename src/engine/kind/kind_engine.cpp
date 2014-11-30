@@ -75,7 +75,7 @@ kind_engine::result kind_engine::query(const system::transition_system& ts, cons
   while (true) {
 
     if (output::get_verbosity(std::cout) > 0) {
-      std::cout << "K-Inductino: checking intialization " << k << std::endl;
+      std::cout << "K-Induction: checking initialization " << k << std::endl;
     }
 
     // Negataed property at k
@@ -120,6 +120,11 @@ kind_engine::result kind_engine::query(const system::transition_system& ts, cons
 
     // Check the current unrolling (2)
     if (k > 0) {
+
+      if (output::get_verbosity(std::cout) > 0) {
+        std::cout << "K-Induction: checking consecution " << k << std::endl;
+      }
+
       scope2.push();
       d_solver_2->add(property_not_k);
       smt::solver::result r_2 = d_solver_2->check();

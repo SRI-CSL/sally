@@ -35,7 +35,7 @@ solver* factory::mk_default_solver(expr::term_manager& tm, const options& opts) 
 
 solver* factory::mk_solver(std::string id, expr::term_manager& tm, const options& opts) {
   solver_context ctx(tm, opts);
-  if (output::get_verbosity(std::cout) > 0) {
+  if (output::get_verbosity(std::cout) > 2) {
     std::cout << "Creating an instance of " + id + " solver." << std::endl;
   }
   return s_solver_data.get_module_info(id).new_instance(ctx);
