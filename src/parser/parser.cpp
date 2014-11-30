@@ -45,7 +45,7 @@ class parser_internal {
 
 public:
 
-  parser_internal(system::context& ctx, const char* file_to_parse)
+  parser_internal(const system::context& ctx, const char* file_to_parse)
   : d_state(ctx)
   {
     // Create the input stream for the file
@@ -173,7 +173,7 @@ public:
 
 };
 
-parser::parser(system::context& ctx, const char* filename)
+parser::parser(const system::context& ctx, const char* filename)
 : d_internal(new parser_internal(ctx, filename))
 {
 }

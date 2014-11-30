@@ -19,7 +19,7 @@ using namespace system;
 
 using namespace std;
 
-parser_state::parser_state(system::context& context)
+parser_state::parser_state(const system::context& context)
 : d_context(context)
 , d_variables("local vars")
 , d_types("types")

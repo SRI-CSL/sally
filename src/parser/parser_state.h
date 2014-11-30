@@ -34,7 +34,7 @@ enum parser_object {
 class parser_state {
 
   /** The context */
-  system::context& d_context;
+  const system::context& d_context;
 
   /** Symbol table for variables */
   utils::symbol_table<expr::term_ref> d_variables;
@@ -45,13 +45,13 @@ class parser_state {
 public:
 
   /** Construct the parser state */
-  parser_state(system::context& context);
+  parser_state(const system::context& context);
 
   /** Returns the term manager for the parser */
   expr::term_manager& tm() const { return d_context.tm(); }
 
   /** Returns the context for the parser */
-  system::context& ctx() const { return d_context; }
+  const system::context& ctx() const { return d_context; }
 
   /** Report an error */
   void report_error(std::string msg) const;

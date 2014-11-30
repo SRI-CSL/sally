@@ -73,7 +73,7 @@ class parser {
 
 public:
 
-  parser(system::context& ctx, const char* filename);
+  parser(const system::context& ctx, const char* filename);
   ~parser();
 
   /** Parse the next command from the input */
