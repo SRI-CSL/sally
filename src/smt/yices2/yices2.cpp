@@ -386,6 +386,11 @@ expr::term_ref yices2_internal::generalize(const std::vector<expr::term_ref>& to
   // Get the model
   model_t* m = yices_get_model(d_ctx, true);
 
+  if (output::get_verbosity(std::cout) > 2) {
+    std::cout << "model:" << std::endl;
+    yices_pp_model(stdout, m, 80, 100, 0);
+  }
+
   // Yices version of the assertions
   term_t* assertions = new term_t[d_assertions.size()];
   for (size_t i = 0; i < d_assertions.size(); ++ i) {
@@ -398,10 +403,28 @@ expr::term_ref yices2_internal::generalize(const std::vector<expr::term_ref>& to
     variables[i] = to_yices2_term(to_eliminate[i]);
   }
 
+  if (output::get_verbosity(std::cout) > 2) {
+    std::cout << "assertions:" << std::endl;
+    for (size_t i = 0; i < d_assertions.size(); ++ i) {
+      std::cout << i << ": ";
+      yices_pp_term(stdout, assertions[i], 80, 100, 0);
+    }
+    std::cout << "variables:" << std::endl;
+    for (size_t i = 0; i < to_eliminate.size(); ++ i) {
+      std::cout << i << ": ";
+      yices_pp_term(stdout, variables[i], 80, 100, 0);
+    }
+  }
+
   // Generalize
   term_t G = yices_generalize_model_array(m,
       d_assertions.size(), assertions,
       to_eliminate.size(), variables);
+
+  if (output::get_verbosity(std::cout) > 2) {
+    std::cout << "generalizaiton:" << std::endl;
+    yices_pp_term(stdout, G, 80, 100, 0);
+  }
 
   std::cout << G << std::endl;
 

@@ -76,7 +76,7 @@ BOOST_AUTO_TEST_CASE(generalization) {
   // Assert something to yices
   term_ref x = tm.mk_variable("x", tm.realType());
   term_ref y = tm.mk_variable("y", tm.realType());
-  term_ref z = tm.mk_variable("y", tm.realType());
+  term_ref z = tm.mk_variable("z", tm.realType());
   term_ref zero = tm.mk_rational_constant(rational());
 
   term_ref sum_x_y = tm.mk_term(TERM_ADD, x, y);
