@@ -10,6 +10,8 @@
 #include "parser/parser.h"
 #include "parser/parser_state.h"
 
+#include <iostream>
+
 namespace sal2 {
 namespace parser {
 
