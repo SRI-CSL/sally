@@ -15,7 +15,6 @@
 namespace sal2 {
 namespace expr {
 
-
 size_t rational::hash() const {
   utils::sequence_hash hasher;
   hasher.add(mpz_get_si(d_gmp_rat.get_den_mpz_t()));

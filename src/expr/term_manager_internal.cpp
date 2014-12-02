@@ -309,3 +309,10 @@ term_ref term_manager_internal::substitute(term_ref t, substitution_map& subst) 
   return t_new;
 }
 
+term_ref term_manager_internal::bitvectorType(size_t size) {
+   bitvector_type_map::const_iterator find = d_bitvectorType.find(size);
+   if (find!= d_bitvectorType.end()) return find->second;
+   term_ref new_type = mk_term<TYPE_BITVECTOR>(size);
+   d_bitvectorType[size] = term_ref_strong(*this, new_type);
+   return new_type;
+}

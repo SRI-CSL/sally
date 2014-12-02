@@ -206,6 +206,11 @@ private:
   /** Real type */
   term_ref_strong d_realType;
 
+  typedef std::map<size_t, term_ref_strong> bitvector_type_map;
+
+  /** The bitvector types */
+  bitvector_type_map d_bitvectorType;
+
   /** Prefixes to be removed when printing variable names */
   std::vector<std::string> d_namespaces;
 
@@ -228,6 +233,9 @@ public:
 
   /** Get the Real type */
   term_ref realType() const { return d_realType; }
+
+  /** Get the Bitvector type */
+  term_ref bitvectorType(size_t size);
 
   /** Generic term constructor */
   template <term_op op, typename iterator_type>
@@ -570,7 +578,6 @@ void term_manager_internal::get_subterms(term_ref t, const matcher& m, collectio
     }
   }
 }
-
 
 }
 }
