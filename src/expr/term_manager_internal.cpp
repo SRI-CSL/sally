@@ -9,6 +9,7 @@
 #include "expr/term_manager.h"
 
 #include <stack>
+#include <sstream>
 
 using namespace sal2;
 using namespace expr;

@@ -10,6 +10,7 @@
 #include "smt/factory.h"
 
 #include <sstream>
+#include <iostream>
 
 namespace sal2 {
 namespace bmc {

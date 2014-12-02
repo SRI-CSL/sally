@@ -11,6 +11,7 @@
 #include "system/state_trace.h"
 
 #include <sstream>
+#include <iostream>
 
 namespace sal2 {
 namespace kind {

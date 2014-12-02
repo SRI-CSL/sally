@@ -8,6 +8,8 @@
 #include "smt/factory.h"
 #include "utils/module_setup.h"
 
+#include <iostream>
+
 namespace sal2 {
 namespace smt {
 

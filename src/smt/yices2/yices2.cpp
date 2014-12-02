@@ -9,6 +9,8 @@
 #include <yices.h>
 #include <boost/unordered_map.hpp>
 
+#include <iostream>
+
 #include "expr/term.h"
 #include "expr/term_manager.h"
 #include "expr/rational.h"
