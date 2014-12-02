@@ -12,9 +12,19 @@
 namespace sal2 {
 namespace expr {
 
+bitvector::bitvector(size_t size)
+: d_size(size)
+{}
+
+/** Construct from integer */
+bitvector::bitvector(size_t size, const integer& z)
+: integer(z)
+, d_size(size)
+{}
+
 size_t bitvector::hash() const {
   utils::sequence_hash hasher;
-  hasher.add(d_gmp_int.get_si());
+  hasher.add(d_gmp_int.get_ui());
   hasher.add(d_size);
   return hasher.get();
 }

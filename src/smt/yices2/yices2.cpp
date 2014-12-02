@@ -226,6 +226,9 @@ term_t yices2_internal::to_yices2_term(expr::term_ref ref) {
   case expr::CONST_RATIONAL:
     result = yices_mpq(d_tm.get_rational_constant(t).mpq().get_mpq_t());
     break;
+  case expr::CONST_INTEGER:
+    result = yices_mpz(d_tm.get_integer_constant(t).mpz().get_mpz_t());
+    break;
   case expr::TERM_ITE:
   case expr::TERM_EQ:
   case expr::TERM_AND:

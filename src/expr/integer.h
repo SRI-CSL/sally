@@ -5,6 +5,8 @@
  *      Author: dejan
  */
 
+#pragma once
+
 #include <iosfwd>
 #include <gmpxx.h>
 
@@ -37,7 +39,7 @@ public:
   /** Construct from string representation */
   explicit integer(std::string s): d_gmp_int(s, 10) {}
 
-  /** Returns the hash of the bitvector */
+  /** Returns the hash of the integer */
   size_t hash() const { return d_gmp_int.get_si(); }
 
   /** Compare the two numbers */
@@ -48,6 +50,10 @@ public:
 
   /** Output ot stream */
   void to_stream(std::ostream& out) const;
+
+  const mpz_class& mpz() const {
+    return d_gmp_int;
+  }
 };
 
 std::ostream& operator << (std::ostream& out, const integer& z);

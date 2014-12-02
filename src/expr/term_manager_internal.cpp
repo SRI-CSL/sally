@@ -8,6 +8,8 @@
 #include "expr/term_manager_internal.h"
 #include "expr/term_manager.h"
 
+#include "utils/exception.h"
+
 #include <stack>
 
 using namespace sal2;
@@ -125,6 +127,7 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
     }
     break;
   // Arithmetic terms
+  case CONST_INTEGER:
   case CONST_RATIONAL:
     break;
   case TERM_ADD:
@@ -176,9 +179,11 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
   }
 
   if (!ok) {
-    std::cerr << "Can't typecheck: " << t_ref << std::endl;
+    std::stringstream ss;
+    output::set_term_manager(ss, this);
+    ss << "Can't typecheck " << t_ref << ".";
+    throw exception(ss.str());
   }
-  assert(ok);
 
   return ok;
 }
@@ -233,6 +238,9 @@ term_ref term_manager_internal::type_of(const term& t) const {
   case TERM_IMPLIES:
     return booleanType();
   // Arithmetic terms
+  case CONST_INTEGER:
+    // TODO: fix this
+    return d_realType;
   case CONST_RATIONAL:
   case TERM_ADD:
   case TERM_MUL:

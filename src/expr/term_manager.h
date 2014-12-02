@@ -82,6 +82,12 @@ public:
   /** Returns the boolan constant value */
   bool get_boolean_constant(const term& t) const;
 
+  /** Make a new integer constant */
+  term_ref mk_integer_constant(const integer& value);
+
+  /** Returns the integer constant value */
+  integer get_integer_constant(const term& t) const;
+
   /** Make a new rational constant */
   term_ref mk_rational_constant(const rational& value);
 

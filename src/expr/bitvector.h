@@ -21,6 +21,12 @@ class bitvector : public integer {
 
 public:
 
+  /** Construct 0 */
+  bitvector(size_t size);
+
+  /** Construct from integer */
+  bitvector(size_t size, const integer& z);
+
   /** Get the size of the bitvector */
   size_t get_size() const { return d_size; }
 
