@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
       }
 
       // Create the parser
-      parser::parser mcmt_parser(ctx, files[i].c_str());
+      parser::parser mcmt_parser(ctx, parser::INPUT_MCMT, files[i].c_str());
 
       // Parse an process each command
       for (parser::command* cmd = mcmt_parser.parse_command(); cmd != 0; delete cmd, cmd = mcmt_parser.parse_command()) {

@@ -8,6 +8,8 @@
 #include "expr/term_manager_internal.h"
 #include "expr/term_manager.h"
 
+#include "utils/exception.h"
+
 #include <stack>
 #include <sstream>
 
@@ -126,6 +128,7 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
     }
     break;
   // Arithmetic terms
+  case CONST_INTEGER:
   case CONST_RATIONAL:
     break;
   case TERM_ADD:
@@ -177,9 +180,11 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
   }
 
   if (!ok) {
-    std::cerr << "Can't typecheck: " << t_ref << std::endl;
+    std::stringstream ss;
+    output::set_term_manager(ss, this);
+    ss << "Can't typecheck " << t_ref << ".";
+    throw exception(ss.str());
   }
-  assert(ok);
 
   return ok;
 }
@@ -234,6 +239,9 @@ term_ref term_manager_internal::type_of(const term& t) const {
   case TERM_IMPLIES:
     return booleanType();
   // Arithmetic terms
+  case CONST_INTEGER:
+    // TODO: fix this
+    return d_realType;
   case CONST_RATIONAL:
   case TERM_ADD:
   case TERM_MUL:
@@ -310,3 +318,10 @@ term_ref term_manager_internal::substitute(term_ref t, substitution_map& subst) 
   return t_new;
 }
 
+term_ref term_manager_internal::bitvectorType(size_t size) {
+   bitvector_type_map::const_iterator find = d_bitvectorType.find(size);
+   if (find!= d_bitvectorType.end()) return find->second;
+   term_ref new_type = mk_term<TYPE_BITVECTOR>(size);
+   d_bitvectorType[size] = term_ref_strong(*this, new_type);
+   return new_type;
+}

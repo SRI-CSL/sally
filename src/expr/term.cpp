@@ -172,6 +172,10 @@ void term::to_stream_smt(std::ostream& out, const term_manager_internal& tm) con
     // Stream is already in SMT mode
     out << tm.payload_of<rational>(*this);
     break;
+  case CONST_INTEGER:
+    // Stream is already in SMT mode
+    out << tm.payload_of<integer>(*this);
+    break;
   case CONST_STRING:
     out << tm.payload_of<std::string>(*this);
     break;

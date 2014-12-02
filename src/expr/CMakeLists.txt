@@ -1,1 +1,10 @@
-add_library(expr term_ops.cpp term.cpp rational.cpp term_manager_internal.cpp term_manager.cpp model.cpp)
+add_library(expr 
+  term_ops.cpp 
+  term.cpp 
+  integer.cpp
+  rational.cpp 
+  bitvector.cpp
+  term_manager_internal.cpp 
+  term_manager.cpp 
+  model.cpp
+)

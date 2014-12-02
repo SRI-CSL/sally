@@ -36,6 +36,11 @@ term_ref term_manager::realType() const {
   return d_tm->realType();
 }
 
+term_ref term_manager::bitvectorType(size_t size) {
+  return d_tm->bitvectorType(size);
+}
+
+
 term_ref term_manager::mk_term(term_op op, const std::vector<term_ref>& children) {
   return d_tm->mk_term(op, children.begin(), children.end());
 }
@@ -89,8 +94,16 @@ term_ref term_manager::mk_boolean_constant(bool value) {
   return d_tm->mk_term<CONST_BOOL>(value);
 }
 
-term_ref term_manager::mk_rational_constant(const rational& value) {\
+term_ref term_manager::mk_integer_constant(const integer& value) {
+  return d_tm->mk_term<CONST_INTEGER>(value);
+}
+
+term_ref term_manager::mk_rational_constant(const rational& value) {
   return d_tm->mk_term<CONST_RATIONAL>(value);
+}
+
+term_ref term_manager::mk_bitvector_constant(const bitvector& value) {
+  return d_tm->mk_term<CONST_BITVECTOR>(value);
 }
 
 term_ref term_manager::mk_string_constant(std::string value) {
@@ -102,9 +115,19 @@ bool term_manager::get_boolean_constant(const term& t) const {
   return d_tm->payload_of<bool>(t);
 }
 
+integer term_manager::get_integer_constant(const term& t) const {
+  assert(t.op() == CONST_INTEGER);
+  return d_tm->payload_of<integer>(t);
+}
+
 rational term_manager::get_rational_constant(const term& t) const {
   assert(t.op() == CONST_RATIONAL);
   return d_tm->payload_of<rational>(t);
+}
+
+bitvector term_manager::get_bitvector_constant(const term& t) const {
+  assert(t.op() == CONST_BITVECTOR);
+  return d_tm->payload_of<bitvector>(t);
 }
 
 std::string term_manager::get_string_constant(const term& t) const {

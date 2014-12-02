@@ -189,8 +189,8 @@ bool_constant returns [expr::term_ref t = expr::term_ref()]
   
 decimal_constant returns [expr::term_ref t = expr::term_ref()]
   : NUMERAL { 
-     expr::rational value(STATE->token_text($NUMERAL));
-     t = STATE->tm().mk_rational_constant(value);
+     expr::integer value(STATE->token_text($NUMERAL));
+     t = STATE->tm().mk_integer_constant(value);
     }
   ; 
 

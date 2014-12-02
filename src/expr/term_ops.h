@@ -9,7 +9,9 @@
 
 #include <iosfwd>
 
+#include "expr/integer.h"
 #include "expr/rational.h"
+#include "expr/bitvector.h"
 #include "utils/allocator_types.h"
 
 namespace sal2 {
@@ -26,6 +28,7 @@ enum term_op {
   TYPE_BOOL,
   TYPE_INTEGER,
   TYPE_REAL,
+  TYPE_BITVECTOR,
   TYPE_STRUCT,
 
   // Variables
@@ -46,6 +49,7 @@ enum term_op {
   TERM_XOR,
 
   // Arithmetic terms
+  CONST_INTEGER,
   CONST_RATIONAL,
   TERM_ADD,
   TERM_SUB,
@@ -55,6 +59,20 @@ enum term_op {
   TERM_LT,
   TERM_GEQ,
   TERM_GT,
+
+  // Bit-vector terms
+  CONST_BITVECTOR,
+  TERM_BV_ADD,
+  TERM_BV_SUB,
+  TERM_BV_MUL,
+  TERM_BV_U_LEQ,
+  TERM_BV_S_LEQ,
+  TERM_BV_U_LT,
+  TERM_BV_S_LT,
+  TERM_BV_U_GEQ,
+  TERM_BV_S_GEQ,
+  TERM_BV_U_GT,
+  TERM_BV_S_GT,
 
   // Constant strings
   CONST_STRING,
@@ -81,11 +99,27 @@ struct term_op_traits {
 };
 
 /**
+ * Bitvector types have a payload of type size_t.
+ */
+template<>
+struct term_op_traits<TYPE_BITVECTOR> {
+  typedef size_t payload_type;
+};
+
+/**
  * Boolean constant terms have a payload of type bool and no children.
  */
 template<>
 struct term_op_traits<CONST_BOOL> {
   typedef bool payload_type;
+};
+
+/**
+ * Integer constants terms have a payload of type integer (gmp) and no children.
+ */
+template<>
+struct term_op_traits<CONST_INTEGER> {
+  typedef integer payload_type;
 };
 
 /**
@@ -95,6 +129,15 @@ template<>
 struct term_op_traits<CONST_RATIONAL> {
   typedef rational payload_type;
 };
+
+/**
+ * Bitvector constants have a payload of type bitvector.
+ */
+template<>
+struct term_op_traits<CONST_BITVECTOR> {
+  typedef bitvector payload_type;
+};
+
 
 /**
  * Variables have a payload that is their name, and one child, which is the

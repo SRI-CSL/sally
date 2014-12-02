@@ -29,51 +29,51 @@ class parser_exception : public exception {
   /** Position of the error */
   int d_pos;
 
-
 public:
 
-  parser_exception(std::string msg)
-  : exception(msg)
-  , d_filename("")
-  , d_line(-1)
-  , d_pos(-1)
-  {}
+  /** Create an exceptoin with no line information */
+  parser_exception(std::string msg);
 
-  parser_exception(std::string msg, std::string filename, int line, int pos)
-  : exception(msg)
-  , d_filename(filename)
-  , d_line(line)
-  , d_pos(pos)
-  {}
+  /** Create an exception with line information */
+  parser_exception(std::string msg, std::string filename, int line, int pos);
 
-  bool has_line_info() const {
-    return d_line != -1;
-  }
+  /** Returns true if the exception carries line information */
+  bool has_line_info() const;
 
-  int get_line() const {
-    return d_line;
-  }
+  /** Get the line number */
+  int get_line() const;
 
-  int get_position() const {
-    return d_pos;
-  }
+  /** Get the position in line */
+  int get_position() const;
 
-  std::string get_filename() const {
-    return d_filename;
-  }
+  /** Get the file name */
+  std::string get_filename() const;
 
+  /** Output to stream */
   void to_stream(std::ostream& out) const;
 };
 
-class parser_internal;
+class antlr_parser_interface;
 
+enum input_language {
+  INPUT_MCMT,
+  INPUT_BTOR
+};
+
+/**
+ * Parser for model-checking problems.
+ */
 class parser {
 
-  parser_internal* d_internal;
+  /** Internal parser data. */
+  antlr_parser_interface* d_internal;
 
 public:
 
-  parser(const system::context& ctx, const char* filename);
+  /** Create a parser for the given language */
+  parser(const system::context& ctx, input_language lang, const char* filename);
+
+  /** Destroy the parser */
   ~parser();
 
   /** Parse the next command from the input */

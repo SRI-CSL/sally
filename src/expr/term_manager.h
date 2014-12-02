@@ -50,6 +50,9 @@ public:
   /** Get the Real type */
   term_ref realType() const;
 
+  /** Get the type of bitvectors of given size > 0. */
+  term_ref bitvectorType(size_t size);
+
   /** Make a term, given children */
   term_ref mk_term(term_op op, term_ref c);
 
@@ -79,11 +82,23 @@ public:
   /** Returns the boolan constant value */
   bool get_boolean_constant(const term& t) const;
 
+  /** Make a new integer constant */
+  term_ref mk_integer_constant(const integer& value);
+
+  /** Returns the integer constant value */
+  integer get_integer_constant(const term& t) const;
+
   /** Make a new rational constant */
   term_ref mk_rational_constant(const rational& value);
 
   /** Returns the rational constant value */
   rational get_rational_constant(const term& t) const;
+
+  /** Make a new bitvector constant */
+  term_ref mk_bitvector_constant(const bitvector& bv);
+
+  /** Return the bitvector constant value */
+  bitvector get_bitvector_constant(const term& t) const;
 
   /** Make a new string constant */
   term_ref mk_string_constant(std::string value);
