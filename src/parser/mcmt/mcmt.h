@@ -14,7 +14,7 @@ namespace sal2 {
 namespace parser {
 
 template<>
-struct parser_traits<INPUT_MCMT> {
+struct antlr_parser_traits<INPUT_MCMT> {
   typedef pmcmtLexer pLangLexer;
   typedef pmcmtParser pLangParser;
 

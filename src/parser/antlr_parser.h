@@ -14,22 +14,31 @@ namespace sal2 {
 namespace parser {
 
 template<input_language lang>
-struct parser_traits {};
+struct antlr_parser_traits {};
+
+class antlr_parser_interface {
+public:
+ virtual ~antlr_parser_interface() {};
+ virtual command* parse_command() = 0;
+ virtual int get_current_parser_line() const = 0;
+ virtual int get_current_parser_position() const = 0;
+ virtual std::string get_filename() const = 0;
+};
 
 template <input_language lang>
-class antlr_parser : public parser_interface {
+class antlr_parser : public antlr_parser_interface {
 
   /** The input */
   pANTLR3_INPUT_STREAM d_input;
 
   /** The lexer */
-  typename parser_traits<lang>::pLangLexer d_lexer;
+  typename antlr_parser_traits<lang>::pLangLexer d_lexer;
 
   /** The token stream */
   pANTLR3_COMMON_TOKEN_STREAM d_token_stream;
 
   /** The parser */
-  typename parser_traits<lang>::pLangParser d_parser;
+  typename antlr_parser_traits<lang>::pLangParser d_parser;
 
   /** The state of the solver */
   parser_state d_state;
@@ -52,7 +61,7 @@ public:
     }
 
     // Create a lexer
-    d_lexer = parser_traits<lang>::newLexer(d_input);
+    d_lexer = antlr_parser_traits<lang>::newLexer(d_input);
     if (d_lexer == 0) {
       throw parser_exception("can't create the lexer");
     }
@@ -67,7 +76,7 @@ public:
     }
 
     // Create the parser
-    d_parser = parser_traits<lang>::newParser(d_token_stream);
+    d_parser = antlr_parser_traits<lang>::newParser(d_token_stream);
     if (d_parser == 0) {
       throw parser_exception("can't create the parser");
     }

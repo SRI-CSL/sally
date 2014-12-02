@@ -53,15 +53,7 @@ public:
   void to_stream(std::ostream& out) const;
 };
 
-/** Interface for the parsers */
-class parser_interface {
-public:
-  virtual ~parser_interface() {};
-  virtual command* parse_command() = 0;
-  virtual int get_current_parser_line() const = 0;
-  virtual int get_current_parser_position() const = 0;
-  virtual std::string get_filename() const = 0;
-};
+class antlr_parser_interface;
 
 enum input_language {
   INPUT_MCMT,
@@ -74,7 +66,7 @@ enum input_language {
 class parser {
 
   /** Internal parser data. */
-  parser_interface* d_internal;
+  antlr_parser_interface* d_internal;
 
 public:
 
