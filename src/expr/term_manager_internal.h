@@ -13,6 +13,7 @@
 #include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
 
+#include <map>
 #include <queue>
 #include <iterator>
 
