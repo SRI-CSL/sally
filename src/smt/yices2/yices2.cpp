@@ -425,7 +425,7 @@ expr::term_ref yices2_internal::generalize(const std::vector<expr::term_ref>& to
       to_eliminate.size(), variables);
 
   if (output::get_verbosity(std::cout) > 2) {
-    std::cout << "generalizaiton:" << std::endl;
+    std::cout << "generalization:" << std::endl;
     yices_pp_term(stdout, G, 80, 100, 0);
   }
 

@@ -73,6 +73,11 @@ BOOST_AUTO_TEST_CASE(basic_asserts) {
 
 BOOST_AUTO_TEST_CASE(generalization) {
 
+  output::set_verbosity(std::cerr, 10);
+  output::set_verbosity(std::cout, 10);
+
+  yices2->push();
+
   // Assert something to yices
   term_ref x = tm.mk_variable("x", tm.realType());
   term_ref y = tm.mk_variable("y", tm.realType());
@@ -86,22 +91,46 @@ BOOST_AUTO_TEST_CASE(generalization) {
   term_ref leq_x_y = tm.mk_term(TERM_LEQ, sum_x_y, zero);
   // 0 <= x + y
   term_ref geq_x_y = tm.mk_term(TERM_LEQ, zero, sum_x_y);
-  // 0 <= x + y + z
-  term_ref geq_x_y_z = tm.mk_term(TERM_LEQ, zero, sum_x_y_z);
-
-  output::set_verbosity(std::cerr, 10);
-  output::set_verbosity(std::cout, 10);
 
   // Add and check
   yices2->add(leq_x_y);
   yices2->add(geq_x_y);
-  yices2->add(geq_x_y_z);
+
+  // Check and generalize
   solver::result result = yices2->check();
   cout << "Check result: " << result << endl;
 
   // Generalize
   std::vector<term_ref> to_elim;
   to_elim.push_back(y);
+  yices2->generalize(to_elim);
+
+  // 0 <= x + y + z
+  term_ref geq_x_y_z = tm.mk_term(TERM_LEQ, zero, sum_x_y_z);
+
+  // Add some more
+  yices2->add(geq_x_y_z);
+
+  // Check and generalize
+  result = yices2->check();
+  cout << "Check result: " << result << endl;
+  yices2->generalize(to_elim);
+
+  yices2->pop();
+
+  term_ref b1 = tm.mk_variable("b1", tm.booleanType());
+  term_ref b2 = tm.mk_variable("b2", tm.booleanType());
+
+  term_ref imp1 = tm.mk_term(expr::TERM_IMPLIES, b1, geq_x_y_z);
+  term_ref imp2 = tm.mk_term(expr::TERM_IMPLIES, b2, leq_x_y);
+
+  yices2->add(imp1);
+  yices2->add(imp2);
+
+  result = yices2->check();
+  cout << "Check result: " << result << endl;
+
+  to_elim.push_back(b1);
   yices2->generalize(to_elim);
 }
 
