@@ -383,10 +383,13 @@ expr::term_ref yices2_internal::mk_term(term_constructor_t constructor, const st
   case YICES_BV_ASHR:
     break;
   case YICES_BV_GE_ATOM:
+    result = d_tm.mk_term(expr::TERM_BV_U_GEQ, children);
     break;
   case YICES_BV_SGE_ATOM:
+    result = d_tm.mk_term(expr::TERM_BV_S_GEQ, children);
     break;
   case YICES_ARITH_GE_ATOM:
+    result = d_tm.mk_term(expr::TERM_GEQ, children);
     break;
   default:
     break;
@@ -550,15 +553,19 @@ void yices2_internal::add(expr::term_ref ref) {
 
 solver::result yices2_internal::check() {
   d_last_check_status = yices_check_context(d_ctx, 0);
-  if (d_last_check_status == STATUS_SAT) {
+
+  switch (d_last_check_status) {
+  case STATUS_SAT:
     return solver::SAT;
-  } else if (d_last_check_status == STATUS_UNSAT) {
+  case STATUS_UNSAT:
     return solver::UNSAT;
-  } else if (d_last_check_status == STATUS_UNKNOWN) {
+  case STATUS_UNKNOWN:
     return solver::UNKNOWN;
-  } else {
+  default:
     throw exception("Yices error (check).");
   }
+
+  return solver::UNKNOWN;
 }
 
 void yices2_internal::get_model(expr::model& m) {
