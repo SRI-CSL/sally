@@ -506,8 +506,12 @@ expr::term_ref yices2_internal::to_term(term_t t) {
       term_t a_y;
       yices_sum_component(t, i, c_y, &a_y);
       expr::term_ref c = d_tm.mk_rational_constant(expr::rational(c_y));
-      expr::term_ref a = to_term(a_y);
-      sum_children.push_back(d_tm.mk_term(expr::TERM_MUL, c, a));
+      if (a_y != NULL_TERM) {
+        expr::term_ref a = to_term(a_y);
+        sum_children.push_back(d_tm.mk_term(expr::TERM_MUL, c, a));
+      } else {
+        sum_children.push_back(c);
+      }
     }
     result = d_tm.mk_term(expr::TERM_ADD, sum_children);
     mpq_clear(c_y);
