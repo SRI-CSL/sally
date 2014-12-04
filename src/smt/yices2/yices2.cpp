@@ -398,6 +398,18 @@ expr::term_ref yices2_internal::mk_term(term_constructor_t constructor, const st
   return result;
 }
 
+static
+expr::bitvector yices_bv_to_bitvector(size_t size, int32_t* bits) {
+  char* bits_str = new char[size + 1];
+  bits_str[size] = 0;
+  for (size_t i = 0; i < size; ++ i) {
+    bits_str[i] = bits[size - i] ? '1' : '0';
+  }
+  expr::bitvector bv(bits_str);
+  delete bits_str;
+  return bv;
+}
+
 expr::term_ref yices2_internal::to_term(term_t t) {
 
   expr::term_ref result;
@@ -431,14 +443,7 @@ expr::term_ref yices2_internal::to_term(term_t t) {
     size_t size = yices_term_bitsize(t);
     int32_t* bits = new int32_t[size];
     yices_bv_const_value(t, bits);
-    char* bits_str = new char[size + 1];
-    bits_str[size] = 0;
-    for (size_t i = 0; i < size; ++ i) {
-      bits_str[i] = bits[size - i] ? '1' : '0';
-    }
-    expr::bitvector bv(bits_str);
-    result = d_tm.mk_bitvector_constant(bv);
-    delete bits_str;
+    result = d_tm.mk_bitvector_constant(yices_bv_to_bitvector(size, bits));
     delete bits;
     break;
   }
@@ -483,7 +488,7 @@ expr::term_ref yices2_internal::to_term(term_t t) {
       expr::term_ref child_term = to_term(child);
       children.push_back(child_term);
     }
-    mk_term(t_constructor, children);
+    result = mk_term(t_constructor, children);
     break;
   }
 
