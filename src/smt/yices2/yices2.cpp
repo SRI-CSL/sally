@@ -19,6 +19,11 @@
 namespace sal2 {
 namespace smt {
 
+/** Yices term hash. */
+struct yices_hasher {
+  size_t operator()(term_t value) const { return value; }
+};
+
 class yices2_internal {
 
   /** The term manager */
@@ -45,10 +50,46 @@ class yices2_internal {
   /** The assertions size per push/pop */
   std::vector<size_t> d_assertions_size;
 
-  typedef boost::unordered_map<expr::term_ref, term_t, expr::term_ref_hasher> term_cache;
+  typedef boost::unordered_map<expr::term_ref, term_t, expr::term_ref_hasher> term_to_yices_cache;
+  typedef boost::unordered_map<term_t, expr::term_ref, yices_hasher> yices_to_term_cache;
 
   /** The map from terms to yices terms */
-  term_cache d_term_cache;
+  term_to_yices_cache d_term_to_yices_cache;
+
+  /** The map from yices terms to SAL terms */
+  yices_to_term_cache d_yices_to_term_cache;
+
+  /**
+   * Set the term cache from t -> t_yices. If t_yices doesn't exist in the
+   * cache already, add the map t_yices -> t.
+   */
+  void set_term_cache(expr::term_ref t, term_t t_yices) {
+    assert(d_term_to_yices_cache.find(t) == d_term_to_yices_cache.end());
+    d_term_to_yices_cache[t] = t_yices;
+    if (d_yices_to_term_cache.find(t_yices) == d_yices_to_term_cache.end()) {
+      d_yices_to_term_cache[t_yices] = t;
+    }
+  }
+
+  /** Returns the yices term associated with t, or NULL_TERM otherwise */
+  term_t get_term_cache(expr::term_ref t) const {
+    term_to_yices_cache::const_iterator find = d_term_to_yices_cache.find(t);
+    if (find != d_term_to_yices_cache.end()) {
+      return find->second;
+    } else {
+      return NULL_TERM;
+    }
+  }
+
+  /** Returns our term representative for the yices term t or null otherwise */
+  expr::term_ref get_term_cache(term_t t) const {
+    yices_to_term_cache::const_iterator find = d_yices_to_term_cache.find(t);
+    if (find != d_yices_to_term_cache.end()) {
+      return find->second;
+    } else {
+      return expr::term_ref();
+    }
+  }
 
   /** List of variables, for model construction */
   std::vector<expr::term_ref> d_variables;
@@ -58,20 +99,43 @@ class yices2_internal {
 
 public:
 
+  /** Construct an instance of yices with the given temr manager and options */
   yices2_internal(expr::term_manager& tm, const options& opts);
+
+  /** Destroy yices instance */
   ~yices2_internal();
 
+  /** Get the yices version of the term */
   term_t to_yices2_term(expr::term_ref ref);
+
+  /** Get the yices version of the type */
   type_t to_yices2_type(expr::term_ref ref);
 
+  /** Get the sal version of the term */
+  expr::term_ref to_term(term_t t);
+
+  /** Make a term given yices operator and children */
+  expr::term_ref mk_term(term_constructor_t constructor, const std::vector<expr::term_ref>& children);
+
+  /** Make a yices term with given operator and children */
   term_t mk_yices2_term(expr::term_op op, size_t n, term_t* children);
 
+  /** Add an assertion to yices */
   void add(expr::term_ref ref);
+
+  /** Check satisfiability */
   solver::result check();
+
+  /** Returns the model */
   void get_model(expr::model& m);
+
+  /** Push the context */
   void push();
+
+  /** Pop the context */
   void pop();
 
+  /** Return the generalization */
   expr::term_ref generalize(const std::vector<expr::term_ref>& to_eliminate);
 };
 
@@ -205,10 +269,10 @@ term_t yices2_internal::to_yices2_term(expr::term_ref ref) {
 
   term_t result = NULL_TERM;
 
-  // Check if in cache already
-  term_cache::const_iterator find = d_term_cache.find(ref);
-  if (find != d_term_cache.end()) {
-    return find->second;
+  // Check the term has been translated already
+  result = get_term_cache(ref);
+  if (result != NULL_TERM) {
+    return result;
   }
 
   // The term
@@ -263,7 +327,205 @@ term_t yices2_internal::to_yices2_term(expr::term_ref ref) {
     throw exception("Yices error (term creation)");
   }
 
-  d_term_cache[ref] = result;
+  // Set the cache ref -> result
+  set_term_cache(ref, result);
+
+  return result;
+}
+
+expr::term_ref yices2_internal::mk_term(term_constructor_t constructor, const std::vector<expr::term_ref>& children) {
+  expr::term_ref result;
+
+  switch (constructor) {
+  case YICES_ITE_TERM:
+    result = d_tm.mk_term(expr::TERM_ITE, children);
+    break;
+  case YICES_APP_TERM:
+    break;
+  case YICES_UPDATE_TERM:
+    break;
+  case YICES_TUPLE_TERM:
+    break;
+  case YICES_EQ_TERM:
+    result = d_tm.mk_term(expr::TERM_EQ, children);
+    break;
+  case YICES_DISTINCT_TERM:
+    break;
+  case YICES_FORALL_TERM:
+    break;
+  case YICES_LAMBDA_TERM:
+    break;
+  case YICES_NOT_TERM:
+    result = d_tm.mk_term(expr::TERM_NOT, children);
+    break;
+  case YICES_OR_TERM:
+    result = d_tm.mk_term(expr::TERM_OR, children);
+    break;
+  case YICES_XOR_TERM:
+    result = d_tm.mk_term(expr::TERM_XOR, children);
+    break;
+  case YICES_BV_ARRAY:
+    break;
+  case YICES_BV_DIV:
+    break;
+  case YICES_BV_REM:
+    break;
+  case YICES_BV_SDIV:
+    break;
+  case YICES_BV_SREM:
+    break;
+  case YICES_BV_SMOD:
+    break;
+  case YICES_BV_SHL:
+    break;
+  case YICES_BV_LSHR:
+    break;
+  case YICES_BV_ASHR:
+    break;
+  case YICES_BV_GE_ATOM:
+    break;
+  case YICES_BV_SGE_ATOM:
+    break;
+  case YICES_ARITH_GE_ATOM:
+    break;
+  default:
+    break;
+  }
+
+  return result;
+}
+
+expr::term_ref yices2_internal::to_term(term_t t) {
+
+  expr::term_ref result;
+
+  // Check the cache
+  result = get_term_cache(t);
+  if (!result.is_null()) {
+    return result;
+  }
+
+  // Get the constructor type of t
+  term_constructor_t t_constructor = yices_term_constructor(t);
+
+  switch (t_constructor) {
+  // atomic terms
+  case YICES_BOOL_CONSTANT: {
+    int32_t value;
+    yices_bool_const_value(t, &value);
+    result = d_tm.mk_boolean_constant(value);
+    break;
+  }
+  case YICES_ARITH_CONSTANT: {
+    mpq_t q;
+    mpq_init(q);
+    yices_rational_const_value(t, q);
+    expr::rational r(q);
+    result = d_tm.mk_rational_constant(r);
+    mpq_clear(q);
+  }
+  case YICES_BV_CONSTANT: {
+    size_t size = yices_term_bitsize(t);
+    int32_t* bits = new int32_t[size];
+    yices_bv_const_value(t, bits);
+    char* bits_str = new char[size + 1];
+    bits_str[size] = 0;
+    for (size_t i = 0; i < size; ++ i) {
+      bits_str[i] = bits[size - i] ? '1' : '0';
+    }
+    expr::bitvector bv(bits_str);
+    result = d_tm.mk_bitvector_constant(bv);
+    delete bits_str;
+    delete bits;
+    break;
+  }
+  case YICES_SCALAR_CONSTANT:
+    // Unsupported
+    break;
+  case YICES_VARIABLE:
+    // Qantifiers, not supported
+    break;
+  case YICES_UNINTERPRETED_TERM:
+    // Variables must be already in the cache
+    break;
+
+  // composite terms
+  case YICES_ITE_TERM:
+  case YICES_APP_TERM:
+  case YICES_UPDATE_TERM:
+  case YICES_TUPLE_TERM:
+  case YICES_EQ_TERM:
+  case YICES_DISTINCT_TERM:
+  case YICES_FORALL_TERM:
+  case YICES_LAMBDA_TERM:
+  case YICES_NOT_TERM:
+  case YICES_OR_TERM:
+  case YICES_XOR_TERM:
+  case YICES_BV_ARRAY:
+  case YICES_BV_DIV:
+  case YICES_BV_REM:
+  case YICES_BV_SDIV:
+  case YICES_BV_SREM:
+  case YICES_BV_SMOD:
+  case YICES_BV_SHL:
+  case YICES_BV_LSHR:
+  case YICES_BV_ASHR:
+  case YICES_BV_GE_ATOM:
+  case YICES_BV_SGE_ATOM:
+  case YICES_ARITH_GE_ATOM: {
+    size_t n = yices_term_num_children(t);
+    std::vector<expr::term_ref> children;
+    for (size_t i = 0; i < n; ++ i) {
+      term_t child = yices_term_child(t, i);
+      expr::term_ref child_term = to_term(child);
+      children.push_back(child_term);
+    }
+    mk_term(t_constructor, children);
+    break;
+  }
+
+  // projections
+  case YICES_SELECT_TERM:
+    break;
+  case YICES_BIT_TERM:
+    break;
+
+  // sums
+  case YICES_BV_SUM:
+    break;
+  case YICES_ARITH_SUM: {
+    mpq_t c_y;
+    mpq_init(c_y);
+    // sum c_i a_i
+    size_t size = yices_term_num_children(t);
+    std::vector<expr::term_ref> sum_children;
+    for (size_t i = 0; i < size; ++ i) {
+      term_t a_y;
+      yices_sum_component(t, i, c_y, &a_y);
+      expr::term_ref c = d_tm.mk_rational_constant(expr::rational(c_y));
+      expr::term_ref a = to_term(a_y);
+      sum_children.push_back(d_tm.mk_term(expr::TERM_MUL, c, a));
+    }
+    result = d_tm.mk_term(expr::TERM_ADD, sum_children);
+    mpq_clear(c_y);
+    break;
+  }
+
+  // products
+  case YICES_POWER_PRODUCT:
+    break;
+
+  default:
+    assert(false);
+  }
+
+  // At this point we need to be non-null
+  if (result.is_null()) {
+    throw exception("Yices error (term creation)");
+  }
+
+  // Set the cache ref -> result
+  set_term_cache(result, t);
 
   return result;
 }
@@ -310,7 +572,7 @@ void yices2_internal::get_model(expr::model& m) {
 
   for (size_t i = 0; i < d_variables.size(); ++ i) {
     expr::term_ref var = d_variables[i];
-    term_t yices_var = d_term_cache[var];
+    term_t yices_var = d_term_to_yices_cache[var];
     expr::term_ref var_type = d_tm.type_of(var);
 
     expr::term_ref var_value;
@@ -422,13 +684,13 @@ expr::term_ref yices2_internal::generalize(const std::vector<expr::term_ref>& to
   }
 
   // Generalize
-  term_t G = yices_generalize_model_array(m,
+  term_t G_y = yices_generalize_model_array(m,
       d_assertions.size(), assertions,
       to_eliminate.size(), variables);
+  expr::term_ref G = to_term(G_y);
 
   if (output::get_verbosity(std::cout) > 2) {
-    std::cout << "generalization:" << std::endl;
-    yices_pp_term(stdout, G, 80, 100, 0);
+    std::cout << "generalization: " << G << std::endl;
   }
 
   std::cout << G << std::endl;
@@ -438,7 +700,7 @@ expr::term_ref yices2_internal::generalize(const std::vector<expr::term_ref>& to
   delete assertions;
   yices_free_model(m);
 
-  return expr::term_ref();
+  return G;
 }
 
 yices2::yices2(expr::term_manager& tm, const options& opts)

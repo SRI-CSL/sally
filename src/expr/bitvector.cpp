@@ -29,6 +29,16 @@ size_t bitvector::hash() const {
   return hasher.get();
 }
 
+bitvector::bitvector(const char* bits)
+: integer(bits, 2)
+, d_size(strlen(bits))
+{}
+
+bitvector::bitvector(std::string bits)
+: integer(bits, 2)
+, d_size(bits.size())
+{}
+
 void bitvector::to_stream(std::ostream& out) const {
 
 }

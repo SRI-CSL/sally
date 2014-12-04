@@ -35,9 +35,9 @@ public:
   /** Construct from long */
   integer(long z) : d_gmp_int(z) {}
   /** Construct from string representation */
-  explicit integer(const char* s): d_gmp_int(s, 10) {}
+  integer(const char* s, size_t base): d_gmp_int(s, base) {}
   /** Construct from string representation */
-  explicit integer(std::string s): d_gmp_int(s, 10) {}
+  integer(std::string s, size_t base): d_gmp_int(s, base) {}
 
   /** Returns the hash of the integer */
   size_t hash() const { return d_gmp_int.get_si(); }

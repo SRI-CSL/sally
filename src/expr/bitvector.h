@@ -22,10 +22,16 @@ class bitvector : public integer {
 public:
 
   /** Construct 0 */
-  bitvector(size_t size);
+  explicit bitvector(size_t size);
 
   /** Construct from integer */
   bitvector(size_t size, const integer& z);
+
+  /** Construct from a string representation (0 terminated) */
+  explicit bitvector(const char* bits);
+
+  /** Construct from a string representation */
+  explicit bitvector(std::string bits);
 
   /** Get the size of the bitvector */
   size_t get_size() const { return d_size; }
