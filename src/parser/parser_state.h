@@ -96,6 +96,14 @@ public:
   static
   std::string token_text(pANTLR3_COMMON_TOKEN token);
 
+  /** Get the int value of a token begin parsed */
+  static
+  int token_as_int(pANTLR3_COMMON_TOKEN token);
+
+  /** Get the integer value of a token begin parsed */
+  static
+  expr::integer token_as_integer(pANTLR3_COMMON_TOKEN token, size_t base);
+
   /** Ensure that the object is declared = true/false locally, throw exception otherwise */
   void ensure_declared(std::string id, parser_object type, bool declared);
 };

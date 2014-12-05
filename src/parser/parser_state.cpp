@@ -36,6 +36,18 @@ string parser_state::token_text(pANTLR3_COMMON_TOKEN token) {
   return string((const char*) start, size);
 }
 
+int parser_state::token_as_int(pANTLR3_COMMON_TOKEN token) {
+  int value;
+  std::stringstream ss;
+  ss << token_text(token);
+  ss >> value;
+  return value;
+}
+
+expr::integer parser_state::token_as_integer(pANTLR3_COMMON_TOKEN token, size_t base) {
+  return expr::integer(token_text(token), 10);
+}
+
 term_ref parser_state::get_type(std::string id) const {
   if (!d_types.has_entry(id)) {
     throw parser_exception(id + " undeclared");

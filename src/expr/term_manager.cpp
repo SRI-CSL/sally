@@ -59,6 +59,13 @@ term_ref term_manager::mk_term(term_op op, term_ref c1, term_ref c2) {
   return d_tm->mk_term(op, children, children + 2);
 }
 
+term_ref term_manager::mk_variable(term_ref type) {
+  static size_t id = 0;
+  std::stringstream ss;
+  ss << "_" << (id ++);
+  return mk_variable(ss.str(), type);
+}
+
 term_ref term_manager::mk_variable(std::string name, term_ref type) {
   if (term_of(type).op() == TYPE_STRUCT) {
     // Size of the struct

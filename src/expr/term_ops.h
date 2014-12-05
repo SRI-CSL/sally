@@ -73,6 +73,16 @@ enum term_op {
   TERM_BV_S_GEQ,
   TERM_BV_U_GT,
   TERM_BV_S_GT,
+  TERM_BV_XOR,
+  TERM_BV_SHL,
+  TERM_BV_LSHR,
+  TERM_BV_ASHR,
+  TERM_BV_NOT,
+  TERM_BV_AND,
+  TERM_BV_OR,
+  TERM_BV_NAND,
+  TERM_BV_NOR,
+  TERM_BV_XNOR,
 
   // Constant strings
   CONST_STRING,

@@ -9,6 +9,7 @@
 #include "parser/antlr_parser.h"
 
 #include "parser/mcmt/mcmt.h"
+#include "parser/btor/btor.h"
 
 #include <iostream>
 
@@ -58,6 +59,9 @@ parser::parser(const system::context& ctx, input_language lang, const char* file
   switch (lang) {
   case INPUT_MCMT:
     d_internal = new antlr_parser<INPUT_MCMT>(ctx, filename);
+    break;
+  case INPUT_BTOR:
+    d_internal = new antlr_parser<INPUT_BTOR>(ctx, filename);
     break;
   default:
     assert(false);

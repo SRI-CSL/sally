@@ -21,6 +21,9 @@ class bitvector : public integer {
 
 public:
 
+  /** Construct 0 of size 1 */
+  bitvector(): d_size(1) {}
+
   /** Construct 0 */
   explicit bitvector(size_t size);
 

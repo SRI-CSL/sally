@@ -70,6 +70,9 @@ public:
     return mk_term(op, children, children + n);
   }
 
+  /** Make a new variable without a name */
+  term_ref mk_variable(term_ref type);
+
   /** Make a new variable */
   term_ref mk_variable(std::string name, term_ref type);
 
