@@ -136,7 +136,7 @@ public:
   void pop();
 
   /** Return the generalization */
-  expr::term_ref generalize(const std::vector<expr::term_ref>& to_eliminate);
+  void generalize(const std::vector<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out);
 };
 
 int yices2_internal::s_instances = 0;
@@ -660,7 +660,7 @@ void yices2_internal::pop() {
   }
 }
 
-expr::term_ref yices2_internal::generalize(const std::vector<expr::term_ref>& to_eliminate) {
+void yices2_internal::generalize(const std::vector<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out) {
 
   if (output::get_verbosity(std::cout) > 2) {
     std::cout << "yices2: generalizing" << std::endl;
@@ -700,23 +700,28 @@ expr::term_ref yices2_internal::generalize(const std::vector<expr::term_ref>& to
   }
 
   // Generalize
-  term_t G_y = yices_generalize_model_array(m,
-      d_assertions.size(), assertions,
-      to_eliminate.size(), variables);
-  expr::term_ref G = to_term(G_y);
+  term_vector_t G_y;
+  yices_init_term_vector(&G_y);
+  int32_t ret = yices_generalize_model_array(m, d_assertions.size(), assertions, to_eliminate.size(), variables, YICES_GEN_DEFAULT, &G_y);
+  if (ret < 0) {
+    throw exception("Generalization failed in Yices.");
+  }
+  for (size_t i = 0; i < G_y.size; ++ i) {
+    projection_out.push_back(to_term(G_y.data[i]));
+  }
+  yices_delete_term_vector(&G_y);
 
   if (output::get_verbosity(std::cout) > 2) {
-    std::cout << "generalization: " << G << std::endl;
+    std::cout << "generalization: " << std::endl;
+    for (size_t i = 0; i < projection_out.size(); ++ i) {
+      std::cout << i << ": " << projection_out[i] << std::endl;
+    }
   }
-
-  std::cout << G << std::endl;
 
   // Free temps
   delete variables;
   delete assertions;
   yices_free_model(m);
-
-  return G;
 }
 
 yices2::yices2(expr::term_manager& tm, const options& opts)
@@ -750,8 +755,8 @@ void yices2::pop() {
 }
 
 
-expr::term_ref yices2::generalize(const std::vector<expr::term_ref>& to_eliminate) {
-  return d_internal->generalize(to_eliminate);
+void yices2::generalize(const std::vector<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out) {
+  d_internal->generalize(to_eliminate, projection_out);
 }
 
 void yices2::interpolate(std::vector<expr::term_ref>& ) {

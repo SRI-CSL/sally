@@ -102,9 +102,14 @@ public:
    * variables vars are eliminated from the assertions.
    */
   virtual
-  expr::term_ref generalize(const std::vector<expr::term_ref>& to_eliminate) {
+  void generalize(const std::vector<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out) {
     throw exception("generalize() not supported by solver " + d_name);
   }
+
+  /**
+   * Same as above, but returns a single expressions.
+   */
+  expr::term_ref generalize(const std::vector<expr::term_ref>& to_eliminate);
 
   /** Interpolate an unsatisfiable answer */
   virtual

@@ -28,5 +28,17 @@ std::ostream& operator << (std::ostream& out, solver::result result) {
   return out;
 }
 
+expr::term_ref solver::generalize(const std::vector<expr::term_ref>& to_eliminate) {
+  std::vector<expr::term_ref> projection_out;
+  generalize(to_eliminate, projection_out);
+  if (projection_out.size() == 0) {
+    return d_tm.mk_boolean_constant(true);
+  }
+  if (projection_out.size() == 1) {
+    return projection_out[0];
+  }
+  return d_tm.mk_term(expr::TERM_AND, projection_out);
+}
+
 }
 }

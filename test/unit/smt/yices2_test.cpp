@@ -102,8 +102,9 @@ BOOST_AUTO_TEST_CASE(generalization) {
 
   // Generalize
   std::vector<term_ref> to_elim;
+  std::vector<term_ref> proj;
   to_elim.push_back(y);
-  yices2->generalize(to_elim);
+  yices2->generalize(to_elim, proj);
 
   // 0 <= x + y + z
   term_ref geq_x_y_z = tm.mk_term(TERM_LEQ, zero, sum_x_y_z);
@@ -114,6 +115,7 @@ BOOST_AUTO_TEST_CASE(generalization) {
   // Check and generalize
   result = yices2->check();
   cout << "Check result: " << result << endl;
+  proj.clear();
   yices2->generalize(to_elim);
 
   yices2->pop();
@@ -131,7 +133,8 @@ BOOST_AUTO_TEST_CASE(generalization) {
   cout << "Check result: " << result << endl;
 
   to_elim.push_back(b1);
-  yices2->generalize(to_elim);
+  proj.clear();
+  yices2->generalize(to_elim, proj);
 }
 
 

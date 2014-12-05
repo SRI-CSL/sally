@@ -49,7 +49,7 @@ public:
    * Generalize the last call to check assuming the result was SAT. The
    * variables vars are eliminated from the assertions.
    */
-  expr::term_ref generalize(const std::vector<expr::term_ref>& to_eliminate);
+  void generalize(const std::vector<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out);
 
   /** Interpolate the last UNSAT result */
   void interpolate(std::vector<expr::term_ref>& out);
