@@ -217,7 +217,7 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
       ok = false;
     } else {
       term_ref type_ref = type_of(t[0]);
-      if (!is_bitvector_type(t[0])) {
+      if (!is_bitvector_type(type_ref)) {
         ok = false;
       } else {
         ok = type_ref == type_of(t[1]);

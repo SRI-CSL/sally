@@ -57,6 +57,8 @@ bv_binary_op returns [expr::term_op op]
   : 'xor'    { $op = expr::TERM_BV_XOR;  }
   | 'sra'    { $op = expr::TERM_BV_ASHR; }
   | 'concat' { $op = expr::TERM_BV_CONCAT; }
+  | 'eq'     { $op = expr::TERM_EQ; }
+  | 'and'    { $op = expr::TERM_BV_AND; }
   ;
 
 /** A subterm */
