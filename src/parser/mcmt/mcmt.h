@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include "parser/mcmt/mcmt_state.h"
+
 #include "parser/mcmt/mcmtLexer.h"
 #include "parser/mcmt/mcmtParser.h"
 
@@ -15,8 +17,11 @@ namespace parser {
 
 template<>
 struct antlr_parser_traits<INPUT_MCMT> {
+
   typedef pmcmtLexer pLangLexer;
   typedef pmcmtParser pLangParser;
+
+  typedef mcmt_state langState;
 
   static
   pmcmtLexer newLexer(pANTLR3_INPUT_STREAM instream) {

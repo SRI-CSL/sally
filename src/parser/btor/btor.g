@@ -8,7 +8,7 @@ options {
 @parser::includes {
   #include <string>
   #include "parser/command.h"
-  #include "parser/parser_state.h"
+  #include "parser/btor/btor_state.h"
   using namespace sal2;
 }
 
@@ -20,61 +20,44 @@ options {
 @parser::context
 {
   /** The sal2 part of the parser state */
-  parser::parser_state* pState;
+  parser::btor_state* pState;
 }
 
 /** Parses the file and produces the commands */
 command returns [parser::command* cmd = 0] 
-@declarations{
-	// Map from indices to terms
-	std::vector<expr::term_ref> terms;
-    // List of variables 
-    std::vector<size_t> variables;
-	// Map from variables to their next versions
-	std::vector<size_t> next;
-}
-  : definition[terms, variables, next]* EOF { 
+  : definition* EOF { 
   	  $cmd = 0; 
     } 
   ;
   
 /** Parses a single BTOR definition */
-definition [std::vector<expr::term_ref>& terms, std::vector<size_t>& vars, std::vector<size_t> next]
+definition 
 @declarations {
   std::string name;
   expr::term_ref term;
   expr::term_ref type;
   expr::bitvector bv;
 }
-  : // Variable declaration
-    id=integer 'var' size=integer (name=symbol[name])? {
-      type = STATE->tm().bitvectorType(size);
-      if (name.size() > 0) { term = STATE->tm().mk_variable(name, type); }
-      else { term = STATE->tm().mk_variable(type); }
-      terms[id] = term;
-    }
+  : // Variables 
+    id=integer 'var' size=integer (name=symbol[name])?                  
+    { STATE->add_variable(id, size, name); }
     // Constants 
-  | id=integer 'constd' size=integer bv_constant[bv, size] {
-      term = STATE->tm().mk_bitvector_constant(bv);
-    }
-    // Bit-vector operations 
-  | id=integer 'xor' size=integer op1=subterm[terms] op2=subterm[terms] { 
-      term = STATE->tm().mk_term(expr::TERM_BV_XOR, op1, op2);
-    }
-  | id=integer 'sra' size=integer op1=subterm[terms] op2=subterm[terms] {
-      term = STATE->tm().mk_term(expr::TERM_BV_ASHR, op1, op2);
-    }     
+  | id=integer 'constd' size=integer bv_constant[bv, size]                 
+    { STATE->add_constant(id, size, bv); }
+    // Simple binary operations 
+  | id=integer op = bv_binary_op size=integer t1=subterm t2=subterm
+    { STATE->add_term(id, op, size, t1, t2); }
+  ;
+
+/** Parse a binary operator type */
+bv_binary_op returns [expr::term_op op]
+  : 'xor' { $op = expr::TERM_BV_XOR;  }
+  | 'sra' { $op = expr::TERM_BV_ASHR; }
   ;
 
 /** A subterm */
-subterm[std::vector<expr::term_ref>& terms] returns [expr::term_ref subterm]
-  : id=integer {
-  	  if (id < 0) {
-  	  	$subterm = STATE->tm().mk_term(expr::TERM_BV_NOT, terms[id]); 
-  	  } else {
-  	    $subterm = terms[id];
-  	  }
-    }
+subterm returns [expr::term_ref subterm]
+  : id=integer { $subterm = STATE->get_term(id); }
   ;
   
 /** Parses an machine size integer */  

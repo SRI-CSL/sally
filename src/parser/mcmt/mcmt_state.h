@@ -31,7 +31,7 @@ enum parser_object {
 };
 
 /** State attached to the parser */
-class parser_state {
+class mcmt_state {
 
   /** The context */
   const system::context& d_context;
@@ -45,16 +45,13 @@ class parser_state {
 public:
 
   /** Construct the parser state */
-  parser_state(const system::context& context);
+  mcmt_state(const system::context& context);
 
   /** Returns the term manager for the parser */
   expr::term_manager& tm() const { return d_context.tm(); }
 
   /** Returns the context for the parser */
   const system::context& ctx() const { return d_context; }
-
-  /** Report an error */
-  void report_error(std::string msg) const;
 
   /** Create a new state type. */
   system::state_type* mk_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types) const;
@@ -95,14 +92,6 @@ public:
   /** Get the string of a token begin parsed */
   static
   std::string token_text(pANTLR3_COMMON_TOKEN token);
-
-  /** Get the int value of a token begin parsed */
-  static
-  int token_as_int(pANTLR3_COMMON_TOKEN token);
-
-  /** Get the integer value of a token begin parsed */
-  static
-  expr::integer token_as_integer(pANTLR3_COMMON_TOKEN token, size_t base);
 
   /** Ensure that the object is declared = true/false locally, throw exception otherwise */
   void ensure_declared(std::string id, parser_object type, bool declared);

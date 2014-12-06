@@ -8,9 +8,9 @@
 #pragma once
 
 #include "parser/parser.h"
-#include "parser/parser_state.h"
 
 #include <iostream>
+#include <antlr3.h>
 
 namespace sal2 {
 namespace parser {
@@ -43,7 +43,7 @@ class antlr_parser : public antlr_parser_interface {
   typename antlr_parser_traits<lang>::pLangParser d_parser;
 
   /** The state of the solver */
-  parser_state d_state;
+  typename antlr_parser_traits<lang>::langState d_state;
 
   static
   void sal2_parser_reportError(pANTLR3_BASE_RECOGNIZER recognizer);

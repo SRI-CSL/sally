@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include "parser/btor/btor_state.h"
+
 #include "parser/btor/btorLexer.h"
 #include "parser/btor/btorParser.h"
 
@@ -15,8 +17,11 @@ namespace parser {
 
 template<>
 struct antlr_parser_traits<INPUT_BTOR> {
+
   typedef pbtorLexer pLangLexer;
   typedef pbtorParser pLangParser;
+
+  typedef btor_state langState;
 
   static
   pLangLexer newLexer(pANTLR3_INPUT_STREAM instream) {
@@ -27,6 +32,7 @@ struct antlr_parser_traits<INPUT_BTOR> {
   pLangParser newParser(pANTLR3_COMMON_TOKEN_STREAM instream) {
     return btorParserNew(instream);
   }
+
 };
 
 }

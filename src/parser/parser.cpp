@@ -87,5 +87,19 @@ command* parser::parse_command() {
   }
 }
 
+input_language parser::guess_language(std::string filename) {
+  std::string::size_type index = filename.find_last_of('.');
+  if (index == filename.npos) {
+    // No extension
+    return INPUT_MCMT;
+  } else {
+    std::string extension = filename.substr(index + 1);
+    if (extension == "btor") {
+      return INPUT_BTOR;
+    }
+    return INPUT_MCMT;
+  }
+}
+
 }
 }

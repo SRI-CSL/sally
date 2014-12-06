@@ -5,7 +5,7 @@
  *      Author: dejan
  */
 
-#include "parser/parser_state.h"
+#include "parser/mcmt/mcmt_state.h"
 #include "parser/parser.h"
 
 #include "expr/term_manager.h"
@@ -18,7 +18,7 @@ using namespace expr;
 
 using namespace std;
 
-parser_state::parser_state(const system::context& context)
+mcmt_state::mcmt_state(const system::context& context)
 : d_context(context)
 , d_variables("local vars")
 , d_types("types")
@@ -30,54 +30,42 @@ parser_state::parser_state(const system::context& context)
   d_types.add_entry("Integer", term_ref_strong(tm, tm.integerType()));
 }
 
-string parser_state::token_text(pANTLR3_COMMON_TOKEN token) {
+string mcmt_state::token_text(pANTLR3_COMMON_TOKEN token) {
   ANTLR3_MARKER start = token->getStartIndex(token);
   size_t size = token->getStopIndex(token) - start + 1;
   return string((const char*) start, size);
 }
 
-int parser_state::token_as_int(pANTLR3_COMMON_TOKEN token) {
-  int value;
-  std::stringstream ss;
-  ss << token_text(token);
-  ss >> value;
-  return value;
-}
-
-expr::integer parser_state::token_as_integer(pANTLR3_COMMON_TOKEN token, size_t base) {
-  return expr::integer(token_text(token), 10);
-}
-
-term_ref parser_state::get_type(std::string id) const {
+term_ref mcmt_state::get_type(std::string id) const {
   if (!d_types.has_entry(id)) {
     throw parser_exception(id + " undeclared");
   }
   return d_types.get_entry(id);
 }
 
-term_ref parser_state::get_variable(std::string id) const {
+term_ref mcmt_state::get_variable(std::string id) const {
   if (!d_variables.has_entry(id)) {
     throw parser_exception(id + "undeclared");
   }
   return d_variables.get_entry(id);
 }
 
-system::state_type* parser_state::mk_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types) const {
+system::state_type* mcmt_state::mk_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types) const {
   expr::term_ref type = tm().mk_struct(vars, types);
   return new system::state_type(tm(), id, type);
 }
 
-system::state_formula* parser_state::mk_state_formula(std::string id, std::string type_id, expr::term_ref sf) const {
+system::state_formula* mcmt_state::mk_state_formula(std::string id, std::string type_id, expr::term_ref sf) const {
   const system::state_type* st = ctx().get_state_type(type_id);
   return new system::state_formula(tm(), st, sf);
 }
 
-system::transition_formula* parser_state::mk_transition_formula(std::string id, std::string type_id, expr::term_ref tf) const {
+system::transition_formula* mcmt_state::mk_transition_formula(std::string id, std::string type_id, expr::term_ref tf) const {
   const system::state_type* st = ctx().get_state_type(type_id);
   return new system::transition_formula(tm(), st, tf);
 }
 
-system::transition_system* parser_state::mk_transition_system(std::string id, std::string type_id, std::string init_id, const std::vector<std::string>& transition_ids) {
+system::transition_system* mcmt_state::mk_transition_system(std::string id, std::string type_id, std::string init_id, const std::vector<std::string>& transition_ids) {
   const system::state_type* st = ctx().get_state_type(type_id);
   const system::state_formula* init = ctx().get_state_formula(init_id);
   std::vector<const system::transition_formula*> transitions;
@@ -87,12 +75,12 @@ system::transition_system* parser_state::mk_transition_system(std::string id, st
   return new system::transition_system(st, init, transitions);
 }
 
-void parser_state::use_state_type(std::string id, system::state_type::var_class var_class, bool use_namespace) {
+void mcmt_state::use_state_type(std::string id, system::state_type::var_class var_class, bool use_namespace) {
   const system::state_type* st = d_context.get_state_type(id);
   use_state_type(st, var_class, use_namespace);
 }
 
-void parser_state::use_state_type(const system::state_type* st, system::state_type::var_class var_class, bool use_namespace) {
+void mcmt_state::use_state_type(const system::state_type* st, system::state_type::var_class var_class, bool use_namespace) {
 
   // Use the appropriate namespace
   st->use_namespace();
@@ -116,15 +104,15 @@ void parser_state::use_state_type(const system::state_type* st, system::state_ty
   }
 }
 
-void parser_state::push_scope() {
+void mcmt_state::push_scope() {
   d_variables.push_scope();
 }
 
-void parser_state::pop_scope() {
+void mcmt_state::pop_scope() {
   d_variables.pop_scope();
 }
 
-void parser_state::ensure_declared(std::string id, parser_object type, bool declared) {
+void mcmt_state::ensure_declared(std::string id, parser_object type, bool declared) {
   bool ok = declared;
   switch (type) {
   case PARSER_VARIABLE:

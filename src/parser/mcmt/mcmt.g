@@ -8,7 +8,7 @@ options {
 @parser::includes {
   #include <string>
   #include "parser/command.h"
-  #include "parser/parser_state.h"
+  #include "parser/mcmt/mcmt_state.h"
   using namespace sal2;
 }
 
@@ -20,7 +20,7 @@ options {
 @parser::context
 {
   /** The sal2 part of the parser state */
-  parser::parser_state* pState;
+  parser::mcmt_state* pState;
 }
 
 /** Parses a command */

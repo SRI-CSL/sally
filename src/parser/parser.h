@@ -78,6 +78,13 @@ public:
 
   /** Parse the next command from the input */
   command* parse_command();
+
+  /**
+   * Returns the language based on the extension of the filename (e.g. given "btor" it
+   * returns INPUT_BTOR. By default, it returns INPUT_MCMT.
+   */
+  static
+  input_language guess_language(std::string filename);
 };
 
 }

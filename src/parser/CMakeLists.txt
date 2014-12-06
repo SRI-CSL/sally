@@ -41,9 +41,10 @@ set_source_files_properties(
 add_library(parser 
   mcmt/mcmtParser.c 
   mcmt/mcmtLexer.c 
+  mcmt/mcmt_state.cpp
   btor/btorParser.c 
   btor/btorLexer.c 
-  parser_state.cpp 
+  btor/btor_state.cpp
   command.cpp 
   parser.cpp
 )
