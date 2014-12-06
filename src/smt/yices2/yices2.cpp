@@ -383,10 +383,10 @@ expr::term_ref yices2_internal::mk_term(term_constructor_t constructor, const st
   case YICES_BV_ASHR:
     break;
   case YICES_BV_GE_ATOM:
-    result = d_tm.mk_term(expr::TERM_BV_U_GEQ, children);
+    result = d_tm.mk_term(expr::TERM_BV_UGEQ, children);
     break;
   case YICES_BV_SGE_ATOM:
-    result = d_tm.mk_term(expr::TERM_BV_S_GEQ, children);
+    result = d_tm.mk_term(expr::TERM_BV_SGEQ, children);
     break;
   case YICES_ARITH_GE_ATOM:
     result = d_tm.mk_term(expr::TERM_GEQ, children);

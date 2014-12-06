@@ -199,14 +199,14 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
   case TERM_BV_ASHR:
     ok = false;
     break;
-  case TERM_BV_U_LEQ:
-  case TERM_BV_S_LEQ:
-  case TERM_BV_U_LT:
-  case TERM_BV_S_LT:
-  case TERM_BV_U_GEQ:
-  case TERM_BV_S_GEQ:
-  case TERM_BV_U_GT:
-  case TERM_BV_S_GT:
+  case TERM_BV_ULEQ:
+  case TERM_BV_SLEQ:
+  case TERM_BV_ULT:
+  case TERM_BV_SLT:
+  case TERM_BV_UGEQ:
+  case TERM_BV_SGEQ:
+  case TERM_BV_UGT:
+  case TERM_BV_SGT:
       ok = false;
     break;
   case CONST_STRING:
