@@ -232,6 +232,11 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
   case TERM_BV_SGEQ:
   case TERM_BV_UGT:
   case TERM_BV_SGT:
+  case TERM_BV_UDIV: // NOTE: Division x/0 = 11...11
+  case TERM_BV_SDIV:
+  case TERM_BV_UREM:
+  case TERM_BV_SREM:
+  case TERM_BV_SMOD:
     if (t.size() != 2) {
       ok = false;
     } else {
@@ -389,6 +394,11 @@ term_ref term_manager_internal::type_of(const term& t) const {
   case TERM_BV_NAND:
   case TERM_BV_NOR:
   case TERM_BV_XNOR:
+  case TERM_BV_UDIV:
+  case TERM_BV_SDIV:
+  case TERM_BV_UREM:
+  case TERM_BV_SREM:
+  case TERM_BV_SMOD:
     result = type_of(t[0]);
     break;
   case TERM_BV_ULEQ:

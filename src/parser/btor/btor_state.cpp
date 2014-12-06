@@ -40,7 +40,7 @@ int btor_state::token_as_int(pANTLR3_COMMON_TOKEN token) {
 }
 
 integer btor_state::token_as_integer(pANTLR3_COMMON_TOKEN token, size_t base) {
-  return integer(token_text(token), 10);
+  return integer(token_text(token), base);
 }
 
 void btor_state::set_term(size_t index, term_ref term, size_t size) {

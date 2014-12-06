@@ -42,7 +42,9 @@ definition
     id=pos_integer 'var' size=pos_integer (name=symbol[name])?                  
     { STATE->add_variable(id, size, name); }
     // Constants 
-  | id=pos_integer 'constd' size=pos_integer bv_constant[bv, size]                 
+  | id=pos_integer 'constd' size=pos_integer bv_constant[bv, size, 10]                 
+    { STATE->add_constant(id, size, bv); }
+  | id=pos_integer 'const' size=pos_integer bv_constant[bv, size, 2]
     { STATE->add_constant(id, size, bv); }
     // Simple binary operations 
   | id=pos_integer op=bv_binary_op size=pos_integer t1=subterm t2=subterm
@@ -65,11 +67,16 @@ definition
 bv_binary_op returns [expr::term_op op]
   : 'xor'    { op = expr::TERM_BV_XOR;  }
   | 'sra'    { op = expr::TERM_BV_ASHR; }
+  | 'sll'    { op = expr::TERM_BV_SHL; }
   | 'concat' { op = expr::TERM_BV_CONCAT; }
   | 'eq'     { op = expr::TERM_EQ; }
   | 'and'    { op = expr::TERM_BV_AND; }
   | 'or'     { op = expr::TERM_BV_OR; }
   | 'add'    { op = expr::TERM_BV_ADD; }
+  | 'sub'    { op = expr::TERM_BV_SUB; }
+  | 'mul'    { op = expr::TERM_BV_MUL; }
+  | 'sdiv'   { op = expr::TERM_BV_SDIV; }
+  | 'srem'   { op = expr::TERM_BV_SREM; }
   | 'ulte'   { op = expr::TERM_BV_ULEQ; }
   ;
 
@@ -89,12 +96,12 @@ pos_integer returns [size_t value ]
   ;
 
 /** Parses an ubounded integer */
-bv_constant[expr::bitvector& bv, size_t size]
+bv_constant[expr::bitvector& bv, size_t size, size_t base]
 @declarations {
 	expr::integer bv_int;
 }
   : NUMERAL { 
-  	  bv_int = STATE->token_as_integer($NUMERAL, 10);
+  	  bv_int = STATE->token_as_integer($NUMERAL, base);
   	  bv = expr::bitvector(size, bv_int); 
   	}
   ;

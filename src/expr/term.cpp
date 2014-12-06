@@ -136,6 +136,16 @@ std::string get_smt_keyword(term_op op) {
     return "bvugt";
   case TERM_BV_SGT:
     return "bvsgt";
+  case TERM_BV_UDIV:
+    return "bvudiv";
+  case TERM_BV_SDIV:
+    return "bvsdiv";
+  case TERM_BV_UREM:
+    return "bvurem";
+  case TERM_BV_SREM:
+    return "bvsrem";
+  case TERM_BV_SMOD:
+    return "bvsmod";
 
   case TYPE_BOOL:
     return "Bool";
@@ -223,6 +233,11 @@ void term::to_stream_smt(std::ostream& out, const term_manager_internal& tm) con
   case TERM_BV_SGEQ:
   case TERM_BV_UGT:
   case TERM_BV_SGT:
+  case TERM_BV_UDIV:
+  case TERM_BV_SDIV:
+  case TERM_BV_UREM:
+  case TERM_BV_SREM:
+  case TERM_BV_SMOD:
   {
     if (size() > 0) {
       out << "(";
@@ -236,6 +251,7 @@ void term::to_stream_smt(std::ostream& out, const term_manager_internal& tm) con
     }
     break;
   }
+
   case TERM_BV_EXTRACT: {
     const bitvector_extract& extract = tm.payload_of<bitvector_extract>(*this);
     out << "((_ extract " << extract.high << " " << extract.low << ") " << *begin() << ")";

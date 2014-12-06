@@ -65,6 +65,12 @@ enum term_op {
   TERM_BV_ADD,
   TERM_BV_SUB,
   TERM_BV_MUL,
+  TERM_BV_DIV,
+  TERM_BV_UDIV, // NOTE: semantics of division is x/0 = 111...111
+  TERM_BV_SDIV,
+  TERM_BV_UREM,
+  TERM_BV_SREM,
+  TERM_BV_SMOD,
   TERM_BV_XOR,
   TERM_BV_SHL,
   TERM_BV_LSHR,
