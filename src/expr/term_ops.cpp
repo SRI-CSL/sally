@@ -39,7 +39,6 @@ std::ostream& operator << (std::ostream& out, term_op op) {
     SWITCH_TO_STRING(TERM_GEQ)
     SWITCH_TO_STRING(TERM_GT)
     SWITCH_TO_STRING(CONST_STRING)
-    SWITCH_TO_STRING(OP_LAST)
     SWITCH_TO_STRING(CONST_BITVECTOR)
     SWITCH_TO_STRING(TERM_BV_ADD)
     SWITCH_TO_STRING(TERM_BV_SUB)
@@ -70,6 +69,7 @@ std::ostream& operator << (std::ostream& out, term_op op) {
     SWITCH_TO_STRING(TERM_BV_SGEQ)
     SWITCH_TO_STRING(TERM_BV_UGT)
     SWITCH_TO_STRING(TERM_BV_SGT)
+    SWITCH_TO_STRING(OP_LAST)
 
   default:
     out << "unknown";
