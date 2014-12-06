@@ -50,11 +50,16 @@ void btor_state::set_term(size_t index, term_ref term) {
   d_terms[index] = term;
 }
 
-expr::term_ref btor_state::get_term(size_t index) const {
-  if (index >= d_terms.size() || d_terms[index].is_null()) {
+expr::term_ref btor_state::get_term(int index) const {
+  size_t i = index >= 0 ? index : -index;
+  if (i >= d_terms.size() || d_terms[i].is_null()) {
     throw exception("Index not declared yet");
   }
-  return d_terms[index];
+  if (index >= 0) {
+    return d_terms[i];
+  } else {
+    return tm().mk_term(expr::TERM_NOT, d_terms[i]);
+  }
 }
 
 void btor_state::add_variable(size_t id, size_t size, std::string name) {
@@ -71,4 +76,8 @@ void btor_state::add_constant(size_t id, size_t size, const bitvector& bv) {
 void btor_state::add_term(size_t id, term_op op, size_t size, term_ref t1, term_ref t2) {
   term_ref term = tm().mk_term(op, t1, t2);
   set_term(id, term);
+}
+
+void btor_state::add_root(size_t id, size_t size, expr::term_ref t1) {
+  d_roots.push_back(t1);
 }

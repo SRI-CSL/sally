@@ -109,7 +109,7 @@ struct term_op_traits {
 };
 
 /**
- * Bitvector types have a payload of type size_t.
+ * Bitvector types have a payload of type size_t > 0.
  */
 template<>
 struct term_op_traits<TYPE_BITVECTOR> {

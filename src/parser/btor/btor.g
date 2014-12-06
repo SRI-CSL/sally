@@ -47,6 +47,9 @@ definition
     // Simple binary operations 
   | id=integer op = bv_binary_op size=integer t1=subterm t2=subterm
     { STATE->add_term(id, op, size, t1, t2); }
+  | // Root nodes 
+    id=integer 'root' size=integer t1=subterm 
+    { STATE->add_root(id, size, t1); }
   ;
 
 /** Parse a binary operator type */
@@ -62,7 +65,8 @@ subterm returns [expr::term_ref subterm]
   
 /** Parses an machine size integer */  
 integer returns [int value = -1; ]
-  : NUMERAL { value = STATE->token_as_int($NUMERAL); }
+  :     NUMERAL { value = STATE->token_as_int($NUMERAL); }
+  | '-' NUMERAL { value = -STATE->token_as_int($NUMERAL); }
   ;
 
 /** Parses an ubounded integer */

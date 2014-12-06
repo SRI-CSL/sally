@@ -515,6 +515,7 @@ bool term_manager_internal::term_ref_constructor<op, iterator_type>::cmp(const t
   return true;
 }
 
+
 template <typename iterator>
 term_ref term_manager_internal::mk_term(term_op op, iterator begin, iterator end) {
 
@@ -522,11 +523,8 @@ term_ref term_manager_internal::mk_term(term_op op, iterator begin, iterator end
 
 #define SWITCH_TO_TERM(OP) case OP: result = mk_term<OP>(begin, end); break;
 
+  // Only needed for the kinds that can be constructed with an op and children
   switch (op) {
-    SWITCH_TO_TERM(TYPE_BOOL)
-    SWITCH_TO_TERM(TYPE_INTEGER)
-    SWITCH_TO_TERM(TYPE_REAL)
-    SWITCH_TO_TERM(TYPE_STRUCT)
     SWITCH_TO_TERM(TERM_EQ)
     SWITCH_TO_TERM(TERM_ITE)
     SWITCH_TO_TERM(TERM_AND)
@@ -542,6 +540,27 @@ term_ref term_manager_internal::mk_term(term_op op, iterator begin, iterator end
     SWITCH_TO_TERM(TERM_LT)
     SWITCH_TO_TERM(TERM_GEQ)
     SWITCH_TO_TERM(TERM_GT)
+    SWITCH_TO_TERM(TERM_BV_ADD)
+    SWITCH_TO_TERM(TERM_BV_SUB)
+    SWITCH_TO_TERM(TERM_BV_MUL)
+    SWITCH_TO_TERM(TERM_BV_U_LEQ)
+    SWITCH_TO_TERM(TERM_BV_S_LEQ)
+    SWITCH_TO_TERM(TERM_BV_U_LT)
+    SWITCH_TO_TERM(TERM_BV_S_LT)
+    SWITCH_TO_TERM(TERM_BV_U_GEQ)
+    SWITCH_TO_TERM(TERM_BV_S_GEQ)
+    SWITCH_TO_TERM(TERM_BV_U_GT)
+    SWITCH_TO_TERM(TERM_BV_S_GT)
+    SWITCH_TO_TERM(TERM_BV_XOR)
+    SWITCH_TO_TERM(TERM_BV_SHL)
+    SWITCH_TO_TERM(TERM_BV_LSHR)
+    SWITCH_TO_TERM(TERM_BV_ASHR)
+    SWITCH_TO_TERM(TERM_BV_NOT)
+    SWITCH_TO_TERM(TERM_BV_AND)
+    SWITCH_TO_TERM(TERM_BV_OR)
+    SWITCH_TO_TERM(TERM_BV_NAND)
+    SWITCH_TO_TERM(TERM_BV_NOR)
+    SWITCH_TO_TERM(TERM_BV_XNOR)
   default:
     assert(false);
   }

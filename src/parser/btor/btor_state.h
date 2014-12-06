@@ -30,6 +30,9 @@ class btor_state {
   // Map from variables to their next versions
   std::vector<size_t> d_next;
 
+  // List of root nodes
+  std::vector<expr::term_ref> d_roots;
+
   /** Set the term */
   void set_term(size_t index, expr::term_ref term);
 
@@ -56,17 +59,20 @@ public:
   static
   expr::integer token_as_integer(pANTLR3_COMMON_TOKEN token, size_t base);
 
-  /** Get the term at index */
-  expr::term_ref get_term(size_t index) const;
+  /** Get the term at index (negated if negative) */
+  expr::term_ref get_term(int index) const;
 
-  /** Make a variable */
+  /** Add a variable */
   void add_variable(size_t id, size_t size, std::string name);
 
-  /** Make a constant */
+  /** Add a constant */
   void add_constant(size_t id, size_t size, const expr::bitvector& bv);
 
-  /** Make a binary term */
+  /** Add a binary term */
   void add_term(size_t id, expr::term_op op, size_t size, expr::term_ref t1, expr::term_ref t2);
+
+  /** Add a root node */
+  void add_root(size_t id, size_t size, expr::term_ref t1);
 };
 
 }

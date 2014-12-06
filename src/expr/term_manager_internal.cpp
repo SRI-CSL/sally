@@ -55,6 +55,7 @@ bool is_type(term_op op) {
   case TYPE_INTEGER:
   case TYPE_REAL:
   case TYPE_STRUCT:
+  case TYPE_BITVECTOR:
     return true;
   default:
     return false;
@@ -72,6 +73,9 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
   case TYPE_INTEGER:
   case TYPE_REAL:
   case VARIABLE:
+    break;
+  case TYPE_BITVECTOR:
+    ok = t.size() == 0 && payload_of<size_t>(t) > 0;
     break;
   case TYPE_STRUCT: {
     if (t.size() % 2) {
@@ -171,6 +175,39 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
       ok = type_of(t[0]) == realType() && type_of(t[1]) == realType();
       // TODO: make TCC
     }
+    break;
+  // Bitvector terms
+  case CONST_BITVECTOR:
+    ok = true;
+    break;
+  case TERM_BV_NOT:
+    ok = false;
+    break;
+  case TERM_BV_ADD:
+  case TERM_BV_SUB:
+  case TERM_BV_MUL:
+  case TERM_BV_XOR:
+  case TERM_BV_AND:
+  case TERM_BV_OR:
+  case TERM_BV_NAND:
+  case TERM_BV_NOR:
+  case TERM_BV_XNOR:
+    ok = false;
+    break;
+  case TERM_BV_SHL:
+  case TERM_BV_LSHR:
+  case TERM_BV_ASHR:
+    ok = false;
+    break;
+  case TERM_BV_U_LEQ:
+  case TERM_BV_S_LEQ:
+  case TERM_BV_U_LT:
+  case TERM_BV_S_LT:
+  case TERM_BV_U_GEQ:
+  case TERM_BV_S_GEQ:
+  case TERM_BV_U_GT:
+  case TERM_BV_S_GT:
+      ok = false;
     break;
   case CONST_STRING:
     ok = true;
