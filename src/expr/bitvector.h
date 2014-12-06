@@ -30,6 +30,9 @@ public:
   /** Construct from integer */
   bitvector(size_t size, const integer& z);
 
+  /** Construct from int */
+  bitvector(size_t size, long x);
+
   /** Construct from a string representation (0 terminated) */
   explicit bitvector(const char* bits);
 
@@ -51,6 +54,25 @@ public:
   void to_stream(std::ostream& out) const;
 };
 
+/**
+ * Payload for bitvector extract operation (low <= high).
+ */
+struct bitvector_extract {
+  /** High bit to be extracted */
+  size_t high;
+  /** Low bit to be extracted */
+  size_t low;
+
+  bitvector_extract(size_t high, size_t low)
+  : high(high), low(low) {}
+
+  /** Comparison */
+  bool operator == (const bitvector_extract& other) const;
+
+  /** Hash */
+  size_t hash() const;
+};
+
 std::ostream& operator << (std::ostream& out, const bitvector& bv);
 
 }
@@ -61,6 +83,13 @@ template<>
 struct hash<expr::bitvector> {
   size_t operator()(const expr::bitvector& bv) const {
     return bv.hash();
+  }
+};
+
+template<>
+struct hash<expr::bitvector_extract> {
+  size_t operator()(const expr::bitvector_extract& extract) const {
+    return extract.hash();
   }
 };
 

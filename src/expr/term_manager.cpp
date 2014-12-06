@@ -64,6 +64,11 @@ term_ref term_manager::mk_term(term_op op, term_ref c1, term_ref c2) {
   return d_tm->mk_term(op, children, children + 2);
 }
 
+term_ref term_manager::mk_term(term_op op, term_ref c1, term_ref c2, term_ref c3) {
+  term_ref children[3] = { c1 , c2, c3 };
+  return d_tm->mk_term(op, children, children + 3);
+}
+
 term_ref term_manager::mk_variable(term_ref type) {
   static size_t id = 0;
   std::stringstream ss;
@@ -118,6 +123,10 @@ term_ref term_manager::mk_bitvector_constant(const bitvector& value) {
   return d_tm->mk_term<CONST_BITVECTOR>(value);
 }
 
+term_ref term_manager::mk_bitvector_extract(term_ref t, const bitvector_extract& extract) {
+  return d_tm->mk_term<expr::TERM_BV_EXTRACT>(extract, t);
+}
+
 term_ref term_manager::mk_string_constant(std::string value) {
   return d_tm->mk_term<CONST_STRING>(value);
 }
@@ -140,6 +149,11 @@ rational term_manager::get_rational_constant(const term& t) const {
 bitvector term_manager::get_bitvector_constant(const term& t) const {
   assert(t.op() == CONST_BITVECTOR);
   return d_tm->payload_of<bitvector>(t);
+}
+
+bitvector_extract term_manager::get_bitvector_extract(const term& t) const {
+  assert(t.op() == TERM_BV_EXTRACT);
+  return d_tm->payload_of<bitvector_extract>(t);
 }
 
 std::string term_manager::get_string_constant(const term& t) const {

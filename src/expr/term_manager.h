@@ -63,6 +63,9 @@ public:
   term_ref mk_term(term_op op, term_ref c1, term_ref c2);
 
   /** Make a term, given children */
+  term_ref mk_term(term_op op, term_ref c1, term_ref c2, term_ref c3);
+
+  /** Make a term, given children */
   term_ref mk_term(term_op op, const std::vector<term_ref>& children);
 
   /** Make a term, given children */
@@ -105,6 +108,12 @@ public:
 
   /** Return the bitvector constant value */
   bitvector get_bitvector_constant(const term& t) const;
+
+  /** Make a new bitvector extract operator */
+  term_ref mk_bitvector_extract(term_ref t, const bitvector_extract& extract);
+
+  /** Get the extract of the extract term */
+  bitvector_extract get_bitvector_extract(const term& t) const;
 
   /** Make a new string constant */
   term_ref mk_string_constant(std::string value);

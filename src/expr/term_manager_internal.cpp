@@ -181,7 +181,7 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
     ok = true;
     break;
   case TERM_BV_NOT:
-    ok = false;
+    ok = t.size() == 1 && is_bitvector_type(type_of(t[0]));
     break;
   case TERM_BV_ADD:
   case TERM_BV_SUB:
@@ -251,6 +251,24 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
       for (const term_ref* it = t.begin(); it != t.end(); ++ it) {
         if (!is_bitvector_type(type_of(*it))) {
           ok = false;
+        }
+      }
+    }
+    break;
+  case TERM_BV_EXTRACT:
+    if (t.size() != 1) {
+      ok = false;
+    } else {
+      term_ref child_type = type_of(t[0]);
+      if (!is_bitvector_type(child_type)) {
+        ok = false;
+      } else {
+        size_t child_size = bitvector_type_size(child_type);
+        const bitvector_extract& extract = payload_of<bitvector_extract>(t);
+        if (extract.high < extract.low) {
+          ok = false;
+        } else {
+          ok = extract.high < child_size;
         }
       }
     }
@@ -397,7 +415,12 @@ term_ref term_manager_internal::type_of(const term& t) const {
     result = const_cast<term_manager_internal*>(this)->bitvector_type(size);
     break;
   }
-
+  case TERM_BV_EXTRACT: {
+    const bitvector_extract& extract = payload_of<bitvector_extract>(t);
+    size_t size = extract.high - extract.low + 1;
+    result = const_cast<term_manager_internal*>(this)->bitvector_type(size);
+    break;
+  }
   case CONST_STRING:
     break;
   default:

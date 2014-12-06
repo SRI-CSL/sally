@@ -39,37 +39,53 @@ definition
   expr::bitvector bv;
 }
   : // Variables 
-    id=integer 'var' size=integer (name=symbol[name])?                  
+    id=pos_integer 'var' size=pos_integer (name=symbol[name])?                  
     { STATE->add_variable(id, size, name); }
     // Constants 
-  | id=integer 'constd' size=integer bv_constant[bv, size]                 
+  | id=pos_integer 'constd' size=pos_integer bv_constant[bv, size]                 
     { STATE->add_constant(id, size, bv); }
     // Simple binary operations 
-  | id=integer op = bv_binary_op size=integer t1=subterm t2=subterm
+  | id=pos_integer op=bv_binary_op size=pos_integer t1=subterm t2=subterm
     { STATE->add_term(id, op, size, t1, t2); }
+  | // Extraction/Slicing
+    id=pos_integer 'slice' size=pos_integer t=subterm high=pos_integer low=pos_integer
+    { STATE->add_slice(id, size, t, high, low); }
+  | // Conditional
+    id=pos_integer 'cond' size=pos_integer t1=subterm t2=subterm t3=subterm
+    { STATE->add_ite(id, size, t1, t2, t3); }
+  | // Next 
+    id=pos_integer 'next' size=pos_integer var_id=pos_integer t=subterm
+    { STATE->add_next_variable(id, size, var_id, t); } 
   | // Root nodes 
-    id=integer 'root' size=integer t1=subterm 
+    id=pos_integer 'root' size=pos_integer t1=subterm 
     { STATE->add_root(id, size, t1); }
   ;
 
 /** Parse a binary operator type */
 bv_binary_op returns [expr::term_op op]
-  : 'xor'    { $op = expr::TERM_BV_XOR;  }
-  | 'sra'    { $op = expr::TERM_BV_ASHR; }
-  | 'concat' { $op = expr::TERM_BV_CONCAT; }
-  | 'eq'     { $op = expr::TERM_EQ; }
-  | 'and'    { $op = expr::TERM_BV_AND; }
+  : 'xor'    { op = expr::TERM_BV_XOR;  }
+  | 'sra'    { op = expr::TERM_BV_ASHR; }
+  | 'concat' { op = expr::TERM_BV_CONCAT; }
+  | 'eq'     { op = expr::TERM_EQ; }
+  | 'and'    { op = expr::TERM_BV_AND; }
+  | 'or'     { op = expr::TERM_BV_OR; }
+  | 'add'    { op = expr::TERM_BV_ADD; }
+  | 'ulte'   { op = expr::TERM_BV_ULEQ; }
   ;
 
 /** A subterm */
 subterm returns [expr::term_ref subterm]
-  : id=integer { $subterm = STATE->get_term(id); }
+  : id=integer { subterm = STATE->get_term(id); }
   ;
   
 /** Parses an machine size integer */  
 integer returns [int value = -1; ]
-  :     NUMERAL { value = STATE->token_as_int($NUMERAL); }
-  | '-' NUMERAL { value = -STATE->token_as_int($NUMERAL); }
+  :     p=pos_integer { value = p; }
+  | '-' p=pos_integer { value = -p; }
+  ;
+
+pos_integer returns [size_t value ]
+  : NUMERAL { value = STATE->token_as_int($NUMERAL); }
   ;
 
 /** Parses an ubounded integer */

@@ -22,6 +22,11 @@ bitvector::bitvector(size_t size, const integer& z)
 , d_size(size)
 {}
 
+bitvector::bitvector(size_t size, long x)
+: integer(x)
+, d_size(size)
+{}
+
 size_t bitvector::hash() const {
   utils::sequence_hash hasher;
   hasher.add(d_gmp_int.get_ui());
@@ -43,6 +48,18 @@ void bitvector::to_stream(std::ostream& out) const {
   out << "(_ bv" << size() << " ";
   integer::to_stream(out);
   out << ")";
+}
+
+
+bool bitvector_extract::operator == (const bitvector_extract& other) const {
+  return high == other.high && low == other.low;
+}
+
+size_t bitvector_extract::hash() const {
+  utils::sequence_hash hasher;
+  hasher.add(high);
+  hasher.add(low);
+  return hasher.get();
 }
 
 std::ostream& operator << (std::ostream& out, const bitvector& bv) {

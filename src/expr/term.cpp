@@ -236,6 +236,11 @@ void term::to_stream_smt(std::ostream& out, const term_manager_internal& tm) con
     }
     break;
   }
+  case TERM_BV_EXTRACT: {
+    const bitvector_extract& extract = tm.payload_of<bitvector_extract>(*this);
+    out << "((_ extract " << extract.high << " " << extract.low << ") " << *begin() << ")";
+    break;
+  }
   case CONST_RATIONAL:
     // Stream is already in SMT mode
     out << tm.payload_of<rational>(*this);

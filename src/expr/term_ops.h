@@ -76,6 +76,7 @@ enum term_op {
   TERM_BV_NOR,
   TERM_BV_XNOR,
   TERM_BV_CONCAT,
+  TERM_BV_EXTRACT,
   TERM_BV_ULEQ,
   TERM_BV_SLEQ,
   TERM_BV_ULT,
@@ -116,6 +117,15 @@ template<>
 struct term_op_traits<TYPE_BITVECTOR> {
   typedef size_t payload_type;
 };
+
+/**
+ * Bitvector extract has a payload of type pair<size_t, size_t>.
+ */
+template<>
+struct term_op_traits<TERM_BV_EXTRACT> {
+  typedef expr::bitvector_extract payload_type;
+};
+
 
 /**
  * Boolean constant terms have a payload of type bool and no children.
