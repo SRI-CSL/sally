@@ -20,10 +20,7 @@ using namespace std;
 
 btor_state::btor_state(const system::context& context)
 : d_context(context)
-{
-  // Add the basic types
-  term_manager& tm = context.tm();
-}
+{}
 
 string btor_state::token_text(pANTLR3_COMMON_TOKEN token) {
   ANTLR3_MARKER start = token->getStartIndex(token);
