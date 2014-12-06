@@ -55,17 +55,23 @@ expr::term_ref btor_state::get_term(int index) const {
   if (i >= d_terms.size() || d_terms[i].is_null()) {
     throw exception("Index not declared yet");
   }
+  term_ref result = d_terms[i];
   if (index >= 0) {
-    return d_terms[i];
+    return result;
   } else {
-    return tm().mk_term(expr::TERM_NOT, d_terms[i]);
+    if (tm().type_of(result) == tm().boolean_type()) {
+      return tm().mk_term(expr::TERM_NOT, result);
+    } else {
+      return tm().mk_term(expr::TERM_BV_NOT, result);
+    }
   }
 }
 
 void btor_state::add_variable(size_t id, size_t size, std::string name) {
-  term_ref type = tm().bitvectorType(size);
+  term_ref type = tm().bitvector_type(size);
   term_ref term = tm().mk_variable(name, type);
   set_term(id, term);
+  d_variables.push_back(id);
 }
 
 void btor_state::add_constant(size_t id, size_t size, const bitvector& bv) {
@@ -73,8 +79,55 @@ void btor_state::add_constant(size_t id, size_t size, const bitvector& bv) {
   set_term(id, term);
 }
 
+static size_t power_log(size_t size) {
+  assert(size > 0);
+  size_t log = 0;
+  while ((size & 1) == 0) {
+    size >>= 1;
+    log ++;
+  }
+  if (size != 1) {
+    throw parser_exception("Bitvector size must be a power of two.");
+  }
+  return log;
+}
+
 void btor_state::add_term(size_t id, term_op op, size_t size, term_ref t1, term_ref t2) {
-  term_ref term = tm().mk_term(op, t1, t2);
+  if (size == 0) {
+    throw parser_exception("Bitvector size must be non-negative");
+  }
+  term_ref term;
+  switch (op) {
+  case TERM_BV_SHL:
+  case TERM_BV_LSHR:
+  case TERM_BV_ASHR: {
+    // Size is a power of two
+    size_t size_log = power_log(size);
+    // Padding
+    bitvector bv(size - size_log);
+    term_ref padding = tm().mk_bitvector_constant(bv);
+    // Extend the shift factor to the size
+    t2 = tm().mk_term(expr::TERM_BV_CONCAT, padding, t2);
+    // Make the term
+    term = tm().mk_term(op, t1, t2);
+    break;
+  }
+  default:
+    // Nothing to do
+    term = tm().mk_term(op, t1, t2);
+    break;
+  }
+
+  term_ref term_type = tm().type_of(term);
+  if (term_type == tm().boolean_type()) {
+    if (size != 1) {
+      throw exception("Bitvector sizes don't match.");
+    }
+  } else if (tm().get_bitvector_type_size(term_type) != size) {
+    throw exception("Bitvector sizes don't match.");
+  }
+
+  // Set the data
   set_term(id, term);
 }
 

@@ -40,7 +40,9 @@ bitvector::bitvector(std::string bits)
 {}
 
 void bitvector::to_stream(std::ostream& out) const {
-
+  out << "(_ bv" << size() << " ";
+  integer::to_stream(out);
+  out << ")";
 }
 
 std::ostream& operator << (std::ostream& out, const bitvector& bv) {

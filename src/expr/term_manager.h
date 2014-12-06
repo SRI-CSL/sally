@@ -42,16 +42,19 @@ public:
   void to_stream(std::ostream& out) const;
 
   /** Get the Boolean type */
-  term_ref booleanType() const;
+  term_ref boolean_type() const;
 
   /** Get the Integer type */
-  term_ref integerType() const;
+  term_ref integer_type() const;
 
   /** Get the Real type */
-  term_ref realType() const;
+  term_ref real_type() const;
 
   /** Get the type of bitvectors of given size > 0. */
-  term_ref bitvectorType(size_t size);
+  term_ref bitvector_type(size_t size);
+
+  /** Get the size of a bitvector type or term */
+  size_t get_bitvector_type_size(term_ref bv_type) const;
 
   /** Make a term, given children */
   term_ref mk_term(term_op op, term_ref c);

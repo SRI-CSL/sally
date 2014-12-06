@@ -24,22 +24,27 @@ void term_manager::to_stream(std::ostream& out) const {
   d_tm->to_stream(out);
 }
 
-term_ref term_manager::booleanType() const {
-  return d_tm->booleanType();
+term_ref term_manager::boolean_type() const {
+  return d_tm->boolean_type();
 }
 
-term_ref term_manager::integerType() const {
-  return d_tm->integerType();
+term_ref term_manager::integer_type() const {
+  return d_tm->integer_type();
 }
 
-term_ref term_manager::realType() const {
-  return d_tm->realType();
+term_ref term_manager::real_type() const {
+  return d_tm->real_type();
 }
 
-term_ref term_manager::bitvectorType(size_t size) {
-  return d_tm->bitvectorType(size);
+term_ref term_manager::bitvector_type(size_t size) {
+  return d_tm->bitvector_type(size);
 }
 
+size_t term_manager::get_bitvector_type_size(term_ref t_ref) const {
+  const term& t = d_tm->term_of(t_ref);
+  assert(t.op() == TYPE_BITVECTOR);
+  return d_tm->payload_of<size_t>(t);
+}
 
 term_ref term_manager::mk_term(term_op op, const std::vector<term_ref>& children) {
   return d_tm->mk_term(op, children.begin(), children.end());

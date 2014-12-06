@@ -39,9 +39,9 @@ BOOST_FIXTURE_TEST_SUITE(smt_tests, term_manager_with_yices_test_fixture)
 BOOST_AUTO_TEST_CASE(basic_asserts) {
 
   // Assert something to yices
-  term_ref x = tm.mk_variable("x", tm.realType());
-  term_ref y = tm.mk_variable("y", tm.realType());
-  term_ref b = tm.mk_variable("b", tm.booleanType());
+  term_ref x = tm.mk_variable("x", tm.real_type());
+  term_ref y = tm.mk_variable("y", tm.real_type());
+  term_ref b = tm.mk_variable("b", tm.boolean_type());
   term_ref zero = tm.mk_rational_constant(rational());
 
   term_ref sum = tm.mk_term(TERM_ADD, x, y);
@@ -79,9 +79,9 @@ BOOST_AUTO_TEST_CASE(generalization) {
   yices2->push();
 
   // Assert something to yices
-  term_ref x = tm.mk_variable("x", tm.realType());
-  term_ref y = tm.mk_variable("y", tm.realType());
-  term_ref z = tm.mk_variable("z", tm.realType());
+  term_ref x = tm.mk_variable("x", tm.real_type());
+  term_ref y = tm.mk_variable("y", tm.real_type());
+  term_ref z = tm.mk_variable("z", tm.real_type());
   term_ref zero = tm.mk_rational_constant(rational());
 
   term_ref sum_x_y = tm.mk_term(TERM_ADD, x, y);
@@ -120,8 +120,8 @@ BOOST_AUTO_TEST_CASE(generalization) {
 
   yices2->pop();
 
-  term_ref b1 = tm.mk_variable("b1", tm.booleanType());
-  term_ref b2 = tm.mk_variable("b2", tm.booleanType());
+  term_ref b1 = tm.mk_variable("b1", tm.boolean_type());
+  term_ref b2 = tm.mk_variable("b2", tm.boolean_type());
 
   term_ref imp1 = tm.mk_term(expr::TERM_IMPLIES, b1, geq_x_y_z);
   term_ref imp2 = tm.mk_term(expr::TERM_IMPLIES, b2, leq_x_y);

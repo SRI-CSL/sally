@@ -91,6 +91,52 @@ std::string get_smt_keyword(term_op op) {
     return ">";
   case TERM_ITE:
     return "ite";
+
+  case TERM_BV_ADD:
+    return "bvadd";
+  case TERM_BV_SUB:
+    return "bvsub";
+  case TERM_BV_MUL:
+    return "bvmul";
+  case TERM_BV_XOR:
+    return "bvxor";
+  case TERM_BV_SHL:
+    return "bvshl";
+  case TERM_BV_LSHR:
+    return "bvlshr";
+  case TERM_BV_ASHR:
+    return "bvashr";
+  case TERM_BV_NOT:
+    return "bvnot";
+  case TERM_BV_AND:
+    return "bvand";
+  case TERM_BV_OR:
+    return "bvor";
+  case TERM_BV_NAND:
+    return "bvnand";
+  case TERM_BV_NOR:
+    return "bvnor";
+  case TERM_BV_XNOR:
+    return "bvxnor";
+  case TERM_BV_CONCAT:
+    return "concat";
+  case TERM_BV_ULEQ:
+    return "bvule";
+  case TERM_BV_SLEQ:
+    return "bvsle";
+  case TERM_BV_ULT:
+    return "bvult";
+  case TERM_BV_SLT:
+    return "bvslt";
+  case TERM_BV_UGEQ:
+    return "bvuge";
+  case TERM_BV_SGEQ:
+    return "bvsge";
+  case TERM_BV_UGT:
+    return "bvugt";
+  case TERM_BV_SGT:
+    return "bvsgt";
+
   case TYPE_BOOL:
     return "Bool";
   case TYPE_INTEGER:
@@ -155,6 +201,28 @@ void term::to_stream_smt(std::ostream& out, const term_manager_internal& tm) con
   case TERM_LT:
   case TERM_GEQ:
   case TERM_GT:
+  case TERM_BV_ADD:
+  case TERM_BV_SUB:
+  case TERM_BV_MUL:
+  case TERM_BV_XOR:
+  case TERM_BV_SHL:
+  case TERM_BV_LSHR:
+  case TERM_BV_ASHR:
+  case TERM_BV_NOT:
+  case TERM_BV_AND:
+  case TERM_BV_OR:
+  case TERM_BV_NAND:
+  case TERM_BV_NOR:
+  case TERM_BV_XNOR:
+  case TERM_BV_CONCAT:
+  case TERM_BV_ULEQ:
+  case TERM_BV_SLEQ:
+  case TERM_BV_ULT:
+  case TERM_BV_SLT:
+  case TERM_BV_UGEQ:
+  case TERM_BV_SGEQ:
+  case TERM_BV_UGT:
+  case TERM_BV_SGT:
   {
     if (size() > 0) {
       out << "(";
@@ -175,6 +243,9 @@ void term::to_stream_smt(std::ostream& out, const term_manager_internal& tm) con
   case CONST_INTEGER:
     // Stream is already in SMT mode
     out << tm.payload_of<integer>(*this);
+    break;
+  case CONST_BITVECTOR:
+    out << tm.payload_of<bitvector>(*this);
     break;
   case CONST_STRING:
     out << tm.payload_of<std::string>(*this);

@@ -37,7 +37,7 @@ public:
   explicit bitvector(std::string bits);
 
   /** Get the size of the bitvector */
-  size_t get_size() const { return d_size; }
+  size_t size() const { return d_size; }
 
   /** Hash */
   size_t hash() const;

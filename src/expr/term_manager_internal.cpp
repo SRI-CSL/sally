@@ -40,7 +40,7 @@ term_manager_internal::~term_manager_internal() {
 }
 
 term_ref term_manager_internal::tcc_of(const term& t) const {
-  tcc_map::const_iterator find = d_tcc_map.find(ref_of(t));
+  term_to_term_map::const_iterator find = d_tcc_map.find(ref_of(t));
   if (find == d_tcc_map.end()) {
     return term_ref();
   } else {
@@ -97,7 +97,7 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
     break;
   // ITE
   case TERM_ITE:
-    ok = (t.size() == 3 && type_of(t[0]) == booleanType() &&
+    ok = (t.size() == 3 && type_of(t[0]) == boolean_type() &&
         type_of(t[1]) == type_of(t[2]));
     break;
   // Boolean terms
@@ -110,7 +110,7 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
       ok = false;
     } else {
       for (const term_ref* it = t.begin(); it != t.end(); ++ it) {
-        if (type_of(*it) != booleanType()) {
+        if (type_of(*it) != boolean_type()) {
           ok = false;
           break;
         }
@@ -121,14 +121,14 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
     if (t.size() != 1) {
       ok = false;
     } else {
-      ok = type_of(t[0]) == booleanType();
+      ok = type_of(t[0]) == boolean_type();
     }
     break;
   case TERM_IMPLIES:
     if (t.size() != 2) {
       ok = false;
     } else {
-      ok = type_of(t[0]) == booleanType() && type_of(t[1]) == booleanType();
+      ok = type_of(t[0]) == boolean_type() && type_of(t[1]) == boolean_type();
     }
     break;
   // Arithmetic terms
@@ -141,7 +141,7 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
       ok = false;
     } else {
       for (const term_ref* it = t.begin(); it != t.end(); ++ it) {
-        if (type_of(*it) != realType()) {
+        if (type_of(*it) != real_type()) {
           ok = false;
           break;
         }
@@ -151,11 +151,11 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
   case TERM_SUB:
     // 1 child is OK
     if (t.size() == 1) {
-      ok = type_of(t[0]) == realType();
+      ok = type_of(t[0]) == real_type();
     } else if (t.size() != 2) {
       ok = false;
     } else {
-      ok = type_of(t[0]) == realType() && type_of(t[1]) == realType();
+      ok = type_of(t[0]) == real_type() && type_of(t[1]) == real_type();
     }
     break;
   case TERM_LEQ:
@@ -165,14 +165,14 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
     if (t.size() != 2) {
       ok = false;
     } else {
-      ok = type_of(t[0]) == realType() && type_of(t[1]) == realType();
+      ok = type_of(t[0]) == real_type() && type_of(t[1]) == real_type();
     }
     break;
   case TERM_DIV:
     if (t.size() != 2) {
       ok = false;
     } else {
-      ok = type_of(t[0]) == realType() && type_of(t[1]) == realType();
+      ok = type_of(t[0]) == real_type() && type_of(t[1]) == real_type();
       // TODO: make TCC
     }
     break;
@@ -192,12 +192,37 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
   case TERM_BV_NAND:
   case TERM_BV_NOR:
   case TERM_BV_XNOR:
-    ok = false;
+    if (t.size() < 2) {
+      ok = false;
+    } else {
+      const term_ref* it = t.begin();
+      term_ref type_ref = type_of(*it);
+      if (!is_bitvector_type(type_ref)) {
+        ok = false;
+      } else {
+        ok = true;
+        for (++ it; it != t.end(); ++ it) {
+          if (type_of(*it) != type_ref) {
+            ok = false;
+            break;
+          }
+        }
+      }
+    }
     break;
   case TERM_BV_SHL:
   case TERM_BV_LSHR:
   case TERM_BV_ASHR:
-    ok = false;
+    if (t.size() != 2) {
+      ok = false;
+    } else {
+      term_ref type_ref = type_of(t[0]);
+      if (!is_bitvector_type(t[0])) {
+        ok = false;
+      } else {
+        ok = type_ref == type_of(t[1]);
+      }
+    }
     break;
   case TERM_BV_ULEQ:
   case TERM_BV_SLEQ:
@@ -207,7 +232,28 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
   case TERM_BV_SGEQ:
   case TERM_BV_UGT:
   case TERM_BV_SGT:
+    if (t.size() != 2) {
       ok = false;
+    } else {
+      term_ref type_ref = type_of(t[0]);
+      if (!is_bitvector_type(type_ref)) {
+        ok = false;
+      } else {
+        ok = type_ref == type_of(t[1]);
+      }
+    }
+    break;
+  case TERM_BV_CONCAT:
+    if (t.size() < 2) {
+      ok = false;
+    } else {
+      ok = true;
+      for (const term_ref* it = t.begin(); it != t.end(); ++ it) {
+        if (!is_bitvector_type(type_of(*it))) {
+          ok = false;
+        }
+      }
+    }
     break;
   case CONST_STRING:
     ok = true;
@@ -252,21 +298,38 @@ std::string term_manager_internal::to_string(term_ref ref) const {
 }
 
 term_ref term_manager_internal::type_of(const term& t) const {
+
+  // Reference of t
+  term_ref t_ref = ref_of(t);
+
+  // Check if computed already
+  term_to_term_map::const_iterator find = d_type_cache.find(t_ref);
+  if (find != d_type_cache.end()) {
+    return find->second;
+  }
+
+  // The result
+  term_ref result = term_ref();
+
+  // Compute the type
   switch (t.op()) {
   case TYPE_BOOL:
   case TYPE_INTEGER:
   case TYPE_REAL:
   case TYPE_STRUCT:
-    return term_ref();
+    result = term_ref();
+    break;
   case VARIABLE:
-    return t[0];
+    result = t[0];
+    break;
   // Equality
   case TERM_EQ:
-    return booleanType();
+    result = boolean_type();
     break;
   // ITE
   case TERM_ITE:
-    return type_of(t[1]);
+    result = type_of(t[1]);
+    break;
   // Boolean terms
   case CONST_BOOL:
   case TERM_AND:
@@ -274,28 +337,77 @@ term_ref term_manager_internal::type_of(const term& t) const {
   case TERM_XOR:
   case TERM_NOT:
   case TERM_IMPLIES:
-    return booleanType();
+    result = boolean_type();
+    break;
   // Arithmetic terms
   case CONST_INTEGER:
     // TODO: fix this
-    return d_realType;
+    result = d_realType;
+    break;
   case CONST_RATIONAL:
   case TERM_ADD:
   case TERM_MUL:
   case TERM_SUB:
   case TERM_DIV:
-    return d_realType;
+    result = d_realType;
+    break;
   case TERM_LEQ:
   case TERM_LT:
   case TERM_GEQ:
   case TERM_GT:
-    return d_booleanType;
+    result = d_booleanType;
+    break;
+  case CONST_BITVECTOR:
+    result = const_cast<term_manager_internal*>(this)->bitvector_type(payload_of<bitvector>(t).size());
+    break;
+
+  case TERM_BV_ADD:
+  case TERM_BV_SUB:
+  case TERM_BV_MUL:
+  case TERM_BV_XOR:
+  case TERM_BV_NOT:
+  case TERM_BV_AND:
+  case TERM_BV_OR:
+  case TERM_BV_NAND:
+  case TERM_BV_NOR:
+  case TERM_BV_XNOR:
+    result = type_of(t[0]);
+    break;
+  case TERM_BV_ULEQ:
+  case TERM_BV_SLEQ:
+  case TERM_BV_ULT:
+  case TERM_BV_SLT:
+  case TERM_BV_UGEQ:
+  case TERM_BV_SGEQ:
+  case TERM_BV_UGT:
+  case TERM_BV_SGT:
+    result = boolean_type();
+    break;
+  case TERM_BV_SHL:
+  case TERM_BV_LSHR:
+  case TERM_BV_ASHR:
+    result = type_of(t[0]);
+    break;
+  case TERM_BV_CONCAT: {
+    size_t size = 0;
+    for (const term_ref* it = t.begin(); it != t.end(); ++ it) {
+      term_ref type_ref = type_of(*it);
+      size += bitvector_type_size(type_ref);
+    }
+    result = const_cast<term_manager_internal*>(this)->bitvector_type(size);
+    break;
+  }
+
   case CONST_STRING:
-    return term_ref();
+    break;
   default:
     assert(false);
   }
-  return term_ref();
+
+  // Cache
+  const_cast<term_manager_internal*>(this)->d_type_cache[t_ref] = result;
+
+  return result;
 }
 
 /** Add a namespace entry (will be removed from prefix when printing. */
@@ -355,10 +467,20 @@ term_ref term_manager_internal::substitute(term_ref t, substitution_map& subst) 
   return t_new;
 }
 
-term_ref term_manager_internal::bitvectorType(size_t size) {
+term_ref term_manager_internal::bitvector_type(size_t size) {
    bitvector_type_map::const_iterator find = d_bitvectorType.find(size);
    if (find!= d_bitvectorType.end()) return find->second;
    term_ref new_type = mk_term<TYPE_BITVECTOR>(size);
    d_bitvectorType[size] = term_ref_strong(*this, new_type);
    return new_type;
+}
+
+bool term_manager_internal::is_bitvector_type(term_ref t) const {
+  return term_of(t).d_op == TYPE_BITVECTOR;
+}
+
+size_t term_manager_internal::bitvector_type_size(term_ref t_ref) const {
+  const term& t = term_of(t_ref);
+  assert(t.op() == TYPE_BITVECTOR);
+  return payload_of<size_t>(t);
 }

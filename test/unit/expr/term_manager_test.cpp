@@ -38,7 +38,7 @@ BOOST_AUTO_TEST_CASE(mk_term) {
   BOOST_CHECK_EQUAL(tm.term_of(t_false).size(), 0);
 
   // A variable
-  term_ref t_v_bool = tm.mk_variable("x", tm.booleanType());
+  term_ref t_v_bool = tm.mk_variable("x", tm.boolean_type());
   cout << t_v_bool << endl;
   BOOST_CHECK_EQUAL(tm.term_of(t_v_bool).size(), 1);
 
@@ -62,11 +62,11 @@ BOOST_AUTO_TEST_CASE(mk_term) {
   cout << t_and << endl;
   BOOST_CHECK_EQUAL(tm.term_of(t_and).size(), 5);
 
-  term_ref t_v_real_0 = tm.mk_variable("x", tm.realType());
+  term_ref t_v_real_0 = tm.mk_variable("x", tm.real_type());
   cout << t_v_real_0 << endl;
-  term_ref t_v_real_1 = tm.mk_variable("y", tm.realType());
+  term_ref t_v_real_1 = tm.mk_variable("y", tm.real_type());
   cout << t_v_real_1 << endl;
-  term_ref t_v_real_2 = tm.mk_variable("z", tm.realType());
+  term_ref t_v_real_2 = tm.mk_variable("z", tm.real_type());
   cout << t_v_real_2 << endl;
 
   term_ref t_r0 = tm.mk_rational_constant(rational(0, 1));

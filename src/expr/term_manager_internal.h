@@ -153,13 +153,18 @@ private:
   /** The pool of existing terms */
   term_ref_hash_set d_pool;
 
-  typedef boost::unordered_map<term_ref, term_ref, term_ref_hasher> tcc_map;
+  typedef boost::unordered_map<term_ref, term_ref, term_ref_hasher> term_to_term_map;
+
+  /**
+   * Map from term to their types. It's built on demand.
+   */
+  term_to_term_map d_type_cache;
 
   /**
    * Map from terms to their type-checking conditions. If the entry is empty
    * then TCC = true.
    */
-  tcc_map d_tcc_map;
+  term_to_term_map d_tcc_map;
 
   /** Type-check the term (adds to TCC if needed) */
   bool typecheck(term_ref t);
@@ -227,16 +232,22 @@ public:
   void to_stream(std::ostream& out) const;
 
   /** Get the Boolean type */
-  term_ref booleanType() const { return d_booleanType; }
+  term_ref boolean_type() const { return d_booleanType; }
 
   /** Get the Integer type */
-  term_ref integerType() const { return d_integerType; }
+  term_ref integer_type() const { return d_integerType; }
 
   /** Get the Real type */
-  term_ref realType() const { return d_realType; }
+  term_ref real_type() const { return d_realType; }
 
   /** Get the Bitvector type */
-  term_ref bitvectorType(size_t size);
+  term_ref bitvector_type(size_t size);
+
+  /** Is t the bitvector type */
+  bool is_bitvector_type(term_ref t) const;
+
+  /** Returns the size of the bitvector type */
+  size_t bitvector_type_size(term_ref t) const;
 
   /** Generic term constructor */
   template <term_op op, typename iterator_type>
@@ -562,6 +573,7 @@ term_ref term_manager_internal::mk_term(term_op op, iterator begin, iterator end
     SWITCH_TO_TERM(TERM_BV_NAND)
     SWITCH_TO_TERM(TERM_BV_NOR)
     SWITCH_TO_TERM(TERM_BV_XNOR)
+    SWITCH_TO_TERM(TERM_BV_CONCAT)
   default:
     assert(false);
   }
