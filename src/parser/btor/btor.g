@@ -64,7 +64,7 @@ definition
   ;
 
 /** Parse a binary operator type */
-bv_binary_op returns [expr::term_op op]
+bv_binary_op returns [expr::term_op op = expr::OP_LAST]
   : 'xor'    { op = expr::TERM_BV_XOR;  }
   | 'sra'    { op = expr::TERM_BV_ASHR; }
   | 'sll'    { op = expr::TERM_BV_SHL; }
@@ -86,12 +86,12 @@ subterm returns [expr::term_ref subterm]
   ;
   
 /** Parses an machine size integer */  
-integer returns [int value = -1; ]
+integer returns [int value = -1]
   :     p=pos_integer { value = p; }
   | '-' p=pos_integer { value = -p; }
   ;
 
-pos_integer returns [size_t value ]
+pos_integer returns [size_t value = 0]
   : NUMERAL { value = STATE->token_as_int($NUMERAL); }
   ;
 
