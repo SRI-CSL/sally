@@ -493,7 +493,16 @@ term_ref term_manager_internal::substitute(term_ref t, substitution_map& subst) 
   }
 
   // Something changed
-  term_ref t_new = mk_term(term_of(t).op(), children.begin(), children.end());
+  term_ref t_new;
+  term_op op = term_of(t).op();
+  // Need special cases for operators with payload
+  switch (op) {
+  case TERM_BV_EXTRACT:
+    t_new = mk_term<TERM_BV_EXTRACT>(payload_of<bitvector_extract>(t), children.begin(), children.end());
+    break;
+  default:
+    t_new = mk_term(op, children.begin(), children.end());
+  }
   subst[t] = t_new;
 
   // Return the result

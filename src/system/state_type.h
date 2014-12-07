@@ -54,7 +54,10 @@ public:
   /** Use the namespace for the the var class (pop the namespace yourself)  */
   void use_namespace(var_class vc) const;
 
-  /** Get the variables of the type */
+  /**
+   * Get the variables of the type, the first one will be the struct variable,
+   * followed by the struct fields in order of declared.
+   */
   void get_variables(var_class vc, std::vector<expr::term_ref>& out) const;
 
   /** Check whether the given formula is a state formula for this type */

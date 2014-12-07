@@ -178,6 +178,11 @@ void term::to_stream_smt(std::ostream& out, const term_manager_internal& tm) con
     out << ")";
     break;
   }
+  case TYPE_BITVECTOR: {
+    size_t size = tm.payload_of<size_t>(*this);
+    out << "(_ BitVec " << size << ")";
+    break;
+  }
   case VARIABLE: {
     std::string name = tm.payload_of<std::string>(*this);
     name = tm.namespace_normalize(name);

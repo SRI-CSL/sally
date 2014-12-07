@@ -25,9 +25,10 @@ options {
 
 /** Parses the file and produces the commands */
 command returns [parser::command* cmd = 0] 
-  : definition* EOF { 
-  	  $cmd = 0; 
+  : definition* { 
+  	  $cmd = STATE->finalize(); 
     } 
+  | EOF
   ;
   
 /** Parses a single BTOR definition */

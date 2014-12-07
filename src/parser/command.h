@@ -20,6 +20,7 @@ public:
 
   /** Enumeration of all possible commands */
   enum type {
+    SEQUENCE,
     DECLARE_STATE_TYPE,
     DEFINE_STATES,
     DEFINE_TRANSITION,
@@ -225,6 +226,39 @@ public:
   /** Output the command to stream */
   void to_stream(std::ostream& out) const;
 };
+
+/** A sequence of commands. */
+class sequence_command : public command {
+
+  std::vector<command*> d_commands;
+
+public:
+
+  /** Query takes over the state formula */
+  sequence_command()
+  : command(SEQUENCE)
+  {}
+
+
+  /** Command owns the query, so we delete it */
+  ~sequence_command();
+
+  /** Add a command to the end of the sequence */
+  void push_back(command* command);
+
+  /** Get the number of direct sub-commands */
+  size_t size() const;
+
+  /** Get the i-th command */
+  command* operator [] (size_t i) const;
+
+  /** Run the command on an engine */
+  void run(system::context* ctx, engine* e);
+
+  /** Output the command to stream */
+  void to_stream(std::ostream& out) const;
+};
+
 
 }
 }

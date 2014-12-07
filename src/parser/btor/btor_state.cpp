@@ -78,6 +78,12 @@ expr::term_ref btor_state::get_term(int index) const {
   }
 }
 
+expr::term_ref btor_state::get_next(size_t index) const {
+  var_to_var_map::const_iterator find = d_variables_next.find(index);
+  return get_term(find->second);
+}
+
+
 void btor_state::add_variable(size_t id, size_t size, std::string name) {
   term_ref type = tm().bitvector_type(size);
   term_ref term = tm().mk_variable(name, type);
@@ -158,7 +164,102 @@ void btor_state::add_slice(size_t id, size_t size, term_ref t, size_t high, size
   set_term(id, term, size);
 }
 
-void btor_state::add_root(size_t id, size_t size, expr::term_ref term) {
+void btor_state::add_root(size_t id, size_t size, term_ref term) {
+  if (size != 1) {
+    throw parser_exception("Roots can only be of size 1.");
+  }
   d_roots.push_back(term);
   set_term(id, term, size);
+}
+
+bool btor_state::is_register(size_t index) const {
+  return d_variables_next.find(index) != d_variables_next.end();
+}
+
+command* btor_state::finalize() const {
+
+  // Create the state type
+  std::vector<std::string> names;
+  std::vector<term_ref> types;
+  for (size_t i = 0; i < d_variables.size(); ++ i) {
+    term_ref var_ref = get_term(d_variables[i]);
+    const term& var = tm().term_of(var_ref);
+    names.push_back(tm().get_variable_name(var));
+    types.push_back(tm().type_of(var));
+  }
+  term_ref state_type_ref = tm().mk_struct(names, types);
+  system::state_type* state_type = new system::state_type(tm(), "state_type", state_type_ref);
+  command* state_type_declare = new declare_state_type_command("state_type", state_type);
+
+  // Get the state variables (real vars start at 1)
+  std::vector<term_ref> current_vars;
+  std::vector<term_ref> next_vars;
+  state_type->get_variables(system::state_type::STATE_CURRENT, current_vars);
+  state_type->get_variables(system::state_type::STATE_NEXT, next_vars);
+
+  // Create the conversion table from btor vars to state and next vars
+  term_manager::substitution_map btor_to_state_var;
+  for (size_t i = 0; i < d_variables.size(); ++ i) {
+    term_ref btor_var = get_term(d_variables[i]);
+    term_ref state_var = current_vars[i+1];
+    btor_to_state_var[btor_var] = state_var;
+  }
+
+  // Initialize the registers (no-next) to zero
+  std::vector<term_ref> init_children;
+  for (size_t i = 0; i < d_variables.size(); ++ i) {
+    if (is_register(d_variables[i])) {
+      term_ref state_var = current_vars[i+1];
+      size_t size = tm().get_bitvector_size(state_var);
+      term_ref zero = tm().mk_bitvector_constant(bitvector(size));
+      term_ref eq = tm().mk_term(TERM_EQ, state_var, zero);
+      init_children.push_back(eq);
+    }
+  }
+  term_ref init = tm().mk_and(init_children);
+  system::state_formula* init_formula = new system::state_formula(tm(), state_type, init);
+  command* init_define = new define_states_command("init", init_formula);
+
+  // Define the transition relation
+  std::vector<term_ref> transition_children;
+  for (size_t i = 0; i < d_variables.size(); ++ i) {
+    size_t btor_var_index = d_variables[i];
+    if (is_register(btor_var_index)) {
+      term_ref next_var = next_vars[i+1];
+      term_ref next_value = get_next(btor_var_index);
+      term_ref eq = tm().mk_term(TERM_EQ, next_var, next_value);
+      transition_children.push_back(eq);
+    }
+  }
+  term_ref transition = tm().mk_and(transition_children);
+  transition = tm().substitute(transition, btor_to_state_var);
+  system::transition_formula* transition_formula = new system::transition_formula(tm(), state_type, transition);
+  command* transition_define = new define_transition_command("transition", transition_formula);
+
+  // Define the transition system
+  std::vector<const system::transition_formula*> transitions;
+  transitions.push_back(transition_formula);
+  system::transition_system* transition_system = new system::transition_system(state_type, init_formula, transitions);
+  command* transition_system_define = new define_transition_system_command("T", transition_system);
+
+  // Query
+  std::vector<term_ref> bad_children;
+  for (size_t i = 0; i < d_roots.size(); ++ i) {
+    term_ref bad = tm().substitute(d_roots[i], btor_to_state_var);
+    bad_children.push_back(bad);
+  }
+  term_ref property = tm().mk_or(bad_children);
+  property = tm().mk_term(TERM_EQ, property, d_zero);
+  system::state_formula* property_formula = new system::state_formula(tm(), state_type, property);
+  command* query = new query_command(ctx(), "T", property_formula);
+
+  // Make the final command
+  sequence_command* full_command = new sequence_command();
+  full_command->push_back(state_type_declare);
+  full_command->push_back(init_define);
+  full_command->push_back(transition_define);
+  full_command->push_back(transition_system_define);
+  full_command->push_back(query);
+
+  return full_command;
 }

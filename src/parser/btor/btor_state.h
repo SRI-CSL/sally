@@ -13,6 +13,7 @@
 #include <antlr3.h>
 
 #include "system/context.h"
+#include "parser/command.h"
 
 namespace sal2 {
 namespace parser {
@@ -45,6 +46,12 @@ class btor_state {
 
   /** Bitvector 0 */
   expr::term_ref d_zero;
+
+  /** Check if there is a next, or is this an input */
+  bool is_register(size_t index) const;
+
+  /** Get the next term for given index */
+  expr::term_ref get_next(size_t index) const;
 
 public:
 
@@ -92,6 +99,9 @@ public:
 
   /** Add a root node */
   void add_root(size_t id, size_t size, expr::term_ref t1);
+
+  /** Returns the final parse command */
+  command* finalize() const;
 };
 
 }

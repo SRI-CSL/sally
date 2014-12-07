@@ -46,6 +46,11 @@ size_t term_manager::get_bitvector_type_size(term_ref t_ref) const {
   return d_tm->payload_of<size_t>(t);
 }
 
+size_t term_manager::get_bitvector_size(term_ref t_ref) const {
+  term_ref t_type = type_of(t_ref);
+  return get_bitvector_type_size(t_type);
+}
+
 term_ref term_manager::mk_term(term_op op, const std::vector<term_ref>& children) {
   return d_tm->mk_term(op, children.begin(), children.end());
 }
@@ -262,6 +267,27 @@ term_ref term_manager::substitute(term_ref t, const substitution_map& subst) {
   substitution_map subst_copy(subst);
   return d_tm->substitute(t, subst_copy);
 }
+
+term_ref term_manager::mk_and(const std::vector<term_ref>& conjuncts) {
+  if (conjuncts.size() == 0) {
+    return mk_boolean_constant(true);
+  }
+  if (conjuncts.size() == 1) {
+    return conjuncts[0];
+  }
+  return d_tm->mk_term<TERM_AND>(conjuncts.begin(), conjuncts.end());
+}
+
+term_ref term_manager::mk_or(const std::vector<term_ref>& disjuncts) {
+  if (disjuncts.size() == 0) {
+    return mk_boolean_constant(false);
+  }
+  if (disjuncts.size() == 1) {
+    return disjuncts[0];
+  }
+  return d_tm->mk_term<TERM_OR>(disjuncts.begin(), disjuncts.end());
+}
+
 
 std::ostream& operator << (std::ostream& out, const set_tm& stm) {
   output::set_term_manager(out, stm.d_tm);

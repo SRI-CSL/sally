@@ -56,6 +56,9 @@ public:
   /** Get the size of a bitvector type or term */
   size_t get_bitvector_type_size(term_ref bv_type) const;
 
+  /** Get the size of a bitvector type or term */
+  size_t get_bitvector_size(term_ref bv_type) const;
+
   /** Make a term, given children */
   term_ref mk_term(term_op op, term_ref c);
 
@@ -90,6 +93,12 @@ public:
 
   /** Returns the boolan constant value */
   bool get_boolean_constant(const term& t) const;
+
+  /** Make a conjunction. If no children => true. One child => child. */
+  term_ref mk_and(const std::vector<term_ref>& conjuncts);
+
+  /** Make a disjunction. If no children => false. One child => child. */
+  term_ref mk_or(const std::vector<term_ref>& disjuncts);
 
   /** Make a new integer constant */
   term_ref mk_integer_constant(const integer& value);
