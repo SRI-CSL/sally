@@ -69,18 +69,23 @@ kind_engine::result kind_engine::query(const system::transition_system& ts, cons
 
   // The property
   expr::term_ref property = sf->get_formula();
-  expr::term_ref property_not = tm().mk_term(expr::TERM_NOT, property);
 
-  // Inductino loop
+  // The terms we use in the unrolling
+  expr::term_ref property_k = d_trace->get_state_formula(property, 0);
+  expr::term_ref property_not_k = tm().mk_term(expr::TERM_NOT, property_k);
+  expr::term_ref transition_k;
+
+  // The options
+  unsigned kind_min = ctx().get_options().get_unsigned("kind-min");
+  unsigned kind_max = ctx().get_options().get_unsigned("kind-max");
+
+  // Induction loop
   unsigned k = 0;
   while (true) {
 
     if (output::get_verbosity(std::cout) > 0) {
       std::cout << "K-Induction: checking initialization " << k << std::endl;
     }
-
-    // Negataed property at k
-    expr::term_ref property_not_k = d_trace->get_state_formula(property_not, k);
 
     // Check the current unrolling (1)
     scope1.push();
@@ -111,21 +116,28 @@ kind_engine::result kind_engine::query(const system::transition_system& ts, cons
     // Pop the solver
     scope1.pop();
 
-    // Did we go overboard
-    if (ctx().get_options().has_option("kind-max") > 0) {
-      unsigned max = ctx().get_options().get_unsigned("kind-max");
-      if (k >= max) {
-        return UNKNOWN;
-      }
+    // For (2) add property and transition
+    d_solver_2->add(property_k);
+
+    // Unroll the transition relation once more
+    transition_k = d_trace->get_transition_formula(transition_fromula, k, k+1);
+
+    // For (2) add property and transition
+    d_solver_2->add(transition_k);
+
+    // Should we do the check at k
+    bool check_consecution = k >= kind_min;
+    if (check_consecution && output::get_verbosity(std::cout) > 0) {
+      std::cout << "K-Induction: checking consecution " << k << std::endl;
     }
 
+    // Unroll the propety once more
+    k = k + 1;
+    property_k = d_trace->get_state_formula(property, k);
+    property_not_k = tm().mk_term(expr::TERM_NOT, property_k);
+
     // Check the current unrolling (2)
-    if (k > 0) {
-
-      if (output::get_verbosity(std::cout) > 0) {
-        std::cout << "K-Induction: checking consecution " << k << std::endl;
-      }
-
+    if (check_consecution) {
       scope2.push();
       d_solver_2->add(property_not_k);
       smt::solver::result r_2 = d_solver_2->check();
@@ -135,7 +147,7 @@ kind_engine::result kind_engine::query(const system::transition_system& ts, cons
       }
 
       // See what happened
-      switch(r_2) {
+      switch (r_2) {
       case smt::solver::SAT:
         // Couldn't prove it, continue
         break;
@@ -153,19 +165,13 @@ kind_engine::result kind_engine::query(const system::transition_system& ts, cons
       scope2.pop();
     }
 
-    // Unroll once more
-    expr::term_ref property_k = d_trace->get_state_formula(property, k);
-    expr::term_ref transition_k = d_trace->get_transition_formula(transition_fromula, k, k+1);
+    // Did we go overboard
+    if (k > kind_max) {
+      return UNKNOWN;
+    }
 
-    // For (1) just add the transition
+    // One more transition for solver 1
     d_solver_1->add(transition_k);
-
-    // For (2) add property and transition
-    d_solver_2->add(property_k);
-    d_solver_2->add(transition_k);
-
-    // Continue
-    k = k + 1;
   }
 
   return UNKNOWN;

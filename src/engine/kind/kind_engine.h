@@ -24,6 +24,8 @@ namespace kind {
  *     I and T_0 and ... and T_{i-1} => P(x_i), for 0 <= i < k
  * (2) P holding at k consecutive step, implies it holds in the next one, i.e.
  *     and_{0 <= i < k} (P_i and T_i) => P_k
+ *
+ * Options kind-min and kind-max set the range of k to try.
  */
 class kind_engine : public engine {
 

@@ -20,6 +20,7 @@ struct kind_engine_info {
     using namespace boost::program_options;
     options.add_options()
         ("kind-max", value<unsigned>()->default_value(10), "Maximal k for k-induction.")
+        ("kind-min", value<unsigned>()->default_value(0), "Minimal k for k-induction.")
         ;
   }
 
