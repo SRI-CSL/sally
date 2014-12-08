@@ -288,6 +288,9 @@ term_ref term_manager::mk_or(const std::vector<term_ref>& disjuncts) {
   return d_tm->mk_term<TERM_OR>(disjuncts.begin(), disjuncts.end());
 }
 
+term_ref term_manager::get_default_value(term_ref type) const {
+  return d_tm->get_default_value(type);
+}
 
 std::ostream& operator << (std::ostream& out, const set_tm& stm) {
   output::set_term_manager(out, stm.d_tm);

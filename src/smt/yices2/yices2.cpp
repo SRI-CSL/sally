@@ -728,6 +728,18 @@ solver::result yices2_internal::check() {
   return solver::UNKNOWN;
 }
 
+static
+expr::bitvector bitvector_from_int32(size_t size, int32_t* value) {
+  char* value_str = new char[size+1];
+  for (size_t i = 0; i < size; ++ i) {
+    value_str[size - i - 1] = value[i] ? '1' : '0';
+  }
+  value_str[size] = 0;
+  expr::bitvector bv(value_str);
+  delete value_str;
+  return bv;
+}
+
 void yices2_internal::get_model(expr::model& m) {
   assert(d_last_check_status == STATUS_SAT);
 
@@ -777,6 +789,15 @@ void yices2_internal::get_model(expr::model& m) {
       var_value = d_tm.mk_rational_constant(rational_value);;
       // Clear the temps
       mpq_clear(value);
+      break;
+    }
+    case expr::TYPE_BITVECTOR: {
+      size_t size = d_tm.get_bitvector_type_size(var_type);
+      int32_t* value = new int32_t[size];
+      yices_get_bv_value(yices_model, yices_var, value);
+      expr::bitvector bv = bitvector_from_int32(size, value);
+      var_value = d_tm.mk_bitvector_constant(bv);
+      delete value;
       break;
     }
     default:

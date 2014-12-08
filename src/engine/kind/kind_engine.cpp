@@ -112,8 +112,8 @@ kind_engine::result kind_engine::query(const system::transition_system& ts, cons
     scope1.pop();
 
     // Did we go overboard
-    if (ctx().get_options().has_option("kind_max") > 0) {
-      unsigned max = ctx().get_options().get_unsigned("kind_max");
+    if (ctx().get_options().has_option("kind-max") > 0) {
+      unsigned max = ctx().get_options().get_unsigned("kind-max");
       if (k >= max) {
         return UNKNOWN;
       }

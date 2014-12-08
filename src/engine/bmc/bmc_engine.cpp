@@ -87,8 +87,8 @@ bmc_engine::result bmc_engine::query(const system::transition_system& ts, const 
     scope.pop();
 
     // Did we go overboard
-    if (ctx().get_options().has_option("bmc_max") > 0) {
-      unsigned max = ctx().get_options().get_unsigned("bmc_max");
+    if (ctx().get_options().has_option("bmc-max") > 0) {
+      unsigned max = ctx().get_options().get_unsigned("bmc-max");
       if (k >= max) {
         return UNKNOWN;
       }

@@ -526,3 +526,23 @@ size_t term_manager_internal::bitvector_type_size(term_ref t_ref) const {
   assert(t.op() == TYPE_BITVECTOR);
   return payload_of<size_t>(t);
 }
+
+term_ref term_manager_internal::get_default_value(term_ref type_ref) {
+  const term& type = term_of(type_ref);
+  term_op op = type.op();
+  switch (op) {
+  case TYPE_BOOL:
+    return mk_term<CONST_BOOL>(false);
+  case TYPE_INTEGER:
+    return mk_term<CONST_INTEGER>(integer());
+  case TYPE_REAL:
+    return mk_term<CONST_RATIONAL>(rational());
+  case TYPE_BITVECTOR: {
+    size_t size = payload_of<size_t>(type);
+    return mk_term<CONST_BITVECTOR>(bitvector(size));
+  }
+  default:
+    assert(false);
+  }
+  return term_ref();
+}

@@ -6,6 +6,7 @@
  */
 
 #include "expr/model.h"
+#include "utils/exception.h"
 
 namespace sal2 {
 namespace expr {
@@ -32,8 +33,16 @@ void model::set_value(expr::term_ref var, expr::term_ref value) {
 
 expr::term_ref model::get_value(expr::term_ref var) const {
   const_iterator find = d_variable_to_value_map.find(var);
-  assert(find != d_variable_to_value_map.end());
+  if (find == d_variable_to_value_map.end()) {
+    std::stringstream ss;
+    ss << set_tm(d_term_manager) << "Variable " << var << " is not part of the model.";
+    throw exception(ss.str());
+  }
   return find->second;
+}
+
+bool model::has_value(expr::term_ref var) const {
+  return d_variable_to_value_map.find(var) != d_variable_to_value_map.end();
 }
 
 model::const_iterator model::values_begin() const {

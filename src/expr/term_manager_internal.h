@@ -380,6 +380,9 @@ public:
   template<typename collection, typename matcher>
   void get_subterms(term_ref t, const matcher& m, collection& out);
 
+  /** Returns the default value for the given type */
+  term_ref get_default_value(term_ref type);
+
   /** Map of substitutions */
   typedef boost::unordered_map<term_ref, term_ref, term_ref_hasher> substitution_map;
 

@@ -34,6 +34,9 @@ public:
   /** Get the value of a variable */
   expr::term_ref get_value(expr::term_ref var) const;
 
+  /** Return true if var has a value in the model */
+  bool has_value(expr::term_ref var) const;
+
   /** Get the iterator for the first of var -> value */
   const_iterator values_begin() const;
 

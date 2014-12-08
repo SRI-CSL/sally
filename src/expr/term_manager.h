@@ -94,6 +94,9 @@ public:
   /** Returns the boolan constant value */
   bool get_boolean_constant(const term& t) const;
 
+  /** Returns the default value for the given type */
+  term_ref get_default_value(term_ref type) const;
+
   /** Make a conjunction. If no children => true. One child => child. */
   term_ref mk_and(const std::vector<term_ref>& conjuncts);
 

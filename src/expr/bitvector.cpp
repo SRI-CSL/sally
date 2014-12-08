@@ -45,9 +45,9 @@ bitvector::bitvector(std::string bits)
 {}
 
 void bitvector::to_stream(std::ostream& out) const {
-  out << "(_ bv" << size() << " ";
+  out << "(_ bv";
   integer::to_stream(out);
-  out << ")";
+  out  << " " << size() << ")";
 }
 
 
