@@ -1,4 +1,8 @@
 All tests in this directory are run on a "make check". They are added to the 
 build system in the CMakeLists.txt associated with the binary (e.g. sal2.cpp).
 Each $file must have an associated $file.options containing *one line* of the
-options that will be passed to the binary.    
+options that will be passed to the binary.
+
+If you add new regressions, or change any old regressions, make sure to run 
+cmake again. This is because the regressions are cached and so 'make check' 
+will not detect the changes otherwise.  
