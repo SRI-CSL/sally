@@ -11,6 +11,7 @@
 #include "expr/term_manager.h"
 
 #include <cassert>
+#include <sstream>
 
 using namespace sal2;
 using namespace parser;

@@ -8,6 +8,8 @@
 #include "expr/term_manager.h"
 #include "expr/term_manager_internal.h"
 
+#include <sstream>
+
 namespace sal2 {
 namespace expr {
 

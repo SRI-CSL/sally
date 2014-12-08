@@ -8,6 +8,8 @@
 #include "expr/model.h"
 #include "utils/exception.h"
 
+#include <sstream>
+
 namespace sal2 {
 namespace expr {
 
