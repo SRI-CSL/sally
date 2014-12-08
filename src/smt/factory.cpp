@@ -45,7 +45,9 @@ solver* factory::mk_solver(std::string id, expr::term_manager& tm, const options
 
 void factory::setup_options(boost::program_options::options_description& options) {
   for (solver_data::const_iterator it = s_solver_data.data().begin(); it != s_solver_data.data().end(); ++ it) {
-    boost::program_options::options_description solver_options(it->second->get_id() + " options");
+    std::stringstream ss;
+    ss << "Solver '" << it->second->get_id() << "' options";
+    boost::program_options::options_description solver_options(ss.str());
     it->second->setup_options(solver_options);
     if (solver_options.options().size() > 0) {
       options.add(solver_options);

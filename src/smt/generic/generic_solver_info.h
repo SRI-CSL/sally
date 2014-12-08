@@ -27,7 +27,7 @@ struct generic_solver_info {
   }
 
   static std::string get_id() {
-    return "generic_solver";
+    return "generic-solver";
   }
 
   static solver* new_instance(const solver_context& ctx) {
