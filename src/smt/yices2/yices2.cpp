@@ -237,6 +237,114 @@ term_t yices2_internal::mk_yices2_term(expr::term_op op, size_t n, term_t* child
     assert(n == 3);
     result = yices_ite(children[0], children[1], children[2]);
     break;
+  case expr::TERM_BV_ADD:
+    assert(n == 2);
+    result = yices_bvadd(children[0], children[1]);
+    break;
+  case expr::TERM_BV_SUB:
+    assert(n == 2);
+    result = yices_bvsub(children[0], children[1]);
+    break;
+  case expr::TERM_BV_MUL:
+    assert(n == 2);
+    result = yices_bvmul(children[0], children[1]);
+    break;
+  case expr::TERM_BV_UDIV: // NOTE: semantics of division is x/0 = 111...111
+    assert(n == 2);
+    result = yices_bvdiv(children[0], children[1]);
+    break;
+  case expr::TERM_BV_SDIV:
+    assert(n == 2);
+    result = yices_bvsdiv(children[0], children[1]);
+    break;
+  case expr::TERM_BV_UREM:
+    assert(n == 2);
+    result = yices_bvrem(children[0], children[1]);
+    break;
+  case expr::TERM_BV_SREM:
+    assert(n == 2);
+    result = yices_bvsrem(children[0], children[1]);
+    break;
+  case expr::TERM_BV_SMOD:
+    assert(n == 2);
+    result = yices_bvsmod(children[0], children[1]);
+    break;
+  case expr::TERM_BV_XOR:
+    assert(n == 2);
+    result = yices_bvxor(children[0], children[1]);
+    break;
+  case expr::TERM_BV_SHL:
+    assert(n == 2);
+    result = yices_bvshl(children[0], children[1]);
+    break;
+  case expr::TERM_BV_LSHR:
+    assert(n == 2);
+    result = yices_bvlshr(children[0], children[1]);
+    break;
+  case expr::TERM_BV_ASHR:
+    assert(n == 2);
+    result = yices_bvashr(children[0], children[1]);
+    break;
+  case expr::TERM_BV_NOT:
+    assert(n == 1);
+    result = yices_bvnot(children[0]);
+    break;
+  case expr::TERM_BV_AND:
+    assert(n == 2);
+    result = yices_bvand(children[0], children[1]);
+    break;
+  case expr::TERM_BV_OR:
+    assert(n == 2);
+    result = yices_bvor(children[0], children[1]);
+    break;
+  case expr::TERM_BV_NAND:
+    assert(n == 2);
+    result = yices_bvnand(children[0], children[1]);
+    break;
+  case expr::TERM_BV_NOR:
+    assert(n == 2);
+    result = yices_bvnor(children[0], children[1]);
+    break;
+  case expr::TERM_BV_XNOR:
+    assert(n == 2);
+    result = yices_bvxnor(children[0], children[1]);
+    break;
+  case expr::TERM_BV_CONCAT:
+    assert(n == 2);
+    result = yices_bvconcat(children[0], children[1]);
+    break;
+  case expr::TERM_BV_ULEQ:
+    assert(n == 2);
+    result = yices_bvle_atom(children[0], children[1]);
+    break;
+  case expr::TERM_BV_SLEQ:
+    assert(n == 2);
+    result = yices_bvsle_atom(children[0], children[1]);
+    break;
+  case expr::TERM_BV_ULT:
+    assert(n == 2);
+    result = yices_bvlt_atom(children[0], children[1]);
+    break;
+  case expr::TERM_BV_SLT:
+    assert(n == 2);
+    result = yices_bvslt_atom(children[0], children[1]);
+    break;
+  case expr::TERM_BV_UGEQ:
+    assert(n == 2);
+    result = yices_bvge_atom(children[0], children[1]);
+    break;
+  case expr::TERM_BV_SGEQ:
+    assert(n == 2);
+    result = yices_bvsge_atom(children[0], children[1]);
+    break;
+  case expr::TERM_BV_UGT:
+    assert(n == 2);
+    result = yices_bvgt_atom(children[0], children[1]);
+    break;
+  case expr::TERM_BV_SGT:
+    assert(n == 2);
+    result = yices_bvsgt_atom(children[0], children[1]);
+    break;
   default:
     assert(false);
   }
@@ -258,6 +366,11 @@ type_t yices2_internal::to_yices2_type(expr::term_ref ref) {
   case expr::TYPE_REAL:
     result = d_real_type;
     break;
+  case expr::TYPE_BITVECTOR: {
+    size_t size = d_tm.get_bitvector_type_size(ref);
+    result = yices_bv_type(size);
+    break;
+  }
   default:
     assert(false);
   }
@@ -295,6 +408,11 @@ term_t yices2_internal::to_yices2_term(expr::term_ref ref) {
   case expr::CONST_INTEGER:
     result = yices_mpz(d_tm.get_integer_constant(t).mpz().get_mpz_t());
     break;
+  case expr::CONST_BITVECTOR: {
+    expr::bitvector bv = d_tm.get_bitvector_constant(t);
+    result = yices_bvconst_mpz(bv.size(), bv.mpz().get_mpz_t());
+    break;
+  }
   case expr::TERM_ITE:
   case expr::TERM_EQ:
   case expr::TERM_AND:
@@ -310,6 +428,33 @@ term_t yices2_internal::to_yices2_term(expr::term_ref ref) {
   case expr::TERM_LT:
   case expr::TERM_GEQ:
   case expr::TERM_GT:
+  case expr::TERM_BV_ADD:
+  case expr::TERM_BV_SUB:
+  case expr::TERM_BV_MUL:
+  case expr::TERM_BV_UDIV: // NOTE: semantics of division is x/0 = 111...111
+  case expr::TERM_BV_SDIV:
+  case expr::TERM_BV_UREM:
+  case expr::TERM_BV_SREM:
+  case expr::TERM_BV_SMOD:
+  case expr::TERM_BV_XOR:
+  case expr::TERM_BV_SHL:
+  case expr::TERM_BV_LSHR:
+  case expr::TERM_BV_ASHR:
+  case expr::TERM_BV_NOT:
+  case expr::TERM_BV_AND:
+  case expr::TERM_BV_OR:
+  case expr::TERM_BV_NAND:
+  case expr::TERM_BV_NOR:
+  case expr::TERM_BV_XNOR:
+  case expr::TERM_BV_CONCAT:
+  case expr::TERM_BV_ULEQ:
+  case expr::TERM_BV_SLEQ:
+  case expr::TERM_BV_ULT:
+  case expr::TERM_BV_SLT:
+  case expr::TERM_BV_UGEQ:
+  case expr::TERM_BV_SGEQ:
+  case expr::TERM_BV_UGT:
+  case expr::TERM_BV_SGT:
   {
     size_t size = t.size();
     term_t children[size];
@@ -317,6 +462,12 @@ term_t yices2_internal::to_yices2_term(expr::term_ref ref) {
       children[i] = to_yices2_term(t[i]);
     }
     result = mk_yices2_term(t.op(), size, children);
+    break;
+  }
+  case expr::TERM_BV_EXTRACT: {
+    const expr::bitvector_extract& extract = d_tm.get_bitvector_extract(t);
+    term_t child = to_yices2_term(t[0]);
+    result = yices_bvextract(child, extract.low, extract.high);
     break;
   }
   default:
