@@ -48,55 +48,52 @@ bmc_engine::result bmc_engine::query(const system::transition_system& ts, const 
   // The property
   expr::term_ref property = sf->get_formula();
 
-  // BMC loop
-  unsigned k = 0;
-  while (true) {
+  // The loop
+  size_t bmc_min = ctx().get_options().get_unsigned("bmc-min");
+  size_t bmc_max = ctx().get_options().get_unsigned("bmc-max");
 
-    if (output::get_verbosity(std::cout) > 0) {
-      std::cout << "BMC: checking " << k << std::endl;
-    }
+  // BMC loop
+  for (size_t k = 0; k <= bmc_max; ++ k) {
 
     // Check the current unrolling
-    scope.push();
-    expr::term_ref property_not = tm().mk_term(expr::TERM_NOT, property);
-    d_solver->add(d_trace->get_state_formula(property_not, k));
-    smt::solver::result r = d_solver->check();
+    if (k >= bmc_min) {
 
-    if (output::get_verbosity(std::cout) > 0) {
-      std::cout << "BMC: got " << r << std::endl;
-    }
-
-    // See what happened
-    switch(r) {
-    case smt::solver::SAT: {
-      expr::model m(tm());
-      d_solver->get_model(m);
-      d_trace->add_model(m);
-      return INVALID;
-    }
-    case smt::solver::UNKNOWN:
-      return UNKNOWN;
-    case smt::solver::UNSAT:
-      // No counterexample found, continue
-      break;
-    default:
-      assert(false);
-    }
-
-    // Pop the solver
-    scope.pop();
-
-    // Did we go overboard
-    if (ctx().get_options().has_option("bmc-max") > 0) {
-      unsigned max = ctx().get_options().get_unsigned("bmc-max");
-      if (k >= max) {
-        return UNKNOWN;
+      if (output::get_verbosity(std::cout) > 0) {
+        std::cout << "BMC: checking " << k << std::endl;
       }
+
+      scope.push();
+      expr::term_ref property_not = tm().mk_term(expr::TERM_NOT, property);
+      d_solver->add(d_trace->get_state_formula(property_not, k));
+      smt::solver::result r = d_solver->check();
+
+      if (output::get_verbosity(std::cout) > 0) {
+        std::cout << "BMC: got " << r << std::endl;
+      }
+
+      // See what happened
+      switch (r) {
+      case smt::solver::SAT: {
+        expr::model m(tm());
+        d_solver->get_model(m);
+        d_trace->add_model(m);
+        return INVALID;
+      }
+      case smt::solver::UNKNOWN:
+        return UNKNOWN;
+      case smt::solver::UNSAT:
+        // No counterexample found, continue
+        break;
+      default:
+        assert(false);
+      }
+
+      // Pop the solver
+      scope.pop();
     }
 
     // Unroll once more
     d_solver->add(d_trace->get_transition_formula(transition_formula, k, k + 1));
-    k = k + 1;
   }
 
   return UNKNOWN;

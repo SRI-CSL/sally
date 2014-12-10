@@ -1,1 +1,1 @@
---engine bmc-engine --bmc-max 9
+--engine bmc-engine --bmc-min 9 --bmc-max 9
