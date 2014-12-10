@@ -38,6 +38,26 @@ set_source_files_properties(
     COMPILE_FLAGS "-Wno-unused-function -Wno-unused-variable -Wno-tautological-compare -x c++"
 )
 
+add_custom_command(
+   OUTPUT 
+     ${CMAKE_CURRENT_SOURCE_DIR}/sal/salParser.h
+     ${CMAKE_CURRENT_SOURCE_DIR}/sal/salParser.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/sal/salLexer.h
+     ${CMAKE_CURRENT_SOURCE_DIR}/sal/salLexer.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/sal/sal.tokens
+   COMMAND 
+     ${ANTLR} -make -fo ${CMAKE_CURRENT_SOURCE_DIR}/sal/ ${CMAKE_CURRENT_SOURCE_DIR}/sal/sal.g 
+   DEPENDS 
+     ${CMAKE_CURRENT_SOURCE_DIR}/sal/sal.g libantlr3c-3.4
+)
+
+set_source_files_properties(
+  sal/salParser.c sal/salLexer.c 
+  PROPERTIES 
+    LANGUAGE CXX
+    COMPILE_FLAGS "-Wno-unused-function -Wno-unused-variable -Wno-tautological-compare -x c++"
+)
+
 add_library(parser 
   mcmt/mcmtParser.c 
   mcmt/mcmtLexer.c 
@@ -45,6 +65,9 @@ add_library(parser
   btor/btorParser.c 
   btor/btorLexer.c 
   btor/btor_state.cpp
+  sal/salParser.c 
+  sal/salLexer.c 
+  sal/sal_state.cpp
   command.cpp 
   parser.cpp
 )

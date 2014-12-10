@@ -97,6 +97,9 @@ input_language parser::guess_language(std::string filename) {
     if (extension == "btor") {
       return INPUT_BTOR;
     }
+    if (extension == "sal") {
+      return INPUT_SAL;
+    }
     return INPUT_MCMT;
   }
 }

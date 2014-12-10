@@ -57,7 +57,8 @@ class antlr_parser_interface;
 
 enum input_language {
   INPUT_MCMT,
-  INPUT_BTOR
+  INPUT_BTOR,
+  INPUT_SAL
 };
 
 /**
