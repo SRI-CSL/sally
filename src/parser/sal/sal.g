@@ -596,7 +596,7 @@ somecommand
   ;
 
 somecommands 
-  : somecommand (ASYNC somecommand)
+  : somecommand (ASYNC somecommand)*
   ;
 
 definitionorcommand
