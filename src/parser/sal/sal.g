@@ -163,9 +163,9 @@ accessor
   ;
 
 indextype 
-  : BOOLEAN
-  | NATURAL
-  | INTEGER
+  : 'BOOLEAN'
+  | 'NATURAL'
+  | 'INTEGER'
   | name 
   | subrange 
   ;
@@ -180,12 +180,12 @@ fullname
   ;
 
 basictype 
-  : REAL 
-  | NZREAL 
-  | INTEGER 
-  | NZINTEGER 
-  | NATURAL 
-  | BOOLEAN
+  : 'REAL' 
+  | 'NZREAL' 
+  | 'INTEGER' 
+  | 'NZINTEGER' 
+  | 'NATURAL' 
+  | 'BOOLEAN'
   ;
 
 bound 
@@ -651,18 +651,9 @@ IFF : '<=>' ;
 SYNC: '||' ;
 ASYNC: '[]';
 
-// Types
-REAL      : 'REAL' | 'real';
-NZREAL    : 'NZREAL' | 'nzreal';
-INTEGER   : 'INTEGER' | 'integer';
-NZINTEGER : 'NZINTEGER' | 'nzinteger';
-NATURAL   : 'NATURAL' | 'natural';
-BOOLEAN   : 'BOOLEAN' | 'boolean';
-
 /** Identifiers */
-IDENTIFIER: ALPHA (ALPHA|'0'..'9'|'?'|'_')*;
+IDENTIFIER: ALPHA (ALPHA | '0'..'9' | '?' | '_' )*;
 
 /** Letters */ 
 fragment
 ALPHA: 'a'..'z'|'A'..'Z';
-
