@@ -45,9 +45,9 @@ declarations
  ;
 
 declaration 
-  : (identifier ':' 'TYPE')                     => typeDeclaration 
-  | (identifier ':' assertionForm)              => assertionDeclaration
-  | (identifier ':' 'CONTEXT')                  => contextDeclaration 
+  : (identifier ':' 'TYPE')                       => typeDeclaration 
+  | (identifier ':' assertionForm)                => assertionDeclaration
+  | (identifier ':' 'CONTEXT')                    => contextDeclaration 
   | (identifier ('[' varDecls ']')? ':' 'MODULE') => moduleDeclaration
   | constantDeclaration
   ;
@@ -163,8 +163,9 @@ accessor
   ;
 
 indextype 
-  : INTEGER
-  | BOOLEAN
+  : BOOLEAN
+  | NATURAL
+  | INTEGER
   | name 
   | subrange 
   ;
@@ -446,11 +447,12 @@ guard
   ;
 
 assignments 
-  : simpleDefinition (';' simpleDefinition)*
+  : simpleDefinition (';' simpleDefinition)* '?'?
   ;
 
 guardedcommand 
   : guard '-->' assignments?
+  | 'ELSE' '-->' assignments? 
   ;
 
 /* The Module Language */
@@ -567,7 +569,7 @@ initfordecl
   ;
 
 initdecl 
-  : 'INITIALIZATION' definitionorcommand (';' definitionorcommand)*
+  : 'INITIALIZATION' definitionorcommand (';' definitionorcommand)* ';'?
   ;
 
 transdecl 
