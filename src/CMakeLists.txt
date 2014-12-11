@@ -22,11 +22,15 @@ target_link_libraries(sal2 ${sal2_LIBS} ${Boost_LIBRARIES} ${GMP_LIBRARY} ${YICE
 
 # Add tests
 
-file(GLOB_RECURSE regressions ${sal2_SOURCE_DIR}/test/regress/*.mcmt ${sal2_SOURCE_DIR}/test/regress/*.btor)
+file(GLOB_RECURSE regressions 
+  ${sal2_SOURCE_DIR}/test/regress/*.mcmt 
+  ${sal2_SOURCE_DIR}/test/regress/*.btor
+  ${sal2_SOURCE_DIR}/test/regress/*.sal
+)
 list(SORT regressions)
 
 foreach(FILE ${regressions})
-  # Get the options for this tes
+  # Get the options for this test
   file(READ "${FILE}.options" ALL_OPTIONS)
   # Remove newlines
   string(REGEX REPLACE "(\r?\n)+$" "" ALL_OPTIONS "${ALL_OPTIONS}")
