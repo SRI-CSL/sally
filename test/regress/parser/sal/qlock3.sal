@@ -1,0 +1,129 @@
+%% N : the number of processes
+%% L : the capacity of the queue
+
+qlock3{; N : nznat, L : nznat}: CONTEXT =
+BEGIN
+  Process_Id: TYPE = [1..N];
+
+  Queue_Idx: TYPE = [0..(L + 1)];
+
+  Queue_Ops: TYPE = {put, top?, get};
+
+  Queue_Res: TYPE = {put_done, top?_done, get_done, no_done};
+
+  Queue_Label: TYPE = {q1, q2, q3};
+
+  queue: MODULE =
+  BEGIN
+    INPUT Q_op : ARRAY Process_Id OF Queue_Ops
+    OUTPUT Ack : ARRAY Process_Id OF Queue_Res
+    LOCAL qpc : ARRAY Process_Id OF Queue_Label
+    LOCAL data : ARRAY Queue_Idx OF Process_Id
+    LOCAL hd : Queue_Idx
+    LOCAL tl : Queue_Idx
+    INITIALIZATION
+      Ack = [[j : Process_Id] no_done];
+      qpc = [[j : Process_Id] q1];
+      data = [[j : Queue_Idx] 1];
+      hd = 1;
+      tl = 0
+    TRANSITION
+    [
+      ([] (j : Process_Id):
+        put:
+          Q_op[j] = put AND qpc[j] = q1 AND NOT(tl = L)
+          --> data' = data WITH [tl + 1] := j;
+              tl' = tl + 1;
+              qpc' = qpc WITH [j] := q2;
+              Ack' = Ack WITH [j] := put_done)
+      []
+      ([] (j : Process_Id):
+        top?:
+          Q_op[j] = top? AND qpc[j] = q2 AND data[hd] = j
+          -->  qpc' = qpc WITH [j] := q3;
+               Ack' = Ack WITH [j] := top?_done)
+      []
+      ([] (j : Process_Id):
+        get:
+          Q_op[j] = get AND qpc[j] = q3 
+          --> hd' = hd + 1;
+              qpc' = qpc WITH [j] := q1;
+              Ack' = Ack WITH [j] := get_done)
+      []
+      reset:
+        (hd = tl + 1) AND (tl = L)
+        --> hd' = 1;
+            tl' = 0;
+    ]
+  END;
+
+  Label: TYPE = {l1, l2, cs, l3};
+
+  process [i : Process_Id]: MODULE =
+  BEGIN
+    INPUT Ack : ARRAY Process_Id OF Queue_Res
+    OUTPUT op : Queue_Ops
+    LOCAL pc : Label
+    INITIALIZATION
+      pc = l1;
+      op = put
+    TRANSITION
+    [
+      want:
+        (pc = l1) AND (Ack[i] = put_done)
+        --> pc' = l2;
+            op' = top?
+      []
+      try:
+        (pc = l2) AND (Ack[i] = top?_done)
+        --> pc' = cs
+      []
+      exit:
+        (pc = cs)
+        --> pc' = l3;
+            op' = get
+      []
+      return:
+        (pc = l3) AND (Ack[i] = get_done)
+        --> pc' = l1;
+            op' = put
+    ]
+  END;
+
+  processes : MODULE =
+    WITH OUTPUT Q_op : ARRAY Process_Id OF Queue_Ops
+    ([] (i : Process_Id): 
+      (RENAME op TO Q_op[i] IN process[i]));
+
+  system : MODULE = processes [] queue;
+
+%% mutual exclusion
+%%
+%% % sal-smc -v 3 --assertion='qlock3{;2,2}!mutex'
+%%
+  mutex: THEOREM
+    system |- G(FORALL (i : Process_Id, j : Process_Id):
+                 (pc[i] = cs AND pc[j] = cs) => (i = j));
+
+%% deadlock freedom
+%%
+%% % sal-deadlock-checker -v 3 --module='qlock3{;2,2}!system'
+%%
+
+%% reachable to the critical section
+%%
+%% % sal-wmc -v 3 --assertion='qlock3{;2,2}!reachable'
+%%
+  reachable: THEOREM
+    system |- (FORALL (i : Process_Id): EF(pc[i] = cs));
+
+
+%% lockout (starvation) freedom
+%%
+%% % sal-smc -v 3 --assertion='qlock3{;2,2}!lofree'
+%%
+  lofree: THEOREM
+    system |- (FORALL (i : Process_Id):
+                G(pc[i] = l2 => F(pc[i] = cs)));
+
+END

@@ -1,0 +1,571 @@
+ 
+ 
+ 
+ BEGIN_FLAT
+  OUTPUT cm_clock!0 : CLOCK
+  OUTPUT cm_clock!1 : CLOCK
+  OUTPUT cm_state!0 : CM_STATE
+  OUTPUT cm_state!1 : CM_STATE
+  OUTPUT compression!0 : CLOCK
+  OUTPUT compression!1 : CLOCK
+  LOCAL perm!0!0 : SM_ID
+  LOCAL perm!0!1 : SM_ID
+  LOCAL perm!0!2 : SM_ID
+  LOCAL perm!0!3 : SM_ID
+  LOCAL perm!0!4 : SM_ID
+  LOCAL perm!1!0 : SM_ID
+  LOCAL perm!1!1 : SM_ID
+  LOCAL perm!1!2 : SM_ID
+  LOCAL perm!1!3 : SM_ID
+  LOCAL perm!1!4 : SM_ID
+  OUTPUT sm_clock!0 : CLOCK
+  OUTPUT sm_clock!1 : CLOCK
+  OUTPUT sm_clock!2 : CLOCK
+  OUTPUT sm_clock!3 : CLOCK
+  OUTPUT sm_clock!4 : CLOCK
+  OUTPUT sm_reading!0!0 : CLOCK
+  OUTPUT sm_reading!0!1 : CLOCK
+  OUTPUT sm_reading!0!2 : CLOCK
+  OUTPUT sm_reading!0!3 : CLOCK
+  OUTPUT sm_reading!0!4 : CLOCK
+  OUTPUT sm_reading!1!0 : CLOCK
+  OUTPUT sm_reading!1!1 : CLOCK
+  OUTPUT sm_reading!1!2 : CLOCK
+  OUTPUT sm_reading!1!3 : CLOCK
+  OUTPUT sm_reading!1!4 : CLOCK
+  OUTPUT sm_state!0 : SM_STATE
+  OUTPUT sm_state!1 : SM_STATE
+  OUTPUT sm_state!2 : SM_STATE
+  OUTPUT sm_state!3 : SM_STATE
+  OUTPUT sm_state!4 : SM_STATE
+  OUTPUT sm_valid!0!0 : bool
+  OUTPUT sm_valid!0!1 : bool
+  OUTPUT sm_valid!0!2 : bool
+  OUTPUT sm_valid!0!3 : bool
+  OUTPUT sm_valid!0!4 : bool
+  OUTPUT sm_valid!1!0 : bool
+  OUTPUT sm_valid!1!1 : bool
+  OUTPUT sm_valid!1!2 : bool
+  OUTPUT sm_valid!1!3 : bool
+  OUTPUT sm_valid!1!4 : bool
+  INPUT choice!1!0 : [0..2]
+  INPUT choice!1!1 : [0..2]
+  INPUT choice!1!2 : [0..2]
+  INPUT choice!1!3 : [0..2]
+  INPUT choice!1!4 : [0..2]
+  INPUT choice!2!0 : [0..4]
+  INPUT choice!2!1 : [0..4]
+  DEFINITION
+    true and
+    true and
+    sm_valid!0!0 and
+    sm_valid!1!0 and
+    sm_valid!0!1 and
+    sm_valid!1!1 and
+    sm_valid!0!3 and
+    sm_valid!1!3 and
+    sm_valid!0!4 and
+    sm_valid!1!4 and
+    (sm_reading!0!0 = sm_clock!0) and
+    (sm_reading!1!0 = sm_clock!0) and
+    (sm_reading!0!1 = sm_clock!1) and
+    (sm_reading!1!1 = sm_clock!1) and
+    (sm_reading!0!3 = sm_clock!3) and
+    (sm_reading!1!3 = sm_clock!3) and
+    (sm_reading!0!4 = sm_clock!4) and
+    (sm_reading!1!4 = sm_clock!4)
+  INITIALIZATION
+    (sm_state!0 = sm_send) and
+    (sm_state!1 = sm_send) and
+    (sm_state!2 = sm_send) and
+    (sm_state!3 = sm_send) and
+    (sm_state!4 = sm_send) and
+    (sm_clock!0 = 0) and
+    (sm_clock!1 = 0) and
+    (sm_clock!2 = 0) and
+    (sm_clock!3 = 0) and
+    (sm_clock!4 = 0) and
+    (cm_state!0 = cm_receive) and
+    (cm_state!1 = cm_receive) and
+    (compression!0 = 0) and
+    (compression!1 = 0) and
+    (cm_clock!0 = 0) and
+    (cm_clock!1 = 0)
+  TRANSITION
+    (LET cs!558: bool = cm_state!0' = cm_correct, cs!594: bool = cm_state!1' = cm_correct
+    IN (LET cs!530: bool = cm_state!0 = cm_receive,
+           cs!559: bool = cm_clock!0' = cm_clock!0,
+           cs!561: bool = compression!0' = compression!0,
+           cs!566: bool = cm_state!1 = cm_receive,
+           cs!595: bool = cm_clock!1' = cm_clock!1,
+           cs!598: bool = compression!1' = compression!1,
+           cs!604: real = (compression!0 + compression!1) / 2
+       IN (LET cs!538: bool = perm!0!1' /= perm!0!0',
+              cs!539: bool = perm!0!2' /= perm!0!0',
+              cs!540: bool = perm!0!3' /= perm!0!0',
+              cs!541: bool = perm!0!4' /= perm!0!0',
+              cs!542: bool = perm!0!0' /= perm!0!1',
+              cs!543: bool = perm!0!2' /= perm!0!1',
+              cs!544: bool = perm!0!3' /= perm!0!1',
+              cs!545: bool = perm!0!4' /= perm!0!1',
+              cs!546: bool = perm!0!0' /= perm!0!2',
+              cs!547: bool = perm!0!1' /= perm!0!2',
+              cs!548: bool = perm!0!3' /= perm!0!2',
+              cs!549: bool = perm!0!4' /= perm!0!2',
+              cs!550: bool = perm!0!0' /= perm!0!3',
+              cs!551: bool = perm!0!1' /= perm!0!3',
+              cs!552: bool = perm!0!2' /= perm!0!3',
+              cs!553: bool = perm!0!4' /= perm!0!3',
+              cs!554: bool = perm!0!0' /= perm!0!4',
+              cs!555: bool = perm!0!1' /= perm!0!4',
+              cs!556: bool = perm!0!2' /= perm!0!4',
+              cs!557: bool = perm!0!3' /= perm!0!4',
+              cs!574: bool = perm!1!1' /= perm!1!0',
+              cs!575: bool = perm!1!2' /= perm!1!0',
+              cs!576: bool = perm!1!3' /= perm!1!0',
+              cs!577: bool = perm!1!4' /= perm!1!0',
+              cs!578: bool = perm!1!0' /= perm!1!1',
+              cs!579: bool = perm!1!2' /= perm!1!1',
+              cs!580: bool = perm!1!3' /= perm!1!1',
+              cs!581: bool = perm!1!4' /= perm!1!1',
+              cs!582: bool = perm!1!0' /= perm!1!2',
+              cs!583: bool = perm!1!1' /= perm!1!2',
+              cs!584: bool = perm!1!3' /= perm!1!2',
+              cs!585: bool = perm!1!4' /= perm!1!2',
+              cs!586: bool = perm!1!0' /= perm!1!3',
+              cs!587: bool = perm!1!1' /= perm!1!3',
+              cs!588: bool = perm!1!2' /= perm!1!3',
+              cs!589: bool = perm!1!4' /= perm!1!3',
+              cs!590: bool = perm!1!0' /= perm!1!4',
+              cs!591: bool = perm!1!1' /= perm!1!4',
+              cs!592: bool = perm!1!2' /= perm!1!4',
+              cs!593: bool = perm!1!3' /= perm!1!4'
+          IN (LET cs!513: CLOCK
+                 = IF perm!0!1' = 5 THEN sm_reading!0!4
+                 ELSIF perm!0!1' = 4 THEN sm_reading!0!3
+                 ELSIF perm!0!1' = 3 THEN sm_reading!0!2
+                 ELSIF perm!0!1' = 2 THEN sm_reading!0!1
+                 ELSE sm_reading!0!0 ENDIF,
+                 cs!514: CLOCK
+                 = IF perm!0!3' = 5 THEN sm_reading!0!4
+                 ELSIF perm!0!3' = 4 THEN sm_reading!0!3
+                 ELSIF perm!0!3' = 3 THEN sm_reading!0!2
+                 ELSIF perm!0!3' = 2 THEN sm_reading!0!1
+                 ELSE sm_reading!0!0 ENDIF,
+                 cs!516: CLOCK
+                 = IF perm!0!2' = 5 THEN sm_reading!0!4
+                 ELSIF perm!0!2' = 4 THEN sm_reading!0!3
+                 ELSIF perm!0!2' = 3 THEN sm_reading!0!2
+                 ELSIF perm!0!2' = 2 THEN sm_reading!0!1
+                 ELSE sm_reading!0!0 ENDIF,
+                 cs!519: CLOCK
+                 = IF perm!1!1' = 5 THEN sm_reading!1!4
+                 ELSIF perm!1!1' = 4 THEN sm_reading!1!3
+                 ELSIF perm!1!1' = 3 THEN sm_reading!1!2
+                 ELSIF perm!1!1' = 2 THEN sm_reading!1!1
+                 ELSE sm_reading!1!0 ENDIF,
+                 cs!520: CLOCK
+                 = IF perm!1!3' = 5 THEN sm_reading!1!4
+                 ELSIF perm!1!3' = 4 THEN sm_reading!1!3
+                 ELSIF perm!1!3' = 3 THEN sm_reading!1!2
+                 ELSIF perm!1!3' = 2 THEN sm_reading!1!1
+                 ELSE sm_reading!1!0 ENDIF,
+                 cs!521: bool
+                 = IF perm!1!4' = 5 THEN sm_valid!1!4
+                 ELSIF perm!1!4' = 4 THEN sm_valid!1!3
+                 ELSIF perm!1!4' = 3 THEN sm_valid!1!2
+                 ELSIF perm!1!4' = 2 THEN sm_valid!1!1
+                 ELSE sm_valid!1!0 ENDIF,
+                 cs!523: CLOCK
+                 = IF perm!1!2' = 5 THEN sm_reading!1!4
+                 ELSIF perm!1!2' = 4 THEN sm_reading!1!3
+                 ELSIF perm!1!2' = 3 THEN sm_reading!1!2
+                 ELSIF perm!1!2' = 2 THEN sm_reading!1!1
+                 ELSE sm_reading!1!0 ENDIF,
+                 cs!528: bool
+                 = IF perm!0!4' = 5 THEN sm_valid!0!4
+                 ELSIF perm!0!4' = 4 THEN sm_valid!0!3
+                 ELSIF perm!0!4' = 3 THEN sm_valid!0!2
+                 ELSIF perm!0!4' = 2 THEN sm_valid!0!1
+                 ELSE sm_valid!0!0 ENDIF,
+                 cs!534: bool
+                 = IF perm!0!0' = 5 THEN sm_valid!0!4
+                 ELSIF perm!0!0' = 4 THEN sm_valid!0!3
+                 ELSIF perm!0!0' = 3 THEN sm_valid!0!2
+                 ELSIF perm!0!0' = 2 THEN sm_valid!0!1
+                 ELSE sm_valid!0!0 ENDIF,
+                 cs!535: bool
+                 = IF perm!0!1' = 5 THEN sm_valid!0!4
+                 ELSIF perm!0!1' = 4 THEN sm_valid!0!3
+                 ELSIF perm!0!1' = 3 THEN sm_valid!0!2
+                 ELSIF perm!0!1' = 2 THEN sm_valid!0!1
+                 ELSE sm_valid!0!0 ENDIF,
+                 cs!536: bool
+                 = IF perm!0!2' = 5 THEN sm_valid!0!4
+                 ELSIF perm!0!2' = 4 THEN sm_valid!0!3
+                 ELSIF perm!0!2' = 3 THEN sm_valid!0!2
+                 ELSIF perm!0!2' = 2 THEN sm_valid!0!1
+                 ELSE sm_valid!0!0 ENDIF,
+                 cs!537: bool
+                 = IF perm!0!3' = 5 THEN sm_valid!0!4
+                 ELSIF perm!0!3' = 4 THEN sm_valid!0!3
+                 ELSIF perm!0!3' = 3 THEN sm_valid!0!2
+                 ELSIF perm!0!3' = 2 THEN sm_valid!0!1
+                 ELSE sm_valid!0!0 ENDIF,
+                 cs!570: bool
+                 = IF perm!1!0' = 5 THEN sm_valid!1!4
+                 ELSIF perm!1!0' = 4 THEN sm_valid!1!3
+                 ELSIF perm!1!0' = 3 THEN sm_valid!1!2
+                 ELSIF perm!1!0' = 2 THEN sm_valid!1!1
+                 ELSE sm_valid!1!0 ENDIF,
+                 cs!571: bool
+                 = IF perm!1!1' = 5 THEN sm_valid!1!4
+                 ELSIF perm!1!1' = 4 THEN sm_valid!1!3
+                 ELSIF perm!1!1' = 3 THEN sm_valid!1!2
+                 ELSIF perm!1!1' = 2 THEN sm_valid!1!1
+                 ELSE sm_valid!1!0 ENDIF,
+                 cs!572: bool
+                 = IF perm!1!2' = 5 THEN sm_valid!1!4
+                 ELSIF perm!1!2' = 4 THEN sm_valid!1!3
+                 ELSIF perm!1!2' = 3 THEN sm_valid!1!2
+                 ELSIF perm!1!2' = 2 THEN sm_valid!1!1
+                 ELSE sm_valid!1!0 ENDIF,
+                 cs!573: bool
+                 = IF perm!1!3' = 5 THEN sm_valid!1!4
+                 ELSIF perm!1!3' = 4 THEN sm_valid!1!3
+                 ELSIF perm!1!3' = 3 THEN sm_valid!1!2
+                 ELSIF perm!1!3' = 2 THEN sm_valid!1!1
+                 ELSE sm_valid!1!0 ENDIF
+             IN (LET cs!531: bool
+                    = IF perm!0!0' = 5 THEN sm_reading!0!4
+                    ELSIF perm!0!0' = 4 THEN sm_reading!0!3
+                    ELSIF perm!0!0' = 3 THEN sm_reading!0!2
+                    ELSIF perm!0!0' = 2 THEN sm_reading!0!1
+                    ELSE sm_reading!0!0 ENDIF <=
+                    cs!513,
+                    cs!532: bool = cs!513 <= cs!516,
+                    cs!533: bool = cs!516 <= cs!514,
+                    cs!565: bool = not(cs!521),
+                    cs!567: bool
+                    = IF perm!1!0' = 5 THEN sm_reading!1!4
+                    ELSIF perm!1!0' = 4 THEN sm_reading!1!3
+                    ELSIF perm!1!0' = 3 THEN sm_reading!1!2
+                    ELSIF perm!1!0' = 2 THEN sm_reading!1!1
+                    ELSE sm_reading!1!0 ENDIF <=
+                    cs!519,
+                    cs!568: bool = cs!519 <= cs!523,
+                    cs!569: bool = cs!523 <= cs!520,
+                    cs!610: bool = not(cs!528)
+                IN ((choice!1!0 = 0) and
+                   (sm_state!0 = sm_send) and
+                   (sm_state!0' = sm_correct) and
+                   (sm_clock!0' = sm_clock!0) or
+                   (choice!1!0 = 1) and
+                   (sm_state!0 = sm_correct) and
+                   (sm_state!0' = sm_drift) and
+                   (sm_clock!0' = cs!604) or
+                   (choice!1!0 = 2) and
+                   (sm_state!0 = sm_drift) and
+                   sm_clock!0 - max_drift <= sm_clock!0' AND sm_clock!0' <= sm_clock!0 + max_drift and
+                   (sm_state!0' = sm_send)) and
+                   ((choice!1!1 = 0) and
+                   (sm_state!1 = sm_send) and
+                   (sm_state!1' = sm_correct) and
+                   (sm_clock!1' = sm_clock!1) or
+                   (choice!1!1 = 1) and
+                   (sm_state!1 = sm_correct) and
+                   (sm_state!1' = sm_drift) and
+                   (sm_clock!1' = cs!604) or
+                   (choice!1!1 = 2) and
+                   (sm_state!1 = sm_drift) and
+                   sm_clock!1 - max_drift <= sm_clock!1' AND sm_clock!1' <= sm_clock!1 + max_drift and
+                   (sm_state!1' = sm_send)) and
+                   ((choice!1!2 = 0) and
+                   (sm_state!2 = sm_send) and
+                   (sm_state!2' = sm_correct) and
+                   (sm_clock!2' = sm_clock!2) or
+                   (choice!1!2 = 1) and
+                   (sm_state!2 = sm_correct) and
+                   (sm_state!2' = sm_drift) and
+                   (sm_clock!2' = cs!604) or
+                   (choice!1!2 = 2) and
+                   (sm_state!2 = sm_drift) and
+                   sm_clock!2 - max_drift <= sm_clock!2' AND sm_clock!2' <= sm_clock!2 + max_drift and
+                   (sm_state!2' = sm_send)) and
+                   ((choice!1!3 = 0) and
+                   (sm_state!3 = sm_send) and
+                   (sm_state!3' = sm_correct) and
+                   (sm_clock!3' = sm_clock!3) or
+                   (choice!1!3 = 1) and
+                   (sm_state!3 = sm_correct) and
+                   (sm_state!3' = sm_drift) and
+                   (sm_clock!3' = cs!604) or
+                   (choice!1!3 = 2) and
+                   (sm_state!3 = sm_drift) and
+                   sm_clock!3 - max_drift <= sm_clock!3' AND sm_clock!3' <= sm_clock!3 + max_drift and
+                   (sm_state!3' = sm_send)) and
+                   ((choice!1!4 = 0) and
+                   (sm_state!4 = sm_send) and
+                   (sm_state!4' = sm_correct) and
+                   (sm_clock!4' = sm_clock!4) or
+                   (choice!1!4 = 1) and
+                   (sm_state!4 = sm_correct) and
+                   (sm_state!4' = sm_drift) and
+                   (sm_clock!4' = cs!604) or
+                   (choice!1!4 = 2) and
+                   (sm_state!4 = sm_drift) and
+                   sm_clock!4 - max_drift <= sm_clock!4' AND sm_clock!4' <= sm_clock!4 + max_drift and
+                   (sm_state!4' = sm_send)) and
+                   ((choice!2!0 = 0) and
+                   cs!530 and
+                   cs!531 and
+                   cs!532 and
+                   cs!534 and
+                   cs!535 and
+                   cs!536 and
+                   not(cs!537) and
+                   cs!610 and
+                   cs!538 and
+                   cs!539 and
+                   cs!540 and
+                   cs!541 and
+                   cs!542 and
+                   cs!543 and
+                   cs!544 and
+                   cs!545 and
+                   cs!546 and
+                   cs!547 and
+                   cs!548 and
+                   cs!549 and
+                   cs!550 and
+                   cs!551 and
+                   cs!552 and
+                   cs!553 and
+                   cs!554 and
+                   cs!555 and
+                   cs!556 and
+                   cs!557 and
+                   cs!558 and
+                   (compression!0' = cs!513) and
+                   cs!559 or
+                   (choice!2!0 = 1) and
+                   cs!530 and
+                   cs!531 and
+                   cs!532 and
+                   cs!533 and
+                   cs!534 and
+                   cs!535 and
+                   cs!536 and
+                   cs!537 and
+                   cs!610 and
+                   cs!538 and
+                   cs!539 and
+                   cs!540 and
+                   cs!541 and
+                   cs!542 and
+                   cs!543 and
+                   cs!544 and
+                   cs!545 and
+                   cs!546 and
+                   cs!547 and
+                   cs!548 and
+                   cs!549 and
+                   cs!550 and
+                   cs!551 and
+                   cs!552 and
+                   cs!553 and
+                   cs!554 and
+                   cs!555 and
+                   cs!556 and
+                   cs!557 and
+                   cs!558 and
+                   (compression!0' = (cs!513 + cs!516) / 2) and
+                   cs!559 or
+                   (choice!2!0 = 2) and
+                   cs!530 and
+                   cs!531 and
+                   cs!532 and
+                   cs!533 and
+                   cs!514 <=
+                   IF perm!0!4' = 5 THEN sm_reading!0!4
+                   ELSIF perm!0!4' = 4 THEN sm_reading!0!3
+                   ELSIF perm!0!4' = 3 THEN sm_reading!0!2
+                   ELSIF perm!0!4' = 2 THEN sm_reading!0!1
+                   ELSE sm_reading!0!0 ENDIF and
+                   cs!534 and
+                   cs!535 and
+                   cs!536 and
+                   cs!537 and
+                   cs!528 and
+                   cs!538 and
+                   cs!539 and
+                   cs!540 and
+                   cs!541 and
+                   cs!542 and
+                   cs!543 and
+                   cs!544 and
+                   cs!545 and
+                   cs!546 and
+                   cs!547 and
+                   cs!548 and
+                   cs!549 and
+                   cs!550 and
+                   cs!551 and
+                   cs!552 and
+                   cs!553 and
+                   cs!554 and
+                   cs!555 and
+                   cs!556 and
+                   cs!557 and
+                   cs!558 and
+                   (compression!0' = cs!516) and
+                   cs!559 or
+                   (choice!2!0 = 3) and
+                   (cm_state!0 = cm_correct) and
+                   (cm_clock!0' = compression!0) and
+                   (cm_state!0' = cm_drift) and
+                   cs!561 or
+                   (choice!2!0 = 4) and
+                   (cm_state!0 = cm_drift) and
+                   cm_clock!0 - max_drift <= cm_clock!0' AND cm_clock!0' <= cm_clock!0 + max_drift and
+                   (cm_state!0' = cm_receive) and
+                   cs!561) and
+                   ((choice!2!1 = 0) and
+                   cs!566 and
+                   cs!567 and
+                   cs!568 and
+                   cs!570 and
+                   cs!571 and
+                   cs!572 and
+                   not(cs!573) and
+                   cs!565 and
+                   cs!574 and
+                   cs!575 and
+                   cs!576 and
+                   cs!577 and
+                   cs!578 and
+                   cs!579 and
+                   cs!580 and
+                   cs!581 and
+                   cs!582 and
+                   cs!583 and
+                   cs!584 and
+                   cs!585 and
+                   cs!586 and
+                   cs!587 and
+                   cs!588 and
+                   cs!589 and
+                   cs!590 and
+                   cs!591 and
+                   cs!592 and
+                   cs!593 and
+                   cs!594 and
+                   (compression!1' = cs!519) and
+                   cs!595 or
+                   (choice!2!1 = 1) and
+                   cs!566 and
+                   cs!567 and
+                   cs!568 and
+                   cs!569 and
+                   cs!570 and
+                   cs!571 and
+                   cs!572 and
+                   cs!573 and
+                   cs!565 and
+                   cs!574 and
+                   cs!575 and
+                   cs!576 and
+                   cs!577 and
+                   cs!578 and
+                   cs!579 and
+                   cs!580 and
+                   cs!581 and
+                   cs!582 and
+                   cs!583 and
+                   cs!584 and
+                   cs!585 and
+                   cs!586 and
+                   cs!587 and
+                   cs!588 and
+                   cs!589 and
+                   cs!590 and
+                   cs!591 and
+                   cs!592 and
+                   cs!593 and
+                   cs!594 and
+                   (compression!1' = (cs!519 + cs!523) / 2) and
+                   cs!595 or
+                   (choice!2!1 = 2) and
+                   cs!566 and
+                   cs!567 and
+                   cs!568 and
+                   cs!569 and
+                   cs!520 <=
+                   IF perm!1!4' = 5 THEN sm_reading!1!4
+                   ELSIF perm!1!4' = 4 THEN sm_reading!1!3
+                   ELSIF perm!1!4' = 3 THEN sm_reading!1!2
+                   ELSIF perm!1!4' = 2 THEN sm_reading!1!1
+                   ELSE sm_reading!1!0 ENDIF and
+                   cs!570 and
+                   cs!571 and
+                   cs!572 and
+                   cs!573 and
+                   cs!521 and
+                   cs!574 and
+                   cs!575 and
+                   cs!576 and
+                   cs!577 and
+                   cs!578 and
+                   cs!579 and
+                   cs!580 and
+                   cs!581 and
+                   cs!582 and
+                   cs!583 and
+                   cs!584 and
+                   cs!585 and
+                   cs!586 and
+                   cs!587 and
+                   cs!588 and
+                   cs!589 and
+                   cs!590 and
+                   cs!591 and
+                   cs!592 and
+                   cs!593 and
+                   cs!594 and
+                   (compression!1' = cs!523) and
+                   cs!595 or
+                   (choice!2!1 = 3) and
+                   (cm_state!1 = cm_correct) and
+                   (cm_clock!1' = compression!1) and
+                   (cm_state!1' = cm_drift) and
+                   cs!598 or
+                   (choice!2!1 = 4) and
+                   (cm_state!1 = cm_drift) and
+                   cm_clock!1 - max_drift <= cm_clock!1' AND cm_clock!1' <= cm_clock!1 + max_drift and
+                   (cm_state!1' = cm_receive) and
+                   cs!598))))))
+  SKIP
+    (sm_clock!0' = sm_clock!0) and
+    (sm_clock!1' = sm_clock!1) and
+    (sm_clock!2' = sm_clock!2) and
+    (sm_clock!3' = sm_clock!3) and
+    (sm_clock!4' = sm_clock!4) and
+    (sm_state!0' = sm_state!0) and
+    (sm_state!1' = sm_state!1) and
+    (sm_state!2' = sm_state!2) and
+    (sm_state!3' = sm_state!3) and
+    (sm_state!4' = sm_state!4) and
+    (compression!0' = compression!0) and
+    (compression!1' = compression!1) and
+    (cm_clock!0' = cm_clock!0) and
+    (cm_clock!1' = cm_clock!1) and
+    (cm_state!0' = cm_state!0) and
+    (cm_state!1' = cm_state!1)
+  VALID_INPUT
+    true
+  VALID_STATE
+    true
+  VALID_CONSTANT
+    true
+END
+ 

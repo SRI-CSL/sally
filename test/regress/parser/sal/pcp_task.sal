@@ -1,0 +1,41 @@
+pcp_task {Semaphore : TYPE; NumberOfTasks : NATURAL} : CONTEXT =
+BEGIN
+
+  semSetCtx : CONTEXT = set{Semaphore;};
+
+  TaskDescriptor : TYPE = [# priority : NATURAL,
+                             period : NATURAL,
+                             budget : NATURAL,
+                             semaphores : semSetCtx!Set
+                           #];
+
+  JobIdx : TYPE = [1..NumberOfTasks];
+
+  TaskDescriptors : TYPE = ARRAY JobIdx OF TaskDescriptor;
+
+  priority(j : JobIdx, t : TaskDescriptors) : NATURAL =
+    t[j].priority;
+ 
+  period(j : JobIdx, t : TaskDescriptors) : NATURAL =
+    t[j].period;
+
+  budget(j : JobIdx, t : TaskDescriptors) : NATURAL =
+    t[j].budget;
+
+  uses_sem?(j : JobIdx, s : Semaphore, t : TaskDescriptors) : BOOLEAN =
+	  semSetCtx!contains?(t[j].semaphores, s);
+
+  % In the Prioriry Ceiling Protocol, each semaphore "S" is assigned a fixed ceiling
+  % that is equal to the highest priority among the tasks that need access to "S".
+  % The function "ceiling" computes the ceiling of the given semaphore.
+  ceiling_aux(s : Semaphore, t : TaskDescriptors, j : JobIdx, max : NATURAL) : NATURAL =
+  IF j <= NumberOfTasks THEN
+    LET result : NATURAL = ceiling_aux(s, t, j + 1, max)
+    IN IF semSetCtx!contains?(t[j].semaphores, s) AND t[j].priority > result
+       THEN t[j].priority
+       ELSE result ENDIF
+    ELSE max
+  ENDIF;
+  ceiling(s : Semaphore, t : TaskDescriptors) : NATURAL = ceiling_aux(s, t, 1, 0);
+   
+END

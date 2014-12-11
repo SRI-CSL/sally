@@ -1,0 +1,49 @@
+peterson: CONTEXT =
+BEGIN
+  PC: TYPE = {sleeping, trying, critical};
+
+  process [tval : BOOLEAN]: MODULE =
+    BEGIN
+      INPUT pc2 : PC
+      INPUT x2 : BOOLEAN
+      OUTPUT pc1 : PC
+      OUTPUT x1 : BOOLEAN
+      INITIALIZATION pc1 = sleeping
+      TRANSITION
+        [
+         wakening: 
+           pc1 = sleeping --> pc1' = trying; x1' = x2 = tval
+         []
+         entering_critical: 
+           pc1 = trying AND (pc2 = sleeping OR x1 = (x2 /= tval))
+           --> pc1' = critical
+         []
+         leaving_critical: 
+           pc1 = critical --> pc1' = sleeping; x1' = x2 = tval
+        ]
+    END;
+
+  system: MODULE =
+     process[FALSE]
+     [] 
+     RENAME pc2 TO pc1, pc1 TO pc2, 
+            x2 TO x1, x1 TO x2
+     IN process[TRUE];
+
+  mutex: THEOREM system |- G(NOT(pc1 = critical AND pc2 = critical));
+
+  invalid: THEOREM system |- G(NOT(pc1 = trying AND pc2 = critical));
+
+  livenessbug1: THEOREM system |- G(F(pc1 = critical));
+
+  livenessbug2: THEOREM system |- G(F(pc2 = critical));
+
+  liveness1: THEOREM system |- G(pc2 = trying => F(pc2 = critical));
+
+  liveness2: THEOREM system |- G(pc1 = trying => F(pc1 = critical));
+
+  liveness3: THEOREM system |- G(F(pc1 = trying)) => G(F(pc1 = critical));
+
+  liveness4: THEOREM system |- G(F(pc2 = trying)) => G(F(pc2 = critical));
+
+END

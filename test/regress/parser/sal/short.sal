@@ -1,0 +1,25 @@
+short: CONTEXT =
+BEGIN
+  State: TYPE = {ready, busy};
+
+  main: MODULE =
+    BEGIN
+      INPUT request : BOOLEAN
+      OUTPUT state : State
+      INITIALIZATION 
+        state = ready
+      TRANSITION
+        state' IN IF (state = ready) AND request THEN
+                    {busy}
+                  ELSE 
+                    {ready, busy}
+                  ENDIF
+    END;
+
+  th1: THEOREM main |- AG(request => AF(state = busy));
+
+  th2: THEOREM main |- G(request => F(state = busy));
+
+  th3: THEOREM main |- ltllib!responds_to(state = busy, request);
+
+END

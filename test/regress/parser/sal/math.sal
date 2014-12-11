@@ -1,0 +1,17 @@
+math : CONTEXT =
+BEGIN
+
+  gcd(m : NATURAL, n : NATURAL) : NATURAL =
+    IF n = 0 THEN m
+    ELSE LET r : NATURAL = m MOD n 
+         IN IF r = 0 THEN n
+            ELSE gcd(n,r) ENDIF
+    ENDIF;
+  
+  lcm(m : NATURAL, n : NATURAL) : NATURAL =
+    IF m = n THEN m
+    ELSIF m MOD n = 0 THEN m
+    ELSIF n MOD m = 0 THEN n
+    ELSE (m DIV gcd(m,n)) * n ENDIF;
+            
+END

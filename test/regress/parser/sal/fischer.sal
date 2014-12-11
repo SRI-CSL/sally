@@ -1,0 +1,158 @@
+%
+% SAL model of Fischer's mutual exclusion protocol
+%
+% Each process does
+%   loop
+%     wait until lock = 0;
+%     set lock to process id;
+%     wait;
+%     if lock = process id 
+%        enter critical section
+%   end
+%
+% Parameters: 
+%   N = number of processes (must be at least 2)
+%   delta1, delta2: delays (must be positive)
+%
+%   - delay between realizing that lock = 0 and 
+%   setting lock to process id is less than or equal to delta1
+%   - waiting time between setting lock to process id
+%   and entering the critical section is greater than or equal to delta2
+%
+% Mutual exclusion is satisfied if delta1 < delta2
+%
+
+fischer: CONTEXT =
+
+BEGIN
+
+  N: NATURAL = 2;
+
+  IDENTITY: TYPE = [1 .. N];
+
+  LOCK_VALUE: TYPE = [0 .. N];
+
+  TIME: TYPE = REAL;
+
+  delta1: TIME = 2;
+
+  delta2: TIME = 4;
+
+  TIMEOUT_ARRAY: TYPE = ARRAY IDENTITY OF TIME;
+
+
+  %-----------------------
+  %  Minimum of an array
+  %-----------------------
+
+  recur_min(x: TIMEOUT_ARRAY, min_sofar: TIME, idx: [0 .. N]): TIME =
+    IF idx = 0 THEN min_sofar 
+       ELSE recur_min(x, min(min_sofar, x[idx]), idx-1) 
+    ENDIF;
+
+  min(x: TIMEOUT_ARRAY): TIME = recur_min(x, x[N], N-1);
+
+
+
+  %---------------------------------------------------------
+  %  Clock module: makes time elapse up to the next timeout
+  %---------------------------------------------------------
+
+  clock: MODULE = 
+    BEGIN
+      INPUT time_out: TIMEOUT_ARRAY
+      OUTPUT time: TIME
+    INITIALIZATION
+      time = 0
+    TRANSITION
+      [ time_elapses: time < min(time_out) --> time' = min(time_out) ]
+    END;
+
+
+
+  %--------------
+  %  Process[i]
+  %--------------
+
+  PC: TYPE = { sleeping, waiting, trying, critical };
+
+  process[i: IDENTITY]: MODULE =
+    BEGIN
+      INPUT  time: TIME
+      GLOBAL lock: LOCK_VALUE
+      OUTPUT timeout: TIME
+      LOCAL pc: PC
+    INITIALIZATION
+      pc = sleeping;
+      timeout IN { x: TIME | time < x };
+      lock = 0
+    TRANSITION
+      [ waking_up: 
+        pc = sleeping AND time = timeout AND lock = 0 -->  
+             pc' = waiting;
+             timeout' IN { x: TIME | time < x AND x <= time + delta1 } 
+
+     [] try_again_later:
+        pc = sleeping AND time = timeout AND lock /= 0 -->
+             timeout' IN { x: TIME | time < x }
+
+     [] setting_lock:
+        pc = waiting AND time = timeout -->
+             pc' = trying;
+             lock' = i;
+             timeout' IN { x: TIME | time + delta2 <= x }
+
+     [] entering_cs:
+        pc = trying AND time = timeout AND lock = i -->
+             pc' = critical;
+             timeout' IN { x: TIME | time < x }
+
+     [] lock_changed:
+        pc = trying AND time = timeout AND lock /= i -->
+             pc' = sleeping;
+             timeout' IN { x: TIME | time < x }
+
+     [] exiting_cs:
+        pc = critical AND time = timeout -->
+             pc' = sleeping;
+             lock' = 0;
+             timeout' IN { x: TIME | time < x }
+      ]
+    END;
+
+
+   %----------------------------------------------------
+   %  Asynchronous composition: all processes together
+   %    time_out[i] = timeout variable of process[i]
+   %----------------------------------------------------
+
+   processes: MODULE = 
+     WITH OUTPUT time_out: TIMEOUT_ARRAY
+        ([] (i: IDENTITY): (RENAME timeout TO time_out[i] IN process[i]));
+    
+   system: MODULE = clock [] processes;
+
+
+   %--------------
+   %  Properties 
+   %--------------
+
+   time_aux1: THEOREM
+      system |- G(FORALL (i: IDENTITY): time <= time_out[i]);
+
+   time_aux2: THEOREM
+      system |- G(FORALL (i: IDENTITY): pc[i] = waiting => time_out[i] - time <= delta1);
+
+   time_aux3: THEOREM 
+      system |- G(FORALL (i, j: IDENTITY): lock = i AND pc[j] = waiting => time_out[i] > time_out[j]);
+
+   logical_aux1: THEOREM
+      system |- G(FORALL (i, j: IDENTITY): pc[i] = critical => lock = i AND pc[j] /= waiting);
+
+   mutex: THEOREM
+      system |- G(FORALL (i: IDENTITY): pc[i] = critical => lock = i);
+
+   mutual_exclusion: THEOREM
+      system |- G(FORALL (i, j: IDENTITY): i /= j AND pc[i] = critical => pc[j] /= critical);
+
+END

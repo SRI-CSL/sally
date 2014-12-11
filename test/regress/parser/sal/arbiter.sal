@@ -1,0 +1,86 @@
+arbiter{; n : {x : NATURAL | x > 1}}: CONTEXT =
+BEGIN
+
+  cell [initial_t : BOOLEAN]: MODULE =
+    BEGIN
+      INPUT req : BOOLEAN
+      INPUT token_in : BOOLEAN
+      INPUT override_in : BOOLEAN
+      INPUT grant_in : BOOLEAN
+      OUTPUT ack : BOOLEAN
+      OUTPUT token_out : BOOLEAN
+      OUTPUT override_out : BOOLEAN
+      OUTPUT grant_out : BOOLEAN
+      LOCAL t : BOOLEAN
+      LOCAL w : BOOLEAN
+      LOCAL aux : BOOLEAN
+      DEFINITION
+        token_out = t;
+        aux = w AND t;
+        override_out = override_in OR aux;
+        grant_out = grant_in AND NOT(req);
+        ack = req AND (aux OR grant_in)
+      INITIALIZATION
+        w = FALSE; 
+        t = initial_t
+      TRANSITION
+        t' = token_in; 
+        w' = req AND (w OR t)
+    END;
+
+  Range: TYPE = [1..n];
+  Array: TYPE = ARRAY Range OF BOOLEAN;
+
+  arbiter: MODULE =
+    WITH OUTPUT Ack : Array;
+          INPUT Req : Array;
+          OUTPUT Token : Array;
+          OUTPUT Grant : Array;
+          OUTPUT Override : Array
+      (RENAME aux TO Override[n], inv_aux TO Grant[n]
+       IN BEGIN
+           OUTPUT zero_const : BOOLEAN
+           INPUT aux : BOOLEAN
+           OUTPUT inv_aux : BOOLEAN
+           DEFINITION
+             zero_const = FALSE; 
+             inv_aux = NOT(aux)
+          END)
+      || 
+      (WITH INPUT zero_const : BOOLEAN
+            (RENAME ack TO Ack[1],
+                    req TO Req[1],
+                    token_in TO Token[1],
+                    token_out TO Token[n],
+                    override_in TO zero_const,
+                    override_out TO Override[1],
+                    grant_in TO Grant[1]
+             IN (LOCAL grant_out
+                 IN cell[TRUE])))
+      || (|| (idx : [2..n]):
+             (RENAME ack TO Ack[idx],
+                     req TO Req[idx],
+                     token_in TO Token[idx],
+                     token_out TO Token[idx - 1],
+                     override_in TO Override[idx - 1],
+                     override_out TO Override[idx],
+                     grant_in TO Grant[idx],
+                     grant_out TO Grant[idx - 1]
+              IN cell[FALSE]));
+
+  at_most_one_ack: 
+    THEOREM arbiter |- G((FORALL (i : [1..n - 1]):
+                             (FORALL (j : [i + 1..n]): NOT(Ack[i] AND Ack[j]))));
+
+  no_ack_without_request: 
+    THEOREM arbiter |- G((FORALL (i : [1..n]): Ack[i] => Req[i]));
+
+  every_request_is_eventually_acknowledged: 
+    THEOREM arbiter |- (FORALL (i : [1..n]): G(F(Req[i] => Ack[i])));
+
+  at_most_one_token:
+    THEOREM arbiter |- G((FORALL (i : [1..n - 1]):
+                             (FORALL (j : [i + 1..n]): NOT(Token[i] AND Token[j]))));
+
+
+END

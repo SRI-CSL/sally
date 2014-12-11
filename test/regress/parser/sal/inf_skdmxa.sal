@@ -1,0 +1,264 @@
+%%
+%% N : the number of nodes
+%% L : the capacity of the queue
+%%
+%% L should be greater than or equal to N.
+%%
+
+inf_skdmxa{; N : nznat, L : nznat}: CONTEXT =
+BEGIN
+  %%
+  %% Data types and their functions are defined.
+  %%
+
+  %%
+  %% Node IDs are denoted by [1..N].
+  %%
+  Node_Id: TYPE = [1..N];
+
+  %%
+  %% Queue indexes are denoted by [0..(L+1)].
+  %& Subtraction '-' cannot be done for those in [1..(L+1)].
+  %% So, [0..(L+1)] is used instead.
+  %%
+  Queue_Idx: TYPE = [0..(L+1)];
+
+  %%
+  %% A queue is represented using an array data and a pointer tl.
+  %% tl points an array element, in which an item is put next.
+  %% If tl is 1, then the queue is empty.
+  %% The first element of the array is the top of the queue if the
+  %% queue is not empty.
+  %%
+  Queue: TYPE = [# data: ARRAY Queue_Idx OF Node_Id,
+                   tl: Queue_Idx #];
+
+  new_empty_queue: Queue = (# data := [[i : Queue_Idx] 1],
+                              tl := 1 #);
+
+  full?(queue : Queue): BOOLEAN = (queue.tl = L+1);
+
+  empty?(queue : Queue): BOOLEAN = (queue.tl = 1);
+
+  %% %% doesn't work because both i and queue.tl are vars
+  %% in_aux?(queue : Queue, node : Node_Id, i : Queue_Idx): BOOLEAN =
+  %%  IF i = queue.tl THEN false
+  %%  ELSIF queue.data[i] = node THEN true
+  %%  ELSE in_aux?(queue, node, i+1)
+  %%  ENDIF;
+
+  in_aux?(queue : Queue, node : Node_Id, i : Queue_Idx): BOOLEAN =
+    IF i = L+1 THEN false
+    ELSIF queue.data[i] = node THEN i < queue.tl
+    ELSE in_aux?(queue, node, i+1)
+    ENDIF;
+
+  in?(queue : Queue, node : Node_Id): BOOLEAN = in_aux?(queue, node, 1);
+    
+  top(queue : Queue): Node_Id = queue.data[1];
+
+  put(queue : Queue, i : Node_Id): Queue =
+    IF full?(queue)
+    THEN queue
+    ELSE (queue WITH .data[queue.tl] := i) WITH .tl := queue.tl + 1
+    ENDIF;
+
+  get_aux(queue : Queue, i : Queue_Idx): Queue =
+    IF i = L+1
+    THEN queue WITH .tl := (queue.tl - 1)
+    ELSE get_aux(queue WITH .data[i] := queue.data[i+1], i+1)
+    ENDIF;
+
+  get(queue : Queue): Queue = 
+    IF empty?(queue)
+    THEN queue
+    ELSE get_aux(queue, 1)
+    ENDIF;
+
+  %%
+  %% Request messages
+  %%
+  Request: TYPE = [# node: Node_Id, no: nat #]; 
+
+  ReqMsg: TYPE = [# new: BOOLEAN, req: Request #];
+
+  %%
+  %% Privilege messages
+  %%
+  Privilege: TYPE = [# queue: Queue, done: ARRAY Node_Id OF nat #];
+
+  PrivMsg: TYPE = [# new: BOOLEAN, priv: Privilege #];
+
+  %%
+  %% Labels
+  %%
+  Label: TYPE = {rem, l1, l2, l3, l4, l5, cs, l6, l7, l8, l9, l10};
+
+  %%
+  %% The behavior of each node is defined
+  %%
+  node [i : Node_Id]: MODULE =
+  BEGIN
+    %%
+    %% reqmedium[i][j] denotes a channel with which node i sends a
+    %% request to node j. 
+    %% privmedium[i][j] denotes a channel with which node i sends a
+    %% privilege to node j.
+    %%
+    GLOBAL reqmedium : ARRAY Node_Id OF ARRAY Node_Id OF ReqMsg
+    GLOBAL privmedium : ARRAY Node_Id OF ARRAY Node_Id OF PrivMsg
+    %%
+    LOCAL requesting : BOOLEAN
+    LOCAL have_privilege : BOOLEAN 
+    LOCAL rn : ARRAY Node_Id OF nat
+    LOCAL ln : ARRAY Node_Id OF nat
+    LOCAL queue : Queue
+    LOCAL idx : Node_Id
+    LOCAL pc : Label
+    INITIALIZATION
+      reqmedium = [[j : Node_Id] [[k : Node_Id] 
+                    (# new := false, 
+                       req := (# node := 1, 
+                                 no := 0 #) #)]];
+      privmedium = [[j : Node_Id] [[k : Node_Id] 
+                    (# new := false, 
+                       priv := (# queue := new_empty_queue,
+                                  done := [[l : Node_Id] 1] #) #)]];
+      requesting = false;
+      have_privilege = IF i = 1 THEN true ELSE false ENDIF;
+      rn = [[j : Node_Id] 0];
+      ln = [[j : Node_Id] 0];
+      queue = new_empty_queue;
+      idx = 1;
+      pc = rem
+    TRANSITION
+    [
+      try:
+        pc = rem --> pc' = l1
+      []
+      set_req:
+        pc = l1 --> pc' = l2;
+                    requesting' = true
+      []
+      check_priv:
+        pc = l2 --> pc' = IF have_privilege THEN cs ELSE l3 ENDIF
+      []
+      inc_req_no:
+        pc = l3 --> pc' = l4;
+                    rn'[i] = rn[i] + 1;
+                    idx' = 1
+      []
+      send_req:
+        pc = l4 --> pc' = IF idx = N THEN l5 ELSE l4 ENDIF;
+                    reqmedium'[i][idx] 
+                    = (# new := true,
+                         req := (# node := i,
+                                   no := rn[i] #) #);
+                    idx' = IF idx = N THEN idx ELSE idx + 1 ENDIF
+                    %%
+                    %% The following is not appropriate because if idx
+                    %%  = N, then idx + 1 is out of the range [1..N].
+                    %% idx' = idx + 1
+      []
+      ([] (j : Node_Id):
+      wait_priv:
+        pc = l5 AND privmedium[j][i].new AND NOT(j = i)
+        --> pc' = cs;
+            have_privilege' = true;
+            privmedium'[j][i] = (# new := false, 
+                                  priv := (# queue := new_empty_queue,
+                                             done := [[l : Node_Id] 1] #) #);
+            queue' = privmedium[j][i].priv.queue;
+            ln' = privmedium[j][i].priv.done)
+      []
+      exit:
+        pc = cs --> pc' = l6
+      []
+      complete_req:
+        pc = l6 --> pc' = l7;
+                    ln'[i] = rn[i];
+                    idx' = 1
+      []
+      update_queue:
+        pc = l7 --> pc' = IF idx = N THEN l8 ELSE l7 ENDIF;
+                    queue' = IF NOT(in?(queue, idx)) AND rn[idx] = ln[idx]+1
+                             THEN put(queue, idx)
+                             ELSE queue 
+                             ENDIF;
+                    idx' = IF idx = N THEN idx ELSE idx + 1 ENDIF
+      []
+      check_queue:
+        pc = l8 --> pc' = IF empty?(queue) THEN l10 ELSE l9 ENDIF;
+      []
+      transfer_priv:
+        pc = l9 --> pc' = l10;
+                    have_privilege' = false;
+                    privmedium'[i][top(queue)]
+                    = (# new := true,
+                         priv := (# queue := get(queue),
+                                    done := ln #) #)
+      []
+      reset_req:
+        pc = l10 --> pc' = rem;
+                     requesting' = false
+      []
+      ([] (j : Node_Id):
+      receive_req:
+        reqmedium[j][i].new AND NOT(j = i)
+        --> reqmedium'[j][i] = (# new := false,
+                                  req := (# node := 1,
+                                            no := 0 #) #);
+            rn'[j] = IF rn[j] < reqmedium[j][i].req.no 
+                     THEN reqmedium[j][i].req.no 
+                     ELSE rn[j]
+                     ENDIF;
+            have_privilege' 
+            = IF have_privilege AND NOT(requesting) AND rn'[j] = ln[j] + 1
+              THEN false
+              ELSE have_privilege
+              ENDIF;
+            privmedium'[i][j]
+            = IF have_privilege AND NOT(requesting) AND rn'[j] = ln[j] + 1
+              THEN (# new := true,
+                      priv := (# queue := queue,
+                                 done := ln #) #)
+              ELSE privmedium[i][j]
+              ENDIF)
+    ]
+  END;
+
+  system: MODULE = ([] (i : Node_Id): node[i]);
+
+%% Lemmas
+%%
+%% % sal-inf-bmc -v 3 -i -ice -d 1 --assertion='inf_skdmxa{;2,2}!lemma1'
+%% 
+  lemma1: LEMMA
+    system |- G(FORALL (i : Node_Id):
+                 ((pc[i] = l2) => requesting[i]) AND
+                 ((pc[i] = l3) => requesting[i]) AND
+                 ((pc[i] = l4) => requesting[i]) AND
+                 ((pc[i] = l5) => requesting[i]) AND
+                 ((pc[i] = cs) => (requesting[i] AND have_privilege[i])) AND
+                 ((pc[i] = l6) => (requesting[i] AND have_privilege[i])) AND
+                 ((pc[i] = l7) => (requesting[i] AND have_privilege[i])) AND
+                 ((pc[i] = l8) => (requesting[i] AND have_privilege[i])) AND
+                 ((pc[i] = l9) => (requesting[i] AND have_privilege[i])) );
+%%
+%% % sal-inf-bmc -v 3 -i -ice -d 1 -l lemma1 --assertion='inf_skdmxa{;2,2}!lemma2'
+%% 
+  lemma2: LEMMA
+    system |- G(FORALL (i : Node_Id, j : Node_Id, k : Node_Id, l : Node_Id):
+                 ((have_privilege[i] AND have_privilege[j]) => (i = j)) AND
+                 (have_privilege[i] => NOT(privmedium[j][k].new)) AND
+                 ((privmedium[i][j].new AND privmedium[k][l].new) => (i = k AND j = l)) );
+
+%% mutual exclusion
+%%
+%% % sal-inf-bmc -v 3 -i -ice -d 1 -l lemma1 -l lemma2 --assertion='inf_skdmxa{;2,2}!mutex'
+%% 
+  mutex: THEOREM
+    system |- G(FORALL (i : Node_Id, j : Node_Id):
+                 (pc[i] = cs AND pc[j] = cs) => (i = j) );
+
+END

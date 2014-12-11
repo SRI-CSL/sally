@@ -1,0 +1,361 @@
+%
+% Simplified model of the TTE clock synchronization algorithm.
+%
+% Author: Bruno Dutertre, SRI International, 2011
+%
+% References:
+%
+%  "Integrated Formal Analysis of Timed-Triggered Ethernet",
+%   Bruno Dutertre, Natarajan Shankar, and Sam Owre, NASA Contractor Report
+%   (to appear)
+%
+%  "Timed-Triggered Ethernet. SAE Aerospace Standard, AS 6802, v1.1.2, 2011"
+%
+%  "Automated Formal Verification of the TTEthernet Synchronization
+%   Quality" by Wilfried Steiner and Bruno Dutertre, NFM 2011.
+%
+%
+% Specific instance in this file:
+% - five SMs
+% - two CMs
+% - one Byzantine faulty SM
+% - fix from the original definition: if five clock readings are received,
+%   the CM compression function uses the average of the 2nd and 4th
+%   value (instead of the middle value).
+%
+
+tte_synchro_fixed: CONTEXT =
+
+BEGIN
+
+  POSREAL: TYPE = { x:REAL | x > 0 };
+
+  %
+  % max_drift is a bound on the maximal drift 
+  % experienced by a clock in one synchronization interval.
+  % This drift is relative to real time.
+  %
+  max_drift: POSREAL;
+
+  %
+  % Clock value = any real
+  %
+  CLOCK: TYPE = REAL;
+
+  %
+  % N = number of Synchronization Masters (SMs)
+  % M = number of Compression Masters (CMs)
+  %
+  N: NATURAL = 5;
+  M: NATURAL = 2;
+
+  SM_ID: TYPE = [1 .. N];
+  CM_ID: TYPE = [1 .. M];
+
+  %
+  % Component status
+  % - good: not faulty
+  % - omissive: inconsistent omission
+  % - byzantine: inconsistent value + omission
+  %
+  STATUS: TYPE = { good, omissive, byzantine };
+
+  %
+  % Status of each SM
+  % - for this scenario, we assume SM[3] is byzantine (changing
+  %   this to any fixed SM makes no difference).
+  % - the other SMs are good
+  %
+  sm_status(i: SM_ID): STATUS = IF i=3 THEN byzantine ELSE good ENDIF;
+
+
+  %
+  % Status of each CM (not used for now)
+  %
+  cm_status(i: CM_ID): STATUS = good;
+  
+
+  %-------------------------------------------------------------------
+  % Sort predicate for the compression function:
+  % - a CM receives at most N values c[1] to c[N]
+  % - boolean array v indicates which values are present
+  %   v[i] = false means that i is omissive (or byzantine) and the
+  %   value from i was not received.
+  %
+  % The compression function is defined by the number of
+  % valid values received and the order of the valid values.
+  %
+  % Predicate sort(c, v, n, p) holds if
+  % 1) there are n valid values in c[1 ... N] (i.e.
+  %    n of the booleans v[1] ... v[N] are true)
+  % 2) p is a permutation of the SM indices
+  % 3) p[1] ... p[n] enumerates the n valid values of 
+  %    c[1 ... N] in increasing order
+  %--------------------------------------------------------------------
+
+  sort(c: ARRAY SM_ID OF CLOCK, v: ARRAY SM_ID OF BOOLEAN,
+       n: [0 .. N], p: ARRAY SM_ID OF SM_ID): BOOLEAN =
+        (FORALL (i: SM_ID): i<n => c[p[i]] <= c[p[i+1]])
+    AND (FORALL (i: SM_ID): v[p[i]] <=> (i <= n))
+    AND (FORALL (i, j: SM_ID): p[i] = p[j] => i = j);
+
+
+  %---------------------------------------------------------
+  % Synchronization master
+  %
+  % Three states: send, correct, drift.
+  %
+  % States send and correct model the resynchronization
+  % protocol at the beginning of every interval:
+  % 1) in state send: the SM sends its clock to the CMs
+  % 2) in state correct: the SM applies a clock correction
+  %    based on the compression values it gets from the CMs
+  %
+  % In state drift: the SM clock drifts from real-time (this
+  % models the rest of the resynchronization interval).
+  %---------------------------------------------------------
+
+  SM_STATE: TYPE = { sm_send, sm_correct, sm_drift };
+
+  SM: MODULE =
+    BEGIN
+      INPUT
+        compression: ARRAY CM_ID OF CLOCK
+
+      OUTPUT
+        state: SM_STATE,
+        clock: CLOCK
+
+      INITIALIZATION
+        state = sm_send;
+        clock = 0;
+
+      TRANSITION
+        [ state = sm_send --> 
+            state' = sm_correct;
+
+       [] state = sm_correct -->
+            state' = sm_drift;
+            clock' = (compression[1] + compression[2])/2; % correction
+
+       [] state = sm_drift -->
+            clock' IN { x : CLOCK | clock - max_drift <= x AND x <= clock + max_drift };
+            state' = sm_send;
+       ]
+     END;
+
+  
+ 
+   %------------------------------------------------------------------
+   % Compression master
+   %
+   % Three states: receive, correct, drift
+   %
+   % States receive and correct model the resynchronization
+   % protocol:
+   % 1) in state receive, each CM gets clock readings from the CMs
+   %    and computes a compression value
+   % 2) in state correct, each CM corrects its clock to 
+   %    the compression value
+   %
+   % In state drift: the clock drift by some amount bounded
+   % by max_drift.
+   %
+   % To model possible missing input (from faulty SMs), we use 
+   % a boolean array 'sm_valid': sm_valid[i] is true if the CM
+   % receives a value from SM i (i.e., sm_reading[i] is taken
+   % into account when computing the compression).
+   %------------------------------------------------------------------
+ 
+   CM_STATE: TYPE = { cm_receive, cm_correct, cm_drift };
+
+   CM: MODULE =
+     BEGIN
+       INPUT
+         sm_reading: ARRAY SM_ID OF CLOCK,
+	 sm_valid: ARRAY SM_ID OF BOOLEAN
+
+       LOCAL
+	 perm: ARRAY SM_ID OF SM_ID
+
+       OUTPUT
+         state: CM_STATE,
+         clock: CLOCK,
+         compression: CLOCK
+
+       INITIALIZATION
+         state = cm_receive;
+         compression = 0;
+         clock = 0;
+
+       DEFINITION
+         perm IN { p: ARRAY SM_ID OF SM_ID | TRUE };
+
+       TRANSITION
+         [ four_readings:
+           state = cm_receive AND sort(sm_reading, sm_valid, 4, perm')  -->
+	     %% received 4 clock readings
+             state' = cm_correct;
+             compression' = (sm_reading[perm'[2]] + sm_reading[perm'[3]])/2;
+
+        [] five_readings:
+           state = cm_receive AND sort(sm_reading, sm_valid, 5, perm') -->
+             %% received 5 clock readings
+             state' = cm_correct;
+             compression' = (sm_reading[perm'[2]] + sm_reading[perm'[4]])/2;
+
+        [] state = cm_correct -->
+             clock' = compression;
+             state' = cm_drift;
+    
+        [] state = cm_drift -->
+             clock' IN { x : CLOCK | clock - max_drift <= x AND x <= clock + max_drift };
+             state' = cm_receive;
+        ]
+     END;
+
+
+
+  %--------------------------------------------------------------
+  % Connection and fault model
+  % - the input is a vector of N clock values (from the N SMs)
+  % - the clock value received by CM j from SM i is 
+  %   modeled by the pair (sm_reading[j][i], sm_valid[j][i])
+  %   depending on i's status.
+  %
+  % If i is good then 
+  %    sm_reading[j][i] = clock[i]
+  %    sm_valid[j][i] is true
+  %
+  % If i is omissive then
+  %    sm_reading[j][i] = clock[i]
+  %    sm_valid[j][i] can be anything
+  %
+  % If is is Byzantine then
+  %    sm_reading[j][i] can be anything
+  %    sm_valid[j][i] can be anything
+  %--------------------------------------------------------------
+
+  Connection: MODULE =
+    BEGIN
+      INPUT
+        sm_clock: ARRAY SM_ID OF CLOCK
+      OUTPUT
+        sm_reading: ARRAY CM_ID OF ARRAY SM_ID OF CLOCK,
+        sm_valid: ARRAY CM_ID OF ARRAY SM_ID OF BOOLEAN
+  
+      DEFINITION
+        %% sm_valid[j][i] is true if i is GOOD
+        sm_valid IN { B: ARRAY CM_ID OF ARRAY SM_ID OF BOOLEAN |
+                      FORALL (j: CM_ID, i: SM_ID): 
+                        sm_status(i) = good => B[j][i] };
+
+        %% sm_reading[j][i] is equal to sm_clock[i] unless i is Byzantine
+        sm_reading IN { A: ARRAY CM_ID OF ARRAY SM_ID OF CLOCK |
+                        FORALL (j: CM_ID, i: SM_ID): 
+                           sm_status(i) /= byzantine => A[j][i] = sm_clock[i] };
+    END;
+ 
+
+
+  %--------------
+  % Full system
+  %--------------
+
+  % All SMs
+  SMs: MODULE = 
+     WITH OUTPUT sm_clock: ARRAY SM_ID OF CLOCK,
+                 sm_state: ARRAY SM_ID OF SM_STATE
+      (|| (i: SM_ID):
+            RENAME 
+              clock TO sm_clock[i],
+              state TO sm_state[i]
+            IN SM);
+
+  % All CMs
+  CMs: MODULE = 
+     WITH INPUT sm_reading: ARRAY CM_ID OF ARRAY SM_ID OF CLOCK,
+                sm_valid: ARRAY CM_ID OF ARRAY SM_ID OF BOOLEAN;
+
+          OUTPUT compression: ARRAY CM_ID OF CLOCK,
+                 cm_state: ARRAY CM_ID OF CM_STATE,
+                 cm_clock: ARRAY CM_ID OF CLOCK
+
+       (|| (i: CM_ID):
+             RENAME
+               compression TO compression[i],
+               state TO cm_state[i],
+               clock TO cm_clock[i],
+               sm_reading TO sm_reading[i],
+               sm_valid TO sm_valid[i]
+             IN CM);
+
+  % Full system
+  TTE: MODULE = SMs || CMs || Connection;
+
+
+
+  %--------------
+  %  Properties
+  %--------------
+
+  %
+  % Auxiliary lemmas:  phase1 to phase3 can all be proved by induction at depth 2
+  %
+  phase1: LEMMA TTE |-
+     G(FORALL (i: SM_ID, j: CM_ID): sm_state[i] = sm_send <=> cm_state[j] = cm_receive);
+
+  phase2: LEMMA TTE |-
+     G(FORALL (i: SM_ID, j: CM_ID): sm_state[i] = sm_correct <=> cm_state[j] = cm_correct);
+
+  phase3: LEMMA TTE |-
+     G(FORALL (i: SM_ID, j: CM_ID): sm_state[i] = sm_drift <=> cm_state[j] = cm_drift);
+
+
+  %
+  % The SMs are synchronized within 2 * max_drift (which is the best we can do).
+  % This holds in this model because all SMs receive the same pair of compression 
+  % values and apply the exact same correction.
+  %
+  % The lemma is provable by induction at depth 2 using phase1 as a lemma
+  % (or using phase2 or phase3 as lemma)
+  %
+  sm_clock_distance: LEMMA
+     TTE |- G(FORALL (i, j: SM_ID): sm_clock[i] - sm_clock[j] <= 2 * max_drift);
+
+  % this one is obviously false (counterexamples at depth 3)
+  sm_clock_distance_strict: LEMMA
+     TTE |- G(FORALL (i, j: SM_ID): sm_clock[i] - sm_clock[j] < 2 * max_drift);
+
+
+
+  %
+  % The CMs are synchronized within 3 * max_drift
+  % (proof: induction at depth 3, using sm_clock_distance + phase 1 as lemmas)
+  %
+  cm_clock_distance: LEMMA
+     TTE |- G(FORALL (i, j: CM_ID): cm_clock[i] - cm_clock[j] <= 3 * max_drift);
+
+  % this one has counterexamples at depth 6
+  cm_clock_distance_strict: LEMMA
+     TTE |- G(FORALL (i, j: CM_ID): cm_clock[i] - cm_clock[j] < 3 * max_drift);
+
+
+
+
+  %
+  % Synchronization between CMs and SMs: 2.5 * max_drift
+  % (proof: induction at depth 3, using sm_clock_distance + phase 1 as lemmas)
+  %
+  sm_cm_clock_distance: LEMMA
+     TTE |- G(FORALL (i: SM_ID, j: CM_ID):
+                  sm_clock[i] - cm_clock[j] <= (5/2) * max_drift AND 
+                  cm_clock[j] - sm_clock[i] <= (5/2) * max_drift);
+
+
+  sm_cm_clock_distance_strict: LEMMA
+     TTE |- G(FORALL (i: SM_ID, j: CM_ID):
+                  sm_clock[i] - cm_clock[j] < (5/2) * max_drift AND 
+                  cm_clock[j] - sm_clock[i] < (5/2) * max_drift);
+
+END

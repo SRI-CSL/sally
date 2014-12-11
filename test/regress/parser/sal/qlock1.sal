@@ -1,0 +1,101 @@
+%% N : the number of processes
+%% L : the capacity of the queue
+
+qlock1{; N : nznat, L : nznat}: CONTEXT =
+BEGIN
+  Process_Id: TYPE = [1..N];
+
+  Queue_Idx: TYPE = [0..(L + 1)];
+
+  Queue: TYPE = [# data: ARRAY Queue_Idx OF Process_Id,
+                   hd: Queue_Idx,
+                   tl: Queue_Idx #];
+  
+  saturated?(queue : Queue): BOOLEAN = queue.tl = L;
+
+  empty?(queue : Queue): BOOLEAN = queue.hd = (queue.tl + 1);
+
+  reset(queue : Queue): Queue = (queue WITH .hd := 1) WITH .tl := 0;
+
+  top(queue : Queue): Process_Id = queue.data[queue.hd];
+
+  put(queue : Queue, i : Process_Id): Queue =
+    (queue WITH .tl := queue.tl + 1) WITH .data[queue.tl + 1] := i;
+
+  get(queue : Queue): Queue = queue WITH .hd := queue.hd + 1;
+
+  Label: TYPE = {l1, l2, cs};
+
+  process [i : Process_Id]: MODULE =
+  BEGIN
+    GLOBAL queue : Queue
+    LOCAL pc : Label
+    INITIALIZATION
+      pc = l1;
+    TRANSITION
+    [
+      want:
+        (pc = l1) AND NOT(saturated?(queue))
+        --> pc' = l2;
+            queue' = put(queue, i)
+      []
+      try:
+        (pc = l2) AND (top(queue) = i)
+        --> pc' = cs
+      []
+      exit:
+        (pc = cs)
+        --> pc' = l1;
+            queue' = get(queue)
+    ]
+  END;
+
+  controller: MODULE =
+  BEGIN
+    GLOBAL queue : Queue
+    INITIALIZATION
+      queue = (# data := [[j : Queue_Idx] 1],
+                 hd := 1,
+                 tl := 0 #)
+    TRANSITION
+    [
+      reset_queue:
+        empty?(queue) AND saturated?(queue)
+        --> queue' = reset(queue)
+    ]
+  END;
+
+  processes : MODULE = ([] (i : Process_Id): process[i]);
+
+  system: MODULE = controller [] processes;
+
+%% mutual exclusion
+%%
+%% % sal-smc -v 3 --assertion='qlock1{;2,2}!mutex'
+%%
+  mutex: THEOREM
+    system |- G(FORALL (i : Process_Id, j : Process_Id):
+                 (pc[i] = cs AND pc[j] = cs) => (i = j));
+
+%% deadlock freedom
+%%
+%% % sal-deadlock-checker -v 3 --module='qlock1{;2,2}!system'
+%%
+
+%% reachable to the critical section
+%%
+%% % sal-wmc -v 3 --assertion='qlock1{;2,2}!reachable'
+%%
+  reachable: THEOREM
+    system |- (FORALL (i : Process_Id): EF(pc[i] = cs));
+
+
+%% lockout (starvation) freedom
+%%
+%% % sal-smc -v 3 --assertion='qlock1{;2,2}!lofree'
+%%
+  lofree: THEOREM
+    system |- (FORALL (i : Process_Id):
+                G(pc[i] = l2 => F(pc[i] = cs)));
+
+END

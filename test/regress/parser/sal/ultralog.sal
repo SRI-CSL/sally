@@ -1,0 +1,533 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%   
+%  SRI INTERNATIONAL
+%  System Design Lab
+%    
+%  Persistence Modeling of Ultra*log
+%  June 13th 2003.
+%  
+%  
+%  SAL Specification of ultra*log persistence mechanism
+%  http://sal.csl.sri.com
+%  Author: Hassen Saidi
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%
+% The model is an abstraction of the current ultra*log
+% implementation in which timing and network information are 
+% abstracted away. The adaptivity and the security managers are 
+% abstracted away as well.
+% The Model is parametrized by the number of agents, robustness 
+% managers, and nodes.
+%
+
+
+ultralog : CONTEXT = 
+BEGIN
+
+% number of nodes
+Nodes : NATURAL = 2
+;
+
+% number of agents
+Agents: NATURAL = 3
+;
+
+% threat
+% As it is shown later, this is the maximum number
+% of a single threat action that could be either:
+% - Loss of an agent.
+% - Loss of a heartbeat.
+% - Loss of a node.
+% - Loss of a manager.
+%
+% The threat that the society is subject to is any sequence of size
+% MaxThreat  that combines those threat 
+%
+
+MaxThreat : NATURAL = 2;
+
+%
+% Typs and Utils
+%
+
+T_Agents    : TYPE = [1..Agents] 
+;
+
+T_Nodes     : TYPE = [1..Nodes]
+;
+
+
+% states
+
+%
+% An agent is either in on of the following states:
+%   - initialization phase 
+%   - alive and sending heartbeats
+%   - busy and therefore not sending heartbeats 
+%           (could also be interpreted as slow)
+%   - dead
+
+
+AgentState: TYPE = {a_init,a_alive,a_busy,a_update,a_dead}
+;
+
+
+
+%
+% A node is either up or down
+%
+
+NodeState: TYPE = {up, down}
+;
+
+
+%
+% Initial location of all agents
+%
+
+LocationType : TYPE = ARRAY [1..Agents] OF T_Nodes
+;
+
+init_location :LocationType =
+ (((
+    [[i: [1..Agents]] 1]
+       WITH [1] := 1)
+        WITH [2] := 1)
+%         WITH [3] := 2)
+	)
+   
+;
+
+Node_Load_Type : TYPE = ARRAY [1..Nodes] OF [0..Agents]
+;
+
+init_loads : Node_Load_Type =
+    ((
+       [[i: [1..Nodes]] 0] 
+        WITH [1] := 2)
+         WITH [2] := 1)
+        %   WITH [3] := 0
+;
+ 
+%
+% utils
+%
+
+
+rec_min2(A:Node_Load_Type,counter:T_Nodes,acc:T_Nodes) : T_Nodes =
+  IF counter >= Nodes
+         THEN acc
+         ELSE IF A[counter] <= A[acc] THEN rec_min2(A,counter+1,counter)
+                                      ELSE rec_min2(A,counter+1,acc)
+              ENDIF
+  ENDIF
+;
+
+min_in2(A:Node_Load_Type ): T_Nodes = rec_min2(A,1,1) ;
+
+
+%
+% Modeling Plans
+%
+
+Max_Plan_Tasks : NATURAL = 3;
+
+T_Task : TYPE = [1..Max_Plan_Tasks];
+
+
+
+T_PlanElem: TYPE = DATATYPE 
+         Alloc(T:T_Task,
+              A:T_Agents,
+              O:T_Agents,
+              S:BOOLEAN,
+              P:BOOLEAN), % Task, Asset, Origin, and Status, and processed?
+   no_elem
+   
+END
+;
+
+%
+% Plan 
+%  constant of type T_PlanElem
+%  depends on the number of agents!
+%
+
+Global_Plan : T_PlanElem =
+  no_elem
+;
+
+
+MasterAgent : T_Agents = 1
+;
+
+
+%
+% Blackboard Type
+%
+
+Max_BlackBoard : NATURAL = 2;
+
+T_BlackBoard : TYPE = ARRAY [1..Max_BlackBoard] OF T_PlanElem
+;
+   
+
+EmptyBoard:T_BlackBoard =
+ [[i: [1..Max_BlackBoard]] no_elem]
+;
+
+
+init_blackboard : ARRAY  [1..Agents] OF T_BlackBoard =
+  ((
+    [[i: [1..Agents]] EmptyBoard] 
+      WITH [1][1] := Alloc(1,1,1,FALSE,FALSE))
+       WITH [1][2] := Alloc(2,2,1,FALSE,FALSE))
+%        WITH [2][1] := Alloc(3,3,2,FALSE,FALSE)
+          
+;
+ 
+
+%
+%
+% Agent Model
+%
+%
+
+MAgent [idAgent : T_Agents ] : MODULE =
+BEGIN
+GLOBAL Success : BOOLEAN
+GLOBAL blackboard : ARRAY  [1..Agents] OF T_BlackBoard
+GLOBAL persisted_blackboard : ARRAY  [1..Agents] OF T_BlackBoard
+GLOBAL state_agent : ARRAY  [1..Agents] OF AgentState
+GLOBAL Nodes_Load : Node_Load_Type
+LOCAL  LocalTask : [1..Max_BlackBoard]
+LOCAL  LocalUpdate : T_PlanElem
+INITIALIZATION
+LocalUpdate = no_elem;
+state_agent = [ [j: [1..Agents]] a_init];
+blackboard = init_blackboard;
+persisted_blackboard = init_blackboard;
+LocalTask = 1;
+TRANSITION
+[
+ 
+%
+% After initialization the agent is alive and sending heartbeats
+% to its manager
+%
+        state_agent[idAgent] = a_init 
+             --> 
+                blackboard'[idAgent] = persisted_blackboard[idAgent];
+                state_agent'[idAgent] = a_alive
+
+
+%
+% Manipulating Blackboard
+% 
+%
+
+  [] 
+     ([]   (i: [1..Max_BlackBoard]) :
+      state_agent[idAgent] = a_alive
+       AND  blackboard[idAgent][i] /= no_elem
+           --> 
+           state_agent'[idAgent] = IF NOT P(blackboard[idAgent][i])  
+                                       THEN a_busy
+                                       ELSE a_alive
+                                   ENDIF;
+           LocalTask' = IF NOT P(blackboard[idAgent][i])  
+                                       THEN i 
+                                       ELSE LocalTask   
+                                   ENDIF              
+     )
+
+%
+% Task that can be done locally are finished with success
+% as long as the agent is alive
+%
+
+  []
+     state_agent[idAgent] = a_busy
+      AND ( A(blackboard[idAgent][LocalTask])=idAgent
+            OR A(blackboard[idAgent][LocalTask])=idAgent
+           )
+         -->
+          state_agent'[idAgent] = a_alive;
+          blackboard'[idAgent][LocalTask] =
+              Alloc(T(blackboard[idAgent][LocalTask]),
+                    A(blackboard[idAgent][LocalTask]),
+                    O(blackboard[idAgent][LocalTask]),
+                    TRUE,
+                    TRUE
+                    )
+  
+%
+% when a task is allocated to another agent, it is copied
+% to the agents blackboard
+%
+
+  []
+     ([]   (i: [1..Agents]) :
+        ([]   (j: [1..Max_BlackBoard]) :
+     state_agent[idAgent] = a_busy
+      AND A(blackboard[idAgent][LocalTask])/=idAgent
+        AND O(blackboard[idAgent][LocalTask])=idAgent
+         AND S(blackboard[idAgent][LocalTask]) = FALSE
+          AND 
+   blackboard[A(blackboard[idAgent][LocalTask])][j] = no_elem
+           --> 
+           state_agent'[idAgent] = a_alive;
+           blackboard' = (blackboard WITH
+     [A(blackboard[idAgent][LocalTask])][j] :=
+              Alloc(T(blackboard[idAgent][LocalTask]),
+                    A(blackboard[idAgent][LocalTask]),
+                    O(blackboard[idAgent][LocalTask]),
+                    FALSE,
+                    FALSE
+                    )) 
+                 WITH [idAgent][LocalTask] :=
+              Alloc(T(blackboard[idAgent][LocalTask]),
+                    A(blackboard[idAgent][LocalTask]),
+                    O(blackboard[idAgent][LocalTask]),
+                    FALSE,
+                    TRUE
+                    )
+       )
+      )
+
+%
+% when a task is finished it's status is TRUE, it 
+% is removed from the blackboard
+%
+  []
+
+ ([]   (i: [1..Max_BlackBoard]) :
+      state_agent[idAgent] = a_alive
+       AND  blackboard[idAgent][i] /= no_elem
+           --> 
+           LocalTask' = IF S(blackboard[idAgent][i]) = TRUE
+                                      THEN i
+                                      ELSE LocalTask
+                                   ENDIF ;
+           state_agent'[idAgent] = IF S(blackboard[idAgent][i]) = TRUE
+                                      THEN a_update
+                                      ELSE state_agent[idAgent]
+                                   ENDIF ;
+           LocalUpdate' = IF S(blackboard[idAgent][i]) = TRUE
+                                      THEN blackboard[idAgent][i]
+                                      ELSE LocalUpdate
+                                  ENDIF;
+           blackboard'[idAgent][i] = 
+                          IF S(blackboard[idAgent][i]) = TRUE
+                                THEN no_elem
+                                ELSE blackboard[idAgent][i]
+                          ENDIF
+     )
+
+%
+% when a task is finished it's status is TRUE and it 
+% originated from another agent, the other agent is informed
+%
+
+  []
+   ([] (j: [1..Max_BlackBoard]) :
+      state_agent[idAgent] = a_update
+       AND O(blackboard[O(LocalUpdate)][j])=O(LocalUpdate)
+           --> 
+           state_agent'[idAgent] = a_alive;
+           blackboard'[O(LocalUpdate)][j]=LocalUpdate
+     )
+
+
+%
+% Persist data when blackboard content changes
+%
+
+  [] ([] (j: [1..Max_BlackBoard]) :
+      state_agent[idAgent] = a_alive
+       AND blackboard[idAgent][j] /= persisted_blackboard[idAgent][j]
+          -->
+          persisted_blackboard'[idAgent][j] = blackboard[idAgent][j]
+       )
+ 
+
+%
+% Success means that all blackboards are finished.
+% 
+
+
+  []
+     state_agent[idAgent] = a_alive
+      AND FORALL (i: [1..Max_BlackBoard]) 
+           : blackboard[idAgent][i] = no_elem
+        AND idAgent = MasterAgent
+          --> 
+           Success' = TRUE
+    
+]
+END;
+
+
+%
+%
+% Threat Model
+%
+%
+
+MThreat : MODULE =
+BEGIN
+GLOBAL Success : BOOLEAN
+GLOBAL state_node : ARRAY  [1..Nodes] OF NodeState
+GLOBAL Location : LocationType
+GLOBAL state_agent : ARRAY  [1..Agents] OF AgentState
+GLOBAL Nodes_Load : Node_Load_Type
+LOCAL counter : [1..MaxThreat]
+INITIALIZATION
+Success = FALSE;
+Nodes_Load = init_loads;
+counter = 1;
+state_node = [ [j: [1..Nodes]] up];
+Location = init_location
+TRANSITION
+[
+
+% kill agent
+   ([] (i:T_Agents) :
+         state_agent[i] /= a_dead AND counter < MaxThreat
+           -->
+             state_agent'[i] = a_dead;
+             counter' = counter + 1
+   )
+
+% kill node
+ []
+   ([] (i:T_Nodes) : 
+           ([] (j:T_Agents) : 
+         state_node[i] = up AND counter < MaxThreat AND
+         Location[j]=i
+           -->
+             state_node'[i] = down;
+             state_agent'[j] = a_dead;
+             counter' = counter + 1 
+   ))
+
+
+]
+
+END;
+
+
+Robustness : MODULE =
+BEGIN
+GLOBAL Location : LocationType
+GLOBAL Nodes_Load : Node_Load_Type
+GLOBAL state_agent : ARRAY  [1..Agents] OF AgentState
+GLOBAL state_node : ARRAY  [1..Nodes] OF NodeState
+LOCAL  old_node  : T_Nodes
+LOCAL  new_node  : T_Nodes
+INITIALIZATION
+old_node = 1;
+new_node = 1
+TRANSITION
+[
+%  Restart agents 
+       ([] (i:T_Agents) : 
+           state_agent[i] = a_dead 
+         -->
+          new_node' = min_in2(Nodes_Load);
+          old_node' = Location[i]
+         )
+% move agents
+[]
+   ([] (i:T_Agents) : 
+     Location[i] =old_node AND state_node[new_node]=up
+       -->
+         Location'[i] = new_node;
+         Nodes_Load' = 
+           (Nodes_Load WITH [new_node] := Nodes_Load[new_node]+ 1)
+            WITH [old_node] := Nodes_Load[old_node] - 1;
+         state_agent'[i] = a_init
+    )
+
+%  Restart nodes
+[]
+      ([] (i:T_Nodes) : 
+           state_node[i] = down 
+             AND  Nodes_Load[i]=0
+         -->
+           state_node'[i] = up
+        )
+]
+END;
+
+%
+% The society behavior is the interleaved actions
+% of all agents, managers, and the threat model
+%
+
+society : MODULE =    ([] (i:T_Agents) : MAgent[i] )
+                      [] MThreat 
+                      [] Robustness
+;
+
+
+
+%
+% Following is a list of properties that are related
+% to the robustness and survivability of ultra*log.
+% Two analysis are possible:
+% 
+%  1. When a property is true, we conclude that the ultra*log
+%     implementation satisfies the requirement expressed 
+%     in the property.
+% 
+%  2. When a property is proved to be not satisfied in the model, 
+%     then, a set of possible ways in which the requirement 
+%     expressed by the property can be violated is generated. 
+%     These possible scenarios might or might not be possible 
+%     to reproduce in the real society, or might occur with 
+%     various probabilities
+%    
+%
+%
+%  There are different ways by which the properties can be 
+%  violated. For each property we will explain some of the 
+%  most interesting cases. Some of the scenarios are short 
+%  and involve only a small number of steps. Others are longer.
+%
+
+
+
+%
+% Can a plan be executed? just for test
+%
+
+prop_1: LEMMA society |- G(NOT Success)
+;
+
+
+%
+% Can any agent update the blackboard other agent?
+%
+prop_2: LEMMA society |- G(FORALL (i:T_Agents): 
+                              state_agent[i] /= a_update)
+;
+
+
+
+
+END
+
+
+
+
+
+
+
+
+
+
+
+

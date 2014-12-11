@@ -1,0 +1,370 @@
+%
+% Robustness Modeling of Ultra*log
+%
+
+ultralog_light : CONTEXT = 
+BEGIN
+
+% number of nodes
+Nodes : NATURAL = 2
+;
+
+% number of agents
+Agents: NATURAL = 4
+;
+
+% number of managers
+Managers: NATURAL = 1
+;
+
+%max capacity of the network
+MaxNetwork : NATURAL = 6
+;
+
+% threat
+
+MaxThreat : NATURAL = 5;
+
+%
+% Typs and Utils
+%
+
+T_Agents    : TYPE = [1..Agents] 
+;
+
+T_Managers  : TYPE = [1..Managers]
+;
+
+IdType : TYPE =  [1..Agents] %Agents are > Managers
+;
+
+T_Nodes     : TYPE = [1..Nodes]
+;
+
+% messages
+
+
+% states
+
+AgentState: TYPE = {a_init,a_alive,a_busy,a_dead}
+;
+
+ManagerState: TYPE = {m_init,m_alive,m_relocate,m_dead}
+;
+
+ThreatState: TYPE = {active, idle}
+;
+
+% nodes state
+
+NodeState: TYPE = {up, down}
+;
+
+
+%robustness community 
+
+manager:  ARRAY [1..Agents] OF  [1..Managers]  =
+        ((([[i: [1..Agents]] 1] 
+            WITH [1] := 1)
+             WITH [2] := 1)  
+              WITH [3] := 1)
+                WITH [4] := 1
+;
+
+
+
+LocationType : TYPE = ARRAY [1..Agents] OF T_Nodes
+;
+
+
+init_location :LocationType =
+ (((
+    [[i: [1..Agents]] 1]
+       WITH [1] := 1)
+        WITH [2] := 1)
+         WITH [3] := 2)
+          WITH [4] := 1
+;
+
+ 
+Node_Load_Type : TYPE = ARRAY [1..Nodes] OF [0..Agents]
+;
+
+rec_max2(A:Node_Load_Type,counter:T_Nodes,acc:T_Nodes) : T_Nodes =
+  IF counter >= Nodes
+         THEN acc
+         ELSE IF A[counter] <= A[acc] THEN rec_max2(A,counter+1,counter)
+                                      ELSE rec_max2(A,counter+1,acc)
+              ENDIF
+  ENDIF
+;
+
+max_in2(A:Node_Load_Type ): T_Nodes = rec_max2(A,1,1) ;
+   
+%
+%
+% Agent Model
+%
+%
+
+MAgent [idAgent : T_Agents ] : MODULE =
+BEGIN
+GLOBAL state_agent : ARRAY  [1..Agents] OF AgentState
+GLOBAL heartbeat_table : ARRAY [1..Agents] OF BOOLEAN
+GLOBAL Nodes_Load : Node_Load_Type
+GLOBAL state_manager :  ARRAY  [1..Managers] OF ManagerState
+INITIALIZATION
+state_agent = [ [j: [1..Agents]] a_init]
+TRANSITION
+[
+ 
+% waiting for request of heartbeat to start
+        state_agent[idAgent] = a_init 
+           AND (EXISTS (j:[1..Managers]) : 
+                  manager[idAgent]=j AND state_manager[j] /=m_init)
+             --> 
+                state_agent'[idAgent] = a_alive;
+                heartbeat_table'[idAgent] = TRUE
+% sending heartbeats
+  []
+    state_agent[idAgent] = a_alive 
+       -->      state_agent'[idAgent] = a_alive;
+                heartbeat_table'[idAgent] = TRUE
+
+% an agent can go busy for a while and comes back
+  []
+    state_agent[idAgent] = a_alive 
+       --> state_agent'[idAgent] = a_busy  
+  []
+    state_agent[idAgent] = a_busy 
+       --> state_agent'[idAgent] = a_alive
+
+]
+END;
+
+%
+%
+% Manager Model
+%
+%
+
+MManager [idManager : T_Managers] : MODULE =
+BEGIN
+GLOBAL Nodes_Load : Node_Load_Type
+GLOBAL heartbeat_table : ARRAY [1..Agents] OF BOOLEAN
+GLOBAL state_node : ARRAY  [1..Nodes] OF NodeState
+GLOBAL state_agent : ARRAY  [1..Agents] OF AgentState
+GLOBAL Location : LocationType
+GLOBAL state_manager :  ARRAY  [1..Managers] OF ManagerState
+GLOBAL is_alive: ARRAY  [1..Managers] 
+            OF ARRAY [1..Agents] OF BOOLEAN
+LOCAL  relocated_agent :  T_Agents
+LOCAL  old_node  : T_Nodes
+LOCAL  new_node  : T_Nodes
+INITIALIZATION
+relocated_agent =1;
+old_node =1;
+new_node =1;
+state_manager = [ [j: [1..Managers]] m_init];
+is_alive = [ [j: [1..Managers]] [[i: [1..Agents]] TRUE]]
+TRANSITION
+[
+ 
+% manager requests heartbeats from the agents it controls
+ state_manager[idManager] = m_init  
+   --> state_manager'[idManager] = m_alive  
+
+
+
+% relocate agent
+% 
+% The agent that sent more pings 
+% (and therefore was often 
+% requested to send a ping)
+% will be relocated
+%  
+
+ [] 
+   ([]   (j: T_Agents) : 
+     state_manager[idManager] = m_alive
+     AND heartbeat_table[j]=FALSE
+          --> state_manager'[idManager] = m_relocate ;
+              relocated_agent' = j;
+              new_node' = max_in2(Nodes_Load);
+              is_alive'[idManager][j] = FALSE;
+              old_node' = Location[j]
+       )        
+
+% all agents in the same node are moved
+
+ []
+
+  ([]   (j: T_Agents) : 
+    state_manager[idManager] = m_relocate
+      AND Location[j] = old_node  AND state_node[new_node]=up
+          -->
+            Location'[j] = new_node;
+            Nodes_Load'[new_node] = Nodes_Load[new_node] + 1;
+            state_agent'[j] = a_init;
+            state_manager'[idManager] = m_alive
+  )
+
+%
+% if the new node is down then no transfer is done
+% This also means that the transfer could be interrupted
+%
+
+ []
+  state_manager[idManager] = m_relocate
+      AND state_node[new_node]=down
+          -->
+      state_manager'[idManager] = m_alive  
+]
+
+END;
+
+%
+%
+% Threat Model
+%
+%
+
+MThreat : MODULE =
+BEGIN
+GLOBAL heartbeat_table : ARRAY [1..Agents] OF BOOLEAN
+GLOBAL state_node : ARRAY  [1..Nodes] OF NodeState
+GLOBAL Location : LocationType
+GLOBAL state_threat : ThreatState
+GLOBAL state_agent : ARRAY  [1..Agents] OF AgentState
+GLOBAL Nodes_Load : Node_Load_Type
+LOCAL counter : [1..MaxThreat]
+INITIALIZATION
+Nodes_Load = ([[i: [1..Nodes]] 0] 
+         WITH [1] := 3)
+           WITH [2] := 1
+;
+counter = 1;
+state_node = [ [j: [1..Nodes]] up];
+state_threat = idle;
+Location = init_location
+TRANSITION
+[
+
+% The threat is non-deterministc and therefore 
+% can either be idle or active
+    state_threat = idle AND counter < MaxThreat
+        --> 
+            state_threat' = active;
+            counter' = counter + 1
+
+% kill agent
+ []
+   ([] (i:T_Agents) :
+         state_agent[i] /= a_dead AND state_threat = active 
+           -->
+             state_agent'[i] = a_dead;
+             state_threat' = idle
+   )
+
+% kill node
+ []
+   ([] (i:T_Nodes) : 
+           ([] (j:T_Agents) : 
+         state_node[i] = up AND state_threat = active AND
+         Location[j]=i
+           -->
+             state_node'[i] = down;
+             state_threat' = idle;
+             state_agent'[j] = a_dead ;
+             counter' = IF counter = 0 THEN 0
+                                       ELSE counter - 1
+                        ENDIF
+   ))
+
+
+% kill heartbeat
+ []
+   ([] (i: [1..Agents]) : 
+             state_threat = active 
+           --> 
+            heartbeat_table'[i] = FALSE
+          
+    )
+
+
+
+]
+END;
+
+
+society : MODULE =    ([] (i:T_Agents) : MAgent[i] ) 
+                   [] ([] (i:T_Managers) : MManager[i] )
+                   [] MThreat 
+;
+
+prop_0: LEMMA society |- G(FORALL (i:T_Managers): 
+                                    FORALL (j:T_Agents) :
+                                  (manager[j]=i AND is_alive[i][j]=FALSE 
+                                         => state_agent[j] /= a_alive)
+                                   )
+;
+
+prop_1: LEMMA society |- G(FORALL (i:T_Managers): 
+                                     FORALL (j:T_Agents) :
+                                   (manager[j]=i AND is_alive[i][j] 
+                                          => NOT state_agent[j] = a_dead)
+                                    )
+;
+ 
+                                      
+prop_3: LEMMA society |- G(NOT (FORALL (j:T_Agents) :
+                                                 state_agent[j] = a_dead))
+;
+
+
+prop_4: LEMMA society |- G(NOT (EXISTS (i:T_Nodes) : 
+                                      state_node[i]=up 
+                                          => 
+                           (FORALL (j:T_Nodes) : j/=i 
+                                   => state_node[i]=down )))
+;
+
+
+prop_5: LEMMA society |- G(FORALL (i:T_Managers): 
+                              NOT state_manager[i]=m_relocate)
+;
+
+
+prop_6: LEMMA society |- G(NOT EXISTS (i:T_Nodes) :
+                                (FORALL (j:T_Agents) : Location[j]=i))
+;
+
+
+prop_7: LEMMA society |- G(NOT (FORALL (i:T_Nodes) : state_node[i]=down))
+;
+
+
+prop_8: LEMMA society |- G(FORALL (i:T_Nodes) : Nodes_Load[i]/=0)
+;
+
+
+prop_9: LEMMA society |- G(FORALL (j:T_Agents) :
+                            state_agent[j]=a_dead 
+                                    => F(state_agent[j]=a_alive))
+;
+
+
+
+END
+
+
+
+
+
+
+
+
+
+
+
+

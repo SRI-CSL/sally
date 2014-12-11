@@ -1,0 +1,57 @@
+tst_pcp_generic : CONTEXT =
+BEGIN
+
+  NumberOfTasks : NATURAL = 3;
+  NumberOfSemaphores : NATURAL = 3;
+
+  Semaphore : TYPE = [1..NumberOfSemaphores];
+  semSetCtx : CONTEXT = set{Semaphore;};
+  SemSet : TYPE = semSetCtx!Set;
+
+  taskCtx : CONTEXT = pcp_task{Semaphore; NumberOfTasks};
+
+  JobIdx : TYPE = taskCtx!JobIdx;
+
+  task1 : taskCtx!TaskDescriptor = 
+                  (# priority := 100, 
+                     period := 8, 
+                     budget := 3,
+                     semaphores := semSetCtx!remove(semSetCtx!full_set, 2)
+                   #);
+
+  task2 : taskCtx!TaskDescriptor = 
+                  (# priority := 50, 
+                     period := 12,  
+                     budget := 4,
+                     semaphores := semSetCtx!remove(semSetCtx!full_set, 3)
+                   #);
+
+  task3 : taskCtx!TaskDescriptor = 
+                  (# priority := 25,
+                     period := 20,
+                     budget := 5,  
+                     semaphores := semSetCtx!full_set
+                   #);
+
+  
+  tasks : taskCtx!TaskDescriptors = 
+          [ [j : JobIdx]
+            IF j = 1 THEN task1
+            ELSIF j = 2 THEN task2
+            ELSE task3 ENDIF ];
+
+  schCtx : CONTEXT = pcp_scheduler{Semaphore; NumberOfTasks, tasks};
+
+  system : MODULE = schCtx!scheduler;
+
+  deadlock_free : THEOREM system |- G(NOT schCtx!deadlock?(job_state, turn));
+  
+  ok1 : THEOREM system |- G(schCtx!consistent1?(job_state));
+
+  deadline_missed : THEOREM system |- G(NOT schCtx!deadline_missed?(dispatch, job_state, clock));
+
+END
+
+
+
+
