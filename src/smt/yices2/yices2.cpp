@@ -270,8 +270,7 @@ term_t yices2_internal::mk_yices2_term(expr::term_op op, size_t n, term_t* child
     result = yices_bvsmod(children[0], children[1]);
     break;
   case expr::TERM_BV_XOR:
-    assert(n == 2);
-    result = yices_bvxor(children[0], children[1]);
+    result = yices_bvxor(n, children);
     break;
   case expr::TERM_BV_SHL:
     assert(n == 2);
@@ -290,12 +289,10 @@ term_t yices2_internal::mk_yices2_term(expr::term_op op, size_t n, term_t* child
     result = yices_bvnot(children[0]);
     break;
   case expr::TERM_BV_AND:
-    assert(n == 2);
-    result = yices_bvand(children[0], children[1]);
+    result = yices_bvand(n, children);
     break;
   case expr::TERM_BV_OR:
-    assert(n == 2);
-    result = yices_bvor(children[0], children[1]);
+    result = yices_bvor(n, children);
     break;
   case expr::TERM_BV_NAND:
     assert(n == 2);
@@ -310,8 +307,7 @@ term_t yices2_internal::mk_yices2_term(expr::term_op op, size_t n, term_t* child
     result = yices_bvxnor(children[0], children[1]);
     break;
   case expr::TERM_BV_CONCAT:
-    assert(n == 2);
-    result = yices_bvconcat(children[0], children[1]);
+    result = yices_bvconcat(n, children);
     break;
   case expr::TERM_BV_ULEQ:
     assert(n == 2);
