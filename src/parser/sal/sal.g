@@ -45,10 +45,10 @@ declarations
  ;
 
 declaration 
-  : (identifier ':' 'TYPE')                       => typeDeclaration 
-  | (identifier ':' assertionForm)                => assertionDeclaration
-  | (identifier ':' 'CONTEXT')                    => contextDeclaration 
-  | (identifier ('[' varDecls ']')? ':' 'MODULE') => moduleDeclaration
+  : typeDeclaration 
+  | assertionDeclaration
+  | contextDeclaration 
+  | moduleDeclaration
   | constantDeclaration
   ;
 
@@ -69,9 +69,9 @@ assertionForm
   ;
 
 assertionExpression 
-  : (AND | OR | IMPLIES | IFF | NOT) => assertionProposition
-  | ('FORALL' | 'EXISTS')            => quantifiedAssertion
-  | (module moduleModels)            => moduleAssertion
+  : assertionProposition
+  | quantifiedAssertion
+  | moduleAssertion
   | expression
   ;
 
@@ -113,9 +113,9 @@ typedefinition
   ;
 
 type
-  : basictype
-  | typeName
-  | (subrange)     => subrange
+  : typeName
+  | basictype
+  | (subrangetype)     => subrangetype
   | arraytype
   | (functiontype) => functiontype
   | tupletype
@@ -167,7 +167,7 @@ indextype
   | 'NATURAL'
   | 'INTEGER'
   | name 
-  | subrange 
+  | subrangetype 
   ;
 
 name 
@@ -192,7 +192,7 @@ bound
   : expression 
   ;
 
-subrange 
+subrangetype 
   : '[' bound '..' bound ']'
   ;
 
@@ -277,7 +277,7 @@ nameexpr
   ;
 
 expressionprefix 
-  : (nextvariable) => nextvariable
+  : nextvariable
   | nameexpr
   | numeral
   | lambdaabstraction
@@ -338,7 +338,7 @@ tupleLiteral
   ;
 
 setexpression 
-  : (setpredexpression) => setpredexpression
+  : setpredexpression
   | setlistexpression
   ;
 
@@ -409,7 +409,7 @@ lhs
 
 access 
   : '[' expression ']' 
-  | ( '.' identifier) => '.' identifier
+  | '.' identifier
   | '.' numeral
   ;
 
@@ -463,8 +463,8 @@ module
 
 basicmodule 
   : basemodule
-  | ('(' SYNC)   => multisynchronous
-  | ('(' ASYNC)  => multiasynchronous
+  | multisynchronous
+  | multiasynchronous
   | hiding
   | newoutput
   | renaming
@@ -627,17 +627,8 @@ numeral
   : NUMERAL
   ;
 
-/** Whitespace (skip) */
-WS : (' ' | '\t' | '\n' | '\r' | '\f')+ { SKIP(); }
-   ;
-
-/** Comments */
-SL_COMMENT
-  : '%' (~('\n'|'\r'))* ('\n'|'\r'('\n')?) { SKIP(); }
-  ;
-
 /** Numerals */
-NUMERAL: ('0'..'9')+;
+NUMERAL: DIGIT+;
  
 // Boolean operators
 AND: 'AND';
@@ -651,9 +642,38 @@ IFF : '<=>' ;
 SYNC: '||' ;
 ASYNC: '[]';
 
-/** Identifiers */
-IDENTIFIER: ALPHA (ALPHA | '0'..'9' | '?' | '_' )*;
+/** Special symbols */
+fragment
+SPECIAL_SYMBOL : '(' | ')' | '[' | ']' | '{' | '}' | '%' | ',' | '.' | ';' | '\'' | '!' | '#' | '?' | '_';
 
 /** Letters */ 
+fragment                                     
+LETTER : 'a'..'z' | 'A'..'Z';
+
+/** Digits */
+fragment   
+DIGIT : '0'..'9';
+
+/** Whitespace characters */
 fragment
-ALPHA: 'a'..'z'|'A'..'Z';
+WHITESPACE : ' ' | '\t' | '\n' | '\r' | '\f';
+
+/** Opchar: anything not a letter, digit, special symbol, or whitespace */
+fragment
+OPCHAR : ~(LETTER | DIGIT | SPECIAL_SYMBOL | WHITESPACE);
+
+/** Comments (which we skip) */
+SL_COMMENT
+  : '%' (~('\n'|'\r'))* ('\n'|'\r'('\n')?) { SKIP(); }
+  ;
+
+/** Whitespace (skip) */
+WHITESPACE_SKIP
+  : WHITESPACE+ { SKIP(); }
+  ;
+   
+/** Identifiers */
+IDENTIFIER
+  : LETTER (LETTER | DIGIT | '?' | '_' )*
+  | OPCHAR+
+  ;
