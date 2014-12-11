@@ -28,11 +28,7 @@ context returns [parser::command* cmd = 0]
   ;
 
 parameters 
-  : (typedecls)? SEMI (pvarDecls)?
-  ;
-
-pvarDecls 
-  : varDecls
+  : typedecls? SEMI varDecls?
   ;
 
 contextbody 
@@ -68,9 +64,9 @@ assertionForm
   ;
 
 assertionExpression 
-  : assertionProposition
-  | quantifiedAssertion
-  | moduleAssertion
+  : (AND | OR | IMPLIES | IFF | NOT) => assertionProposition
+  | ('FORALL' | 'EXISTS')            => quantifiedAssertion
+  | (module moduleModels)            => moduleAssertion
   | expression
   ;
 
@@ -80,23 +76,16 @@ assertionProposition
   ;
 
 quantifiedAssertion 
-  : ('FORALL' | 'EXISTS') LP pvarDecls RP CLN assertionExpression
+  : ('FORALL' | 'EXISTS') LP varDecls RP CLN assertionExpression
   ;
 
 moduleAssertion 
-  :  module (moduleModels | moduleImplements)
+  :  module moduleModels 
   ;
 
 moduleModels 
   : '|-' expression 
   ;
-
-moduleImplements 
-  : 'IMPLEMENTS' module 
-  ;
-
-moduleRefines :
-  'REFINES' module ;
 
 contextDeclaration 
   : identifier CLN 'CONTEXT' EQ contextName
@@ -120,7 +109,6 @@ typedefinition
 
 type
   : basictype
-  | (module DOT)   => statetype
   | typeName
   | (subrange)     => subrange
   | arraytype
@@ -192,13 +180,8 @@ basictype
   | BOOLEAN
   ;
 
-unbounded 
-  : UNBOUNDED
-  ;
-
 bound 
-  : unbounded 
-  | expression 
+  : expression 
   ;
 
 subrange 
@@ -223,10 +206,6 @@ recordtype
 
 fielddeclaration 
   : identifier CLN type
-  ;
-
-statetype 
-  : module DOT 'STATE' 
   ;
 
 // Expressions
@@ -291,7 +270,6 @@ nameexpr
 
 expressionprefix 
   : (nextvariable) => nextvariable
-  | (module DOT ('INIT'|'TRANS')) => statepreds
   | nameexpr
   | numeral
   | lambdaabstraction
@@ -315,11 +293,12 @@ nextvariable
   ;
 
 lambdaabstraction 
-  : 'LAMBDA' LP pvarDecls RP CLN expression
+  : 'LAMBDA' LP varDecls RP CLN expression
   ;
 
 quantifiedexpression 
-  : ('FORALL' | 'EXISTS') LP pvarDecls RP CLN expression
+  : 'FORALL' LP varDecls RP CLN expression
+  | 'EXISTS' LP varDecls RP CLN expression 
   ;
 
 letexpression 
@@ -373,10 +352,6 @@ conditional
 
 elsif 
   : 'ELSIF' expression 'THEN' expression 
-  ;
-
-statepreds 
-  : module DOT ('INIT' |'TRANS')
   ;
   
 argument
@@ -448,7 +423,7 @@ simpleDefinition
   ;
 
 foralldefinition 
-  : LP 'FORALL' LP pvarDecls RP CLN definitions RP 
+  : LP 'FORALL' LP varDecls RP CLN definitions RP 
   ;
 
 definition 
@@ -531,7 +506,7 @@ renaming
   ;
 
 renames 
-  : rename (COMMA! rename)*
+  : rename (COMMA rename)*
   ;
 
 rename 
@@ -602,7 +577,7 @@ namedcommand
   ;
 
 multicommand 
-  : LP ASYNC LP pvarDecls RP CLN somecommand RP 
+  : LP ASYNC LP varDecls RP CLN somecommand RP 
   ;
 
 somecommand 
