@@ -112,28 +112,28 @@ void sal_state::pop_scope() {
   d_variables.pop_scope();
 }
 
-void sal_state::ensure_declared(std::string id, parser_object type, bool declared) {
+void sal_state::ensure_declared(std::string id, sal_object type, bool declared) {
   bool ok = declared;
   switch (type) {
-  case PARSER_VARIABLE:
+  case SAL_VARIABLE:
     ok = d_variables.has_entry(id);
     break;
-  case PARSER_TYPE:
+  case SAL_TYPE:
     ok = d_types.has_entry(id);
     break;
-  case PARSER_STATE_TYPE:
+  case SAL_STATE_TYPE:
     ok = d_context.has_state_type(id);
     break;
-  case PARSER_STATE_FORMULA:
+  case SAL_STATE_FORMULA:
     ok = d_context.has_state_formula(id);
     break;
-  case PARSER_TRANSITION_FORMULA:
+  case SAL_TRANSITION_FORMULA:
     ok = d_context.has_transition_formula(id);
     break;
-  case PARSER_TRANSITION_SYSTEM:
+  case SAL_TRANSITION_SYSTEM:
     ok = d_context.has_transition_system(id);
     break;
-  case PARSER_OBJECT_LAST:
+  case SAL_OBJECT_LAST:
     // Always noop
     return;
   default:

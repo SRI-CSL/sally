@@ -20,14 +20,14 @@ namespace sal2 {
 
 namespace parser {
 
-enum parser_object {
-  PARSER_VARIABLE,
-  PARSER_TYPE,
-  PARSER_STATE_TYPE,
-  PARSER_STATE_FORMULA,
-  PARSER_TRANSITION_FORMULA,
-  PARSER_TRANSITION_SYSTEM,
-  PARSER_OBJECT_LAST
+enum sal_object {
+  SAL_VARIABLE,
+  SAL_TYPE,
+  SAL_STATE_TYPE,
+  SAL_STATE_FORMULA,
+  SAL_TRANSITION_FORMULA,
+  SAL_TRANSITION_SYSTEM,
+  SAL_OBJECT_LAST
 };
 
 /** State attached to the parser */
@@ -94,7 +94,7 @@ public:
   std::string token_text(pANTLR3_COMMON_TOKEN token);
 
   /** Ensure that the object is declared = true/false locally, throw exception otherwise */
-  void ensure_declared(std::string id, parser_object type, bool declared);
+  void ensure_declared(std::string id, sal_object type, bool declared);
 };
 
 }

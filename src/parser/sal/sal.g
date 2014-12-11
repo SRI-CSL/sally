@@ -3,6 +3,8 @@ grammar sal;
 options {
   // C output for antlr
   language = 'C'; 
+  // Lookahead 
+  k = 2;
 }
  
 @parser::includes {
@@ -23,7 +25,11 @@ options {
   parser::sal_state* pState;
 }
 
-context returns [parser::command* cmd = 0]
+command returns [parser::command* cmd = 0]
+  : context
+  ; 
+
+context 
   : identifier (LC parameters RC)? CLN 'CONTEXT' EQ contextbody EOF  
   ;
 
@@ -432,7 +438,7 @@ definition
   ;
 
 definitions :
-  definition (SEMI! definition)* ;
+  definition (SEMI definition)* ;
 
 guard 
   : expression
