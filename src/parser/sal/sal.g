@@ -440,7 +440,7 @@ definition
   ;
 
 definitions :
-  definition (';' definition)* ;
+  definition (';' definition)* ';'?;
 
 guard 
   : expression
