@@ -23,8 +23,8 @@ options {
   parser::sal_state* pState;
 }
 
-context
-  : identifier (LC parameters RC)? CLN "CONTEXT" EQ contextbody EOF  
+context returns [parser::command* cmd = 0]
+  : identifier (LC parameters RC)? CLN 'CONTEXT' EQ contextbody EOF  
   ;
 
 parameters 
@@ -36,7 +36,7 @@ pvarDecls
   ;
 
 contextbody 
-  : "BEGIN" declarations "END" 
+  : 'BEGIN' declarations 'END' 
   ;
 
 declarations 
@@ -44,19 +44,19 @@ declarations
  ;
 
 declaration 
-  : (identifier CLN "TYPE")                     => typeDeclaration 
+  : (identifier CLN 'TYPE')                     => typeDeclaration 
   | (identifier CLN assertionForm)              => assertionDeclaration
-  | (identifier CLN "CONTEXT")                  => contextDeclaration 
-  | (identifier (LB varDecls RB)? CLN "MODULE") => moduleDeclaration
+  | (identifier CLN 'CONTEXT')                  => contextDeclaration 
+  | (identifier (LB varDecls RB)? CLN 'MODULE') => moduleDeclaration
   | constantDeclaration
   ;
 
 constantDeclaration 
-  : identifier (LP arDecls RP)? CLN type (EQ expression)?
+  : identifier (LP varDecls RP)? CLN type (EQ expression)?
   ;
 
 typeDeclaration 
-  : identifier CLN "TYPE" (EQ typedef)?
+  : identifier CLN 'TYPE' (EQ typedefinition)?
   ;
 
 assertionDeclaration 
@@ -64,13 +64,13 @@ assertionDeclaration
   ;
 
 assertionForm 
-  : ("OBLIGATION" | "CLAIM" | "LEMMA" | "THEOREM")
+  : ('OBLIGATION' | 'CLAIM' | 'LEMMA' | 'THEOREM')
   ;
 
 assertionExpression 
-  : (AND | OR | IMPLIES | IFF | NOT)           => assertionProposition
-  | ("FORALL" | "EXISTS")                      => quantifiedAssertion
-  | (module (moduleModels | moduleImplements)) => moduleAssertion
+  : assertionProposition
+  | quantifiedAssertion
+  | moduleAssertion
   | expression
   ;
 
@@ -80,7 +80,7 @@ assertionProposition
   ;
 
 quantifiedAssertion 
-  : ("FORALL" | "EXISTS") LP pvarDecls RP CLN aexp : assertionExpression
+  : ('FORALL' | 'EXISTS') LP pvarDecls RP CLN assertionExpression
   ;
 
 moduleAssertion 
@@ -88,18 +88,18 @@ moduleAssertion
   ;
 
 moduleModels 
-  : "|-" expression 
+  : '|-' expression 
   ;
 
 moduleImplements 
-  : "IMPLEMENTS" module 
+  : 'IMPLEMENTS' module 
   ;
 
 moduleRefines :
-  "REFINES"! module ;
+  'REFINES' module ;
 
 contextDeclaration 
-  : identifier CLN "CONTEXT" EQ contextName
+  : identifier CLN 'CONTEXT' EQ contextName
   ;
 
 contextName 
@@ -107,12 +107,12 @@ contextName
   ;
 
 moduleDeclaration 
-  : identifier (LB varDecls RB)? CLN "MODULE" EQ module
+  : identifier (LB varDecls RB)? CLN 'MODULE' EQ module
   ;
 
 // Types
 
-typedef 
+typedefinition 
   : type 
   | scalartype 
   | datatype 
@@ -145,7 +145,7 @@ scalarElement
   : identifier;
 
 datatype
-  : "DATATYPE" constructors "END"
+  : 'DATATYPE' constructors 'END'
   ;
 
 constructors 
@@ -180,7 +180,7 @@ name
   ;
 
 fullname
-  : identifier (LC actualparameters RC )? BANG id:identifier
+  : identifier (LC actualparameters RC )? BANG identifier
   ;
 
 basictype 
@@ -206,7 +206,7 @@ subrange
   ;
 
 arraytype 
-  : "ARRAY" indextype "OF" type
+  : 'ARRAY' indextype 'OF' type
   ;
 
 tupletype 
@@ -226,7 +226,7 @@ fielddeclaration
   ;
 
 statetype 
-  : module DOT "STATE" 
+  : module DOT 'STATE' 
   ;
 
 // Expressions
@@ -236,89 +236,62 @@ expression
   ;
 
 iffExpression 
-  : impliesexpression
-  (options {warnWhenFollowAmbig=false;}:
-   op : IFF {setSimplePlaceAttribute(#op);} impliesexpression)*
-  {#iffExpression = infix_to_prefix(#iffExpression);};
+  : impliesexpression (IFF impliesexpression)?
+  ;
 
-impliesexpression :
-  orexpression
-  (options {warnWhenFollowAmbig=false;}:
-   op : IMPLIES {setSimplePlaceAttribute(#op);} orexpression)*
-  {#impliesexpression = infix_to_prefix_right(#impliesexpression);};
+impliesexpression 
+  : orexpression (IMPLIES orexpression)?
+  ;
 
-orexpression :
-  andexpression
-  (options {warnWhenFollowAmbig=false;}:
-   (  op1: OR {setSimplePlaceAttribute(#op1);} 
-    | op2: XOR {setSimplePlaceAttribute(#op2);}) andexpression)*
-  {#orexpression = infix_to_prefix(#orexpression);};
+orexpression 
+  : andexpression ((OR | XOR) andexpression)*
+  ;
 
-andexpression :
-  notexpression
-  (options {warnWhenFollowAmbig=false;}:
-   op : AND {setSimplePlaceAttribute(#op);} notexpression)*
-   {#andexpression = infix_to_prefix(#andexpression);};
+andexpression 
+  : notexpression (AND notexpression)*
+  ;
 
-notexpression :
-  (op : NOT {setSimplePlaceAttribute(#op);} notexpression
-  {#notexpression = #makeUnaryApplication(#notexpression);})
-  | eqexpression ;
+notexpression 
+  : NOT notexpression
+  | eqexpression 
+  ;
 
-eqexpression :
-  relexpression
-  (options {warnWhenFollowAmbig=false;}:
-   (  op1 : EQ {setSimplePlaceAttribute(#op1);} 
-    | op2 : NEQ {setSimplePlaceAttribute(#op2);} ) relexpression)*
-  {#eqexpression = infix_to_prefix(#eqexpression);};
+eqexpression 
+  : relexpression ((EQ | NEQ) relexpression)?
+  ;
 
-relexpression :
-  infixapplication
-  (options {warnWhenFollowAmbig=false;}:
-   (   op1 : GT {setSimplePlaceAttribute(#op1);}
-     | op2 : GE {setSimplePlaceAttribute(#op2);}
-     | op3 : LT {setSimplePlaceAttribute(#op3);}
-     | op4 : LE {setSimplePlaceAttribute(#op4);}) infixapplication)*
-  {#relexpression = infix_to_prefix(#relexpression);};
+relexpression 
+  : infixapplication ((GT | GE | LT | LE) infixapplication)?
+  ;
 
-infixapplication :
-  additiveexpression
-  (options {warnWhenFollowAmbig=false;}:
-   op : IDENTIFIER {setSimplePlaceAttribute(#op);} additiveexpression)*
-  {#infixapplication = infix_to_prefix(#infixapplication);};
+infixapplication 
+  : additiveexpression (IDENTIFIER additiveexpression)*
+  ;
 
-additiveexpression :
-  multiplicativeexpression
-  (options {warnWhenFollowAmbig=false;}:
-   (  op1 : PLUS {setSimplePlaceAttribute(#op1);}
-    | op2 : MINUS {setSimplePlaceAttribute(#op2);} ) multiplicativeexpression)*
-  {#additiveexpression = infix_to_prefix(#additiveexpression);};
+additiveexpression 
+  : multiplicativeexpression ((PLUS | MINUS) multiplicativeexpression)*
+  ;
 
-multiplicativeexpression :
-  unaryexpression
-  (options {warnWhenFollowAmbig=false;}:
-   (  op1 : MULT {setSimplePlaceAttribute(#op1);}
-    | op2 : DIV {setSimplePlaceAttribute(#op2);} ) unaryexpression)*
-  {#multiplicativeexpression = infix_to_prefix(#multiplicativeexpression);};
+multiplicativeexpression 
+  : unaryexpression ((MULT | DIV) unaryexpression)*
+  ;
 
-unaryexpression :
-  ( op: MINUS {setSimplePlaceAttribute(#op);} unaryexpression
-   {#unaryexpression = #makeUnaryApplication(#unaryexpression);})
+unaryexpression 
+  : (MINUS unaryexpression)
   | simpleExpression
   ;
 
-simpleExpression :
-  expressionprefix (options {warnWhenFollowAmbig=false;}:
-        expressionSuffix)*
-  {#simpleExpression = makeSimpleExpression(#simpleExpression);};
+simpleExpression 
+  : expressionprefix (expressionSuffix)*
+  ;
 
-nameexpr :
-  name
-  {#nameexpr = #makeNameExpr((XmlAst)#nameexpr);};
+nameexpr 
+  : name
+  ;
 
 expressionprefix 
-  : (nextvariable)                => nextvariable
-  | (module DOT ("INIT"|"TRANS")) => statepreds
+  : (nextvariable) => nextvariable
+  | (module DOT ('INIT'|'TRANS')) => statepreds
   | nameexpr
   | numeral
   | lambdaabstraction
@@ -342,15 +315,15 @@ nextvariable
   ;
 
 lambdaabstraction 
-  : "LAMBDA" LP pvarDecls RP CLN expression
+  : 'LAMBDA' LP pvarDecls RP CLN expression
   ;
 
 quantifiedexpression 
-  : ("FORALL" | "EXISTS") LP pvarDecls RP CLN expression
+  : ('FORALL' | 'EXISTS') LP pvarDecls RP CLN expression
   ;
 
 letexpression 
-  : "LET" letdeclarations "IN" expression
+  : 'LET' letdeclarations 'IN' expression
   ;
 
 letdeclarations 
@@ -391,19 +364,19 @@ setlistexpression
   ;
 
 conditional 
-  : "IF"   expression
-    "THEN" expression
+  : 'IF'   expression
+    'THEN' expression
     (elsif)*   
-    "ELSE" expression
-    "ENDIF"
+    'ELSE' expression
+    'ENDIF'
   ;
 
 elsif 
-  : "ELSIF" expression "THEN" expression 
+  : 'ELSIF' expression 'THEN' expression 
   ;
 
 statepreds 
-  : module DOT ("INIT" |"TRANS")
+  : module DOT ('INIT' |'TRANS')
   ;
   
 argument
@@ -415,11 +388,11 @@ expressions
   ;
 
 updatesuffix 
-  : "WITH" update
+  : 'WITH' update
   ;
 
 update 
-  : updateposition ASSIGN! expression 
+  : updateposition ASSIGN expression 
   ;
 
 updateposition 
@@ -462,7 +435,7 @@ rhsexpression
   ;
 
 rhsselection 
-  : "IN" expression
+  : 'IN' expression
   ;
 
 rhsdefinition 
@@ -475,7 +448,7 @@ simpleDefinition
   ;
 
 foralldefinition 
-  : LP! "FORALL" LP pvarDecls RP CLN definitions RP 
+  : LP 'FORALL' LP pvarDecls RP CLN definitions RP 
   ;
 
 definition 
@@ -518,7 +491,7 @@ basicmodule
   ;
 
 basemodule
-  : "BEGIN" basedeclarations "END"
+  : 'BEGIN' basedeclarations 'END'
   ;
 
 basedeclarations 
@@ -546,15 +519,15 @@ multiasynchronous
   ;
 
 hiding
-  : "LOCAL" pidentifiers "IN" module
+  : 'LOCAL' pidentifiers 'IN' module
   ;
 
 newoutput 
-  : "OUTPUT" pidentifiers "IN" module
+  : 'OUTPUT' pidentifiers 'IN' module
   ;
 
 renaming 
-  : "RENAME" renames "IN" module
+  : 'RENAME' renames 'IN' module
   ;
 
 renames 
@@ -562,11 +535,11 @@ renames
   ;
 
 rename 
-  : lhs "TO" lhs
+  : lhs 'TO' lhs
   ;
 
 withModule
-  : "WITH" newVarDecls module
+  : 'WITH' newVarDecls module
   ;
 
 modulename 
@@ -578,45 +551,45 @@ moduleActuals
   ;
 
 observeModule 
-  : "OBSERVE" module "WITH" module
+  : 'OBSERVE' module 'WITH' module
   ;
 
 /* Declarations within modules */
 
 inputdecl 
-  : "INPUT" varDecls
+  : 'INPUT' varDecls
   ;
 
 outputdecl 
-  : "OUTPUT" varDecls
+  : 'OUTPUT' varDecls
   ;
 
 globaldecl 
-  : "GLOBAL" varDecls
+  : 'GLOBAL' varDecls
   ;
 
 localdecl
-  : "LOCAL" varDecls
+  : 'LOCAL' varDecls
   ;
 
 defdecl
-  : "DEFINITION" definitions
+  : 'DEFINITION' definitions
   ;
 
 invardecl
-  : "INVARIANT" expression
+  : 'INVARIANT' expression
   ;
 
 initfordecl 
-  : "INITFORMULA" expression
+  : 'INITFORMULA' expression
   ;
 
 initdecl 
-  : "INITIALIZATION" definitionorcommand (SEMI definitionorcommand)*
+  : 'INITIALIZATION' definitionorcommand (SEMI definitionorcommand)*
   ;
 
 transdecl 
-  : "TRANSITION" definitionorcommand (SEMI definitionorcommand)*
+  : 'TRANSITION' definitionorcommand (SEMI definitionorcommand)*
   ; 
 
 labeledcommand 
@@ -657,18 +630,18 @@ newVarDecls
   ;
 
 typedecls 
-  : identifiers CLN "TYPE";
+  : identifiers CLN 'TYPE';
 
 actualparameters 
-  : (actualtypes)? SEMI (actualexprs)?
+  : actualtypes? SEMI actualexprs?
   ;
 
 actualtypes 
-  : (type (COMMA type)*)?
+  : type (COMMA type)*
   ;
 
 actualexprs 
-  : (expression (COMMA expression)*)?
+  : expression (COMMA expression)*
   ;
 
 identifier 
@@ -679,13 +652,17 @@ numeral
   : NUMERAL
   ;
 
+// Letters 
+ALPHA: ('a'..'z'|'A'..'Z');
+
+
 // Whitespace
 WS : (' ' | '\t' | '\n' | '\r' | '\f')+ { SKIP(); }
    ;
 
 // Single-line comments
 SL_COMMENT
-  : "%" (~('\n'|'\r'))* ('\n'|'\r'('\n')?) { SKIP(); }
+  : '%' (~('\n'|'\r'))* ('\n'|'\r'('\n')?) { SKIP(); }
   ;
 
 LP: '(';
@@ -694,10 +671,10 @@ LB: '[';
 RB: ']';
 LC: '{';
 RC: '}';
-RECS: "[#";
-RECE: "#]";
-RECEXS: "(#";
-RECEXE: "#)";
+RECS: '[#';
+RECE: '#]';
+RECEXS: '(#';
+RECEXE: '#)';
 DOT: '.';
 COMMA: ',';
 CLN: ':';
@@ -709,36 +686,38 @@ HASH: '#';
 QMARK: '?';
 NUMERAL: ('0'..'9')+;
 ALPHANUM: (ALPHA|'0'..'9'|'?'|'_');
-AND: "AND";
-OR: "OR";
-XOR: "XOR";
-NOT: "NOT";
-ASSIGN: ":=" ;
-DOTDOT: ".." ;
-QUOTE: "\'" ;
-IMPLIES: "=>" ;
+AND: 'AND';
+OR: 'OR';
+XOR: 'XOR';
+NOT: 'NOT';
+ASSIGN: ':=' ;
+DOTDOT: '..' ;
+QUOTE: '\'' ;
+IMPLIES: '=>' ;
 EQ: '=' ;
 DIV: '/' ;
-NEQ: "/=" ;
-SLASH: '/';
-SYNC: "||" ;
-ASYNC: "[]";
+NEQ: '/=' ;
+SYNC: '||' ;
+ASYNC: '[]';
 PLUS: '+';
-LONGARROW: "-->" ;
-ARROW: "->" ;
+LONGARROW: '-->' ;
+ARROW: '->' ;
 MINUS: '-' ;
-HYPHEN: '-';
 MULT : '*';
 
 // Relational operators
-IFF : "<=>" ;
-LE : "<=" ;
+IFF : '<=>' ;
+LE : '<=' ;
 LT : '<' ;
-GE : ">=" ;
+GE : '>=' ;
 GT : '>' ;
 
-// Misc
-UNBOUNDED : '_' ;
+REAL : 'REAL' | 'real';
+NZREAL : 'NZREAL' | 'nzreal';
+INTEGER : 'INTEGER' | 'integer';
+NZINTEGER : 'NZINTEGER' | 'nzinteger';
+NATURAL : 'NATURAL' | 'natural';
+BOOLEAN : 'BOOLEAN' | 'boolean';
 
 /* From the language description: an identifier is taken to be any string
 of ASCII characters that is not a numeral and does not contain spaces,
@@ -746,11 +725,8 @@ parentheses, brackets, braces, the percent sign, equality, comma, period,
 colon, semi-colon, and hash.  */
 
 // IDENTIFIER
-IDENTIFIER: (ALPHA (ALPHA|'0'..'9'|'?'|'_')*) | (OPCHAR1 (OPCHAR)*) ;
-ALPHA: ('a'..'z'|'A'..'Z');
-OPCHAR1: ('$'|'&'|'@'|'^'|'~');
-OPCHAR: ~('a'..'z'|'A'..'Z'|'0'..'9'|'('|')'|'['|']'|'{'|'}'|'%'|','|'.'|':'|';'|'#'|'\''|'!'|'?'|'_'|'|'|' '|'\t'|'\n'|'\r'|'\f') ;
+IDENTIFIER: (ALPHA (ALPHA|'0'..'9'|'?'|'_')*);
 
 // The only purpose of the following line is to allow the user to use the double quote character inside comments.
-DOUBLEQUOTE : "\"";
+DOUBLEQUOTE : '\"';
 
