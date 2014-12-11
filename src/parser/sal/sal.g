@@ -3,8 +3,6 @@ grammar sal;
 options {
   // C output for antlr
   language = 'C'; 
-  // Lookahead 
-  k = 2;
 }
  
 @parser::includes {

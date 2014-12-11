@@ -7,32 +7,13 @@
 
 #pragma once
 
-#include "parser/sal/sal_state.h"
-
-#include "parser/sal/salLexer.h"
-#include "parser/sal/salParser.h"
+#include "system/context.h"
+#include "parser/antlr_parser.h"
 
 namespace sal2 {
 namespace parser {
 
-template<>
-struct antlr_parser_traits<INPUT_SAL> {
-
-  typedef psalLexer pLangLexer;
-  typedef psalParser pLangParser;
-
-  typedef sal_state langState;
-
-  static
-  psalLexer newLexer(pANTLR3_INPUT_STREAM instream) {
-    return salLexerNew(instream);
-  }
-
-  static
-  psalParser newParser(pANTLR3_COMMON_TOKEN_STREAM instream) {
-    return salParserNew(instream);
-  }
-};
+antlr_parser_interface* new_sal_parser(const system::context& ctx, const char* filename);
 
 }
 }

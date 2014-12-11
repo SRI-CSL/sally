@@ -62,12 +62,15 @@ add_library(parser
   mcmt/mcmtParser.c 
   mcmt/mcmtLexer.c 
   mcmt/mcmt_state.cpp
+  mcmt/mcmt.cpp
   btor/btorParser.c 
   btor/btorLexer.c 
   btor/btor_state.cpp
+  btor/btor.cpp
   sal/salParser.c 
   sal/salLexer.c 
   sal/sal_state.cpp
+  sal/sal.cpp
   command.cpp 
   parser.cpp
 )

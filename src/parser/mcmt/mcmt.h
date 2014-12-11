@@ -7,32 +7,13 @@
 
 #pragma once
 
-#include "parser/mcmt/mcmt_state.h"
-
-#include "parser/mcmt/mcmtLexer.h"
-#include "parser/mcmt/mcmtParser.h"
+#include "system/context.h"
+#include "parser/antlr_parser.h"
 
 namespace sal2 {
 namespace parser {
 
-template<>
-struct antlr_parser_traits<INPUT_MCMT> {
-
-  typedef pmcmtLexer pLangLexer;
-  typedef pmcmtParser pLangParser;
-
-  typedef mcmt_state langState;
-
-  static
-  pmcmtLexer newLexer(pANTLR3_INPUT_STREAM instream) {
-    return mcmtLexerNew(instream);
-  }
-
-  static
-  pmcmtParser newParser(pANTLR3_COMMON_TOKEN_STREAM instream) {
-    return mcmtParserNew(instream);
-  }
-};
+antlr_parser_interface* new_mcmt_parser(const system::context& ctx, const char* filename);
 
 }
 }

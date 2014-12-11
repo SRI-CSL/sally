@@ -59,13 +59,13 @@ parser::parser(const system::context& ctx, input_language lang, const char* file
 {
   switch (lang) {
   case INPUT_MCMT:
-    d_internal = new antlr_parser<INPUT_MCMT>(ctx, filename);
+    d_internal = new_mcmt_parser(ctx, filename);
     break;
   case INPUT_BTOR:
-    d_internal = new antlr_parser<INPUT_BTOR>(ctx, filename);
+    d_internal = new_btor_parser(ctx, filename);
     break;
   case INPUT_SAL:
-    d_internal = new antlr_parser<INPUT_SAL>(ctx, filename);
+    d_internal = new_sal_parser(ctx, filename);
     break;
   default:
     assert(false);

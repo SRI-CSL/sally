@@ -41,7 +41,7 @@ declare_state_type returns [parser::command* cmd = 0]
   std::vector<expr::term_ref> types;
 }
   : '(' 'declare-state-type' 
-        symbol[id, parser::PARSER_STATE_TYPE, false]  
+        symbol[id, parser::MCMT_STATE_TYPE, false]  
         variable_list[vars, types] 
     ')' 
     {
@@ -56,8 +56,8 @@ define_states returns [parser::command* cmd = 0]
   std::string type_id;
 }
   : '(' 'define-states'
-        symbol[id, parser::PARSER_STATE_FORMULA, false]       
-        symbol[type_id, parser::PARSER_STATE_TYPE, true] { 
+        symbol[id, parser::MCMT_STATE_FORMULA, false]       
+        symbol[type_id, parser::MCMT_STATE_TYPE, true] { 
             STATE->push_scope(); 
             STATE->use_state_type(type_id, system::state_type::STATE_CURRENT, true); 
         }
@@ -75,8 +75,8 @@ define_transition returns [parser::command* cmd = 0]
   std::string type_id;  
 }
   : '(' 'define-transition'
-      symbol[id, parser::PARSER_TRANSITION_FORMULA, false]
-      symbol[type_id, parser::PARSER_STATE_TYPE, true] { 
+      symbol[id, parser::MCMT_TRANSITION_FORMULA, false]
+      symbol[type_id, parser::MCMT_STATE_TYPE, true] { 
       	  STATE->push_scope();
           STATE->use_state_type(type_id, system::state_type::STATE_CURRENT, false); 
           STATE->use_state_type(type_id, system::state_type::STATE_NEXT, false); 
@@ -97,9 +97,9 @@ define_transition_system returns [parser::command* cmd = 0]
   std::vector<std::string> transitions;  
 }
   : '(' 'define-transition-system'
-      symbol[id, parser::PARSER_TRANSITION_SYSTEM, false]                    
-      symbol[type_id, parser::PARSER_STATE_TYPE, true]
-      symbol[initial_id, parser::PARSER_STATE_FORMULA, true]            
+      symbol[id, parser::MCMT_TRANSITION_SYSTEM, false]                    
+      symbol[type_id, parser::MCMT_STATE_TYPE, true]
+      symbol[initial_id, parser::MCMT_STATE_FORMULA, true]            
       transition_list[transitions]  {  
         $cmd = new parser::define_transition_system_command(id, STATE->mk_transition_system(id, type_id, initial_id, transitions));
       } 
@@ -112,7 +112,7 @@ transition_list[std::vector<std::string>& transitions]
   std::string id;
 } 
   : '(' (
-    symbol[id, parser::PARSER_TRANSITION_FORMULA, true] { 
+    symbol[id, parser::MCMT_TRANSITION_FORMULA, true] { 
         transitions.push_back(id); 
     }
   	)+ ')'
@@ -125,7 +125,7 @@ query returns [parser::command* cmd = 0]
   const system::state_type* state_type;
 }
   : '(' 'query'
-    symbol[id, parser::PARSER_TRANSITION_SYSTEM, true] { 
+    symbol[id, parser::MCMT_TRANSITION_SYSTEM, true] { 
         STATE->push_scope();
         state_type = STATE->ctx().get_transition_system(id)->get_state_type();
         STATE->use_state_type(state_type, system::state_type::STATE_CURRENT, true); 
@@ -153,7 +153,7 @@ term returns [expr::term_ref t = expr::term_ref()]
   std::string id;
   std::vector<expr::term_ref> children;
 } 
-  : symbol[id, parser::PARSER_VARIABLE, true] { t = STATE->get_variable(id); }                
+  : symbol[id, parser::MCMT_VARIABLE, true] { t = STATE->get_variable(id); }                
   | c = constant { t = c; } 
   | '(' 
         op = term_op 
@@ -163,10 +163,10 @@ term returns [expr::term_ref t = expr::term_ref()]
   ; 
   
 /** 
- * A symbol. Returns it in the id string. If obj_type is not PARSER_OBJECT_LAST
+ * A symbol. Returns it in the id string. If obj_type is not MCMT_OBJECT_LAST
  * we check whether it has been declared = true/false.
  */
-symbol[std::string& id, parser::parser_object obj_type, bool declared] 
+symbol[std::string& id, parser::mcmt_object obj_type, bool declared] 
   : SYMBOL { 
   	    id = STATE->token_text($SYMBOL);
         STATE->ensure_declared(id, obj_type, declared);
@@ -220,10 +220,10 @@ variable_list[std::vector<std::string>& out_vars, std::vector<expr::term_ref>& o
 } 
   : '(' 
     ( '(' 
-        symbol[var_id, parser::PARSER_OBJECT_LAST, false] { 
+        symbol[var_id, parser::MCMT_OBJECT_LAST, false] { 
         	out_vars.push_back(var_id); 
         } 
-        symbol[type_id, parser::PARSER_TYPE, true] { 
+        symbol[type_id, parser::MCMT_TYPE, true] { 
         	out_types.push_back(STATE->get_type(type_id)); 
         }
     ')' )+ 
