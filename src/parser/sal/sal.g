@@ -29,11 +29,11 @@ command returns [parser::command* cmd = 0]
   ; 
 
 context 
-  : identifier (LC parameters RC)? CLN 'CONTEXT' EQ contextbody   
+  : identifier ('{' parameters '}')? ':' 'CONTEXT' '=' contextbody   
   ;
 
 parameters 
-  : typedecls? SEMI varDecls?
+  : typedecls? ';' varDecls?
   ;
 
 contextbody 
@@ -41,27 +41,27 @@ contextbody
   ;
 
 declarations 
- : (declaration SEMI)+ 
+ : (declaration ';')+ 
  ;
 
 declaration 
-  : (identifier CLN 'TYPE')                     => typeDeclaration 
-  | (identifier CLN assertionForm)              => assertionDeclaration
-  | (identifier CLN 'CONTEXT')                  => contextDeclaration 
-  | (identifier (LB varDecls RB)? CLN 'MODULE') => moduleDeclaration
+  : (identifier ':' 'TYPE')                     => typeDeclaration 
+  | (identifier ':' assertionForm)              => assertionDeclaration
+  | (identifier ':' 'CONTEXT')                  => contextDeclaration 
+  | (identifier ('[' varDecls ']')? ':' 'MODULE') => moduleDeclaration
   | constantDeclaration
   ;
 
 constantDeclaration 
-  : identifier (LP varDecls RP)? CLN type (EQ expression)?
+  : identifier ('(' varDecls ')')? ':' type ('=' expression)?
   ;
 
 typeDeclaration 
-  : identifier CLN 'TYPE' (EQ typedefinition)?
+  : identifier ':' 'TYPE' ('=' typedefinition)?
   ;
 
 assertionDeclaration 
-  : identifier CLN assertionForm assertionExpression
+  : identifier ':' assertionForm assertionExpression
   ;
 
 assertionForm 
@@ -76,12 +76,12 @@ assertionExpression
   ;
 
 assertionProposition 
-  : ((AND|OR|IMPLIES|IFF) LP assertionExpression COMMA assertionExpression RP)
-  | (NOT LP assertionExpression RP)
+  : ((AND|OR|IMPLIES|IFF) '(' assertionExpression ',' assertionExpression ')')
+  | (NOT '(' assertionExpression ')')
   ;
 
 quantifiedAssertion 
-  : ('FORALL' | 'EXISTS') LP varDecls RP CLN assertionExpression
+  : ('FORALL' | 'EXISTS') '(' varDecls ')' ':' assertionExpression
   ;
 
 moduleAssertion 
@@ -93,15 +93,15 @@ moduleModels
   ;
 
 contextDeclaration 
-  : identifier CLN 'CONTEXT' EQ contextName
+  : identifier ':' 'CONTEXT' '=' contextName
   ;
 
 contextName 
-  : identifier (LC actualparameters RC)?
+  : identifier ('{' actualparameters '}')?
   ;
 
 moduleDeclaration 
-  : identifier (LB varDecls RB)? CLN 'MODULE' EQ module
+  : identifier ('[' varDecls ']')? ':' 'MODULE' '=' module
   ;
 
 // Types
@@ -127,11 +127,11 @@ typeName
   ;
 
 scalartype
-  : LC scalarElements RC
+  : '{' scalarElements '}'
   ;
 
 scalarElements 
-  : scalarElement (COMMA scalarElement)* 
+  : scalarElement (',' scalarElement)* 
   ;
 
 scalarElement 
@@ -142,19 +142,19 @@ datatype
   ;
 
 constructors 
-  : constructor (COMMA constructor)* 
+  : constructor (',' constructor)* 
   ;
 
 constructor
-  : identifier (LP accessors RP)?
+  : identifier ('(' accessors ')')?
   ;
 
 accessors 
-  : accessor (COMMA accessor)* 
+  : accessor (',' accessor)* 
    ;
 
 accessor 
-  : identifier CLN type 
+  : identifier ':' type 
   ;
 
 indextype 
@@ -173,7 +173,7 @@ name
   ;
 
 fullname
-  : identifier (LC actualparameters RC )? BANG identifier
+  : identifier ('{' actualparameters '}' )? '!' identifier
   ;
 
 basictype 
@@ -190,7 +190,7 @@ bound
   ;
 
 subrange 
-  : LB bound DOTDOT bound RB
+  : '[' bound '..' bound ']'
   ;
 
 arraytype 
@@ -198,19 +198,19 @@ arraytype
   ;
 
 tupletype 
-  : LB type (COMMA type)+ RB
+  : '[' type (',' type)+ ']'
   ;
 
 functiontype 
-  : LB type ARROW type RB
+  : '[' type '->' type ']'
   ;
 
 recordtype
-  : RECS fielddeclaration (COMMA fielddeclaration)* RECE
+  : '[#' fielddeclaration (',' fielddeclaration)* '#]'
   ;
 
 fielddeclaration 
-  : identifier CLN type
+  : identifier ':' type
   ;
 
 // Expressions
@@ -241,7 +241,7 @@ notexpression
   ;
 
 eqexpression 
-  : relexpression ((EQ | NEQ) relexpression)?
+  : relexpression (('=' | '/=') relexpression)?
   ;
 
 relexpression 
@@ -253,15 +253,15 @@ infixapplication
   ;
 
 additiveexpression 
-  : multiplicativeexpression ((PLUS | MINUS) multiplicativeexpression)*
+  : multiplicativeexpression  (('+' | '-') multiplicativeexpression)*
   ;
 
 multiplicativeexpression 
-  : unaryexpression ((MULT | DIV) unaryexpression)*
+  : unaryexpression (('*' | '/') unaryexpression)*
   ;
 
 unaryexpression 
-  : (MINUS unaryexpression)
+  : ('-' unaryexpression)
   | simpleExpression
   ;
 
@@ -294,16 +294,16 @@ expressionSuffix
   ;
 
 nextvariable 
-  : identifier QUOTE 
+  : identifier '\'' 
   ;
 
 lambdaabstraction 
-  : 'LAMBDA' LP varDecls RP CLN expression
+  : 'LAMBDA' '(' varDecls ')' ':' expression
   ;
 
 quantifiedexpression 
-  : 'FORALL' LP varDecls RP CLN expression
-  | 'EXISTS' LP varDecls RP CLN expression 
+  : 'FORALL' '(' varDecls ')' ':' expression
+  | 'EXISTS' '(' varDecls ')' ':' expression 
   ;
 
 letexpression 
@@ -311,27 +311,27 @@ letexpression
   ;
 
 letdeclarations 
-  : letDeclaration (COMMA letDeclaration)*
+  : letDeclaration (',' letDeclaration)*
   ;
 
 letDeclaration 
-  : identifier CLN type EQ expression
+  : identifier ':' type '=' expression
   ;
 
 arrayliteral 
-  : LB LB indexVarDecl RB expression RB
+  : '[' '[' indexVarDecl ']' expression ']'
   ;
 
 recordliteral
-  : RECEXS recordentry (COMMA recordentry)* RECEXE
+  : '(#' recordentry (',' recordentry)* '#)'
   ;
 
 recordentry 
-  : identifier ASSIGN expression
+  : identifier ':=' expression
   ;
 
 tupleLiteral 
-  : LP expressions RP 
+  : '(' expressions ')' 
   ;
 
 setexpression 
@@ -340,11 +340,11 @@ setexpression
   ;
 
 setpredexpression
-  : LC identifier CLN type VBAR expression RC
+  : '{' identifier ':' type '|' expression '}'
   ;
 
 setlistexpression 
-  : LC (expression (COMMA expression)*)? RC 
+  : '{' (expression (',' expression)*)? '}' 
   ;
 
 conditional 
@@ -360,11 +360,11 @@ elsif
   ;
   
 argument
-  : LP expressions RP 
+  : '(' expressions ')' 
   ;
 
 expressions 
-  : expression (COMMA expression )* 
+  : expression (',' expression )* 
   ;
 
 updatesuffix 
@@ -372,7 +372,7 @@ updatesuffix
   ;
 
 update 
-  : updateposition ASSIGN expression 
+  : updateposition ':=' expression 
   ;
 
 updateposition 
@@ -380,38 +380,38 @@ updateposition
   ;
 
 indexVarDecl 
-  : identifier CLN indextype
+  : identifier ':' indextype
   ;
 
 identifiers 
-  : identifier (COMMA identifier)* 
+  : identifier (',' identifier)* 
   ;
 
 pidentifiers 
   : identifiers;
 
 varDecl 
-  : identifiers CLN type 
+  : identifiers ':' type 
   ;
 
 varDecls 
-  : varDecl (COMMA varDecl)*
+  : varDecl (',' varDecl)*
   ;
 
 /* The Transition Language */
 
 lhs 
-  : identifier QUOTE? access*
+  : identifier '\''? access*
   ;
 
 access 
-  : LB expression RB 
-  | ( DOT identifier) => DOT identifier
-  | DOT numeral
+  : '[' expression ']' 
+  | ( '.' identifier) => '.' identifier
+  | '.' numeral
   ;
 
 rhsexpression 
-  : EQ expression
+  : '=' expression
   ;
 
 rhsselection 
@@ -428,7 +428,7 @@ simpleDefinition
   ;
 
 foralldefinition 
-  : LP 'FORALL' LP varDecls RP CLN definitions RP 
+  : '(' 'FORALL' '(' varDecls ')' ':' definitions ')' 
   ;
 
 definition 
@@ -437,18 +437,18 @@ definition
   ;
 
 definitions :
-  definition (SEMI definition)* ;
+  definition (';' definition)* ;
 
 guard 
   : expression
   ;
 
 assignments 
-  : simpleDefinition (SEMI simpleDefinition)*
+  : simpleDefinition (';' simpleDefinition)*
   ;
 
 guardedcommand 
-  : guard LONGARROW assignments?
+  : guard '-->' assignments?
   ;
 
 /* The Module Language */
@@ -459,15 +459,15 @@ module
 
 basicmodule 
   : basemodule
-  | (LP SYNC)   => multisynchronous
-  | (LP ASYNC)  => multiasynchronous
+  | ('(' SYNC)   => multisynchronous
+  | ('(' ASYNC)  => multiasynchronous
   | hiding
   | newoutput
   | renaming
   | withModule
   | modulename
   | observeModule
-  | (LP module RP) 
+  | ('(' module ')') 
   ;
 
 basemodule
@@ -491,11 +491,11 @@ basedeclaration
   ;
 
 multisynchronous 
-  : LP SYNC LP indexVarDecl RP CLN module RP
+  : '(' SYNC '(' indexVarDecl ')' ':' module ')'
   ;
 
 multiasynchronous 
-  : LP ASYNC LP indexVarDecl RP CLN module RP
+  : '(' ASYNC '(' indexVarDecl ')' ':' module ')'
   ;
 
 hiding
@@ -511,7 +511,7 @@ renaming
   ;
 
 renames 
-  : rename (COMMA rename)*
+  : rename (',' rename)*
   ;
 
 rename 
@@ -527,7 +527,7 @@ modulename
   ;
 
 moduleActuals 
-  : (LB expressions RB)?
+  : ('[' expressions ']')?
   ;
 
 observeModule 
@@ -565,24 +565,24 @@ initfordecl
   ;
 
 initdecl 
-  : 'INITIALIZATION' definitionorcommand (SEMI definitionorcommand)*
+  : 'INITIALIZATION' definitionorcommand (';' definitionorcommand)*
   ;
 
 transdecl 
-  : 'TRANSITION' definitionorcommand (SEMI definitionorcommand)*
+  : 'TRANSITION' definitionorcommand (';' definitionorcommand)*
   ; 
 
 labeledcommand 
-  : identifier CLN guardedcommand
+  : identifier ':' guardedcommand
   ;
 
 namedcommand 
-  : (identifier CLN) => labeledcommand
+  : (identifier ':') => labeledcommand
   | guardedcommand 
   ;
 
 multicommand 
-  : LP ASYNC LP varDecls RP CLN somecommand RP 
+  : '(' ASYNC '(' varDecls ')' ':' somecommand ')' 
   ;
 
 somecommand 
@@ -596,7 +596,7 @@ somecommands
 
 definitionorcommand
   : definition
-  | (LB somecommands RB)
+  | ('[' somecommands ']')
   ;
 
 newVarDecl 
@@ -606,22 +606,22 @@ newVarDecl
   ;
 
 newVarDecls 
-  : newVarDecl (SEMI newVarDecl)*
+  : newVarDecl (';' newVarDecl)*
   ;
 
 typedecls 
-  : identifiers CLN 'TYPE';
+  : identifiers ':' 'TYPE';
 
 actualparameters 
-  : actualtypes? SEMI actualexprs?
+  : actualtypes? ';' actualexprs?
   ;
 
 actualtypes 
-  : type (COMMA type)*
+  : type (',' type)*
   ;
 
 actualexprs 
-  : expression (COMMA expression)*
+  : expression (',' expression)*
   ;
 
 identifier 
@@ -632,77 +632,42 @@ numeral
   : NUMERAL
   ;
 
-// Letters 
+/** Letters */ 
 ALPHA: ('a'..'z'|'A'..'Z');
 
 
-// Whitespace
+/** Whitespace (skip) */
 WS : (' ' | '\t' | '\n' | '\r' | '\f')+ { SKIP(); }
    ;
 
-// Single-line comments
+/** Comments */
 SL_COMMENT
   : '%' (~('\n'|'\r'))* ('\n'|'\r'('\n')?) { SKIP(); }
   ;
 
-LP: '(';
-RP: ')';
-LB: '[';
-RB: ']';
-LC: '{';
-RC: '}';
-RECS: '[#';
-RECE: '#]';
-RECEXS: '(#';
-RECEXE: '#)';
-DOT: '.';
-COMMA: ',';
-CLN: ':';
-SEMI: ';';
-BANG: '!';
-VBAR: '|';
-PERCENT: '%';
-HASH: '#';
-QMARK: '?';
+/** Numerals */
 NUMERAL: ('0'..'9')+;
-ALPHANUM: (ALPHA|'0'..'9'|'?'|'_');
+ 
+// Boolean operators
 AND: 'AND';
 OR: 'OR';
 XOR: 'XOR';
 NOT: 'NOT';
-ASSIGN: ':=' ;
-DOTDOT: '..' ;
-QUOTE: '\'' ;
 IMPLIES: '=>' ;
-EQ: '=' ;
-DIV: '/' ;
-NEQ: '/=' ;
-SYNC: '||' ;
-ASYNC: '[]';
-PLUS: '+';
-LONGARROW: '-->' ;
-ARROW: '->' ;
-MINUS: '-' ;
-MULT : '*';
-
-// Relational operators
 IFF : '<=>' ;
 
-REAL : 'REAL' | 'real';
-NZREAL : 'NZREAL' | 'nzreal';
-INTEGER : 'INTEGER' | 'integer';
+// Combination operators
+SYNC: '||' ;
+ASYNC: '[]';
+
+// Types
+REAL      : 'REAL' | 'real';
+NZREAL    : 'NZREAL' | 'nzreal';
+INTEGER   : 'INTEGER' | 'integer';
 NZINTEGER : 'NZINTEGER' | 'nzinteger';
-NATURAL : 'NATURAL' | 'natural';
-BOOLEAN : 'BOOLEAN' | 'boolean';
+NATURAL   : 'NATURAL' | 'natural';
+BOOLEAN   : 'BOOLEAN' | 'boolean';
 
-/* From the language description: an identifier is taken to be any string
-of ASCII characters that is not a numeral and does not contain spaces,
-parentheses, brackets, braces, the percent sign, equality, comma, period,
-colon, semi-colon, and hash.  */
-
-// IDENTIFIER
-IDENTIFIER: (ALPHA (ALPHA|'0'..'9'|'?'|'_')*);
-
-// The only purpose of the following line is to allow the user to use the double quote character inside comments.
-DOUBLEQUOTE : '\"';
+/** Identifiers */
+IDENTIFIER: ALPHA (ALPHA|'0'..'9'|'?'|'_')*;
 
