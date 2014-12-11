@@ -447,7 +447,7 @@ guard
   ;
 
 assignments 
-  : simpleDefinition (';' simpleDefinition)* '?'?
+  : simpleDefinition (';' simpleDefinition)* ';'?
   ;
 
 guardedcommand 
@@ -576,22 +576,13 @@ transdecl
   : 'TRANSITION' definitionorcommand (';' definitionorcommand)*
   ; 
 
-labeledcommand 
-  : identifier ':' guardedcommand
-  ;
-
-namedcommand 
-  : (identifier ':') => labeledcommand
-  | guardedcommand 
-  ;
-
 multicommand 
   : '(' ASYNC '(' varDecls ')' ':' somecommand ')' 
   ;
 
 somecommand 
-  : (namedcommand) => namedcommand 
-  | multicommand 
+  : (identifier ':') ? guardedcommand 
+  | (identifier ':') ? multicommand 
   ;
 
 somecommands 
