@@ -15,7 +15,7 @@ set_source_files_properties(
   mcmt/mcmtParser.c mcmt/mcmtLexer.c 
   PROPERTIES 
     LANGUAGE CXX
-    COMPILE_FLAGS "-Wno-unused-function -Wno-unused-variable -Wno-tautological-compare -x c++"
+    COMPILE_FLAGS "-Wno-sign-compare -Wno-unused-function -Wno-unused-variable -Wno-tautological-compare -x c++"
 )
 
 add_custom_command(
@@ -35,7 +35,7 @@ set_source_files_properties(
   btor/btorParser.c btor/btorLexer.c 
   PROPERTIES 
     LANGUAGE CXX
-    COMPILE_FLAGS "-Wno-unused-function -Wno-unused-variable -Wno-tautological-compare -x c++"
+    COMPILE_FLAGS "-Wno-sign-compare -Wno-unused-function -Wno-unused-variable -Wno-tautological-compare -x c++"
 )
 
 add_custom_command(
@@ -55,7 +55,7 @@ set_source_files_properties(
   sal/salParser.c sal/salLexer.c 
   PROPERTIES 
     LANGUAGE CXX
-    COMPILE_FLAGS "-Wno-unused-function -Wno-unused-variable -Wno-tautological-compare -x c++"
+    COMPILE_FLAGS "-Wno-sign-compare -Wno-unused-function -Wno-unused-variable -Wno-tautological-compare -x c++"
 )
 
 add_library(parser 

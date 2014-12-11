@@ -25,10 +25,11 @@ options {
 
 command returns [parser::command* cmd = 0]
   : context
+  | EOF
   ; 
 
 context 
-  : identifier (LC parameters RC)? CLN 'CONTEXT' EQ contextbody EOF  
+  : identifier (LC parameters RC)? CLN 'CONTEXT' EQ contextbody   
   ;
 
 parameters 
@@ -244,7 +245,7 @@ eqexpression
   ;
 
 relexpression 
-  : infixapplication ((GT | GE | LT | LE) infixapplication)?
+  : infixapplication (('>' | '>=' | '<' | '<=') infixapplication)?
   ;
 
 infixapplication 
@@ -686,10 +687,6 @@ MULT : '*';
 
 // Relational operators
 IFF : '<=>' ;
-LE : '<=' ;
-LT : '<' ;
-GE : '>=' ;
-GT : '>' ;
 
 REAL : 'REAL' | 'real';
 NZREAL : 'NZREAL' | 'nzreal';
