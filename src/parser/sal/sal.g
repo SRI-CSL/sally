@@ -163,13 +163,10 @@ accessor
   ;
 
 indextype 
-  : integertype
+  : INTEGER
+  | BOOLEAN
   | name 
   | subrange 
-  ;
-
-integertype
-  : INTEGER
   ;
 
 name 
@@ -670,7 +667,7 @@ NATURAL   : 'NATURAL' | 'natural';
 BOOLEAN   : 'BOOLEAN' | 'boolean';
 
 /** Identifiers */
-IDENTIFIER: ALPHA (ALPHA|('0'..'9')|'?'|'_')*;
+IDENTIFIER: ALPHA (ALPHA|'0'..'9'|'?'|'_')*;
 
 /** Letters */ 
 fragment
