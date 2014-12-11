@@ -120,6 +120,11 @@ type
   | (functiontype) => functiontype
   | tupletype
   | recordtype
+  | subtype
+  ;
+
+subtype
+  : '{' identifier ':' type '|' expression '}'
   ;
 
 typeName 
@@ -632,10 +637,6 @@ numeral
   : NUMERAL
   ;
 
-/** Letters */ 
-ALPHA: ('a'..'z'|'A'..'Z');
-
-
 /** Whitespace (skip) */
 WS : (' ' | '\t' | '\n' | '\r' | '\f')+ { SKIP(); }
    ;
@@ -669,5 +670,9 @@ NATURAL   : 'NATURAL' | 'natural';
 BOOLEAN   : 'BOOLEAN' | 'boolean';
 
 /** Identifiers */
-IDENTIFIER: ALPHA (ALPHA|'0'..'9'|'?'|'_')*;
+IDENTIFIER: ALPHA (ALPHA|('0'..'9')|'?'|'_')*;
+
+/** Letters */ 
+fragment
+ALPHA: 'a'..'z'|'A'..'Z';
 
