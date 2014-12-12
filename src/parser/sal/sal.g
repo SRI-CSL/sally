@@ -33,7 +33,7 @@ context
   ;
 
 parameters 
-  : typedecls? ';' varDecls?
+  : type_declarations? ';' var_declarations?
   ;
 
 contextbody 
@@ -45,70 +45,70 @@ declarations
  ;
 
 declaration 
-  : typeDeclaration 
-  | assertionDeclaration
-  | contextDeclaration 
-  | moduleDeclaration
-  | constantDeclaration
+  : type_declaration 
+  | assertion_declaration
+  | context_declaration 
+  | module_declaration
+  | constant_declaration
   ;
 
-constantDeclaration 
-  : identifier ('(' varDecls ')')? ':' type ('=' expression)?
+constant_declaration 
+  : identifier ('(' var_declarations ')')? ':' type ('=' expression)?
   ;
 
-typeDeclaration 
-  : identifier ':' 'TYPE' ('=' typedefinition)?
+type_declaration 
+  : identifier ':' 'TYPE' ('=' type_definition)?
   ;
 
-assertionDeclaration 
-  : identifier ':' assertionForm assertionExpression
+assertion_declaration 
+  : identifier ':' assertion_form assertion_expression
   ;
 
-assertionForm 
+assertion_form 
   : ('OBLIGATION' | 'CLAIM' | 'LEMMA' | 'THEOREM')
   ;
 
-assertionExpression 
+assertion_expression 
   : module '|-' expression
   ;
 
-assertionProposition 
-  : ((AND|OR|IMPLIES|IFF) '(' assertionExpression ',' assertionExpression ')')
-  | (NOT '(' assertionExpression ')')
+assertion_proposition 
+  : ((AND|OR|IMPLIES|IFF) '(' assertion_expression ',' assertion_expression ')')
+  | (NOT '(' assertion_expression ')')
   ;
 
-quantifiedAssertion 
-  : ('FORALL' | 'EXISTS') '(' varDecls ')' ':' assertionExpression
+quantified_assertion 
+  : ('FORALL' | 'EXISTS') '(' var_declarations ')' ':' assertion_expression
   ;
 
-contextDeclaration 
-  : identifier ':' 'CONTEXT' '=' contextName
+context_declaration 
+  : identifier ':' 'CONTEXT' '=' context_name
   ;
 
-contextName 
-  : identifier ('{' actualparameters '}')?
+context_name 
+  : identifier ('{' actual_parameters '}')?
   ;
 
-moduleDeclaration 
-  : identifier ('[' varDecls ']')? ':' 'MODULE' '=' module
+module_declaration 
+  : identifier ('[' var_declarations ']')? ':' 'MODULE' '=' module
   ;
 
 // Types
 
-typedefinition 
+type_definition 
   : type 
-  | scalartype 
+  | scalar_type 
   | datatype 
   ;
 
 type
-  : typeName
-  | basictype
-  | (subrangetype)     => subrangetype
-  | arraytype
-  | (functiontype) => functiontype
-  | tupletype
-  | recordtype
+  : type_name
+  | basic_type
+  | (subrange_type)     => subrange_type
+  | array_type
+  | (function_type) => function_type
+  | tuple_type
+  | record_type
   | subtype
   ;
 
@@ -116,20 +116,17 @@ subtype
   : '{' identifier ':' type '|' expression '}'
   ;
 
-typeName 
+type_name 
   : name
   ;
 
-scalartype
-  : '{' scalarElements '}'
+scalar_type
+  : '{' scalar_elements '}'
   ;
 
-scalarElements 
-  : scalarElement (',' scalarElement)* 
+scalar_elements 
+  : identifier (',' identifier)* 
   ;
-
-scalarElement 
-  : identifier;
 
 datatype
   : 'DATATYPE' constructors 'END'
@@ -145,30 +142,30 @@ constructor
 
 accessors 
   : accessor (',' accessor)* 
-   ;
+  ;
 
 accessor 
   : identifier ':' type 
   ;
 
-indextype 
+index_type 
   : 'BOOLEAN'
   | 'NATURAL'
   | 'INTEGER'
   | name 
-  | subrangetype 
+  | subrange_type 
   ;
 
 name 
-  : (qualifiedname) => qualifiedname
+  : (qualified_name) => qualified_name
   | identifier
   ;
 
-qualifiedname
-  : identifier ('{' actualparameters '}' )? '!' identifier
+qualified_name
+  : identifier ('{' actual_parameters '}' )? '!' identifier
   ;
 
-basictype 
+basic_type 
   : 'BOOLEAN'
   | 'REAL' 
   | 'INTEGER' 
@@ -179,163 +176,164 @@ basictype
 
 bound 
   : expression 
+  | '_'
   ;
 
-subrangetype 
+subrange_type 
   : '[' bound '..' bound ']'
   ;
 
-arraytype 
-  : 'ARRAY' indextype 'OF' type
+array_type 
+  : 'ARRAY' index_type 'OF' type
   ;
 
-tupletype 
+tuple_type 
   : '[' type (',' type)+ ']'
   ;
 
-functiontype 
+function_type 
   : '[' type '->' type ']'
   ;
 
-recordtype
-  : '[#' fielddeclaration (',' fielddeclaration)* '#]'
+record_type
+  : '[#' field_declaration (',' field_declaration)* '#]'
   ;
 
-fielddeclaration 
+field_declaration 
   : identifier ':' type
   ;
 
 // Expressions
 
 expression 
-  : iffExpression
+  : iff_expression
   ;
 
-iffExpression 
-  : impliesexpression (IFF impliesexpression)?
+iff_expression 
+  : implies_expression (IFF implies_expression)?
   ;
 
-impliesexpression 
-  : orexpression (IMPLIES orexpression)?
+implies_expression 
+  : or_expression (IMPLIES or_expression)?
   ;
 
-orexpression 
-  : andexpression ((OR | XOR) andexpression)*
+or_expression 
+  : and_expression ((OR | XOR) and_expression)*
   ;
 
-andexpression 
-  : notexpression (AND notexpression)*
+and_expression 
+  : not_expression (AND not_expression)*
   ;
 
-notexpression 
-  : NOT notexpression
-  | eqexpression 
+not_expression 
+  : NOT not_expression
+  | eq_expression 
   ;
 
-eqexpression 
-  : relexpression (('=' | '/=') relexpression)?
+eq_expression 
+  : rel_expression (('=' | '/=') rel_expression)?
   ;
 
-relexpression 
-  : infixapplication (('>' | '>=' | '<' | '<=') infixapplication)?
+rel_expression 
+  : infix_application (('>' | '>=' | '<' | '<=') infix_application)?
   ;
 
-infixapplication 
-  : additiveexpression (IDENTIFIER additiveexpression)*
+infix_application 
+  : additive_expression (IDENTIFIER additive_expression)?
   ;
 
-additiveexpression 
-  : multiplicativeexpression  (('+' | '-') multiplicativeexpression)*
+additive_expression 
+  : multiplicative_expression  (('+' | '-') multiplicative_expression)*
   ;
 
-multiplicativeexpression 
-  : unaryexpression (('*' | '/') unaryexpression)*
+multiplicative_expression 
+  : unary_expression (('*' | '/') unary_expression)*
   ;
 
-unaryexpression 
-  : ('-' unaryexpression)
+unary_expression 
+  : ('-' unary_expression)
   | simpleExpression
   ;
 
 simpleExpression 
-  : expressionprefix (expressionSuffix)*
+  : expression_prefix (expression_suffix)*
   ;
 
-nameexpr 
+name_expression 
   : name
   ;
 
-expressionprefix 
-  : nextvariable
-  | nameexpr
+expression_prefix 
+  : next_variable
+  | name_expression
   | numeral
-  | lambdaabstraction
-  | quantifiedexpression
-  | letexpression
-  | arrayliteral 
-  | recordliteral 
-  | tupleLiteral 
-  | setexpression
+  | lambda_expression
+  | quantified_expression
+  | let_expression
+  | array_literal 
+  | record_literal 
+  | tuple_literal 
+  | set_expression
   | conditional
   ;
 
-expressionSuffix 
+expression_suffix 
   : argument
   | access
   | updatesuffix
   ;
 
-nextvariable 
+next_variable 
   : identifier '\'' 
   ;
 
-lambdaabstraction 
-  : 'LAMBDA' '(' varDecls ')' ':' expression
+lambda_expression 
+  : 'LAMBDA' '(' var_declarations ')' ':' expression // TODO: recursion here
   ;
 
-quantifiedexpression 
-  : 'FORALL' '(' varDecls ')' ':' expression
-  | 'EXISTS' '(' varDecls ')' ':' expression 
+quantified_expression 
+  : 'FORALL' '(' var_declarations ')' ':' expression // TODO: recursion here
+  | 'EXISTS' '(' var_declarations ')' ':' expression // TODO: recursion here
   ;
 
-letexpression 
-  : 'LET' letdeclarations 'IN' expression
+let_expression 
+  : 'LET' let_declarations 'IN' expression
   ;
 
-letdeclarations 
-  : letDeclaration (',' letDeclaration)*
+let_declarations 
+  : let_declaration (',' let_declaration)*
   ;
 
-letDeclaration 
+let_declaration 
   : identifier ':' type '=' expression
   ;
 
-arrayliteral 
-  : '[' '[' indexVarDecl ']' expression ']'
+array_literal 
+  : '[' '[' index_var_declaration ']' expression ']'
   ;
 
-recordliteral
-  : '(#' recordentry (',' recordentry)* '#)'
+record_literal
+  : '(#' record_entry (',' record_entry)* '#)'
   ;
 
-recordentry 
+record_entry 
   : identifier ':=' expression
   ;
 
-tupleLiteral 
+tuple_literal 
   : '(' expressions ')' 
   ;
 
-setexpression 
-  : setpredexpression
-  | setlistexpression
+set_expression 
+  : set_predicate_expression
+  | set_list_expression
   ;
 
-setpredexpression
+set_predicate_expression
   : '{' identifier ':' type '|' expression '}'
   ;
 
-setlistexpression 
+set_list_expression 
   : '{' (expression (',' expression)*)? '}' 
   ;
 
@@ -371,8 +369,8 @@ updateposition
   : (argument | access)+
   ;
 
-indexVarDecl 
-  : identifier ':' indextype
+index_var_declaration 
+  : identifier ':' index_type
   ;
 
 identifiers 
@@ -382,12 +380,12 @@ identifiers
 pidentifiers 
   : identifiers;
 
-varDecl 
+var_declaration 
   : identifiers ':' type 
   ;
 
-varDecls 
-  : varDecl (',' varDecl)*
+var_declarations 
+  : var_declaration (',' var_declaration)*
   ;
 
 /* The Transition Language */
@@ -415,16 +413,16 @@ rhsdefinition
   | rhsselection 
   ;
 
-simpleDefinition 
+simple_definition 
   : lhs rhsdefinition
   ;
 
 foralldefinition 
-  : '(' 'FORALL' '(' varDecls ')' ':' definitions ')' 
+  : '(' 'FORALL' '(' var_declarations ')' ':' definitions ')' 
   ;
 
 definition 
-  : simpleDefinition 
+  : simple_definition 
   | foralldefinition 
   ;
 
@@ -436,7 +434,7 @@ guard
   ;
 
 assignments 
-  : simpleDefinition (';' simpleDefinition)* ';'?
+  : simple_definition (';' simple_definition)* ';'?
   ;
 
 guardedcommand 
@@ -447,55 +445,55 @@ guardedcommand
 /* The Module Language */
 
 module 
-  : basicmodule ((ASYNC|SYNC) basicmodule)*
+  : basic_module ((ASYNC|SYNC) basic_module)*
   ;
 
-basicmodule 
-  : basemodule
-  | multisynchronous
-  | multiasynchronous
+basic_module 
+  : base_module
+  | multi_synchronous
+  | multi_asynchronous
   | hiding
-  | newoutput
+  | new_output
   | renaming
-  | withModule
-  | modulename
-  | observeModule
+  | with_module
+  | module_name
+  | observe_module
   | ('(' module ')') 
   ;
 
-basemodule
-  : 'BEGIN' basedeclarations 'END'
+base_module
+  : 'BEGIN' base_declarations 'END'
   ;
 
-basedeclarations 
-  : (basedeclaration)* 
+base_declarations 
+  : (base_declaration)* 
   ;
 
-basedeclaration 
-  : inputdecl 
-  | outputdecl 
-  | globaldecl 
-  | localdecl 
-  | defdecl 
-  | invardecl
-  | initfordecl 
-  | initdecl 
-  | transdecl
+base_declaration 
+  : input_declaration 
+  | output_declaration 
+  | global_declaration 
+  | local_declaration 
+  | definition_declaration 
+  | invariant_declaration
+  | init_formula_declaration 
+  | init_declaration 
+  | transition_declaration
   ;
 
-multisynchronous 
-  : '(' SYNC '(' indexVarDecl ')' ':' module ')'
+multi_synchronous 
+  : '(' SYNC '(' index_var_declaration ')' ':' module ')'
   ;
 
-multiasynchronous 
-  : '(' ASYNC '(' indexVarDecl ')' ':' module ')'
+multi_asynchronous 
+  : '(' ASYNC '(' index_var_declaration ')' ':' module ')'
   ;
 
 hiding
   : 'LOCAL' pidentifiers 'IN' module
   ;
 
-newoutput 
+new_output 
   : 'OUTPUT' pidentifiers 'IN' module
   ;
 
@@ -511,100 +509,100 @@ rename
   : lhs 'TO' lhs
   ;
 
-withModule
-  : 'WITH' newVarDecls module
+with_module
+  : 'WITH' new_var_declarations module
   ;
 
-modulename 
-  : name moduleActuals
+module_name 
+  : name module_actuals
   ;
 
-moduleActuals 
+module_actuals 
   : ('[' expressions ']')?
   ;
 
-observeModule 
+observe_module 
   : 'OBSERVE' module 'WITH' module
   ;
 
 /* Declarations within modules */
 
-inputdecl 
-  : 'INPUT' varDecls
+input_declaration 
+  : 'INPUT' var_declarations
   ;
 
-outputdecl 
-  : 'OUTPUT' varDecls
+output_declaration 
+  : 'OUTPUT' var_declarations
   ;
 
-globaldecl 
-  : 'GLOBAL' varDecls
+global_declaration 
+  : 'GLOBAL' var_declarations
   ;
 
-localdecl
-  : 'LOCAL' varDecls
+local_declaration
+  : 'LOCAL' var_declarations
   ;
 
-defdecl
+definition_declaration
   : 'DEFINITION' definitions
   ;
 
-invardecl
+invariant_declaration
   : 'INVARIANT' expression
   ;
 
-initfordecl 
+init_formula_declaration 
   : 'INITFORMULA' expression
   ;
 
-initdecl 
-  : 'INITIALIZATION' definitionorcommand (';' definitionorcommand)* ';'?
+init_declaration 
+  : 'INITIALIZATION' definition_or_command (';' definition_or_command)* ';'?
   ;
 
-transdecl 
-  : 'TRANSITION' definitionorcommand (';' definitionorcommand)*
+transition_declaration 
+  : 'TRANSITION' definition_or_command (';' definition_or_command)*
   ; 
 
 multicommand 
-  : '(' ASYNC '(' varDecls ')' ':' somecommand ')' 
+  : '(' ASYNC '(' var_declarations ')' ':' some_command ')' 
   ;
 
-somecommand 
+some_command 
   : (identifier ':') ? guardedcommand 
   | (identifier ':') ? multicommand 
   ;
 
-somecommands 
-  : somecommand (ASYNC somecommand)*
+some_commands 
+  : some_command (ASYNC some_command)*
   ;
 
-definitionorcommand
+definition_or_command
   : definition
-  | ('[' somecommands ']')
+  | ('[' some_commands ']')
   ;
 
-newVarDecl 
-  : inputdecl 
-  | outputdecl 
-  | globaldecl
+new_var_declaration 
+  : input_declaration 
+  | output_declaration 
+  | global_declaration
   ;
 
-newVarDecls 
-  : newVarDecl (';' newVarDecl)*
+new_var_declarations 
+  : new_var_declaration (';' new_var_declaration)*
   ;
 
-typedecls 
+type_declarations 
   : identifiers ':' 'TYPE';
 
-actualparameters 
-  : actualtypes? ';' actualexprs?
+actual_parameters 
+  : actual_types? ';' actual_expressions?
   ;
 
-actualtypes 
+actual_types 
   : type (',' type)*
   ;
 
-actualexprs 
+actual_expressions 
   : expression (',' expression)*
   ;
 

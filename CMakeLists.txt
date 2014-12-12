@@ -6,10 +6,17 @@ enable_testing()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wall")
 
+# If ENABLE_COVERAGE is defined, try to set coverage flags.
+if (ENABLE_COVERAGE)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage")
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage")
+endif()
+
 # Default is release with debug info
-IF(NOT CMAKE_BUILD_TYPE)
-SET(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
-ENDIF()
+if(NOT CMAKE_BUILD_TYPE)
+set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
+endif()
 
 # Add the target for the check
 add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND})
@@ -31,7 +38,7 @@ find_library(GMP_LIBRARY gmp)
 if (GMP_LIBRARY)
   message(STATUS "GMP library: " ${GMP_LIBRARY})
 else()
-  MESSAGE(FATAL_ERROR "Could not the GMP number library (sudo apt-get install libgmp-dev)")
+  message(FATAL_ERROR "Could not the GMP number library (sudo apt-get install libgmp-dev)")
 endif()
 
 # Find Yices
