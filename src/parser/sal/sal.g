@@ -69,10 +69,7 @@ assertionForm
   ;
 
 assertionExpression 
-  : assertionProposition
-  | quantifiedAssertion
-  | moduleAssertion
-  | expression
+  : module '|-' expression
   ;
 
 assertionProposition 
@@ -82,14 +79,6 @@ assertionProposition
 
 quantifiedAssertion 
   : ('FORALL' | 'EXISTS') '(' varDecls ')' ':' assertionExpression
-  ;
-
-moduleAssertion 
-  :  module moduleModels 
-  ;
-
-moduleModels 
-  : '|-' expression 
   ;
 
 contextDeclaration 
@@ -171,21 +160,21 @@ indextype
   ;
 
 name 
-  : (fullname) => fullname
+  : (qualifiedname) => qualifiedname
   | identifier
   ;
 
-fullname
+qualifiedname
   : identifier ('{' actualparameters '}' )? '!' identifier
   ;
 
 basictype 
-  : 'REAL' 
-  | 'NZREAL' 
+  : 'BOOLEAN'
+  | 'REAL' 
   | 'INTEGER' 
   | 'NZINTEGER' 
-  | 'NATURAL' 
-  | 'BOOLEAN'
+  | 'NATURAL'
+  | 'NZREAL' 
   ;
 
 bound 
