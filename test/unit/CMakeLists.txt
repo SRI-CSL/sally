@@ -17,7 +17,11 @@ foreach (DIR expr smt)
   add_subdirectory(${DIR})
   # We need to add the options, to include the whole library, otherwise boost
   # auto-registration of tests doesn't work.
-  set(sal2_test_LIBS -Wl,--whole-archive ${DIR}_test -Wl,--no-whole-archive ${sal2_test_LIBS})
+  if(APPLE) 
+    set(sal2_test_LIBS -Wl,-force_load ${DIR}_test ${sal2_test_LIBS})    
+  else()
+   set(sal2_test_LIBS -Wl,--whole-archive ${DIR}_test -Wl,--no-whole-archive ${sal2_test_LIBS})
+  endif()
 endforeach(DIR)
 
 # Link the thing
