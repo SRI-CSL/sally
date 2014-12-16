@@ -690,11 +690,6 @@ expr::term_ref yices2_internal::to_term(term_t t) {
 }
 
 void yices2_internal::add(expr::term_ref ref) {
-
-  if (output::get_verbosity(std::cout) > 2) {
-    std::cout << "yices2: adding " << ref << std::endl;
-  }
-
   // Remember the assertions
   expr::term_ref_strong ref_strong(d_tm, ref);
   d_assertions.push_back(ref_strong);
@@ -903,22 +898,37 @@ yices2::~yices2() {
 }
 
 void yices2::add(expr::term_ref f) {
+  if (output::get_verbosity(std::cout) > 2) {
+    std::cout << "yices2: adding " << f << std::endl;
+  }
   d_internal->add(f);
 }
 
 solver::result yices2::check() {
+  if (output::get_verbosity(std::cout) > 2) {
+    std::cout << "yices2: check()" << std::endl;
+  }
   return d_internal->check();
 }
 
 void yices2::get_model(expr::model& m) const {
+  if (output::get_verbosity(std::cout) > 2) {
+    std::cout << "yices2: get_model()" << std::endl;
+  }
   d_internal->get_model(m);
 }
 
 void yices2::push() {
+  if (output::get_verbosity(std::cout) > 2) {
+    std::cout << "yices2: push()" << std::endl;
+  }
   d_internal->push();
 }
 
 void yices2::pop() {
+  if (output::get_verbosity(std::cout) > 2) {
+    std::cout << "yices2: pop()" << std::endl;
+  }
   d_internal->pop();
 }
 

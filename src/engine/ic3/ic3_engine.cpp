@@ -50,7 +50,7 @@ expr::term_ref ic3_engine::check_one_step_reachable(size_t k, expr::term_ref F) 
   smt::solver::result r = solver->check();
   switch (r) {
   case smt::solver::SAT: {
-    const std::vector<expr::term_ref>& state_vars = d_state_type->get_variables(system::state_type::STATE_CURRENT);
+    const std::vector<expr::term_ref>& state_vars = d_state_type->get_variables(system::state_type::STATE_NEXT);
     return solver->generalize(state_vars);
   }
   case smt::solver::UNSAT:
@@ -74,7 +74,7 @@ void ic3_engine::add_learnt(size_t k, expr::term_ref F) {
   // Ensure frame is setup
   ensure_frame(k);
   // Add to all frames from 0..k
-  for(size_t i = 1; i <= k; ++ i) {
+  for(size_t i = 0; i <= k; ++ i) {
     assert(d_frame_content[i].find(F) == d_frame_content[i].end());
     d_frame_content[i].insert(F);
     get_solver(i)->add(F);
@@ -118,6 +118,7 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   // Check that P holds in the initial state
   expr::term_ref P_not = tm().mk_term(expr::TERM_NOT, P);
   smt::solver* solver0 = get_solver(0);
+  solver0->push();
   solver0->add(P_not);
   smt::solver::result r = solver0->check();
   solver0->pop();
