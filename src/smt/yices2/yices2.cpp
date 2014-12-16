@@ -665,7 +665,11 @@ expr::term_ref yices2_internal::to_term(term_t t) {
         sum_children.push_back(c);
       }
     }
-    result = d_tm.mk_term(expr::TERM_ADD, sum_children);
+    if (size == 1) {
+      result = sum_children[0];
+    } else {
+      result = d_tm.mk_term(expr::TERM_ADD, sum_children);
+    }
     mpq_clear(c_y);
     break;
   }

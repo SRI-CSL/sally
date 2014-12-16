@@ -14,7 +14,7 @@
 //
 
 #ifdef NDEBUG
-#define TRACE(tag) false &&
+#define TRACE(tag) false && std::cerr
 #else
 #define TRACE(tag) sal2::output::get_trace(tag)
 #endif

@@ -79,8 +79,14 @@ expr::term_ref ic3_engine::check_inductive_at(size_t k, expr::term_ref F) {
 void ic3_engine::add_learnt(size_t k, expr::term_ref F) {
   // Ensure frame is setup
   ensure_frame(k);
+
+  // Formula is either
+  // * being pushed, so it's true up to k-1 and we're adding at k
+  // * newly learnt, so it's not known from 0..k
+  bool is_push = (k > 0 && d_frame_content[k-1].find(F) != d_frame_content[k-1].end());
+
   // Add to all frames from 0..k
-  for(size_t i = 0; i <= k; ++ i) {
+  for(size_t i = is_push ? k : 0; i <= k; ++ i) {
     assert(d_frame_content[i].find(F) == d_frame_content[i].end());
     d_frame_content[i].insert(F);
     get_solver(i)->add(F);
@@ -89,6 +95,7 @@ void ic3_engine::add_learnt(size_t k, expr::term_ref F) {
       get_solver(i-1)->add(F_next);
     }
   }
+
   // Add to induction obligations
   d_induction_obligations.push(obligation(k, F));
 }
@@ -148,14 +155,15 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 
     // Pick a formula to try and prove inductive, i.e. that F_k & P & T => P'
     obligation ind = d_induction_obligations.top();
+    d_induction_obligations.pop();
 
     // Check if inductive
+    TRACE("ic3") << "Checking inductive at " << ind.frame() << " for " << ind.formula() << std::endl;
     G = check_inductive_at(ind.frame(), ind.formula());
 
     // If inductive
     if (G.is_null()) {
-      // Proved, we can remove it
-      d_induction_obligations.pop();
+      TRACE("ic3") << "is inductive" << std::endl;
       // Valid, push forward
       add_learnt(ind.frame() + 1, ind.formula());
       // Check if we're done
@@ -165,6 +173,8 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
       // Go for the next obligation
       continue;
     }
+
+    TRACE("ic3") << "not inductive" << std::endl;
 
     // If we're checking frame 0, there is nothing to do
     if (ind.frame() == 0) {
@@ -216,7 +226,7 @@ const system::state_trace* ic3_engine::get_trace() {
 void ic3_engine::to_stream(std::ostream& out) const  {
   for (size_t k = 0; k < d_frame_content.size(); ++ k) {
     out << "Frame " << k << ":" << std::endl;
-    formula_set::const_iterator it = d_frame_content[k].end();
+    formula_set::const_iterator it = d_frame_content[k].begin();
     for (; it != d_frame_content[k].end(); ++ it) {
       out << *it << std::endl;
     }
