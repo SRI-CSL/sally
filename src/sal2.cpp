@@ -38,6 +38,14 @@ int main(int argc, char* argv[]) {
   output::set_verbosity(cout, opts.get_unsigned("verbosity"));
   output::set_verbosity(cerr, opts.get_unsigned("verbosity"));
 
+  // Set any trace tags if passed in
+  if (boost_opts.count("debug") > 0) {
+    vector<string>& tags = boost_opts.at("debug").as< vector<string> >();
+    for (size_t i = 0; i < tags.size(); ++ i) {
+      output::trace_tag_enable(tags[i]);
+    }
+  }
+
   // Typecheck by default
   bool type_check = true;
 
@@ -134,6 +142,9 @@ void parseOptions(int argc, char* argv[], variables_map& variables)
       ("help,h", "Prints this help message.")
       ("verbosity,v", value<unsigned>()->default_value(0), "Set the verbosity of the output.")
       ("input,i", value<vector<string> >()->required(), "A problem to solve.")
+#ifndef NDEBUG
+      ("debug,d", value<vector<string> >(), "Any tags to trace (only for debug builds).")
+#endif
       ("show-trace", "Show the counterexample trace if found.")
       ("parse-only", "Just parse, don't solve.")
       ("engine", value<string>(), get_engines_list().c_str())

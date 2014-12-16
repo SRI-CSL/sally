@@ -44,5 +44,20 @@ size_t get_verbosity(std::ostream& out);
 /** Set the verbosity */
 void set_verbosity(std::ostream& out, size_t verbosity);
 
+/** Set the trace stream */
+void set_trace_stream(std::ostream& out);
+
+/** Get the trace stream */
+std::ostream& get_trace_stream();
+
+/** Enable trace for given tag */
+void trace_tag_enable(std::string tag);
+
+/** True if the trace tag is enabled */
+bool trace_tag_is_enabled(std::string tag);
+
+/** Return the trace stream that outputs anything only if the tag has been enabled */
+std::ostream& get_trace(std::string tag);
+
 }
 }

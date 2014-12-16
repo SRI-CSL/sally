@@ -9,6 +9,7 @@
 
 #include "smt/factory.h"
 #include "system/state_trace.h"
+#include "utils/trace.h"
 
 #include <cassert>
 #include <sstream>
@@ -21,6 +22,11 @@ ic3_engine::ic3_engine(const system::context& ctx)
 : engine(ctx)
 , d_state_type(0)
 {
+}
+
+std::ostream& operator << (std::ostream& out, const ic3_engine& ic3) {
+  ic3.to_stream(out);
+  return out;
 }
 
 smt::solver* ic3_engine::get_solver(size_t k) {
@@ -138,9 +144,7 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 
     assert(!d_induction_obligations.empty());
 
-    if (output::get_verbosity(std::cout) > 2) {
-      to_stream(std::cout);
-    }
+    TRACE("ic3") << *this << std::endl;
 
     // Pick a formula to try and prove inductive, i.e. that F_k & P & T => P'
     obligation ind = d_induction_obligations.top();
