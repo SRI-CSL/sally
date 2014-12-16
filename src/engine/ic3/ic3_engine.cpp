@@ -100,15 +100,16 @@ void ic3_engine::ensure_frame(size_t k) {
   assert(d_solvers.size() == d_frame_content.size());
 }
 
-engine::result ic3_engine::query(const system::transition_system& ts, const system::state_formula* sf) {
+engine::result ic3_engine::query(const system::transition_system* ts, const system::state_formula* sf) {
 
   expr::term_ref G;
 
-  // Remember the state type
+  // Remember the input
   d_state_type = sf->get_state_type();
+  d_transition_system = ts;
 
   // The initial state
-  expr::term_ref I = ts.get_initial_states();
+  expr::term_ref I = ts->get_initial_states();
   add_learnt(0, I);
 
   // The property we're trying to prove
@@ -145,6 +146,8 @@ engine::result ic3_engine::query(const system::transition_system& ts, const syst
 
     // Check if inductive
     G = check_inductive_at(ind.frame(), ind.formula());
+
+    // If inductive
     if (G.is_null()) {
       // Proved, we can remove it
       d_induction_obligations.pop();
@@ -155,6 +158,11 @@ engine::result ic3_engine::query(const system::transition_system& ts, const syst
         return engine::VALID;
       }
       // Go for the next obligation
+      continue;
+    }
+
+    // If we're checking frame 0, there is nothing to do
+    if (ind.frame() == 0) {
       continue;
     }
 

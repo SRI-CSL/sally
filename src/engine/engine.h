@@ -54,7 +54,7 @@ public:
 
   /** Query the engine */
   virtual
-  result query(const system::transition_system& ts, const system::state_formula* sf) = 0;
+  result query(const system::transition_system* ts, const system::state_formula* sf) = 0;
 
   /** Get the counter-example trace, if previous query allows it */
   virtual

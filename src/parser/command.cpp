@@ -107,7 +107,7 @@ void query_command::run(system::context* ctx, engine* e) {
   // Get the transition system
   const system::transition_system* T = ctx->get_transition_system(d_system_id);
   // Check the formula
-  engine::result result = e->query(*T, d_query);
+  engine::result result = e->query(T, d_query);
   std::cout << result << std::endl;
   // If invalid, and asked to, show the trace
   if (result == engine::INVALID && ctx->get_options().has_option("show-trace")) {

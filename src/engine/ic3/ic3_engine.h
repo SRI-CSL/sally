@@ -114,7 +114,7 @@ public:
   ~ic3_engine();
 
   /** Query */
-  result query(const system::transition_system& ts, const system::state_formula* sf);
+  result query(const system::transition_system* ts, const system::state_formula* sf);
 
   /** Trace */
   const system::state_trace* get_trace();

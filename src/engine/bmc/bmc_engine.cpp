@@ -28,7 +28,7 @@ bmc_engine::~bmc_engine() {
   delete d_trace;
 }
 
-engine::result bmc_engine::query(const system::transition_system& ts, const system::state_formula* sf) {
+engine::result bmc_engine::query(const system::transition_system* ts, const system::state_formula* sf) {
 
   // Scope for push/pop on the solver
   smt::solver_scope scope(d_solver);
@@ -36,14 +36,14 @@ engine::result bmc_engine::query(const system::transition_system& ts, const syst
 
   // The trace we are building
   if (d_trace) { delete d_trace; }
-  d_trace = new system::state_trace(ts.get_state_type());
+  d_trace = new system::state_trace(ts->get_state_type());
 
   // Initial states
-  expr::term_ref initial_states = ts.get_initial_states();
+  expr::term_ref initial_states = ts->get_initial_states();
   d_solver->add(d_trace->get_state_formula(initial_states, 0));
 
   // Transition formula
-  expr::term_ref transition_formula = ts.get_transition_relation();
+  expr::term_ref transition_formula = ts->get_transition_relation();
 
   // The property
   expr::term_ref property = sf->get_formula();
