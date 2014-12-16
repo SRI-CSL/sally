@@ -19,6 +19,7 @@ namespace ic3 {
 
 ic3_engine::ic3_engine(const system::context& ctx)
 : engine(ctx)
+, d_state_type(0)
 {
 }
 
@@ -35,16 +36,20 @@ ic3_engine::~ic3_engine() {
   }
 }
 
-expr::term_ref ic3_engine::check_sat(size_t k, expr::term_ref F) {
+expr::term_ref ic3_engine::check_one_step_reachable(size_t k, expr::term_ref F) {
 
-  smt::solver* solver = get_solver(k);
-  smt::solver_scope scope(get_solver(k));
+  assert(k > 0);
 
-  if (!F.is_null()) {
-    scope.push();
-    solver->add(F);
-  }
+  // Get the solver
+  smt::solver* solver = get_solver(k-1);
+  smt::solver_scope scope(solver);
 
+  // Add the formula (moving
+  scope.push();
+  expr::term_ref F_next = d_state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, F);
+  solver->add(F_next);
+
+  // Figure out the result
   smt::solver::result r = solver->check();
   switch (r) {
   case smt::solver::SAT: {
@@ -63,15 +68,20 @@ expr::term_ref ic3_engine::check_sat(size_t k, expr::term_ref F) {
 
 expr::term_ref ic3_engine::check_inductive(size_t k, expr::term_ref F) {
   assert(!F.is_null());
-  expr::term_ref F_next = d_state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, F);
-  expr::term_ref F_next_not = tm().mk_term(expr::TERM_NOT, F_next);
-  return check_sat(k, F_next_not);
+  expr::term_ref F_not = tm().mk_term(expr::TERM_NOT, F);
+  return check_one_step_reachable(k+1, F_not);
 }
 
 void ic3_engine::add(size_t k, expr::term_ref F) {
   // Add to the frame
-  // Add to solver
+
+  // Add to solvers
   get_solver(k)->add(F);
+  if (k > 0) {
+    expr::term_ref F_next = d_state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, F);
+    get_solver(k-1)->add(F_next);
+  }
+
   // Add to induction obligations
   d_induction_obligations.push(obligation(k, F));
 }
@@ -85,6 +95,9 @@ engine::result ic3_engine::query(const system::transition_system& ts, const syst
 
   expr::term_ref G;
 
+  // Remember the state type
+  d_state_type = sf->get_state_type();
+
   // The initial state
   expr::term_ref I = ts.get_initial_states();
   add(0, I);
@@ -93,60 +106,73 @@ engine::result ic3_engine::query(const system::transition_system& ts, const syst
   expr::term_ref P = sf->get_formula();
 
   // Check that P holds in the initial state
-  expr::term_ref P_not = tm().mk_term(expr::TERM_BV_NOT, P);
-  G = check_sat(0, P_not);
-  if (!G.is_null()) {
+  expr::term_ref P_not = tm().mk_term(expr::TERM_NOT, P);
+  smt::solver* solver0 = get_solver(0);
+  solver0->add(P_not);
+  smt::solver::result r = solver0->check();
+  solver0->pop();
+  switch (r) {
+  case smt::solver::SAT:
     // Invalid, property is not valid
     return engine::INVALID;
-  } else {
-    // Add P to the initial state
+  case smt::solver::UNSAT:
+    // Valid, we continue with P
     add(0, P);
+    break;
+  default:
+    throw exception("Unknown SMT result.");
   }
 
   for (;;) {
 
+    assert(!d_induction_obligations.empty());
+    assert(d_reachability_obligations.empty());
+
     // Pick a formula to try and prove inductive, i.e. that F_k & P & T => P'
-    obligation io = d_induction_obligations.top();
-    size_t io_frame = io.get_frame();
-    expr::term_ref io_formula = io.get_formula();
+    obligation ind = d_induction_obligations.top();
 
     // Check if inductive
-    G = check_inductive(io_frame, io_formula);
+    G = check_inductive(ind.frame(), ind.formula());
     if (G.is_null()) {
-      // Valid, remove from obligations and push forward
+      // Proved, we can remove it
       d_induction_obligations.pop();
-      add(io_frame + 1, io_formula);
+      // Valid, push forward
+      add(ind.frame() + 1, ind.formula());
       // Check if we're done
-      if (frames_equal(io_frame, io_frame + 1)) {
+      if (frames_equal(ind.frame(), ind.frame() + 1)) {
           return engine::VALID;
       }
       // Continue with the next obligation
       continue;
     }
 
-    // The obligation not valid, try to extend to full counter-example
-    for (;;) {
+    // The induction not valid, try to extend to full counter-example
+    while (!d_reachability_obligations.empty()) {
 
       // Get the next satisfiability obligations
-      obligation so = d_sat_obligations.top();
-      size_t so_frame = so.get_frame();
-      expr::term_ref so_formula = so.get_formula();
+      obligation reach = d_reachability_obligations.top();
 
       // Check if the obligation is sat
-      G = check_sat(so_frame, so_formula);
+      G = check_one_step_reachable(reach.frame(), reach.formula());
       if (G.is_null()) {
-
-      }
-
-      // If this is a full counterexample
-      if (so_frame == 0) {
-        // If this was the property we just disproved, we're invalid
-        if (io_formula == P) {
-          return engine::INVALID;
+        // Proven, remove from obligations
+        d_reachability_obligations.pop();
+        // Add the negation of the obligation to known facts
+        add(reach.frame(), tm().mk_term(expr::TERM_NOT, reach.formula()));
+      } else {
+        // If this is a full counterexample
+        if (reach.frame() == 1) {
+          // If this was the property we just disproved, we're invalid
+          if (ind.formula() == P) {
+            return engine::INVALID;
+          }
+          break;
         }
       }
     }
 
+    // Clear reachability obligations, if any
+    d_reachability_obligations.clear();
   }
 
   return UNKNOWN;

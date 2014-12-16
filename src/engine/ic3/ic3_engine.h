@@ -36,12 +36,12 @@ public:
   : d_k(k), d_P(P) {}
 
   /** Get the frame */
-  size_t get_frame() const {
+  size_t frame() const {
     return d_k;
   }
 
   /** Get the formula */
-  expr::term_ref get_formula() const {
+  expr::term_ref formula() const {
     return d_P;
   }
 
@@ -73,12 +73,11 @@ class ic3_engine : public engine {
   smt::solver* get_solver(size_t k);
 
   /**
-   * Checks the formula for satisfiablity in k-th frame, returns generalization
-   * in k-th frame if satisfiable. F should be a formula in terms of state
-   * variables (k-th frame) and optionally (k+1-th frame) variables. The generalization
-   * will be in terms of current variables (k-th frame).
+   * Checks if the formula is reachable in one step at frame k > 0. F should be
+   * af ormula in terms of state variables. The generalization will be in terms
+   * of the state variables (k-1)-th frame.
    */
-  expr::term_ref check_sat(size_t k, expr::term_ref F);
+  expr::term_ref check_one_step_reachable(size_t k, expr::term_ref F);
 
   /**
    * Checks if the formula is inductive in k-th frame, returns counterexample
@@ -95,7 +94,7 @@ class ic3_engine : public engine {
   obligation_queue d_induction_obligations;
 
   /** Queue of safety obligations */
-  obligation_queue d_sat_obligations;
+  obligation_queue d_reachability_obligations;
 
   /** Returns true of frames i and j are equal */
   bool frames_equal(size_t i, size_t j) const;
