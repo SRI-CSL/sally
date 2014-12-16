@@ -20,8 +20,20 @@ state_type::state_type(expr::term_manager& tm, std::string id, expr::term_ref ty
 , d_id(id)
 , d_type(tm, type)
 {
+  // Create the state variables
   d_current_state = expr::term_ref_strong(tm, tm.mk_variable(id + "::" + to_string(STATE_CURRENT), type));
   d_next_state = expr::term_ref_strong(tm, tm.mk_variable(id + "::" + to_string(STATE_NEXT), type));
+
+  // Create the substitutino map
+  std::vector<expr::term_ref> current_vars;
+  std::vector<expr::term_ref> next_vars;
+  get_variables(STATE_CURRENT, current_vars);
+  get_variables(STATE_NEXT, next_vars);
+
+  for (size_t i = 0; i < current_vars.size(); ++ i) {
+    d_subst_current_next[current_vars[i]] = next_vars[i];
+    d_subst_next_current[next_vars[i]] = current_vars[i];
+  }
 }
 
 void state_type::use_namespace() const {
@@ -88,6 +100,18 @@ bool state_type::is_transition_formula(expr::term_ref f) const {
   d_tm.get_variables(f, f_variables);
   // State formula if only over state variables
   return std::includes(state_variables.begin(), state_variables.end(), f_variables.begin(), f_variables.end());
+}
+
+expr::term_ref state_type::change_formula_vars(var_class from, var_class to, expr::term_ref f) const {
+  assert(from != to);
+  if (from == STATE_CURRENT && to == STATE_NEXT) {
+    return tm().substitute(f, d_subst_current_next);
+  }
+  if (from == STATE_NEXT && to == STATE_CURRENT) {
+    return tm().substitute(f, d_subst_next_current);
+  }
+  // They are the same
+  return f;
 }
 
 }

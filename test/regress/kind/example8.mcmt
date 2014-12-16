@@ -9,7 +9,7 @@
 ;; One transition 
 (define-transition transition state_type
   ;; Implicit variables next, state of state_type
-  (= next.x (+ state.x 1))
+  (= next.x (- state.x))
 )
 
 ;; The system
@@ -21,3 +21,5 @@
 
 ;; Query (any state formula over state_type)
 (query T (>= x 0))
+
+

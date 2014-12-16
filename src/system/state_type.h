@@ -11,7 +11,7 @@
 #include <vector>
 #include <cassert>
 
-#include "expr/term.h"
+#include "expr/term_manager.h"
 
 namespace sal2 {
 namespace system {
@@ -69,6 +69,9 @@ public:
   /** Get the term manager for this type */
   expr::term_manager& tm() const { return d_tm; }
 
+  /** Transform the formula from class to another class */
+  expr::term_ref change_formula_vars(var_class from, var_class to, expr::term_ref f) const;
+
 private:
 
   /** The term manager */
@@ -86,6 +89,11 @@ private:
   /** The next state */
   expr::term_ref_strong d_next_state;
 
+  /** Substitution map for CURRENT -> NEXT */
+  expr::term_manager::substitution_map d_subst_current_next;
+
+  /** Substitution map for NEXT -> CURRENT */
+  expr::term_manager::substitution_map d_subst_next_current;
 };
 
 std::ostream& operator << (std::ostream& out, const state_type& st);

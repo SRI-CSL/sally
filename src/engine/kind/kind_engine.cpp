@@ -31,7 +31,7 @@ kind_engine::~kind_engine() {
   delete d_trace;
 }
 
-kind_engine::result kind_engine::query(const system::transition_system& ts, const system::state_formula* sf) {
+engine::result kind_engine::query(const system::transition_system& ts, const system::state_formula* sf) {
 
   /*
 

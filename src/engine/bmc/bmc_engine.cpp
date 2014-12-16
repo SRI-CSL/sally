@@ -28,7 +28,7 @@ bmc_engine::~bmc_engine() {
   delete d_trace;
 }
 
-bmc_engine::result bmc_engine::query(const system::transition_system& ts, const system::state_formula* sf) {
+engine::result bmc_engine::query(const system::transition_system& ts, const system::state_formula* sf) {
 
   // Scope for push/pop on the solver
   smt::solver_scope scope(d_solver);

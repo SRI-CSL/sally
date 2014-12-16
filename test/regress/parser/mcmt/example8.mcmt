@@ -9,7 +9,7 @@
 ;; One transition 
 (define-transition transition state_type
   ;; Implicit variables next, state of state_type
-  (= next.x (+ state.x 1))
+  (= next.x (- state.x))
 )
 
 ;; The system
