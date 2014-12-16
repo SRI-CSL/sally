@@ -22,23 +22,38 @@ namespace ic3 {
  * frame k. Or, we could be trying to prove P is inductive at frame k.
  */
 class obligation {
-  size_t k;
-  expr::term_ref P;
+  size_t d_k;
+  expr::term_ref d_P;
 public:
 
+  /** Empty obligation (for containers) */
+  obligation()
+  : d_k(0)
+  {}
+
   /** Construct the obligation */
-  obligation(size_T k, expr::term_ref P)
-  : k(k), P(P) {}
+  obligation(size_t k, expr::term_ref P)
+  : d_k(k), d_P(P) {}
+
+  /** Get the frame */
+  size_t get_frame() const {
+    return d_k;
+  }
+
+  /** Get the formula */
+  expr::term_ref get_formula() const {
+    return d_P;
+  }
 
   /** Compare for equality */
   bool operator == (const obligation& o) const {
-    return k == o.k && P = o.P;
+    return d_k == o.d_k && d_P == o.d_P;
   }
 
   /** Comparison for the queue, it's inverse because the queue pops the largest */
   bool operator < (const obligation& o) const {
-    if (k == o.k) return P > o.P;
-    return k > o.k;
+    if (d_k == o.d_k) return d_P > o.d_P;
+    return d_k > o.d_k;
   }
 };
 
@@ -48,17 +63,14 @@ typedef boost::heap::priority_queue<obligation> obligation_queue;
 
 class ic3_engine : public engine {
 
+  /** The state type */
+  const system::state_type* d_state_type;
+
   /** A solver per frame */
   std::vector<smt::solver*> d_solvers;
 
   /** Returns the solver for k-th frame */
   smt::solver* get_solver(size_t k);
-
-  /** State variables */
-  std::vector<expr::term_ref> d_state_variables;
-
-  /** Next variables */
-  std::vector<expr::term_ref> d_next_variables;
 
   /**
    * Checks the formula for satisfiablity in k-th frame, returns generalization
@@ -66,7 +78,15 @@ class ic3_engine : public engine {
    * variables (k-th frame) and optionally (k+1-th frame) variables. The generalization
    * will be in terms of current variables (k-th frame).
    */
-  expr::term_ref check(size_t k, expr::term_ref F);
+  expr::term_ref check_sat(size_t k, expr::term_ref F);
+
+  /**
+   * Checks if the formula is inductive in k-th frame, returns counterexample
+   * generalization in k-th frame if not. F should be a formula in terms of state
+   * variables (k-th frame). The generalization will be in terms of current
+   * variables (k-th frame).
+   */
+  expr::term_ref check_inductive(size_t k, expr::term_ref F);
 
   /** Add a formula to k-th frame. */
   void add(size_t k, expr::term_ref F);
@@ -74,23 +94,11 @@ class ic3_engine : public engine {
   /** Queue of induction obligations */
   obligation_queue d_induction_obligations;
 
-  /** Add an induction obligation for frame k */
-  void add_induction_obligation(size_t k, expr::term_ref f);
-
-  /** Get the top induction obligation */
-
-
-  /** Remove the top induction obligation */
-  void pop_induction_obligation();
-
   /** Queue of safety obligations */
-  obligation_queue d_satisfiablity_obligations;
+  obligation_queue d_sat_obligations;
 
-  /** Add a satisfiablity obligation for frame k */
-  void add_satisfiability_obligation(size_t k, expr::term_ref f);
-
-  /** Pop the next satisfiability obligation */
-  obligation pop_satisfiability_obligation() const;
+  /** Returns true of frames i and j are equal */
+  bool frames_equal(size_t i, size_t j) const;
 
 public:
 

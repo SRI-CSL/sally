@@ -35,7 +35,7 @@ ic3_engine::~ic3_engine() {
   }
 }
 
-expr::term_ref ic3_engine::check(size_t k, expr::term_ref F) {
+expr::term_ref ic3_engine::check_sat(size_t k, expr::term_ref F) {
 
   smt::solver* solver = get_solver(k);
   smt::solver_scope scope(get_solver(k));
@@ -47,8 +47,10 @@ expr::term_ref ic3_engine::check(size_t k, expr::term_ref F) {
 
   smt::solver::result r = solver->check();
   switch (r) {
-  case smt::solver::SAT:
-    return solver->generalize(d_next_variables);
+  case smt::solver::SAT: {
+    const std::vector<expr::term_ref>& state_vars = d_state_type->get_variables(system::state_type::STATE_CURRENT);
+    return solver->generalize(state_vars);
+  }
   case smt::solver::UNSAT:
     // Unsat, we return NULL
     return expr::term_ref();
@@ -59,9 +61,23 @@ expr::term_ref ic3_engine::check(size_t k, expr::term_ref F) {
   return expr::term_ref();
 }
 
+expr::term_ref ic3_engine::check_inductive(size_t k, expr::term_ref F) {
+  assert(!F.is_null());
+  expr::term_ref F_next = d_state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, F);
+  expr::term_ref F_next_not = tm().mk_term(expr::TERM_NOT, F_next);
+  return check_sat(k, F_next_not);
+}
+
 void ic3_engine::add(size_t k, expr::term_ref F) {
+  // Add to the frame
+  // Add to solver
   get_solver(k)->add(F);
-  add_induction_obligation(k, f);
+  // Add to induction obligations
+  d_induction_obligations.push(obligation(k, F));
+}
+
+bool ic3_engine::frames_equal(size_t i, size_t j) const {
+  return true;
 }
 
 
@@ -78,36 +94,56 @@ engine::result ic3_engine::query(const system::transition_system& ts, const syst
 
   // Check that P holds in the initial state
   expr::term_ref P_not = tm().mk_term(expr::TERM_BV_NOT, P);
-  G = check(0, P_not);
+  G = check_sat(0, P_not);
   if (!G.is_null()) {
+    // Invalid, property is not valid
     return engine::INVALID;
+  } else {
+    // Add P to the initial state
+    add(0, P);
   }
 
-  // Add P to the initial state
-  add(0, P);
-
   for (;;) {
-    // Major loop: Pick a formula to try and prove inductive, i.e.
-    // that F_k & P & T => P'
-    induction_obligation io = pop_induction_obligation();
-    G = check_inductive(io.k, io.P);
+
+    // Pick a formula to try and prove inductive, i.e. that F_k & P & T => P'
+    obligation io = d_induction_obligations.top();
+    size_t io_frame = io.get_frame();
+    expr::term_ref io_formula = io.get_formula();
+
+    // Check if inductive
+    G = check_inductive(io_frame, io_formula);
     if (G.is_null()) {
-      // Valid, push it forward
-      push_forward(o);
-      // Check if proven
-      if (frames_equal(o, o_next)) {
+      // Valid, remove from obligations and push forward
+      d_induction_obligations.pop();
+      add(io_frame + 1, io_formula);
+      // Check if we're done
+      if (frames_equal(io_frame, io_frame + 1)) {
           return engine::VALID;
       }
+      // Continue with the next obligation
       continue;
     }
 
     // The obligation not valid, try to extend to full counter-example
     for (;;) {
 
+      // Get the next satisfiability obligations
+      obligation so = d_sat_obligations.top();
+      size_t so_frame = so.get_frame();
+      expr::term_ref so_formula = so.get_formula();
 
-      // If this was the property we just disproved, we're invalid
-      if (io.P == P) {
-        return engine::INVALID;
+      // Check if the obligation is sat
+      G = check_sat(so_frame, so_formula);
+      if (G.is_null()) {
+
+      }
+
+      // If this is a full counterexample
+      if (so_frame == 0) {
+        // If this was the property we just disproved, we're invalid
+        if (io_formula == P) {
+          return engine::INVALID;
+        }
       }
     }
 

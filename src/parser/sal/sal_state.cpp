@@ -89,8 +89,7 @@ void sal_state::use_state_type(const system::state_type* st, system::state_type:
   }
 
   // Declare the variables
-  std::vector<expr::term_ref> vars;
-  st->get_variables(var_class, vars);
+  const std::vector<expr::term_ref>& vars = st->get_variables(var_class);
   for (size_t i = 0; i < vars.size(); ++ i) {
     const term& var_term = tm().term_of(vars[i]);
     std::string var_name = tm().get_variable_name(var_term);

@@ -24,15 +24,22 @@ state_type::state_type(expr::term_manager& tm, std::string id, expr::term_ref ty
   d_current_state = expr::term_ref_strong(tm, tm.mk_variable(id + "::" + to_string(STATE_CURRENT), type));
   d_next_state = expr::term_ref_strong(tm, tm.mk_variable(id + "::" + to_string(STATE_NEXT), type));
 
-  // Create the substitutino map
-  std::vector<expr::term_ref> current_vars;
-  std::vector<expr::term_ref> next_vars;
-  get_variables(STATE_CURRENT, current_vars);
-  get_variables(STATE_NEXT, next_vars);
+  // Get the variables
+  d_tm.get_variables(d_current_state, d_current_vars);
+  d_tm.get_variables(d_next_state, d_next_vars);
 
-  for (size_t i = 0; i < current_vars.size(); ++ i) {
-    d_subst_current_next[current_vars[i]] = next_vars[i];
-    d_subst_next_current[next_vars[i]] = current_vars[i];
+  // Remove the first one (the struct variable)
+  for (size_t i = 0; i + 1 < d_current_vars.size(); ++ i) {
+    d_current_vars[i] = d_current_vars[i+1];
+    d_next_vars[i] = d_next_vars[i+1];
+  }
+  d_current_vars.pop_back();
+  d_next_vars.pop_back();
+
+  // Make the substitution map
+  for (size_t i = 0; i < d_current_vars.size(); ++ i) {
+    d_subst_current_next[d_current_vars[i]] = d_next_vars[i];
+    d_subst_next_current[d_next_vars[i]] = d_current_vars[i];
   }
 }
 
@@ -75,8 +82,13 @@ std::ostream& operator << (std::ostream& out, const state_type& st) {
   return out;
 }
 
-void state_type::get_variables(var_class vc, std::vector<expr::term_ref>& out) const {
-  d_tm.get_variables(get_state(vc), out);
+const std::vector<expr::term_ref>& state_type::get_variables(var_class vc) const {
+  switch (vc) {
+  case STATE_CURRENT:
+    return d_current_vars;
+  case STATE_NEXT:
+    return d_next_vars;
+  }
 }
 
 bool state_type::is_state_formula(expr::term_ref f) const {

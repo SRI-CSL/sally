@@ -192,17 +192,15 @@ command* btor_state::finalize() const {
   system::state_type* state_type = new system::state_type(tm(), "state_type", state_type_ref);
   command* state_type_declare = new declare_state_type_command("state_type", state_type);
 
-  // Get the state variables (real vars start at 1)
-  std::vector<term_ref> current_vars;
-  std::vector<term_ref> next_vars;
-  state_type->get_variables(system::state_type::STATE_CURRENT, current_vars);
-  state_type->get_variables(system::state_type::STATE_NEXT, next_vars);
+  // Get the state variables
+  const std::vector<term_ref>& current_vars = state_type->get_variables(system::state_type::STATE_CURRENT);
+  const std::vector<term_ref>& next_vars = state_type->get_variables(system::state_type::STATE_NEXT);
 
   // Create the conversion table from btor vars to state and next vars
   term_manager::substitution_map btor_to_state_var;
   for (size_t i = 0; i < d_variables.size(); ++ i) {
     term_ref btor_var = get_term(d_variables[i]);
-    term_ref state_var = current_vars[i+1];
+    term_ref state_var = current_vars[i];
     btor_to_state_var[btor_var] = state_var;
   }
 
@@ -210,7 +208,7 @@ command* btor_state::finalize() const {
   std::vector<term_ref> init_children;
   for (size_t i = 0; i < d_variables.size(); ++ i) {
     if (is_register(d_variables[i])) {
-      term_ref state_var = current_vars[i+1];
+      term_ref state_var = current_vars[i];
       size_t size = tm().get_bitvector_size(state_var);
       term_ref zero = tm().mk_bitvector_constant(bitvector(size));
       term_ref eq = tm().mk_term(TERM_EQ, state_var, zero);
@@ -226,7 +224,7 @@ command* btor_state::finalize() const {
   for (size_t i = 0; i < d_variables.size(); ++ i) {
     size_t btor_var_index = d_variables[i];
     if (is_register(btor_var_index)) {
-      term_ref next_var = next_vars[i+1];
+      term_ref next_var = next_vars[i];
       term_ref next_value = get_next(btor_var_index);
       term_ref eq = tm().mk_term(TERM_EQ, next_var, next_value);
       transition_children.push_back(eq);

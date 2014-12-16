@@ -35,6 +35,7 @@ public:
   void to_stream(std::ostream& out) const;
 
   bool operator < (const term_ref& ref) const { return index() < ref.index(); }
+  bool operator > (const term_ref& ref) const { return index() > ref.index(); }
   bool operator == (const term_ref& ref) const { return index() == ref.index(); }
 };
 

@@ -58,7 +58,7 @@ public:
    * Get the variables of the type, the first one will be the struct variable,
    * followed by the struct fields in order of declared.
    */
-  void get_variables(var_class vc, std::vector<expr::term_ref>& out) const;
+  const std::vector<expr::term_ref>& get_variables(var_class vc) const;
 
   /** Check whether the given formula is a state formula for this type */
   bool is_state_formula(expr::term_ref f) const;
@@ -88,6 +88,12 @@ private:
 
   /** The next state */
   expr::term_ref_strong d_next_state;
+
+  /** State variables */
+  std::vector<expr::term_ref> d_current_vars;
+
+  /** Next state variables */
+  std::vector<expr::term_ref> d_next_vars;
 
   /** Substitution map for CURRENT -> NEXT */
   expr::term_manager::substitution_map d_subst_current_next;
