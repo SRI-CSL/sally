@@ -12,6 +12,7 @@
 
 #include <vector>
 #include <boost/heap/priority_queue.hpp>
+#include <iosfwd>
 
 namespace sal2 {
 namespace ic3 {
@@ -66,6 +67,9 @@ class ic3_engine : public engine {
   /** The state type */
   const system::state_type* d_state_type;
 
+  /** The transition system */
+  const system::transition_system* d_transition_system;
+
   /** A solver per frame */
   std::vector<smt::solver*> d_solvers;
 
@@ -74,7 +78,7 @@ class ic3_engine : public engine {
 
   /**
    * Checks if the formula is reachable in one step at frame k > 0. F should be
-   * af ormula in terms of state variables. The generalization will be in terms
+   * a formula in terms of state variables. The generalization will be in terms
    * of the state variables (k-1)-th frame.
    */
   expr::term_ref check_one_step_reachable(size_t k, expr::term_ref F);
@@ -85,19 +89,24 @@ class ic3_engine : public engine {
    * variables (k-th frame). The generalization will be in terms of current
    * variables (k-th frame).
    */
-  expr::term_ref check_inductive(size_t k, expr::term_ref F);
+  expr::term_ref check_inductive_at(size_t k, expr::term_ref F);
 
-  /** Add a formula to k-th frame. */
-  void add(size_t k, expr::term_ref F);
+  /**
+   * Add a newly learnt formula. The formula will be added to
+   * frames 0, ..., k, and additionally added to induction obligations.
+   */
+  void add_learnt(size_t k, expr::term_ref F);
 
   /** Queue of induction obligations */
   obligation_queue d_induction_obligations;
 
-  /** Queue of safety obligations */
-  obligation_queue d_reachability_obligations;
+  typedef std::set<expr::term_ref> formula_set;
 
-  /** Returns true of frames i and j are equal */
-  bool frames_equal(size_t i, size_t j) const;
+  /** Set of facts valid per frame */
+  std::vector<formula_set> d_frame_content;
+
+  /** Make sure all frame content is ready */
+  void ensure_frame(size_t k);
 
 public:
 
@@ -109,6 +118,9 @@ public:
 
   /** Trace */
   const system::state_trace* get_trace();
+
+  /** Output the state of the system to the stream */
+  void to_stream(std::ostream& out) const;
 
 };
 
