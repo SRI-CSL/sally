@@ -550,7 +550,7 @@ expr::bitvector yices_bv_to_bitvector(size_t size, int32_t* bits) {
   char* bits_str = new char[size + 1];
   bits_str[size] = 0;
   for (size_t i = 0; i < size; ++ i) {
-    bits_str[i] = bits[size - i] ? '1' : '0';
+    bits_str[i] = bits[size-i-1] ? '1' : '0';
   }
   expr::bitvector bv(bits_str);
   delete bits_str;

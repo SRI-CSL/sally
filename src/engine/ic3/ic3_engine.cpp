@@ -103,6 +103,9 @@ void ic3_engine::add_learnt(size_t k, expr::term_ref F) {
 }
 
 void ic3_engine::ensure_frame(size_t k) {
+  if (d_solvers.size() <= k && output::get_verbosity(std::cout) > 0) {
+    std::cout << "ic3: Extending trace to " << k << std::endl;
+  }
   while (d_solvers.size() <= k) {
     // Make the solver
     smt::solver* solver = smt::factory::mk_default_solver(tm(), ctx().get_options());
