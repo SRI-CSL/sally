@@ -237,7 +237,7 @@ engine::result ic3_engine::search(expr::term_ref P) {
 
     // If we discharged all the obligations, let's re-check the induction
     if (!reachable) {
-      d_induction_obligations.push(obligation(ind.frame(), ind.formula(), ind.weight()+1));
+      d_induction_obligations.push(ind);
     } else {
       if (ind.formula() == P) {
         return engine::INVALID;
