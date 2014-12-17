@@ -25,16 +25,12 @@ namespace ic3 {
 class obligation {
   size_t d_k;
   expr::term_ref d_P;
+  int d_weight;
 public:
 
-  /** Empty obligation (for containers) */
-  obligation()
-  : d_k(0)
-  {}
-
   /** Construct the obligation */
-  obligation(size_t k, expr::term_ref P)
-  : d_k(k), d_P(P) {}
+  obligation(size_t k, expr::term_ref P, int weight)
+  : d_k(k), d_P(P), d_weight(weight) {}
 
   /** Get the frame */
   size_t frame() const {
@@ -46,21 +42,23 @@ public:
     return d_P;
   }
 
+  int weight() const {
+    return d_weight;
+  }
+
   /** Compare for equality */
   bool operator == (const obligation& o) const {
     return d_k == o.d_k && d_P == o.d_P;
   }
+};
 
-  /** Comparison for the queue, it's inverse because the queue pops the largest */
-  bool operator < (const obligation& o) const {
-    if (d_k == o.d_k) return d_P > o.d_P;
-    return d_k > o.d_k;
-  }
+/** Order on the induction obligations */
+struct obligation_compare_induction {
+  bool operator () (const obligation& o1, const obligation& o2) const;
 };
 
 /** Priority queue for obligations */
-typedef boost::heap::priority_queue<obligation> obligation_queue;
-
+typedef boost::heap::priority_queue<obligation, boost::heap::compare<obligation_compare_induction> > induction_obligation_queue;
 
 class ic3_engine : public engine {
 
@@ -95,18 +93,33 @@ class ic3_engine : public engine {
    * Add a newly learnt formula. The formula will be added to
    * frames 0, ..., k, and additionally added to induction obligations.
    */
-  void add_learnt(size_t k, expr::term_ref F);
+  void add_learnt(size_t k, expr::term_ref F, int weight);
 
   /** Queue of induction obligations */
-  obligation_queue d_induction_obligations;
+  induction_obligation_queue d_induction_obligations;
 
   typedef std::set<expr::term_ref> formula_set;
 
   /** Set of facts valid per frame */
   std::vector<formula_set> d_frame_content;
 
+  /** Check if the frame contains the fiven formula */
+  bool frame_contains(size_t k, expr::term_ref f);
+
   /** Make sure all frame content is ready */
   void ensure_frame(size_t k);
+
+  /** Max number of frames */
+  unsigned d_max_frames;
+
+  /** Max number of facts */
+  unsigned d_max_frame_size;
+
+  /** Check if f is reachable at k */
+  bool check_reachable(size_t k, expr::term_ref f, int weight);
+
+  /** The main loop */
+  result search(expr::term_ref P);
 
 public:
 
