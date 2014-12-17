@@ -17,6 +17,11 @@ namespace ic3 {
 struct ic3_engine_info {
 
   static void setup_options(boost::program_options::options_description& options) {
+    using namespace boost::program_options;
+    options.add_options()
+        ("ic3-max-frames", value<unsigned>()->default_value(10), "Maximal number of frames.")
+        ("ic3-max-frame-size", value<unsigned>()->default_value(50), "Maximal number of facts per frame.")
+        ;
   }
 
   static std::string get_id() {

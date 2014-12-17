@@ -88,6 +88,9 @@ const std::vector<expr::term_ref>& state_type::get_variables(var_class vc) const
     return d_current_vars;
   case STATE_NEXT:
     return d_next_vars;
+  default:
+    assert(false);
+    return d_current_vars;
   }
 }
 

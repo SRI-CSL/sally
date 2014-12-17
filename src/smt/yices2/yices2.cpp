@@ -585,6 +585,7 @@ expr::term_ref yices2_internal::to_term(term_t t) {
     expr::rational r(q);
     result = d_tm.mk_rational_constant(r);
     mpq_clear(q);
+    break;
   }
   case YICES_BV_CONSTANT: {
     size_t size = yices_term_bitsize(t);

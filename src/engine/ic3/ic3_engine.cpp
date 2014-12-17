@@ -21,6 +21,7 @@ namespace ic3 {
 ic3_engine::ic3_engine(const system::context& ctx)
 : engine(ctx)
 , d_state_type(0)
+, d_transition_system(0)
 {
 }
 
@@ -77,6 +78,7 @@ expr::term_ref ic3_engine::check_inductive_at(size_t k, expr::term_ref F) {
 }
 
 void ic3_engine::add_learnt(size_t k, expr::term_ref F) {
+
   // Ensure frame is setup
   ensure_frame(k);
 
@@ -121,6 +123,10 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   d_state_type = sf->get_state_type();
   d_transition_system = ts;
 
+  // Options
+  unsigned max_frames = ctx().get_options().get_unsigned("ic3-max-frames");
+  unsigned max_frame_size = ctx().get_options().get_unsigned("ic3-max-frame-size");
+
   // The initial state
   expr::term_ref I = ts->get_initial_states();
   add_learnt(0, I);
@@ -151,14 +157,17 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 
     assert(!d_induction_obligations.empty());
 
-    TRACE("ic3") << *this << std::endl;
+    if (d_frame_content.size() > max_frames || d_frame_content[0].size() > max_frame_size) {
+      return UNKNOWN;
+    }
 
     // Pick a formula to try and prove inductive, i.e. that F_k & P & T => P'
     obligation ind = d_induction_obligations.top();
     d_induction_obligations.pop();
 
     // Check if inductive
-    TRACE("ic3") << "Checking inductive at " << ind.frame() << " for " << ind.formula() << std::endl;
+    TRACE("ic3") << "IC3: Learnt facts: " << d_frame_content[0].size() << std::endl;
+    TRACE("ic3") << "IC3: Checking inductive at " << ind.frame() << " for " << ind.formula() << std::endl;
     G = check_inductive_at(ind.frame(), ind.formula());
 
     // If inductive
@@ -214,6 +223,9 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
         }
       }
     }
+
+    // If we discharged all the obligations, let's re-check the induction
+    d_induction_obligations.push(obligation(ind.frame(), ind.formula()));
   }
 
   return UNKNOWN;
