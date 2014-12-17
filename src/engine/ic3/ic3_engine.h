@@ -62,11 +62,13 @@ typedef boost::heap::priority_queue<obligation, boost::heap::compare<obligation_
 
 class ic3_engine : public engine {
 
-  /** The state type */
-  const system::state_type* d_state_type;
+  typedef std::set<expr::term_ref> formula_set;
 
   /** The transition system */
   const system::transition_system* d_transition_system;
+
+  /** The property we're trying to prove */
+  const system::state_formula* d_property;
 
   /** A solver per frame */
   std::vector<smt::solver*> d_solvers;
@@ -98,8 +100,6 @@ class ic3_engine : public engine {
   /** Queue of induction obligations */
   induction_obligation_queue d_induction_obligations;
 
-  typedef std::set<expr::term_ref> formula_set;
-
   /** Set of facts valid per frame */
   std::vector<formula_set> d_frame_content;
 
@@ -115,11 +115,11 @@ class ic3_engine : public engine {
   /** Max number of facts */
   unsigned d_max_frame_size;
 
-  /** Check if f is reachable at k */
-  bool check_reachable(size_t k, expr::term_ref f, int weight);
+  /** Check if f is holds at k (added if holds) */
+  bool check_valid_and_add(size_t k, expr::term_ref f, int weight);
 
-  /** The main loop */
-  result search(expr::term_ref P);
+  /** Check if f is reachable at k (negation added if not reachable) */
+  bool check_reachable_and_add(size_t k, expr::term_ref f, int weight);
 
 public:
 

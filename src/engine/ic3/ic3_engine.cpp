@@ -44,7 +44,6 @@ typedef boost::heap::priority_queue<obligation, boost::heap::compare<obligation_
 
 ic3_engine::ic3_engine(const system::context& ctx)
 : engine(ctx)
-, d_state_type(0)
 , d_transition_system(0)
 , d_max_frames(0)
 , d_max_frame_size(0)
@@ -70,20 +69,23 @@ ic3_engine::~ic3_engine() {
 expr::term_ref ic3_engine::check_one_step_reachable(size_t k, expr::term_ref F) {
   assert(k > 0);
 
+  // The state type
+  const system::state_type* state_type = d_transition_system->get_state_type();
+
   // Get the solver of the previous frame
   smt::solver* solver = get_solver(k-1);
   smt::solver_scope scope(solver);
 
   // Add the formula (moving current -> next)
   scope.push();
-  expr::term_ref F_next = d_state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, F);
+  expr::term_ref F_next = state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, F);
   solver->add(F_next);
 
   // Figure out the result
   smt::solver::result r = solver->check();
   switch (r) {
   case smt::solver::SAT: {
-    const std::vector<expr::term_ref>& state_vars = d_state_type->get_variables(system::state_type::STATE_NEXT);
+    const std::vector<expr::term_ref>& state_vars = state_type->get_variables(system::state_type::STATE_NEXT);
     return solver->generalize(state_vars);
   }
   case smt::solver::UNSAT:
@@ -121,6 +123,8 @@ expr::term_ref ic3_engine::check_inductive_at(size_t k, expr::term_ref F) {
 void ic3_engine::add_learnt(size_t k, expr::term_ref F, int weight) {
   // Ensure frame is setup
   ensure_frame(k);
+  // The state type
+  const system::state_type* state_type = d_transition_system->get_state_type();
   // Add to all frames from 0..k
   int i = k;
   for(; i >= 0; -- i) {
@@ -130,7 +134,7 @@ void ic3_engine::add_learnt(size_t k, expr::term_ref F, int weight) {
     d_frame_content[i].insert(F);
     get_solver(i)->add(F);
     if (i > 0) {
-      expr::term_ref F_next = d_state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, F);
+      expr::term_ref F_next = state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, F);
       get_solver(i-1)->add(F_next);
     }
   }
@@ -159,7 +163,7 @@ bool ic3_engine::frame_contains(size_t k, expr::term_ref f) {
   return d_frame_content[k].find(f) != d_frame_content[k].end();
 }
 
-bool ic3_engine::check_reachable(size_t k, expr::term_ref f, int weight) {
+bool ic3_engine::check_reachable_and_add(size_t k, expr::term_ref f, int weight) {
 
   if (output::get_verbosity(std::cout) > 0) {
      std::cout << "ic3: checking reachability" << std::endl;
@@ -186,7 +190,7 @@ bool ic3_engine::check_reachable(size_t k, expr::term_ref f, int weight) {
       // Proven, remove from obligations
       reachability_obligations.pop();
       // Add the negation of the obligation to known facts
-      add_learnt(reach.frame(), tm().mk_term(expr::TERM_NOT, reach.formula()), weight);
+      add_learnt(reach.frame(), tm().mk_term(expr::TERM_NOT, reach.formula()), weight + (k - reach.frame()));
     } else {
       // New obligation to reach the counterexample
       reachability_obligations.push(obligation(reach.frame()-1, G, 0));
@@ -201,7 +205,53 @@ bool ic3_engine::check_reachable(size_t k, expr::term_ref f, int weight) {
   return false;
 }
 
-engine::result ic3_engine::search(expr::term_ref P) {
+bool ic3_engine::check_valid_and_add(size_t k, expr::term_ref f, int weight) {
+
+  if (output::get_verbosity(std::cout) > 0) {
+     std::cout << "ic3: checking validity" << std::endl;
+  }
+
+  ensure_frame(k);
+
+  expr::term_ref f_not = tm().mk_term(expr::TERM_NOT, f);
+  smt::solver* solver = get_solver(k);
+  solver->push();
+  solver->add(f_not);
+  smt::solver::result r = solver->check();
+  solver->pop();
+  switch (r) {
+  case smt::solver::SAT:
+    // Invalid, property is not valid
+    return false;
+  case smt::solver::UNSAT:
+    // Valid, we continue with P
+    add_learnt(0, f, weight);
+    return true;
+  default:
+    throw exception("Unknown SMT result.");
+  }
+}
+
+engine::result ic3_engine::query(const system::transition_system* ts, const system::state_formula* sf) {
+
+  // Remember the input
+  d_transition_system = ts;
+  d_property = sf;
+
+  // Options
+  d_max_frames = ctx().get_options().get_unsigned("ic3-max-frames");
+  d_max_frame_size = ctx().get_options().get_unsigned("ic3-max-frame-size");
+
+  // Add the initial state
+  expr::term_ref I = d_transition_system->get_initial_states();
+  add_learnt(0, I, 0);
+
+  // Add the property we're trying to prove
+  expr::term_ref P = d_property->get_formula();
+  bool P_valid = check_valid_and_add(0, P, 0);
+  if (!P_valid) {
+    return engine::INVALID;
+  }
 
   // Search while we have something to do
   while (!d_induction_obligations.empty() && d_frame_content[0].size() <= d_max_frame_size) {
@@ -233,13 +283,13 @@ engine::result ic3_engine::search(expr::term_ref P) {
     }
 
      // Check if G is reachable
-    bool reachable = check_reachable(ind.frame(), G, ind.weight()+1);
+    bool reachable = check_reachable_and_add(ind.frame(), G, ind.weight()+1);
 
     // If we discharged all the obligations, let's re-check the induction
     if (!reachable) {
       d_induction_obligations.push(ind);
     } else {
-      if (ind.formula() == P) {
+      if (ind.formula() == d_property->get_formula()) {
         return engine::INVALID;
       }
     }
@@ -247,46 +297,6 @@ engine::result ic3_engine::search(expr::term_ref P) {
 
   // Didn't prove or disprove, so unknown
   return engine::UNKNOWN;
-}
-
-engine::result ic3_engine::query(const system::transition_system* ts, const system::state_formula* sf) {
-
-  // Remember the input
-  d_state_type = sf->get_state_type();
-  d_transition_system = ts;
-
-  // Options
-  d_max_frames = ctx().get_options().get_unsigned("ic3-max-frames");
-  d_max_frame_size = ctx().get_options().get_unsigned("ic3-max-frame-size");
-
-  // The initial state
-  expr::term_ref I = ts->get_initial_states();
-  add_learnt(0, I, 0);
-
-  // The property we're trying to prove
-  expr::term_ref P = sf->get_formula();
-
-  // Check that P holds in the initial state
-  expr::term_ref P_not = tm().mk_term(expr::TERM_NOT, P);
-  smt::solver* solver0 = get_solver(0);
-  solver0->push();
-  solver0->add(P_not);
-  smt::solver::result r = solver0->check();
-  solver0->pop();
-  switch (r) {
-  case smt::solver::SAT:
-    // Invalid, property is not valid
-    return engine::INVALID;
-  case smt::solver::UNSAT:
-    // Valid, we continue with P
-    add_learnt(0, P, 0);
-    break;
-  default:
-    throw exception("Unknown SMT result.");
-  }
-
-  // Do the search
-  return search(P);
 }
 
 const system::state_trace* ic3_engine::get_trace() {
