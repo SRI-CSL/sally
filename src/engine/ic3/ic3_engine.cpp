@@ -123,12 +123,12 @@ expr::term_ref ic3_engine::check_inductive_at(size_t k, expr::term_ref F) {
 void ic3_engine::add_learnt(size_t k, expr::term_ref F, int weight) {
   // Ensure frame is setup
   ensure_frame(k);
+  assert(!frame_contains(k, F));
   // The state type
   const system::state_type* state_type = d_transition_system->get_state_type();
   // Add to all frames from 0..k
-  int i = k;
-  for(; i >= 0; -- i) {
-    if (d_frame_content[i].find(F) != d_frame_content[i].end()) {
+  for(int i = k; i >= 0; -- i) {
+    if (frame_contains(i, F)) {
       break;
     }
     d_frame_content[i].insert(F);
@@ -244,7 +244,7 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 
   // Add the initial state
   expr::term_ref I = d_transition_system->get_initial_states();
-  add_learnt(0, I, 0);
+  add_learnt(0, I, 1);
 
   // Add the property we're trying to prove
   expr::term_ref P = d_property->get_formula();
