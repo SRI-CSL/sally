@@ -19,13 +19,14 @@
 namespace sal2 {
 namespace ic3 {
 
-/** Lowest weight first, then, lowest frame */
 bool obligation_compare_induction::operator () (const obligation& o1, const obligation& o2) const {
-  if (o1.weight() != o2.weight()) {
-    return o1.weight() > o2.weight();
-  }
+  // Smaller frame wins
   if (o1.frame() != o2.frame()) {
     return o1.frame() > o2.frame();
+  }
+  // Lower weight wins
+  if (o1.weight() != o2.weight()) {
+    return o1.weight() > o2.weight();
   }
   return o1.formula() > o2.formula();
 }
@@ -103,6 +104,9 @@ void ic3_engine::add_inductive_at(size_t k, expr::term_ref F, int weight) {
   ensure_frame(k);
   // The state type
   const system::state_type* state_type = d_transition_system->get_state_type();
+
+  TRACE("ic3") << "ic3: adding at " << k << ": " << F << std::endl;
+
   // Add to all frames from 0..k
   int i = k;
   for(; i >= 0; -- i) {
@@ -220,7 +224,9 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, int weight) {
   ensure_frame(k);
   ensure_frame(k+1);
 
-  std::vector<obligation> induction_assumptions;
+  std::vector<expr::term_ref> induction_assumptions;
+
+  TRACE("ic3") << "ic3: pushing at " << k << ":" << f << std::endl;
 
   // Push the solvers
   push_solvers();
@@ -247,7 +253,7 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, int weight) {
     } else {
       expr::term_ref learnt = tm().mk_term(expr::TERM_NOT, G);
       get_solver(k)->add(learnt);
-      induction_assumptions.push_back(obligation(k, learnt, weight + 1));
+      induction_assumptions.push_back(learnt);
     }
   }
 
@@ -256,11 +262,11 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, int weight) {
 
   // If inductive, add the learnt and all the needed formulas
   if (inductive) {
+    TRACE("ic3") << "ic3: proved at " << k << " with " << induction_assumptions.size() << " assumptions" << std::endl;
     // Add the thing we learnt
     add_inductive_at(k+1, f, weight+1);
     for (size_t i = 0; i < induction_assumptions.size(); ++ i) {
-      obligation assumption = induction_assumptions[i];
-      add_inductive_at(assumption.frame(), assumption.formula(), assumption.weight());
+      add_inductive_at(k, induction_assumptions[i], weight+1);
     }
   }
 
@@ -295,21 +301,21 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
     obligation ind = d_induction_obligations.top();
     d_induction_obligations.pop();
 
-    // Check if already shown in the next frame
-    if (frame_contains(ind.frame()+1, ind.formula())) {
-      continue;
-    }
+    assert(!frame_contains(ind.frame()+1, ind.formula()));
 
     /** Push the formula forward if it's inductive at the fram */
     bool is_inductive = push_if_inductive(ind.frame(), ind.formula(), ind.weight());
     if (!is_inductive) {
-      // Not inductive, if P then we have a conterexample
+      // Not inductive, if P then we have a counterexample
       if (ind.formula() == P) {
         return engine::INVALID;
       }
     } else {
       // Inductive, if frames equal, we have a proofs
       if (d_frame_content[ind.frame()].size() == d_frame_content[ind.frame()+1].size()) {
+        if (output::get_verbosity(std::cout) > 1) {
+          print_frames(std::cout);
+        }
         return engine::VALID;
       }
     }
@@ -357,6 +363,19 @@ void ic3_engine::pop_solvers() {
   d_solvers_modified_per_push.pop_back();
 }
 
+void ic3_engine::print_frames(std::ostream& out) const {
+  for (size_t k = 0; k < d_frame_content.size(); ++ k) {
+    print_frame(k, out);
+  }
+}
+
+void ic3_engine::print_frame(size_t k, std::ostream& out) const {
+  out << "ic3: frame " << k << ": " << std::endl;
+  formula_set::const_iterator it = d_frame_content[k].begin();
+  for (; it != d_frame_content[k].end(); ++ it) {
+    out << *it << std::endl;
+  }
+}
 
 }
 }

@@ -134,6 +134,12 @@ class ic3_engine : public engine {
   /** Pop the solvers modified since push */
   void pop_solvers();
 
+  /** Print the frame content */
+  void print_frame(size_t k, std::ostream& out) const;
+
+  /** Print all frames */
+  void print_frames(std::ostream& out) const;
+
 public:
 
   ic3_engine(const system::context& ctx);
