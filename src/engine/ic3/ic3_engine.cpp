@@ -88,17 +88,12 @@ expr::term_ref ic3_engine::check_inductive_at(size_t k, expr::term_ref F) {
   assert(d_frame_content[k].find(F) != d_frame_content[k].end());
   assert(d_frame_content[k+1].find(F) != d_frame_content[k].end());
 
-  if (output::get_verbosity(std::cout) > 0) {
-    std::cout << "ic3: Checking induction at " << k << " (" << d_induction_obligations.size() << " left)" << std::endl;
-  }
   TRACE("ic3") << "ic3: Checking inductive at " << k << " for " << F << std::endl;
 
   expr::term_ref F_not = tm().mk_term(expr::TERM_NOT, F);
   expr::term_ref result = check_one_step_reachable(k+1, F_not);
 
-  if (result.is_null() && output::get_verbosity(std::cout) > 0) {
-    std::cout << "ic3: inductive directly" << std::endl;
-  }
+  TRACE("ic3") << "ic3: " << (result.is_null() ? "inductive" : "not inductive") << std::endl;
 
   return result;
 }
@@ -227,7 +222,6 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, int weight) {
 
   std::vector<obligation> induction_assumptions;
 
-
   // Push the solvers
   push_solvers();
 
@@ -264,8 +258,8 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, int weight) {
   if (inductive) {
     // Add the thing we learnt
     add_inductive_at(k+1, f, weight+1);
-    for (size_t i = 0; induction_assumptions.size(); ++ i) {
-      const obligation& assumption = induction_assumptions[i];
+    for (size_t i = 0; i < induction_assumptions.size(); ++ i) {
+      obligation assumption = induction_assumptions[i];
       add_inductive_at(assumption.frame(), assumption.formula(), assumption.weight());
     }
   }
