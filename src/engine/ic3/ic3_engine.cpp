@@ -11,6 +11,7 @@
 #include "system/state_trace.h"
 #include "utils/trace.h"
 
+#include <stack>
 #include <cassert>
 #include <sstream>
 #include <iostream>
@@ -29,36 +30,17 @@ bool obligation_compare_induction::operator () (const obligation& o1, const obli
   return o1.formula() > o2.formula();
 }
 
-/** Order on the reachability obligations */
-struct obligation_compare_reachability {
-  bool operator () (const obligation& o1, const obligation& o2) const {
-    if (o1.frame() == o2.frame()) {
-      return o1.formula() > o2.formula();
-    }
-    return o1.frame() > o2.frame();
-  }
-};
-
-/** Priority queue for reachability obligations */
-typedef boost::heap::priority_queue<obligation, boost::heap::compare<obligation_compare_reachability> > reachability_obligation_queue;
-
 ic3_engine::ic3_engine(const system::context& ctx)
 : engine(ctx)
 , d_transition_system(0)
 , d_property(0)
 , d_max_frames(0)
 , d_max_frame_size(0)
-, d_in_push(false)
 {}
 
 std::ostream& operator << (std::ostream& out, const ic3_engine& ic3) {
   ic3.to_stream(out);
   return out;
-}
-
-smt::solver* ic3_engine::get_solver(size_t k) {
-  ensure_frame(k);
-  return d_solvers[k];
 }
 
 ic3_engine::~ic3_engine() {
@@ -121,7 +103,7 @@ expr::term_ref ic3_engine::check_inductive_at(size_t k, expr::term_ref F) {
   return result;
 }
 
-void ic3_engine::add_learnt(size_t k, expr::term_ref F, int weight) {
+void ic3_engine::add_inductive_at(size_t k, expr::term_ref F, int weight) {
   // Ensure frame is setup
   ensure_frame(k);
   // The state type
@@ -164,26 +146,29 @@ bool ic3_engine::frame_contains(size_t k, expr::term_ref f) {
   return d_frame_content[k].find(f) != d_frame_content[k].end();
 }
 
-bool ic3_engine::check_reachable_and_add(size_t k, expr::term_ref f, int weight) {
+bool ic3_engine::check_reachable(size_t k, expr::term_ref f) {
 
-  if (output::get_verbosity(std::cout) > 0) {
-     std::cout << "ic3: checking reachability" << std::endl;
-   }
+  TRACE("ic3") << "ic3: checking reachability at " << k << std::endl;
+
+  // Push the solvers
+  push_solvers();
 
   // Queue of reachability obligations
-  reachability_obligation_queue reachability_obligations;
+  std::stack<obligation> reachability_obligations;
   reachability_obligations.push(obligation(k, f, 0));
+
+  // We're not reachable, if we hit 0 we set it to true
+  bool reachable = false;
 
   // The induction not valid, try to extend to full counter-example
   while (!reachability_obligations.empty()) {
     // Get the next reachability obligations
     obligation reach = reachability_obligations.top();
-    // If we're at 0 frame, we're reachable
+    // If we're at 0 frame, we're reachable anything passed in is consistent
+    // part of the abstraction
     if (reach.frame() == 0) {
-      if (output::get_verbosity(std::cout) > 0) {
-        std::cout << "ic3: reachable" << std::endl;
-      }
-      return true;
+      reachable = true;
+      break;
     }
     // Check if the obligation is reachable
     expr::term_ref G = check_one_step_reachable(reach.frame(), reach.formula());
@@ -191,19 +176,21 @@ bool ic3_engine::check_reachable_and_add(size_t k, expr::term_ref f, int weight)
       // Proven, remove from obligations
       reachability_obligations.pop();
       // Add the negation of the obligation to known facts
-      add_learnt(reach.frame(), tm().mk_term(expr::TERM_NOT, reach.formula()), weight + (k - reach.frame()));
+      expr::term_ref learnt = tm().mk_term(expr::TERM_NOT, reach.formula());
+      get_solver(reach.frame())->add(learnt);
     } else {
       // New obligation to reach the counterexample
       reachability_obligations.push(obligation(reach.frame()-1, G, 0));
     }
   }
 
-  if (output::get_verbosity(std::cout) > 0) {
-    std::cout << "ic3: not reachable" << std::endl;
-  }
+  // Pop the solvers
+  pop_solvers();
+
+  TRACE("ic3") << "ic3: " << (reachable ? "reachable" : "not reachable") << std::endl;
 
   // All discharged, so it's not reachable
-  return false;
+  return reachable;
 }
 
 bool ic3_engine::check_valid_and_add(size_t k, expr::term_ref f, int weight) {
@@ -226,7 +213,7 @@ bool ic3_engine::check_valid_and_add(size_t k, expr::term_ref f, int weight) {
     return false;
   case smt::solver::UNSAT:
     // Valid, we continue with P
-    add_learnt(0, f, weight);
+    add_inductive_at(0, f, weight);
     return true;
   default:
     throw exception("Unknown SMT result.");
@@ -235,11 +222,16 @@ bool ic3_engine::check_valid_and_add(size_t k, expr::term_ref f, int weight) {
 
 bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, int weight) {
 
+  ensure_frame(k);
+  ensure_frame(k+1);
+
+  std::vector<obligation> induction_assumptions;
+
+
+  // Push the solvers
+  push_solvers();
+
   bool inductive = false;
-
-  // Push the context (if it's not inductive, we throw away learnts)
-  push();
-
   for (;;) {
 
     // Check if inductive
@@ -252,21 +244,30 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, int weight) {
     }
 
     // Check if G is reachable
-    bool reachable = check_reachable_and_add(k, G, weight+1);
+    bool reachable = check_reachable(k, G);
 
     // If we discharged all the obligations, let's re-check the induction
     if (reachable) {
       inductive = false;
       break;
+    } else {
+      expr::term_ref learnt = tm().mk_term(expr::TERM_NOT, G);
+      get_solver(k)->add(learnt);
+      induction_assumptions.push_back(obligation(k, learnt, weight + 1));
     }
   }
 
-  // Pop the context
-  pop();
+  // Pop the solvers
+  pop_solvers();
 
   // If inductive, add the learnt and all the needed formulas
   if (inductive) {
-    add_learnt(k+1, f, weight+1);
+    // Add the thing we learnt
+    add_inductive_at(k+1, f, weight+1);
+    for (size_t i = 0; induction_assumptions.size(); ++ i) {
+      const obligation& assumption = induction_assumptions[i];
+      add_inductive_at(assumption.frame(), assumption.formula(), assumption.weight());
+    }
   }
 
   return inductive;
@@ -284,7 +285,7 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 
   // Add the initial state
   expr::term_ref I = d_transition_system->get_initial_states();
-  add_learnt(0, I, 0);
+  add_inductive_at(0, I, 0);
 
   // Add the property we're trying to prove
   expr::term_ref P = d_property->get_formula();
@@ -338,16 +339,30 @@ void ic3_engine::to_stream(std::ostream& out) const  {
   }
 }
 
-void ic3_engine::push() {
-  assert(!d_in_push);
-  d_in_push = true;
+smt::solver* ic3_engine::get_solver(size_t k) {
+  ensure_frame(k);
+  if (d_solvers_modified_per_push.size() > 0) {
+    if (d_solvers_modified_per_push.back().find(k) == d_solvers_modified_per_push.back().end()) {
+      d_solvers_modified_per_push.back().insert(k);
+      d_solvers[k]->push();
+    }
+  }
+  return d_solvers[k];
 }
 
-void ic3_engine::pop() {
-  assert(d_in_push);
-  d_in_push = false;
-
+void ic3_engine::push_solvers() {
+  d_solvers_modified_per_push.push_back(std::set<size_t>());
 }
+
+void ic3_engine::pop_solvers() {
+  assert(!d_solvers_modified_per_push.empty());
+  std::set<size_t>::iterator it = d_solvers_modified_per_push.back().begin();
+  for (; it != d_solvers_modified_per_push.back().end(); ++ it) {
+    get_solver(*it)->pop();
+  }
+  d_solvers_modified_per_push.pop_back();
+}
+
 
 }
 }

@@ -95,10 +95,11 @@ class ic3_engine : public engine {
   bool push_if_inductive(size_t k, expr::term_ref f, int weight);
 
   /**
-   * Add a newly learnt formula. The formula will be added to
-   * frames 0, ..., k, and additionally added to induction obligations.
+   * Add a formula that's inductive up to k-1 and holds at k. The formula will
+   * be added to frames 0, ..., k, and additionally added to induction
+   * obligations at k.
    */
-  void add_learnt(size_t k, expr::term_ref f, int weight);
+  void add_inductive_at(size_t k, expr::term_ref f, int weight);
 
   /** Queue of induction obligations */
   induction_obligation_queue d_induction_obligations;
@@ -121,17 +122,17 @@ class ic3_engine : public engine {
   /** Check if f is holds at k (added if holds) */
   bool check_valid_and_add(size_t k, expr::term_ref f, int weight);
 
-  /** Check if f is reachable at k (negation added if not reachable) */
-  bool check_reachable_and_add(size_t k, expr::term_ref f, int weight);
+  /** Check if f is reachable at k (nothing is added) */
+  bool check_reachable(size_t k, expr::term_ref f);
 
-  /** Are we in the push state */
-  bool d_in_push;
+  /** Solvers modified since last push */
+  std::vector< std::set<size_t> > d_solvers_modified_per_push;
 
-  /** Push the context (only once allowed) */
-  void push();
+  /** Will push the solvers */
+  void push_solvers();
 
-  /** Pop the context */
-  void pop();
+  /** Pop the solvers modified since push */
+  void pop_solvers();
 
 public:
 

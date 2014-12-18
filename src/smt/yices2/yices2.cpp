@@ -15,6 +15,7 @@
 #include "expr/term_manager.h"
 #include "expr/rational.h"
 #include "smt/yices2/yices2.h"
+#include "utils/trace.h"
 
 namespace sal2 {
 namespace smt {
@@ -104,6 +105,9 @@ class yices2_internal {
   /** Last check return */
   smt_status_t d_last_check_status;
 
+  /** The instance */
+  size_t d_instance;
+
 public:
 
   /** Construct an instance of yices with the given temr manager and options */
@@ -144,6 +148,9 @@ public:
 
   /** Return the generalization */
   void generalize(const std::vector<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out);
+
+  /** Returns the instance id */
+  size_t instance() const { return d_instance; }
 };
 
 int yices2_internal::s_instances = 0;
@@ -151,6 +158,7 @@ int yices2_internal::s_instances = 0;
 yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
 : d_tm(tm)
 , d_last_check_status(STATUS_UNKNOWN)
+, d_instance(s_instances)
 {
   // Initialize
   if (s_instances == 0) {
@@ -870,10 +878,6 @@ void yices2_internal::pop() {
 
 void yices2_internal::generalize(const std::vector<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out) {
 
-  if (output::get_verbosity(std::cout) > 2) {
-    std::cout << "yices2: generalizing" << std::endl;
-  }
-
   // Get the model
   model_t* m = yices_get_model(d_ctx, true);
 
@@ -943,42 +947,33 @@ yices2::~yices2() {
 }
 
 void yices2::add(expr::term_ref f) {
-  if (output::get_verbosity(std::cout) > 2) {
-    std::cout << "yices2: adding " << f << std::endl;
-  }
+  TRACE("yices2") << "yices2[" << d_internal->instance() << "]: adding " << f << std::endl;
   d_internal->add(f);
 }
 
 solver::result yices2::check() {
-  if (output::get_verbosity(std::cout) > 2) {
-    std::cout << "yices2: check()" << std::endl;
-  }
+  TRACE("yices2") << "yices2[" << d_internal->instance() << "]: check()" << std::endl;
   return d_internal->check();
 }
 
 void yices2::get_model(expr::model& m) const {
-  if (output::get_verbosity(std::cout) > 2) {
-    std::cout << "yices2: get_model()" << std::endl;
-  }
+  TRACE("yices2") << "yices2[" << d_internal->instance() << "]: get_model()" << std::endl;
   d_internal->get_model(m);
 }
 
 void yices2::push() {
-  if (output::get_verbosity(std::cout) > 2) {
-    std::cout << "yices2: push()" << std::endl;
-  }
+  TRACE("yices2") << "yices2[" << d_internal->instance() << "]: push()" << std::endl;
   d_internal->push();
 }
 
 void yices2::pop() {
-  if (output::get_verbosity(std::cout) > 2) {
-    std::cout << "yices2: pop()" << std::endl;
-  }
+  TRACE("yices2") << "yices2[" << d_internal->instance() << "]: pop()" << std::endl;
   d_internal->pop();
 }
 
 
 void yices2::generalize(const std::vector<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out) {
+  TRACE("yices2") << "yices2[" << d_internal->instance() << "]: generalizing" << std::endl;
   d_internal->generalize(to_eliminate, projection_out);
 }
 
