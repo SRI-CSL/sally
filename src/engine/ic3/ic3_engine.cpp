@@ -45,10 +45,11 @@ typedef boost::heap::priority_queue<obligation, boost::heap::compare<obligation_
 ic3_engine::ic3_engine(const system::context& ctx)
 : engine(ctx)
 , d_transition_system(0)
+, d_property(0)
 , d_max_frames(0)
 , d_max_frame_size(0)
-{
-}
+, d_in_push(false)
+{}
 
 std::ostream& operator << (std::ostream& out, const ic3_engine& ic3) {
   ic3.to_stream(out);
@@ -232,6 +233,45 @@ bool ic3_engine::check_valid_and_add(size_t k, expr::term_ref f, int weight) {
   }
 }
 
+bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, int weight) {
+
+  bool inductive = false;
+
+  // Push the context (if it's not inductive, we throw away learnts)
+  push();
+
+  for (;;) {
+
+    // Check if inductive
+    expr::term_ref G = check_inductive_at(k, f);
+
+    // If inductive
+    if (G.is_null()) {
+      inductive = true;
+      break;
+    }
+
+    // Check if G is reachable
+    bool reachable = check_reachable_and_add(k, G, weight+1);
+
+    // If we discharged all the obligations, let's re-check the induction
+    if (reachable) {
+      inductive = false;
+      break;
+    }
+  }
+
+  // Pop the context
+  pop();
+
+  // If inductive, add the learnt and all the needed formulas
+  if (inductive) {
+    add_learnt(k+1, f, weight+1);
+  }
+
+  return inductive;
+}
+
 engine::result ic3_engine::query(const system::transition_system* ts, const system::state_formula* sf) {
 
   // Remember the input
@@ -265,32 +305,17 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
       continue;
     }
 
-    // Check if inductive
-    expr::term_ref G = check_inductive_at(ind.frame(), ind.formula());
-
-    // If inductive
-    if (G.is_null()) {
-      // Valid, push forward
-      if (ind.frame() < d_max_frames) {
-        add_learnt(ind.frame() + 1, ind.formula(), ind.weight() + 1);
+    /** Push the formula forward if it's inductive at the fram */
+    bool is_inductive = push_if_inductive(ind.frame(), ind.formula(), ind.weight());
+    if (!is_inductive) {
+      // Not inductive, if P then we have a conterexample
+      if (ind.formula() == P) {
+        return engine::INVALID;
       }
-      // Check if we're done
+    } else {
+      // Inductive, if frames equal, we have a proofs
       if (d_frame_content[ind.frame()].size() == d_frame_content[ind.frame()+1].size()) {
         return engine::VALID;
-      }
-      // Go for the next obligation
-      continue;
-    }
-
-     // Check if G is reachable
-    bool reachable = check_reachable_and_add(ind.frame(), G, ind.weight()+1);
-
-    // If we discharged all the obligations, let's re-check the induction
-    if (!reachable) {
-      d_induction_obligations.push(ind);
-    } else {
-      if (ind.formula() == d_property->get_formula()) {
-        return engine::INVALID;
       }
     }
   }
@@ -311,6 +336,17 @@ void ic3_engine::to_stream(std::ostream& out) const  {
       out << *it << std::endl;
     }
   }
+}
+
+void ic3_engine::push() {
+  assert(!d_in_push);
+  d_in_push = true;
+}
+
+void ic3_engine::pop() {
+  assert(d_in_push);
+  d_in_push = false;
+
 }
 
 }

@@ -19,13 +19,18 @@ namespace ic3 {
 
 /**
  * An obligation to do at frame k. This is just a carrier, the semantics
- * depend on the context. It could be that we're trying to satisfy P at
+ * depend on the context. It could be that we're trying to reach P at
  * frame k. Or, we could be trying to prove P is inductive at frame k.
  */
 class obligation {
+
+  /** The frame of the obligation */
   size_t d_k;
+  /** The forumula in question */
   expr::term_ref d_P;
+  /** Weight used for ordering */
   int d_weight;
+
 public:
 
   /** Construct the obligation */
@@ -33,18 +38,13 @@ public:
   : d_k(k), d_P(P), d_weight(weight) {}
 
   /** Get the frame */
-  size_t frame() const {
-    return d_k;
-  }
+  size_t frame() const { return d_k; }
 
   /** Get the formula */
-  expr::term_ref formula() const {
-    return d_P;
-  }
+  expr::term_ref formula() const { return d_P; }
 
-  int weight() const {
-    return d_weight;
-  }
+  /** Get the weight */
+  int weight() const { return d_weight; }
 
   /** Compare for equality */
   bool operator == (const obligation& o) const {
@@ -81,7 +81,7 @@ class ic3_engine : public engine {
    * a formula in terms of state variables. The generalization will be in terms
    * of the state variables (k-1)-th frame.
    */
-  expr::term_ref check_one_step_reachable(size_t k, expr::term_ref F);
+  expr::term_ref check_one_step_reachable(size_t k, expr::term_ref f);
 
   /**
    * Checks if the formula is inductive in k-th frame, returns counterexample
@@ -89,13 +89,16 @@ class ic3_engine : public engine {
    * variables (k-th frame). The generalization will be in terms of current
    * variables (k-th frame).
    */
-  expr::term_ref check_inductive_at(size_t k, expr::term_ref F);
+  expr::term_ref check_inductive_at(size_t k, expr::term_ref f);
+
+  /** Push the formula forward if its inductive. Returns true if inductive. */
+  bool push_if_inductive(size_t k, expr::term_ref f, int weight);
 
   /**
    * Add a newly learnt formula. The formula will be added to
    * frames 0, ..., k, and additionally added to induction obligations.
    */
-  void add_learnt(size_t k, expr::term_ref F, int weight);
+  void add_learnt(size_t k, expr::term_ref f, int weight);
 
   /** Queue of induction obligations */
   induction_obligation_queue d_induction_obligations;
@@ -120,6 +123,15 @@ class ic3_engine : public engine {
 
   /** Check if f is reachable at k (negation added if not reachable) */
   bool check_reachable_and_add(size_t k, expr::term_ref f, int weight);
+
+  /** Are we in the push state */
+  bool d_in_push;
+
+  /** Push the context (only once allowed) */
+  void push();
+
+  /** Pop the context */
+  void pop();
 
 public:
 
