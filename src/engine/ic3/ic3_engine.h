@@ -70,11 +70,17 @@ class ic3_engine : public engine {
   /** The property we're trying to prove */
   const system::state_formula* d_property;
 
-  /** A solver per frame */
-  std::vector<smt::solver*> d_solvers;
+  /** A solver per frame with next info */
+  std::vector<smt::solver*> d_solvers_with_next;
 
-  /** Returns the solver for k-th frame */
-  smt::solver* get_solver(size_t k);
+  /** A solver per frame without the next */
+  std::vector<smt::solver*> d_solvers_without_next;
+
+  /** Returns the solver for k-th frame with next */
+  smt::solver* get_solver_with_next(size_t k);
+
+  /** Returns the solver for k-th frame without next */
+  smt::solver* get_solver_without_next(size_t k);
 
   /**
    * Checks if the formula is reachable in one step at frame k > 0. F should be
