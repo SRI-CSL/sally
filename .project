@@ -24,11 +24,4 @@
 		<nature>org.eclipse.cdt.managedbuilder.core.managedBuildNature</nature>
 		<nature>org.eclipse.cdt.managedbuilder.core.ScannerConfigNature</nature>
 	</natures>
-	<linkedResources>
-		<link>
-			<name>yices_include</name>
-			<type>2</type>
-			<locationURI>WORKSPACE_LOC/yices2/src/include</locationURI>
-		</link>
-	</linkedResources>
 </projectDescription>

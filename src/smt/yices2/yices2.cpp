@@ -15,6 +15,7 @@
 #include "expr/term_manager.h"
 #include "expr/rational.h"
 #include "smt/yices2/yices2.h"
+#include "utils/trace.h"
 
 namespace sal2 {
 namespace smt {
@@ -52,6 +53,13 @@ class yices2_internal {
 
   typedef boost::unordered_map<expr::term_ref, term_t, expr::term_ref_hasher> term_to_yices_cache;
   typedef boost::unordered_map<term_t, expr::term_ref, yices_hasher> yices_to_term_cache;
+
+  /** Bitvector 1 */
+  expr::term_ref_strong d_bv1;
+
+  /** Bitvector 0 */
+  expr::term_ref_strong d_bv0;
+
 
   /** The map from terms to yices terms */
   term_to_yices_cache d_term_to_yices_cache;
@@ -97,6 +105,9 @@ class yices2_internal {
   /** Last check return */
   smt_status_t d_last_check_status;
 
+  /** The instance */
+  size_t d_instance;
+
 public:
 
   /** Construct an instance of yices with the given temr manager and options */
@@ -137,6 +148,9 @@ public:
 
   /** Return the generalization */
   void generalize(const std::vector<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out);
+
+  /** Returns the instance id */
+  size_t instance() const { return d_instance; }
 };
 
 int yices2_internal::s_instances = 0;
@@ -144,6 +158,7 @@ int yices2_internal::s_instances = 0;
 yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
 : d_tm(tm)
 , d_last_check_status(STATUS_UNKNOWN)
+, d_instance(s_instances)
 {
   // Initialize
   if (s_instances == 0) {
@@ -155,6 +170,10 @@ yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
   d_bool_type = yices_bool_type();
   d_int_type = yices_int_type();
   d_real_type = yices_real_type();
+
+  // Bitvector bits
+  d_bv0 = expr::term_ref_strong(d_tm, d_tm.mk_bitvector_constant(expr::bitvector(1, 0)));
+  d_bv1 = expr::term_ref_strong(d_tm, d_tm.mk_bitvector_constant(expr::bitvector(1, 1)));
 
   // The context
   d_ctx = yices_new_context(NULL);
@@ -643,12 +662,41 @@ expr::term_ref yices2_internal::to_term(term_t t) {
   // projections
   case YICES_SELECT_TERM:
     break;
-  case YICES_BIT_TERM:
+  case YICES_BIT_TERM: {
+    // Selects a bit, and the result is Boolean
+    size_t index = yices_proj_index(t);
+    expr::term_ref argument = to_term(yices_proj_arg(t));
+    result = d_tm.mk_bitvector_extract(argument, expr::bitvector_extract(index, index));
+    // Convert to boolean
+    result = d_tm.mk_term(expr::TERM_EQ, result, d_bv1);
     break;
-
+  }
   // sums
-  case YICES_BV_SUM:
+  case YICES_BV_SUM: {
+    // sum a_i * t_i
+    size_t bv_size = yices_term_bitsize(t);
+    int32_t* a_i_bits = new int32_t[bv_size];
+    size_t size = yices_term_num_children(t);
+    std::vector<expr::term_ref> sum_children;
+    for (size_t i = 0; i < size; ++i) {
+      term_t t_i_yices;
+      yices_bvsum_component(t, i, a_i_bits, &t_i_yices);
+      expr::term_ref a_i = d_tm.mk_bitvector_constant(yices_bv_to_bitvector(bv_size, a_i_bits));
+      if (t_i_yices != NULL_TERM) {
+        expr::term_ref t_i = to_term(t_i_yices);
+        sum_children.push_back(d_tm.mk_term(expr::TERM_BV_MUL, a_i, t_i));
+      } else {
+        sum_children.push_back(a_i);
+      }
+    }
+    if (size == 1) {
+      result = sum_children[0];
+    } else {
+      result = d_tm.mk_term(expr::TERM_BV_ADD, sum_children);
+    }
+    delete a_i_bits;
     break;
+  }
   case YICES_ARITH_SUM: {
     mpq_t c_y;
     mpq_init(c_y);
@@ -830,10 +878,6 @@ void yices2_internal::pop() {
 
 void yices2_internal::generalize(const std::vector<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out) {
 
-  if (output::get_verbosity(std::cout) > 2) {
-    std::cout << "yices2: generalizing" << std::endl;
-  }
-
   // Get the model
   model_t* m = yices_get_model(d_ctx, true);
 
@@ -903,42 +947,33 @@ yices2::~yices2() {
 }
 
 void yices2::add(expr::term_ref f) {
-  if (output::get_verbosity(std::cout) > 2) {
-    std::cout << "yices2: adding " << f << std::endl;
-  }
+  TRACE("yices2") << "yices2[" << d_internal->instance() << "]: adding " << f << std::endl;
   d_internal->add(f);
 }
 
 solver::result yices2::check() {
-  if (output::get_verbosity(std::cout) > 2) {
-    std::cout << "yices2: check()" << std::endl;
-  }
+  TRACE("yices2") << "yices2[" << d_internal->instance() << "]: check()" << std::endl;
   return d_internal->check();
 }
 
 void yices2::get_model(expr::model& m) const {
-  if (output::get_verbosity(std::cout) > 2) {
-    std::cout << "yices2: get_model()" << std::endl;
-  }
+  TRACE("yices2") << "yices2[" << d_internal->instance() << "]: get_model()" << std::endl;
   d_internal->get_model(m);
 }
 
 void yices2::push() {
-  if (output::get_verbosity(std::cout) > 2) {
-    std::cout << "yices2: push()" << std::endl;
-  }
+  TRACE("yices2") << "yices2[" << d_internal->instance() << "]: push()" << std::endl;
   d_internal->push();
 }
 
 void yices2::pop() {
-  if (output::get_verbosity(std::cout) > 2) {
-    std::cout << "yices2: pop()" << std::endl;
-  }
+  TRACE("yices2") << "yices2[" << d_internal->instance() << "]: pop()" << std::endl;
   d_internal->pop();
 }
 
 
 void yices2::generalize(const std::vector<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out) {
+  TRACE("yices2") << "yices2[" << d_internal->instance() << "]: generalizing" << std::endl;
   d_internal->generalize(to_eliminate, projection_out);
 }
 

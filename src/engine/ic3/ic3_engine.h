@@ -19,13 +19,18 @@ namespace ic3 {
 
 /**
  * An obligation to do at frame k. This is just a carrier, the semantics
- * depend on the context. It could be that we're trying to satisfy P at
+ * depend on the context. It could be that we're trying to reach P at
  * frame k. Or, we could be trying to prove P is inductive at frame k.
  */
 class obligation {
+
+  /** The frame of the obligation */
   size_t d_k;
+  /** The forumula in question */
   expr::term_ref d_P;
+  /** Weight used for ordering */
   int d_weight;
+
 public:
 
   /** Construct the obligation */
@@ -33,18 +38,13 @@ public:
   : d_k(k), d_P(P), d_weight(weight) {}
 
   /** Get the frame */
-  size_t frame() const {
-    return d_k;
-  }
+  size_t frame() const { return d_k; }
 
   /** Get the formula */
-  expr::term_ref formula() const {
-    return d_P;
-  }
+  expr::term_ref formula() const { return d_P; }
 
-  int weight() const {
-    return d_weight;
-  }
+  /** Get the weight */
+  int weight() const { return d_weight; }
 
   /** Compare for equality */
   bool operator == (const obligation& o) const {
@@ -70,18 +70,24 @@ class ic3_engine : public engine {
   /** The property we're trying to prove */
   const system::state_formula* d_property;
 
-  /** A solver per frame */
-  std::vector<smt::solver*> d_solvers;
+  /** A solver per frame with next info */
+  std::vector<smt::solver*> d_solvers_with_next;
 
-  /** Returns the solver for k-th frame */
-  smt::solver* get_solver(size_t k);
+  /** A solver per frame without the next */
+  std::vector<smt::solver*> d_solvers_without_next;
+
+  /** Returns the solver for k-th frame with next */
+  smt::solver* get_solver_with_next(size_t k);
+
+  /** Returns the solver for k-th frame without next */
+  smt::solver* get_solver_without_next(size_t k);
 
   /**
    * Checks if the formula is reachable in one step at frame k > 0. F should be
    * a formula in terms of state variables. The generalization will be in terms
    * of the state variables (k-1)-th frame.
    */
-  expr::term_ref check_one_step_reachable(size_t k, expr::term_ref F);
+  expr::term_ref check_one_step_reachable(size_t k, expr::term_ref f);
 
   /**
    * Checks if the formula is inductive in k-th frame, returns counterexample
@@ -89,13 +95,17 @@ class ic3_engine : public engine {
    * variables (k-th frame). The generalization will be in terms of current
    * variables (k-th frame).
    */
-  expr::term_ref check_inductive_at(size_t k, expr::term_ref F);
+  expr::term_ref check_inductive_at(size_t k, expr::term_ref f);
+
+  /** Push the formula forward if its inductive. Returns true if inductive. */
+  bool push_if_inductive(size_t k, expr::term_ref f, int weight);
 
   /**
-   * Add a newly learnt formula. The formula will be added to
-   * frames 0, ..., k, and additionally added to induction obligations.
+   * Add a formula that's inductive up to k-1 and holds at k. The formula will
+   * be added to frames 0, ..., k, and additionally added to induction
+   * obligations at k.
    */
-  void add_learnt(size_t k, expr::term_ref F, int weight);
+  void add_inductive_at(size_t k, expr::term_ref f, int weight);
 
   /** Queue of induction obligations */
   induction_obligation_queue d_induction_obligations;
@@ -118,8 +128,23 @@ class ic3_engine : public engine {
   /** Check if f is holds at k (added if holds) */
   bool check_valid_and_add(size_t k, expr::term_ref f, int weight);
 
-  /** Check if f is reachable at k (negation added if not reachable) */
-  bool check_reachable_and_add(size_t k, expr::term_ref f, int weight);
+  /** Check if f is reachable at k (nothing is added) */
+  bool check_reachable(size_t k, expr::term_ref f);
+
+  /** Solvers modified since last push */
+  std::vector< std::set<size_t> > d_solvers_modified_per_push;
+
+  /** Will push the solvers */
+  void push_solvers();
+
+  /** Pop the solvers modified since push */
+  void pop_solvers();
+
+  /** Print the frame content */
+  void print_frame(size_t k, std::ostream& out) const;
+
+  /** Print all frames */
+  void print_frames(std::ostream& out) const;
 
 public:
 
