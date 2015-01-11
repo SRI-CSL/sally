@@ -20,13 +20,9 @@ namespace sal2 {
 namespace ic3 {
 
 bool obligation_compare_induction::operator () (const obligation& o1, const obligation& o2) const {
-  // Lower weight wins
-  if (o1.weight() != o2.weight()) {
-    return o1.weight() > o2.weight();
-  }
-  // Bigger frame wins
+  // Smaller frame wins
   if (o1.frame() != o2.frame()) {
-    return o1.frame() < o2.frame();
+    return o1.frame() > o2.frame();
   }
   return o1.formula() > o2.formula();
 }
@@ -35,8 +31,6 @@ ic3_engine::ic3_engine(const system::context& ctx)
 : engine(ctx)
 , d_transition_system(0)
 , d_property(0)
-, d_max_frames(0)
-, d_max_frame_size(0)
 {}
 
 std::ostream& operator << (std::ostream& out, const ic3_engine& ic3) {
@@ -70,8 +64,7 @@ expr::term_ref ic3_engine::check_one_step_reachable(size_t k, expr::term_ref F) 
   smt::solver::result r = solver->check();
   switch (r) {
   case smt::solver::SAT: {
-    const std::vector<expr::term_ref>& state_vars = state_type->get_variables(system::state_type::STATE_NEXT);
-    return solver->generalize(state_vars);
+    return generalize_sat_at(k, solver);
   }
   case smt::solver::UNSAT:
     // Unsat, we return NULL
@@ -110,8 +103,7 @@ expr::term_ref ic3_engine::check_inductive_at(size_t k, expr::term_ref F) {
   smt::solver::result r = solver->check();
   switch (r) {
   case smt::solver::SAT: {
-    const std::vector<expr::term_ref>& state_vars = state_type->get_variables(system::state_type::STATE_NEXT);
-    result = solver->generalize(state_vars);
+    result = generalize_sat_at(k, solver);
     break;
   }
   case smt::solver::UNSAT:
@@ -314,10 +306,6 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   d_transition_system = ts;
   d_property = sf;
 
-  // Options
-  d_max_frames = ctx().get_options().get_unsigned("ic3-max-frames");
-  d_max_frame_size = ctx().get_options().get_unsigned("ic3-max-frame-size");
-
   // Add the initial state
   expr::term_ref I = d_transition_system->get_initial_states();
   add_inductive_at(0, I, 0);
@@ -336,15 +324,8 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
     obligation ind = d_induction_obligations.top();
     d_induction_obligations.pop();
 
-    // Unless of course if's over the limit
-    if (d_frame_content[ind.frame()].size() > d_max_frame_size) {
-      continue;
-    }
-
     // If already ahead, we'll prove it there
-    if (frame_contains(ind.frame()+1, ind.formula())) {
-      continue;
-    }
+    assert(!frame_contains(ind.frame()+1, ind.formula()));
 
     /** Push the formula forward if it's inductive at the fram */
     bool is_inductive = push_if_inductive(ind.frame(), ind.formula(), ind.weight());
@@ -433,6 +414,21 @@ void ic3_engine::print_frame(size_t k, std::ostream& out) const {
   for (; it != d_frame_content[k].end(); ++ it) {
     out << *it << std::endl;
   }
+}
+
+expr::term_ref ic3_engine::generalize_sat_at(size_t k, smt::solver* solver) {
+  const system::state_type* state_type = d_transition_system->get_state_type();
+  const std::vector<expr::term_ref>& state_vars = state_type->get_variables(system::state_type::STATE_NEXT);
+  std::vector<expr::term_ref> generalization_facts;
+  solver->generalize(state_vars, generalization_facts);
+  size_t to_keep = 0;
+  for(size_t i = 0; i < generalization_facts.size(); ++ i) {
+    if (!frame_contains(k, generalization_facts[i])) {
+      generalization_facts[to_keep++] = generalization_facts[i];
+    }
+  }
+  generalization_facts.resize(to_keep);
+  return tm().mk_and(generalization_facts);
 }
 
 }

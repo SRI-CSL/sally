@@ -1,1 +1,1 @@
---engine ic3-engine --ic3-max-frames 50 --ic3-max-frame-size 50
+--engine ic3-engine

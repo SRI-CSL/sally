@@ -119,12 +119,6 @@ class ic3_engine : public engine {
   /** Make sure all frame content is ready */
   void ensure_frame(size_t k);
 
-  /** Max number of frames */
-  unsigned d_max_frames;
-
-  /** Max number of facts */
-  unsigned d_max_frame_size;
-
   /** Check if f is holds at k (added if holds) */
   bool check_valid_and_add(size_t k, expr::term_ref f, int weight);
 
@@ -145,6 +139,9 @@ class ic3_engine : public engine {
 
   /** Print all frames */
   void print_frames(std::ostream& out) const;
+
+  /** Generalize a SAT answer, but don't keep the known facts in the generalization */
+  expr::term_ref generalize_sat_at(size_t k, smt::solver* solver);
 
 public:
 
