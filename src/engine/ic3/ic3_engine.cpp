@@ -148,7 +148,14 @@ void ic3_engine::ensure_frame(size_t k) {
   if (d_solvers_with_next.size() <= k && output::get_verbosity(std::cout) > 0) {
     std::cout << "ic3: Extending trace to " << k << std::endl;
   }
+
+  // The state type for assumption transformations
+  const system::state_type* state_type = d_transition_system->get_state_type();
+
   while (d_solvers_with_next.size() <= k) {
+
+    assert(!in_push());
+
     // Make the solver with next
     smt::solver* solver_with_next = smt::factory::mk_default_solver(tm(), ctx().get_options());
     d_solvers_with_next.push_back(solver_with_next);
@@ -161,6 +168,17 @@ void ic3_engine::ensure_frame(size_t k) {
     solver_without_next->add(d_transition_system->get_transition_relation());
     // Add the frame content
     d_frame_content.push_back(formula_set());
+
+    // Also add the solver assumptions
+    const std::vector<system::state_formula*>& assumptions = d_transition_system->get_assumptions();
+    for (size_t i = 0; i < assumptions.size(); ++ i) {
+      expr::term_ref assumption_current = assumptions[i]->get_formula();
+      expr::term_ref assumption_next = state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, assumption_current);
+      d_solvers_with_next[k]->add(assumption_current);
+      d_solvers_with_next[k]->add(assumption_next);
+      d_solvers_without_next[k]->add(assumption_current);
+      d_solvers_without_next[k]->add(assumption_next);
+    }
   }
   assert(d_solvers_with_next.size() == d_frame_content.size());
   assert(d_solvers_without_next.size() == d_frame_content.size());
@@ -401,6 +419,11 @@ void ic3_engine::pop_solvers() {
   }
   d_solvers_modified_per_push.pop_back();
 }
+
+bool ic3_engine::in_push() const {
+  return d_solvers_modified_per_push.size() > 0;
+}
+
 
 void ic3_engine::print_frames(std::ostream& out) const {
   for (size_t k = 0; k < d_frame_content.size(); ++ k) {

@@ -134,6 +134,9 @@ class ic3_engine : public engine {
   /** Pop the solvers modified since push */
   void pop_solvers();
 
+  /** Are we in a push state */
+  bool in_push() const;
+
   /** Print the frame content */
   void print_frame(size_t k, std::ostream& out) const;
 

@@ -19,6 +19,9 @@
   (transition)
 )
 
+;; Assume that it's always positive
+(assume T (>= x 0)) 
+
 ;; Query (any state formula over state_type)
 (query T (not (= x (/ 1 2))))
 
