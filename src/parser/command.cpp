@@ -26,6 +26,7 @@ switch (d_type) {
   CASE_TO_STRING(DEFINE_STATES)
   CASE_TO_STRING(DEFINE_TRANSITION)
   CASE_TO_STRING(DEFINE_TRANSITION_SYSTEM)
+  CASE_TO_STRING(ASSUME)
   CASE_TO_STRING(QUERY)
 default:
   assert(false);
@@ -119,6 +120,22 @@ void query_command::run(system::context* ctx, engine* e) {
 query_command::~query_command() {
   delete d_query;
 }
+
+void assume_command::to_stream(std::ostream& out) const  {
+  out << "[" << get_command_type_string() << " " << d_system_id << " " << *d_assumption << "]";
+}
+
+void assume_command::run(system::context* ctx, engine* e) {
+  // Add the assumption
+  ctx->add_assumption_to(d_system_id, d_assumption);
+  // Taken by the context
+  d_assumption = 0;
+}
+
+assume_command::~assume_command() {
+  delete d_assumption;
+}
+
 
 sequence_command::~sequence_command() {
   for (size_t i = 0; i < d_commands.size(); ++ i) {

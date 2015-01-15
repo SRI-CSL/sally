@@ -92,7 +92,7 @@ bool context::has_transition_formula(std::string id) const {
   return d_transition_formulas.has_entry(id);
 }
 
-void context::add_transition_system(std::string id, const transition_system* ts) {
+void context::add_transition_system(std::string id, transition_system* ts) {
   if (d_transition_systems.has_entry(id)) {
     delete ts;
     throw exception(id + " already declared");
@@ -117,9 +117,19 @@ const system::transition_system* context::get_transition_system(std::string id) 
   return d_transition_systems.get_entry(id);
 }
 
+
 bool context::has_transition_system(std::string id) const {
   return d_transition_systems.has_entry(id);
 }
+
+void context::add_assumption_to(std::string id, state_formula* sf) {
+  if (!d_transition_systems.has_entry(id)) {
+    throw exception(id + " not declared");
+  }
+  d_transition_systems.get_entry(id)->add_assumption(sf);
+
+}
+
 
 const options& context::get_options() const {
   return d_options;

@@ -72,11 +72,14 @@ public:
   /** True if id exists */
   bool has_transition_formula(std::string id) const;
 
-  /** Add a new state transition system with the givwen id (to be managed by the context) */
-  void add_transition_system(std::string id, const transition_system* ts);
+  /** Add a new state transition system with the given id (to be managed by the context) */
+  void add_transition_system(std::string id, transition_system* ts);
 
   /** Add a new state transition system with the givwen id (to be managed by the context) */
   void add_transition_system(std::string id, std::string type_id, std::string init_id, const std::vector<std::string>& transition_ids);
+
+  /** Add an assumption to the given transition system (takes over sf). */
+  void add_assumption_to(std::string id, state_formula* sf);
 
   /** Get the transition system with the given id */
   const transition_system* get_transition_system(std::string id) const;
@@ -102,7 +105,7 @@ private:
   utils::symbol_table<const transition_formula*> d_transition_formulas;
 
   /** Symbol table for transition systems */
-  utils::symbol_table<const transition_system*> d_transition_systems;
+  utils::symbol_table<transition_system*> d_transition_systems;
 
   /** Program options, if any */
   const options& d_options;

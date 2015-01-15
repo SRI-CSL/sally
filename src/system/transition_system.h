@@ -27,6 +27,9 @@ class transition_system {
   /** The transition formula */
   std::vector<const transition_formula*> d_transition_relation;
 
+  /** Any assumptions */
+  std::vector<state_formula*> d_assumptions;
+
 public:
 
   transition_system(const state_type* state_type, const state_formula* initial_states, const std::vector<const transition_formula*>& transition_relation)
@@ -41,12 +44,14 @@ public:
   , d_transition_relation(T.d_transition_relation)
   {}
 
+  ~transition_system();
+
   /** Get the state type */
   const state_type* get_state_type() const {
     return d_state_type;
   }
 
-  /** Get the intial states */
+  /** Get the initial states */
   expr::term_ref get_initial_states() const {
     return d_initial_states->get_formula();
   }
@@ -63,6 +68,9 @@ public:
 
   /** Get the whole transition relation (disjunction) */
   expr::term_ref get_transition_relation() const;
+
+  /** Add an assumption on the state type (takes over the pointer) */
+  void add_assumption(state_formula* assumption);
 
   /** Print it to the stream */
   void to_stream(std::ostream& out) const;

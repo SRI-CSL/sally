@@ -43,5 +43,16 @@ expr::term_ref transition_system::get_transition_relation() const {
   }
 }
 
+void transition_system::add_assumption(state_formula* assumption) {
+  d_assumptions.push_back(assumption);
+}
+
+transition_system::~transition_system() {
+  for (size_t i = 0; i < d_assumptions.size(); ++ i) {
+    delete d_assumptions[i];
+  }
+}
+
+
 }
 }
