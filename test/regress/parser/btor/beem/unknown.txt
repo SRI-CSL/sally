@@ -1,0 +1,4 @@
+resistance.2.prop1-func-interl.btor
+resistance.2.prop2-func-interl.btor
+resistance.2.prop3-func-interl.btor
+

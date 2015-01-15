@@ -1,0 +1,12 @@
+anderson.2.prop1-func-interl.btor
+bakery.1.prop1-back-serstep.btor
+bakery.1.prop1-func-interl.btor
+fischer.1.prop1-back-serstep.btor
+fischer.1.prop1-func-interl.btor
+resistance.1.prop1-back-serstep.btor
+resistance.1.prop1-func-interl.btor
+resistance.1.prop2-back-serstep.btor
+resistance.1.prop2-func-interl.btor
+resistance.1.prop3-back-serstep.btor
+resistance.1.prop3-func-interl.btor
+
