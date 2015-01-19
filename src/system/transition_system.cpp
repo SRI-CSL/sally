@@ -47,6 +47,15 @@ void transition_system::add_assumption(state_formula* assumption) {
   d_assumptions.push_back(assumption);
 }
 
+expr::term_ref transition_system::get_assumption() const {
+  std::vector<expr::term_ref> assumption_terms;
+  for (size_t i = 0; i < d_assumptions.size(); ++ i) {
+    assumption_terms.push_back(d_assumptions[i]->get_formula());
+  }
+  return d_state_type->tm().mk_and(assumption_terms);
+}
+
+
 transition_system::~transition_system() {
   for (size_t i = 0; i < d_assumptions.size(); ++ i) {
     delete d_assumptions[i];

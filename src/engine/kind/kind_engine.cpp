@@ -64,14 +64,19 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
   expr::term_ref initial_states = ts->get_initial_states();
   d_solver_1->add(d_trace->get_state_formula(initial_states, 0));
 
+  // The assumption
+  expr::term_ref assumption = ts->get_assumption();
+  d_solver_1->add(assumption);
+
   // Transition formula
-  expr::term_ref transition_fromula = ts->get_transition_relation();
+  expr::term_ref transition_formula = ts->get_transition_relation();
 
   // The property
   expr::term_ref property = sf->get_formula();
 
   // The terms we use in the unrolling
   expr::term_ref property_k = d_trace->get_state_formula(property, 0);
+  expr::term_ref assumption_k_next = d_trace->get_state_formula(assumption, 1);
   expr::term_ref property_not_k = tm().mk_term(expr::TERM_NOT, property_k);
   expr::term_ref transition_k;
 
@@ -120,10 +125,11 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
     d_solver_2->add(property_k);
 
     // Unroll the transition relation once more
-    transition_k = d_trace->get_transition_formula(transition_fromula, k, k+1);
+    transition_k = d_trace->get_transition_formula(transition_formula, k, k+1);
 
     // For (2) add property and transition
     d_solver_2->add(transition_k);
+    d_solver_2->add(assumption_k_next);
 
     // Should we do the check at k
     bool check_consecution = k >= kind_min;
@@ -134,6 +140,7 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
     // Unroll the propety once more
     k = k + 1;
     property_k = d_trace->get_state_formula(property, k);
+    assumption_k_next = d_trace->get_state_formula(assumption, k+1);
     property_not_k = tm().mk_term(expr::TERM_NOT, property_k);
 
     // Check the current unrolling (2)
@@ -172,6 +179,7 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
 
     // One more transition for solver 1
     d_solver_1->add(transition_k);
+    d_solver_1->add(assumption_k_next);
   }
 
   return UNKNOWN;

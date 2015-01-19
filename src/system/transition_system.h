@@ -77,6 +77,8 @@ public:
     return d_assumptions;
   }
 
+  expr::term_ref get_assumption() const;
+
   /** Print it to the stream */
   void to_stream(std::ostream& out) const;
 };
