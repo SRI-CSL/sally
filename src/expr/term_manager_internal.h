@@ -391,6 +391,15 @@ public:
 
   /** Returns the id normalized with resepct to the current namespaces */
   std::string namespace_normalize(std::string id) const;
+
+  /** Returns true if the types are comparable by equality */
+  bool types_comparable(term_ref t1, term_ref t2) const;
+
+  /** Returns true if t1 is a subtype of t2 */
+  bool is_subtype_of(term_ref t1, term_ref t2) const;
+
+  /** Returns the supertype of the two types */
+  term_ref supertype_of(term_ref t1, term_ref t2) const;
 };
 
 inline

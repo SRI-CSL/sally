@@ -62,6 +62,37 @@ bool is_type(term_op op) {
   }
 }
 
+bool term_manager_internal::is_subtype_of(term_ref t1, term_ref t2) const {
+  if (t1 == t2) {
+    return true;
+  }
+  if (t1 == integer_type() && t2 == real_type()) {
+    return true;
+  }
+  return false;
+}
+
+term_ref term_manager_internal::supertype_of(term_ref t1, term_ref t2) const {
+  assert(types_comparable(t1, t2));
+
+  if (t1 == t2) {
+    return t1;
+  }
+  if (t1 == integer_type() && t2 == real_type()) {
+    return t2;
+  }
+  if (t2 == integer_type() && t1 == real_type()) {
+    return t1;
+  }
+
+  assert(false);
+  return t1;
+}
+
+bool term_manager_internal::types_comparable(term_ref t1, term_ref t2) const {
+  return (is_subtype_of(t1, t2) || is_subtype_of(t2, t2));
+}
+
 bool term_manager_internal::typecheck(term_ref t_ref) {
   const term& t = term_of(t_ref);
   term_op op = t.op();
@@ -93,12 +124,13 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
   }
   // Equality
   case TERM_EQ:
-    ok = (t.size() == 2 && type_of(t[0]) == type_of(t[1]));
+    ok = (t.size() == 2 && types_comparable(type_of(t[0]), type_of(t[1])));
     break;
   // ITE
   case TERM_ITE:
-    ok = (t.size() == 3 && type_of(t[0]) == boolean_type() &&
-        type_of(t[1]) == type_of(t[2]));
+    ok = (t.size() == 3 &&
+        type_of(t[0]) == boolean_type() &&
+        types_comparable(type_of(t[1]), type_of(t[2])));
     break;
   // Boolean terms
   case CONST_BOOL:
@@ -141,7 +173,8 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
       ok = false;
     } else {
       for (const term_ref* it = t.begin(); it != t.end(); ++ it) {
-        if (type_of(*it) != real_type()) {
+        term_ref it_type = type_of(*it);
+        if (!is_subtype_of(it_type, real_type())) {
           ok = false;
           break;
         }
@@ -151,11 +184,12 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
   case TERM_SUB:
     // 1 child is OK
     if (t.size() == 1) {
-      ok = type_of(t[0]) == real_type();
+      ok = is_subtype_of(type_of(t[0]), real_type());
     } else if (t.size() != 2) {
       ok = false;
     } else {
-      ok = type_of(t[0]) == real_type() && type_of(t[1]) == real_type();
+      ok = is_subtype_of(type_of(t[0]), real_type()) &&
+           is_subtype_of(type_of(t[1]), real_type());
     }
     break;
   case TERM_LEQ:
@@ -165,14 +199,16 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
     if (t.size() != 2) {
       ok = false;
     } else {
-      ok = type_of(t[0]) == real_type() && type_of(t[1]) == real_type();
+      ok = is_subtype_of(type_of(t[0]), real_type()) &&
+           is_subtype_of(type_of(t[1]), real_type());
     }
     break;
   case TERM_DIV:
     if (t.size() != 2) {
       ok = false;
     } else {
-      ok = type_of(t[0]) == real_type() && type_of(t[1]) == real_type();
+      ok = is_subtype_of(type_of(t[0]), real_type()) &&
+           is_subtype_of(type_of(t[1]), real_type());
       // TODO: make TCC
     }
     break;
@@ -364,13 +400,24 @@ term_ref term_manager_internal::type_of(const term& t) const {
     break;
   // Arithmetic terms
   case CONST_INTEGER:
-    // TODO: fix this
-    result = d_realType;
+    result = d_integerType;
     break;
   case CONST_RATIONAL:
+    result = d_realType;
+    break;
   case TERM_ADD:
   case TERM_MUL:
-  case TERM_SUB:
+  case TERM_SUB: {
+    // If all children are integer, it's integer
+    result = integer_type();
+    for (const term_ref* it = t.begin(); it != t.end(); ++ it) {
+      if (type_of(*it) != integer_type()) {
+        result = real_type();
+        break;
+      }
+    }
+    break;
+  }
   case TERM_DIV:
     result = d_realType;
     break;
