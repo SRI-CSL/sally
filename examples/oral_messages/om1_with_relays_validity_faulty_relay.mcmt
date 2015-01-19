@@ -1,0 +1,359 @@
+;; State type:
+;;  cx!i!j: channel from process i to relay j
+;;  cy!i!j: channel from relay j to process i
+;;  good_p!i: true if process i is non-faulty
+;;  good_r!j: true if relay k is non-faulty
+;;  v!i: result produced by process i
+;;  round: global round counter
+;;
+;; Encoding:
+;;  channels store a real value. We encode "nothing sent" as 0.
+;;
+;; Parameters:
+;;  source: id of the source process (integer between 1 and 4)
+;;  val: value sent by the source, if its not faulty.
+;;  val is assumed non-zero.
+;;
+
+(declare-state-type state
+   ((cx!0!0 Real)
+    (cx!0!1 Real)
+    (cx!0!2 Real)
+    (cx!0!3 Real)
+    (cx!1!0 Real)
+    (cx!1!1 Real)
+    (cx!1!2 Real)
+    (cx!1!3 Real)
+    (cx!2!0 Real)
+    (cx!2!1 Real)
+    (cx!2!2 Real)
+    (cx!2!3 Real)
+    (cx!3!0 Real)
+    (cx!3!1 Real)
+    (cx!3!2 Real)
+    (cx!3!3 Real)
+    (cy!0!0 Real)
+    (cy!0!1 Real)
+    (cy!0!2 Real)
+    (cy!0!3 Real)
+    (cy!1!0 Real)
+    (cy!1!1 Real)
+    (cy!1!2 Real)
+    (cy!1!3 Real)
+    (cy!2!0 Real)
+    (cy!2!1 Real)
+    (cy!2!2 Real)
+    (cy!2!3 Real)
+    (cy!3!0 Real)
+    (cy!3!1 Real)
+    (cy!3!2 Real)
+    (cy!3!3 Real)
+    (good_p!0 Boolean)
+    (good_p!1 Boolean)
+    (good_p!2 Boolean)
+    (good_p!3 Boolean)
+    (good_r!0 Boolean)
+    (good_r!1 Boolean)
+    (good_r!2 Boolean)
+    (good_r!3 Boolean)
+    (v!0 Real)
+    (v!1 Real)
+    (v!2 Real)
+    (v!3 Real)
+    (round Real)
+    ;; we add parameters to the state.
+    (source Real)
+    (val Real)))
+
+
+;;
+;; Initial states
+;; - round = 0
+;; - all channels are empty
+;;
+(define-states init state
+   (and
+    (= round 0)
+    (= cx!0!0 0)
+    (= cx!0!1 0)
+    (= cx!0!2 0)
+    (= cx!0!3 0)
+    (= cx!1!0 0)
+    (= cx!1!1 0)
+    (= cx!1!2 0)
+    (= cx!1!3 0)
+    (= cx!2!0 0)
+    (= cx!2!1 0)
+    (= cx!2!2 0)
+    (= cx!2!3 0)
+    (= cx!3!0 0)
+    (= cx!3!1 0)
+    (= cx!3!2 0)
+    (= cx!3!3 0)
+    (= cy!0!0 0)
+    (= cy!0!1 0)
+    (= cy!0!2 0)
+    (= cy!0!3 0)
+    (= cy!1!0 0)
+    (= cy!1!1 0)
+    (= cy!1!2 0)
+    (= cy!1!3 0)   
+    (= cy!2!0 0)
+    (= cy!2!1 0)
+    (= cy!2!2 0)
+    (= cy!2!3 0)
+    (= cy!3!0 0)
+    (= cy!3!1 0)
+    (= cy!3!2 0)
+    (= cy!3!3 0)
+    ;;
+    ;; constraints on the global parameters
+    ;;
+    (or (= source 1) (= source 2) (= source 3) (= source  4))
+    (not (= val 0))
+    ;;
+    ;; fault model: which processes can be faulty
+    ;;
+    (and (and good_p!0 good_p!1 good_p!2 good_p!3)
+	 (or (and good_r!0 good_r!1 good_r!2)
+	     (and good_r!0 good_r!1 good_r!3)
+	     (and good_r!0 good_r!2 good_r!3)
+	     (and good_r!1 good_r!2 good_r!3)))))
+
+
+
+;;
+;; Transition relation
+;;
+(define-transition trans state
+   (let
+    ((cond!1 (= state.source 2))
+     (cond!2 (= state.source 3))
+     (cond!3 (= state.source 4))
+     (cs!196 (not state.good_p!1))
+     (cs!201 (not state.good_p!2))
+     (cs!206 (not state.good_p!3))
+     (cs!211 (and (= next.cx!0!0 state.cx!0!0)
+		  (= next.cx!0!1 state.cx!0!1)
+		  (= next.cx!0!2 state.cx!0!2)
+		  (= next.cx!0!3 state.cx!0!3)
+		  (= next.cx!1!0 state.cx!1!0)
+		  (= next.cx!1!1 state.cx!1!1)
+		  (= next.cx!1!2 state.cx!1!2)
+		  (= next.cx!1!3 state.cx!1!3)
+		  (= next.cx!2!0 state.cx!2!0)
+		  (= next.cx!2!1 state.cx!2!1)
+		  (= next.cx!2!2 state.cx!2!2)
+		  (= next.cx!2!3 state.cx!2!3)
+		  (= next.cx!3!0 state.cx!3!0)
+		  (= next.cx!3!1 state.cx!3!1)
+		  (= next.cx!3!2 state.cx!3!2)
+		  (= next.cx!3!3 state.cx!3!3)))
+     (cs!212 (and (= next.cy!0!0 state.cy!0!0)
+		  (= next.cy!0!1 state.cy!0!1)
+		  (= next.cy!0!2 state.cy!0!2)
+		  (= next.cy!0!3 state.cy!0!3)
+		  (= next.cy!1!0 state.cy!1!0)
+		  (= next.cy!1!1 state.cy!1!1)
+		  (= next.cy!1!2 state.cy!1!2)
+		  (= next.cy!1!3 state.cy!1!3)
+		  (= next.cy!2!0 state.cy!2!0)
+		  (= next.cy!2!1 state.cy!2!1)
+		  (= next.cy!2!2 state.cy!2!2)
+		  (= next.cy!2!3 state.cy!2!3)
+		  (= next.cy!3!0 state.cy!3!0)
+		  (= next.cy!3!1 state.cy!3!1)
+		  (= next.cy!3!2 state.cy!3!2)
+		  (= next.cy!3!3 state.cy!3!3)))
+     (cs!213 (and (= next.good_p!0 state.good_p!0)
+		  (= next.good_p!1 state.good_p!1)
+		  (= next.good_p!2 state.good_p!2)
+		  (= next.good_p!3 state.good_p!3)))
+     (cs!214 (and (= next.good_r!0 state.good_r!0)
+		  (= next.good_r!1 state.good_r!1)
+		  (= next.good_r!2 state.good_r!2)
+		  (= next.good_r!3 state.good_r!3)))
+     (cs!215 (and (= next.v!0 state.v!0)
+		  (= next.v!1 state.v!1)
+		  (= next.v!2 state.v!2)
+		  (= next.v!3 state.v!3)))
+     (cs!232 (not state.good_r!0))
+     (cs!234 (not state.good_r!1))
+     (cs!236 (not state.good_r!2))
+     (cs!250 (not state.good_r!3))
+     (cs!256 (not state.good_p!0))
+     (cs!233 (ite cond!3 state.cx!3!0
+              (ite cond!2 state.cx!2!0
+	       (ite cond!1 state.cx!1!0 state.cx!0!0))))
+     (cs!235 (ite cond!3 state.cx!3!1
+	      (ite cond!2 state.cx!2!1
+	       (ite cond!1 state.cx!1!1 state.cx!0!1))))
+     (cs!237 (ite cond!3 state.cx!3!2
+	      (ite cond!2 state.cx!2!2
+	       (ite cond!1 state.cx!1!2 state.cx!0!2))))
+     (cs!255 (ite cond!3 state.cx!3!3
+	      (ite cond!2 state.cx!2!3
+	       (ite cond!1 state.cx!1!3 state.cx!0!3))))
+     (cs!257 (= state.cy!0!0 state.cy!0!1))
+     (cs!258 (= state.cy!0!0 state.cy!0!2))
+     (cs!259 (= state.cy!0!0 state.cy!0!3))
+     (cs!260 (= state.cy!1!0 state.cy!1!1))
+     (cs!261 (= state.cy!1!0 state.cy!1!2))
+     (cs!262 (= state.cy!1!0 state.cy!1!3))
+     (cs!263 (= state.cy!2!0 state.cy!2!1))
+     (cs!264 (= state.cy!2!0 state.cy!2!2))
+     (cs!265 (= state.cy!2!0 state.cy!2!3))
+     (cs!266 (= state.cy!3!0 state.cy!3!1))
+     (cs!267 (= state.cy!3!0 state.cy!3!2))
+     (cs!268 (= state.cy!3!0 state.cy!3!3)))
+
+;; Generic constraint: source and val don't change
+    (and
+     (= state.source next.source)
+     (= state.val next.val)
+     (or
+      (and (= state.round 0)
+	   (or cs!256 (not (= 1 state.source))
+	       (and (= next.cx!0!0 state.val)
+		    (= next.cx!0!1 state.val)
+		    (= next.cx!0!2 state.val)
+		    (= next.cx!0!3 state.val)))
+	   (or cs!196 (not (= 2 state.source))
+	       (and (= next.cx!1!0 state.val)
+		    (= next.cx!1!1 state.val)
+		    (= next.cx!1!2 state.val)
+		    (= next.cx!1!3 state.val)))
+	   (or cs!201 (not (= 3 state.source))
+	       (and (= next.cx!2!0 state.val)
+		    (= next.cx!2!1 state.val)
+		    (= next.cx!2!2 state.val)
+		    (= next.cx!2!3 state.val)))
+	   (or cs!206 (not (= 4 state.source))
+	       (and (= next.cx!3!0 state.val) 
+		    (= next.cx!3!1 state.val)
+		    (= next.cx!3!2 state.val)
+		    (= next.cx!3!3 state.val)))
+	   (or cs!256 (= 1 state.source)
+	       (and (= next.cx!0!0 0)
+		    (= next.cx!0!1 0)
+		    (= next.cx!0!2 0)
+		    (= next.cx!0!3 0)))
+	   (or cs!196 (= 2 state.source)
+	       (and (= next.cx!1!0 0)
+		    (= next.cx!1!1 0)
+		    (= next.cx!1!2 0)
+		    (= next.cx!1!3 0)))
+	   (or cs!201 (= 3 state.source)
+	       (and (= next.cx!2!0 0)
+		    (= next.cx!2!1 0)
+		    (= next.cx!2!2 0)
+		    (= next.cx!2!3 0)))
+	   (or cs!206 (= 4 state.source)
+	       (and (= next.cx!3!0 0)
+		    (= next.cx!3!1 0)
+		    (= next.cx!3!2 0)
+		    (= next.cx!3!3 0)))
+	   (= next.round 1)
+	   cs!212
+	   cs!213
+	   cs!214
+	   cs!215)
+
+      (and (= state.round 1)
+	   (or cs!232 (= next.cy!0!0 cs!233))
+	   (or cs!232 (= next.cy!1!0 cs!233))
+	   (or cs!232 (= next.cy!2!0 cs!233))
+	   (or cs!232 (= next.cy!3!0 cs!233))
+	   (or cs!234 (= next.cy!0!1 cs!235))
+	   (or cs!234 (= next.cy!1!1 cs!235))
+	   (or cs!234 (= next.cy!2!1 cs!235))
+	   (or cs!234 (= next.cy!3!1 cs!235))
+	   (or cs!236 (= next.cy!0!2 cs!237))
+	   (or cs!236 (= next.cy!1!2 cs!237))
+	   (or cs!236 (= next.cy!2!2 cs!237))
+	   (or cs!236 (= next.cy!3!2 cs!237))
+	   (or cs!250 (= next.cy!0!3 cs!255))
+	   (or cs!250 (= next.cy!1!3 cs!255))
+	   (or cs!250 (= next.cy!2!3 cs!255))
+	   (or cs!250 (= next.cy!3!3 cs!255))
+	   (= next.round 2) 
+	   cs!211
+	   cs!213
+	   cs!214
+	   cs!215)
+
+      (and (= state.round 2)
+	   (or cs!256
+	       (= next.v!0 
+		  (ite (or (and cs!257 cs!258) (and cs!257 cs!259) (and cs!258 cs!259))
+		       state.cy!0!0
+ 		   (ite (and (= state.cy!0!1 state.cy!0!2) (= state.cy!0!1 state.cy!0!3))
+			state.cy!0!1
+			0))))
+	   (or cs!196
+	       (= next.v!1
+		  (ite (or (and cs!260 cs!261) (and cs!260 cs!262) (and cs!261 cs!262))
+		       state.cy!1!0
+  	          (ite (and (= state.cy!1!1 state.cy!1!2) (= state.cy!1!1 state.cy!1!3))
+		       state.cy!1!1
+		       0))))
+	   (or cs!201
+	       (= next.v!2
+		  (ite (or (and cs!263 cs!264) (and cs!263 cs!265) (and cs!264 cs!265))
+		       state.cy!2!0
+		   (ite (and (= state.cy!2!1 state.cy!2!2) (= state.cy!2!1 state.cy!2!3))
+			state.cy!2!1
+			0))))
+	   (or cs!206
+	       (= next.v!3
+		  (ite (or (and cs!266 cs!267) (and cs!266 cs!268) (and cs!267 cs!268))
+		       state.cy!3!0
+		   (ite (and (= state.cy!3!1 state.cy!3!2) (= state.cy!3!1 state.cy!3!3))
+			state.cy!3!1
+			0))))
+	   (= next.round 3)
+	   cs!211
+	   cs!212
+	   cs!213
+	   cs!214)
+
+      (and (= state.round 3)
+	   cs!211
+	   cs!212
+	   cs!213
+	   cs!214
+	   (= next.round state.round)
+	   cs!215)))
+    )
+)
+
+;;
+;; Transition system
+;;
+(define-transition-system OM
+  state
+  init
+  (trans))
+
+
+;;
+;; Assumption: fault model
+;;
+;;(assume OM 
+;;	(and (and good_p!0 good_p!1 good_p!2 good_p!3)
+;;	     (and good_r!0 good_r!1 good_r!2 good_r!3)))
+;;
+
+;;
+;; Query: validity
+;;
+(query OM (or 
+	   (not (ite (= source 4) good_p!3
+		 (ite (= source 3) good_p!2
+                  (ite (= source 2) good_p!1
+                   good_p!0))))		      
+	   (< round 3)
+	   (and (or (not good_p!0) (= v!0 val))
+		(or (not good_p!1) (= v!1 val))
+		(or (not good_p!2) (= v!2 val))
+		(or (not good_p!3) (= v!3 val)))))

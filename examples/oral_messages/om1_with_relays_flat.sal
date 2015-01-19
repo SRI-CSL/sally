@@ -1,0 +1,1118 @@
+%
+% Flat module: for om1_with_relays!OM
+%
+% DATA is Real
+% source: an integer in [1 .. 4]
+% val: a non-zero Real
+%
+BEGIN_FLAT
+  OUTPUT cx!0!0 : DATA
+  OUTPUT cx!0!1 : DATA
+  OUTPUT cx!0!2 : DATA
+  OUTPUT cx!0!3 : DATA
+  OUTPUT cx!1!0 : DATA
+  OUTPUT cx!1!1 : DATA
+  OUTPUT cx!1!2 : DATA
+  OUTPUT cx!1!3 : DATA
+  OUTPUT cx!2!0 : DATA
+  OUTPUT cx!2!1 : DATA
+  OUTPUT cx!2!2 : DATA
+  OUTPUT cx!2!3 : DATA
+  OUTPUT cx!3!0 : DATA
+  OUTPUT cx!3!1 : DATA
+  OUTPUT cx!3!2 : DATA
+  OUTPUT cx!3!3 : DATA
+  OUTPUT cy!0!0 : DATA
+  OUTPUT cy!0!1 : DATA
+  OUTPUT cy!0!2 : DATA
+  OUTPUT cy!0!3 : DATA
+  OUTPUT cy!1!0 : DATA
+  OUTPUT cy!1!1 : DATA
+  OUTPUT cy!1!2 : DATA
+  OUTPUT cy!1!3 : DATA
+  OUTPUT cy!2!0 : DATA
+  OUTPUT cy!2!1 : DATA
+  OUTPUT cy!2!2 : DATA
+  OUTPUT cy!2!3 : DATA
+  OUTPUT cy!3!0 : DATA
+  OUTPUT cy!3!1 : DATA
+  OUTPUT cy!3!2 : DATA
+  OUTPUT cy!3!3 : DATA
+  OUTPUT good_p!0 : bool
+  OUTPUT good_p!1 : bool
+  OUTPUT good_p!2 : bool
+  OUTPUT good_p!3 : bool
+  OUTPUT good_r!0 : bool
+  OUTPUT good_r!1 : bool
+  OUTPUT good_r!2 : bool
+  OUTPUT good_r!3 : bool
+  OUTPUT v!0 : DATA
+  OUTPUT v!1 : DATA
+  OUTPUT v!2 : DATA
+  OUTPUT v!3 : DATA
+  OUTPUT round : NATURAL
+  INPUT choice!1 : [0..3]
+  DEFINITION
+    true
+  INITIALIZATION
+    (round = 0) and
+    (cx!0!0 = 0) and
+    (cx!0!1 = 0) and
+    (cx!0!2 = 0) and
+    (cx!0!3 = 0) and
+    (cx!1!0 = 0) and
+    (cx!1!1 = 0) and
+    (cx!1!2 = 0) and
+    (cx!1!3 = 0) and
+    (cx!2!0 = 0) and
+    (cx!2!1 = 0) and
+    (cx!2!2 = 0) and
+    (cx!2!3 = 0) and
+    (cx!3!0 = 0) and
+    (cx!3!1 = 0) and
+    (cx!3!2 = 0) and
+    (cx!3!3 = 0) and
+    (cy!0!0 = 0) and
+    (cy!0!1 = 0) and
+    (cy!0!2 = 0) and
+    (cy!0!3 = 0) and
+    (cy!1!0 = 0) and
+    (cy!1!1 = 0) and
+    (cy!1!2 = 0) and
+    (cy!1!3 = 0) and
+    (cy!2!0 = 0) and
+    (cy!2!1 = 0) and
+    (cy!2!2 = 0) and
+    (cy!2!3 = 0) and
+    (cy!3!0 = 0) and
+    (cy!3!1 = 0) and
+    (cy!3!2 = 0) and
+    (cy!3!3 = 0) and
+    good_p!0 AND good_p!1 AND good_p!2 AND good_p!3 and
+    good_r!0 AND good_r!1 AND good_r!2 OR
+    good_r!0 AND good_r!1 AND good_r!3 OR
+    good_r!0 AND good_r!2 AND good_r!3 OR
+    good_r!1 AND good_r!2 AND good_r!3
+  TRANSITION
+    (LET cond!1: bool = source = 2,
+        cond!2: bool = source = 3,
+        cond!3: bool = source = 4,
+        cs!196: bool = not(good_p!1),
+        cs!201: bool = not(good_p!2),
+        cs!206: bool = not(good_p!3),
+        cs!211: bool
+        = (cx!0!0' = cx!0!0) and
+        (cx!0!1' = cx!0!1) and
+        (cx!0!2' = cx!0!2) and
+        (cx!0!3' = cx!0!3) and
+        (cx!1!0' = cx!1!0) and
+        (cx!1!1' = cx!1!1) and
+        (cx!1!2' = cx!1!2) and
+        (cx!1!3' = cx!1!3) and
+        (cx!2!0' = cx!2!0) and
+        (cx!2!1' = cx!2!1) and
+        (cx!2!2' = cx!2!2) and
+        (cx!2!3' = cx!2!3) and
+        (cx!3!0' = cx!3!0) and
+        (cx!3!1' = cx!3!1) and
+        (cx!3!2' = cx!3!2) and
+        (cx!3!3' = cx!3!3),
+        cs!212: bool
+        = (cy!0!0' = cy!0!0) and
+        (cy!0!1' = cy!0!1) and
+        (cy!0!2' = cy!0!2) and
+        (cy!0!3' = cy!0!3) and
+        (cy!1!0' = cy!1!0) and
+        (cy!1!1' = cy!1!1) and
+        (cy!1!2' = cy!1!2) and
+        (cy!1!3' = cy!1!3) and
+        (cy!2!0' = cy!2!0) and
+        (cy!2!1' = cy!2!1) and
+        (cy!2!2' = cy!2!2) and
+        (cy!2!3' = cy!2!3) and
+        (cy!3!0' = cy!3!0) and
+        (cy!3!1' = cy!3!1) and
+        (cy!3!2' = cy!3!2) and
+        (cy!3!3' = cy!3!3),
+        cs!213: bool
+        = (good_p!0' = good_p!0) and
+        (good_p!1' = good_p!1) and
+        (good_p!2' = good_p!2) and
+        (good_p!3' = good_p!3),
+        cs!214: bool
+        = (good_r!0' = good_r!0) and
+        (good_r!1' = good_r!1) and
+        (good_r!2' = good_r!2) and
+        (good_r!3' = good_r!3),
+        cs!215: bool
+        = (v!0' = v!0) and
+        (v!1' = v!1) and
+        (v!2' = v!2) and
+        (v!3' = v!3),
+        cs!232: bool = not(good_r!0),
+        cs!234: bool = not(good_r!1),
+        cs!236: bool = not(good_r!2),
+        cs!250: bool = not(good_r!3),
+        cs!256: bool = not(good_p!0)
+    IN (LET cs!233: DATA
+           = IF cond!3 THEN cx!3!0
+           ELSIF cond!2 THEN cx!2!0
+           ELSIF cond!1 THEN cx!1!0
+           ELSE cx!0!0 ENDIF,
+           cs!235: DATA
+           = IF cond!3 THEN cx!3!1
+           ELSIF cond!2 THEN cx!2!1
+           ELSIF cond!1 THEN cx!1!1
+           ELSE cx!0!1 ENDIF,
+           cs!237: DATA
+           = IF cond!3 THEN cx!3!2
+           ELSIF cond!2 THEN cx!2!2
+           ELSIF cond!1 THEN cx!1!2
+           ELSE cx!0!2 ENDIF,
+           cs!255: DATA
+           = IF cond!3 THEN cx!3!3
+           ELSIF cond!2 THEN cx!2!3
+           ELSIF cond!1 THEN cx!1!3
+           ELSE cx!0!3 ENDIF,
+           cs!257: bool = cy!0!0 = cy!0!1,
+           cs!258: bool = cy!0!0 = cy!0!2,
+           cs!259: bool = cy!0!0 = cy!0!3,
+           cs!260: bool = cy!1!0 = cy!1!1,
+           cs!261: bool = cy!1!0 = cy!1!2,
+           cs!262: bool = cy!1!0 = cy!1!3,
+           cs!263: bool = cy!2!0 = cy!2!1,
+           cs!264: bool = cy!2!0 = cy!2!2,
+           cs!265: bool = cy!2!0 = cy!2!3,
+           cs!266: bool = cy!3!0 = cy!3!1,
+           cs!267: bool = cy!3!0 = cy!3!2,
+           cs!268: bool = cy!3!0 = cy!3!3
+       IN (choice!1 = 0) and
+          (round = 0) and
+          (cs!256 or
+          (1 /= source) or
+          (cx!0!0' = val) and
+          (cx!0!1' = val) and
+          (cx!0!2' = val) and
+          (cx!0!3' = val)) and
+          (cs!196 or
+          (2 /= source) or
+          (cx!1!0' = val) and
+          (cx!1!1' = val) and
+          (cx!1!2' = val) and
+          (cx!1!3' = val)) and
+          (cs!201 or
+          (3 /= source) or
+          (cx!2!0' = val) and
+          (cx!2!1' = val) and
+          (cx!2!2' = val) and
+          (cx!2!3' = val)) and
+          (cs!206 or
+          (4 /= source) or
+          (cx!3!0' = val) and
+          (cx!3!1' = val) and
+          (cx!3!2' = val) and
+          (cx!3!3' = val)) and
+          (cs!256 or
+          (1 = source) or
+          (cx!0!0' = 0) and
+          (cx!0!1' = 0) and
+          (cx!0!2' = 0) and
+          (cx!0!3' = 0)) and
+          (cs!196 or
+          (2 = source) or
+          (cx!1!0' = 0) and
+          (cx!1!1' = 0) and
+          (cx!1!2' = 0) and
+          (cx!1!3' = 0)) and
+          (cs!201 or
+          (3 = source) or
+          (cx!2!0' = 0) and
+          (cx!2!1' = 0) and
+          (cx!2!2' = 0) and
+          (cx!2!3' = 0)) and
+          (cs!206 or
+          (4 = source) or
+          (cx!3!0' = 0) and
+          (cx!3!1' = 0) and
+          (cx!3!2' = 0) and
+          (cx!3!3' = 0)) and
+          (round' = 1) and
+          cs!212 and
+          cs!213 and
+          cs!214 and
+          cs!215 or
+          (choice!1 = 1) and
+          (round = 1) and
+          (cs!232 or (cy!0!0' = cs!233)) and
+          (cs!232 or (cy!1!0' = cs!233)) and
+          (cs!232 or (cy!2!0' = cs!233)) and
+          (cs!232 or (cy!3!0' = cs!233)) and
+          (cs!234 or (cy!0!1' = cs!235)) and
+          (cs!234 or (cy!1!1' = cs!235)) and
+          (cs!234 or (cy!2!1' = cs!235)) and
+          (cs!234 or (cy!3!1' = cs!235)) and
+          (cs!236 or (cy!0!2' = cs!237)) and
+          (cs!236 or (cy!1!2' = cs!237)) and
+          (cs!236 or (cy!2!2' = cs!237)) and
+          (cs!236 or (cy!3!2' = cs!237)) and
+          (cs!250 or (cy!0!3' = cs!255)) and
+          (cs!250 or (cy!1!3' = cs!255)) and
+          (cs!250 or (cy!2!3' = cs!255)) and
+          (cs!250 or (cy!3!3' = cs!255)) and
+          (round' = 2) and
+          cs!211 and
+          cs!213 and
+          cs!214 and
+          cs!215 or
+          (choice!1 = 2) and
+          (round = 2) and
+          (cs!256 or
+          (v!0' =
+          IF cs!257 AND cs!258 OR
+             cs!257 AND cs!259 OR
+             cs!258 AND cs!259 THEN
+            cy!0!0
+          ELSIF (cy!0!1 = cy!0!2) AND (cy!0!1 = cy!0!3) THEN cy!0!1
+          ELSE 0 ENDIF)) and
+          (cs!196 or
+          (v!1' =
+          IF cs!260 AND cs!261 OR
+             cs!260 AND cs!262 OR
+             cs!261 AND cs!262 THEN
+            cy!1!0
+          ELSIF (cy!1!1 = cy!1!2) AND (cy!1!1 = cy!1!3) THEN cy!1!1
+          ELSE 0 ENDIF)) and
+          (cs!201 or
+          (v!2' =
+          IF cs!263 AND cs!264 OR
+             cs!263 AND cs!265 OR
+             cs!264 AND cs!265 THEN
+            cy!2!0
+          ELSIF (cy!2!1 = cy!2!2) AND (cy!2!1 = cy!2!3) THEN cy!2!1
+          ELSE 0 ENDIF)) and
+          (cs!206 or
+          (v!3' =
+          IF cs!266 AND cs!267 OR
+             cs!266 AND cs!268 OR
+             cs!267 AND cs!268 THEN
+            cy!3!0
+          ELSIF (cy!3!1 = cy!3!2) AND (cy!3!1 = cy!3!3) THEN cy!3!1
+          ELSE 0 ENDIF)) and
+          (round' = 3) and
+          cs!211 and
+          cs!212 and
+          cs!213 and
+          cs!214 or
+          (choice!1 = 3) and
+          (round = 3) and
+          cs!211 and
+          cs!212 and
+          cs!213 and
+          cs!214 and
+          (round' = round) and
+          cs!215))
+  SKIP
+    (round' = round) and
+    (v!0' = v!0) and
+    (v!1' = v!1) and
+    (v!2' = v!2) and
+    (v!3' = v!3) and
+    (good_r!0' = good_r!0) and
+    (good_r!1' = good_r!1) and
+    (good_r!2' = good_r!2) and
+    (good_r!3' = good_r!3) and
+    (good_p!0' = good_p!0) and
+    (good_p!1' = good_p!1) and
+    (good_p!2' = good_p!2) and
+    (good_p!3' = good_p!3) and
+    (cy!0!0' = cy!0!0) and
+    (cy!0!1' = cy!0!1) and
+    (cy!0!2' = cy!0!2) and
+    (cy!0!3' = cy!0!3) and
+    (cy!1!0' = cy!1!0) and
+    (cy!1!1' = cy!1!1) and
+    (cy!1!2' = cy!1!2) and
+    (cy!1!3' = cy!1!3) and
+    (cy!2!0' = cy!2!0) and
+    (cy!2!1' = cy!2!1) and
+    (cy!2!2' = cy!2!2) and
+    (cy!2!3' = cy!2!3) and
+    (cy!3!0' = cy!3!0) and
+    (cy!3!1' = cy!3!1) and
+    (cy!3!2' = cy!3!2) and
+    (cy!3!3' = cy!3!3) and
+    (cx!0!0' = cx!0!0) and
+    (cx!0!1' = cx!0!1) and
+    (cx!0!2' = cx!0!2) and
+    (cx!0!3' = cx!0!3) and
+    (cx!1!0' = cx!1!0) and
+    (cx!1!1' = cx!1!1) and
+    (cx!1!2' = cx!1!2) and
+    (cx!1!3' = cx!1!3) and
+    (cx!2!0' = cx!2!0) and
+    (cx!2!1' = cx!2!1) and
+    (cx!2!2' = cx!2!2) and
+    (cx!2!3' = cx!2!3) and
+    (cx!3!0' = cx!3!0) and
+    (cx!3!1' = cx!3!1) and
+    (cx!3!2' = cx!3!2) and
+    (cx!3!3' = cx!3!3)
+  VALID_INPUT
+    true
+  VALID_STATE
+    true
+  VALID_CONSTANT
+    true
+END
+
+%
+% Flat assertion: om1_with_relays agreement
+%
+BEGIN_FLAT
+  OUTPUT cx!0!0 : DATA
+  OUTPUT cx!0!1 : DATA
+  OUTPUT cx!0!2 : DATA
+  OUTPUT cx!0!3 : DATA
+  OUTPUT cx!1!0 : DATA
+  OUTPUT cx!1!1 : DATA
+  OUTPUT cx!1!2 : DATA
+  OUTPUT cx!1!3 : DATA
+  OUTPUT cx!2!0 : DATA
+  OUTPUT cx!2!1 : DATA
+  OUTPUT cx!2!2 : DATA
+  OUTPUT cx!2!3 : DATA
+  OUTPUT cx!3!0 : DATA
+  OUTPUT cx!3!1 : DATA
+  OUTPUT cx!3!2 : DATA
+  OUTPUT cx!3!3 : DATA
+  OUTPUT cy!0!0 : DATA
+  OUTPUT cy!0!1 : DATA
+  OUTPUT cy!0!2 : DATA
+  OUTPUT cy!0!3 : DATA
+  OUTPUT cy!1!0 : DATA
+  OUTPUT cy!1!1 : DATA
+  OUTPUT cy!1!2 : DATA
+  OUTPUT cy!1!3 : DATA
+  OUTPUT cy!2!0 : DATA
+  OUTPUT cy!2!1 : DATA
+  OUTPUT cy!2!2 : DATA
+  OUTPUT cy!2!3 : DATA
+  OUTPUT cy!3!0 : DATA
+  OUTPUT cy!3!1 : DATA
+  OUTPUT cy!3!2 : DATA
+  OUTPUT cy!3!3 : DATA
+  OUTPUT good_p!0 : bool
+  OUTPUT good_p!1 : bool
+  OUTPUT good_p!2 : bool
+  OUTPUT good_p!3 : bool
+  OUTPUT good_r!0 : bool
+  OUTPUT good_r!1 : bool
+  OUTPUT good_r!2 : bool
+  OUTPUT good_r!3 : bool
+  OUTPUT v!0 : DATA
+  OUTPUT v!1 : DATA
+  OUTPUT v!2 : DATA
+  OUTPUT v!3 : DATA
+  OUTPUT round : NATURAL
+  INPUT choice!2 : [0..3]
+  DEFINITION
+    true
+  INITIALIZATION
+    (round = 0) and
+    (cx!0!0 = 0) and
+    (cx!0!1 = 0) and
+    (cx!0!2 = 0) and
+    (cx!0!3 = 0) and
+    (cx!1!0 = 0) and
+    (cx!1!1 = 0) and
+    (cx!1!2 = 0) and
+    (cx!1!3 = 0) and
+    (cx!2!0 = 0) and
+    (cx!2!1 = 0) and
+    (cx!2!2 = 0) and
+    (cx!2!3 = 0) and
+    (cx!3!0 = 0) and
+    (cx!3!1 = 0) and
+    (cx!3!2 = 0) and
+    (cx!3!3 = 0) and
+    (cy!0!0 = 0) and
+    (cy!0!1 = 0) and
+    (cy!0!2 = 0) and
+    (cy!0!3 = 0) and
+    (cy!1!0 = 0) and
+    (cy!1!1 = 0) and
+    (cy!1!2 = 0) and
+    (cy!1!3 = 0) and
+    (cy!2!0 = 0) and
+    (cy!2!1 = 0) and
+    (cy!2!2 = 0) and
+    (cy!2!3 = 0) and
+    (cy!3!0 = 0) and
+    (cy!3!1 = 0) and
+    (cy!3!2 = 0) and
+    (cy!3!3 = 0) and
+    good_p!0 AND good_p!1 AND good_p!2 AND good_p!3 and
+    good_r!0 AND good_r!1 AND good_r!2 OR
+    good_r!0 AND good_r!1 AND good_r!3 OR
+    good_r!0 AND good_r!2 AND good_r!3 OR
+    good_r!1 AND good_r!2 AND good_r!3
+  TRANSITION
+    (LET cond!12: bool = source = 2,
+        cond!13: bool = source = 3,
+        cond!14: bool = source = 4,
+        cs!492: bool = not(good_r!0),
+        cs!494: bool = not(good_r!1),
+        cs!496: bool = not(good_r!2),
+        cs!510: bool = not(good_r!3),
+        cs!516: bool = not(good_p!0),
+        cs!521: bool = not(good_p!1),
+        cs!526: bool = not(good_p!2),
+        cs!531: bool = not(good_p!3),
+        cs!536: bool
+        = (cx!0!0' = cx!0!0) and
+        (cx!0!1' = cx!0!1) and
+        (cx!0!2' = cx!0!2) and
+        (cx!0!3' = cx!0!3) and
+        (cx!1!0' = cx!1!0) and
+        (cx!1!1' = cx!1!1) and
+        (cx!1!2' = cx!1!2) and
+        (cx!1!3' = cx!1!3) and
+        (cx!2!0' = cx!2!0) and
+        (cx!2!1' = cx!2!1) and
+        (cx!2!2' = cx!2!2) and
+        (cx!2!3' = cx!2!3) and
+        (cx!3!0' = cx!3!0) and
+        (cx!3!1' = cx!3!1) and
+        (cx!3!2' = cx!3!2) and
+        (cx!3!3' = cx!3!3),
+        cs!537: bool
+        = (cy!0!0' = cy!0!0) and
+        (cy!0!1' = cy!0!1) and
+        (cy!0!2' = cy!0!2) and
+        (cy!0!3' = cy!0!3) and
+        (cy!1!0' = cy!1!0) and
+        (cy!1!1' = cy!1!1) and
+        (cy!1!2' = cy!1!2) and
+        (cy!1!3' = cy!1!3) and
+        (cy!2!0' = cy!2!0) and
+        (cy!2!1' = cy!2!1) and
+        (cy!2!2' = cy!2!2) and
+        (cy!2!3' = cy!2!3) and
+        (cy!3!0' = cy!3!0) and
+        (cy!3!1' = cy!3!1) and
+        (cy!3!2' = cy!3!2) and
+        (cy!3!3' = cy!3!3),
+        cs!538: bool
+        = (good_p!0' = good_p!0) and
+        (good_p!1' = good_p!1) and
+        (good_p!2' = good_p!2) and
+        (good_p!3' = good_p!3),
+        cs!539: bool
+        = (good_r!0' = good_r!0) and
+        (good_r!1' = good_r!1) and
+        (good_r!2' = good_r!2) and
+        (good_r!3' = good_r!3),
+        cs!540: bool
+        = (v!0' = v!0) and
+        (v!1' = v!1) and
+        (v!2' = v!2) and
+        (v!3' = v!3)
+    IN (LET cs!493: DATA
+           = IF cond!14 THEN cx!3!0
+           ELSIF cond!13 THEN cx!2!0
+           ELSIF cond!12 THEN cx!1!0
+           ELSE cx!0!0 ENDIF,
+           cs!495: DATA
+           = IF cond!14 THEN cx!3!1
+           ELSIF cond!13 THEN cx!2!1
+           ELSIF cond!12 THEN cx!1!1
+           ELSE cx!0!1 ENDIF,
+           cs!497: DATA
+           = IF cond!14 THEN cx!3!2
+           ELSIF cond!13 THEN cx!2!2
+           ELSIF cond!12 THEN cx!1!2
+           ELSE cx!0!2 ENDIF,
+           cs!515: DATA
+           = IF cond!14 THEN cx!3!3
+           ELSIF cond!13 THEN cx!2!3
+           ELSIF cond!12 THEN cx!1!3
+           ELSE cx!0!3 ENDIF,
+           cs!541: bool = cy!0!0 = cy!0!1,
+           cs!542: bool = cy!0!0 = cy!0!2,
+           cs!543: bool = cy!0!0 = cy!0!3,
+           cs!544: bool = cy!1!0 = cy!1!1,
+           cs!545: bool = cy!1!0 = cy!1!2,
+           cs!546: bool = cy!1!0 = cy!1!3,
+           cs!547: bool = cy!2!0 = cy!2!1,
+           cs!548: bool = cy!2!0 = cy!2!2,
+           cs!549: bool = cy!2!0 = cy!2!3,
+           cs!550: bool = cy!3!0 = cy!3!1,
+           cs!551: bool = cy!3!0 = cy!3!2,
+           cs!552: bool = cy!3!0 = cy!3!3
+       IN (choice!2 = 0) and
+          (round = 0) and
+          (cs!516 or
+          (1 /= source) or
+          (cx!0!0' = val) and
+          (cx!0!1' = val) and
+          (cx!0!2' = val) and
+          (cx!0!3' = val)) and
+          (cs!521 or
+          (2 /= source) or
+          (cx!1!0' = val) and
+          (cx!1!1' = val) and
+          (cx!1!2' = val) and
+          (cx!1!3' = val)) and
+          (cs!526 or
+          (3 /= source) or
+          (cx!2!0' = val) and
+          (cx!2!1' = val) and
+          (cx!2!2' = val) and
+          (cx!2!3' = val)) and
+          (cs!531 or
+          (4 /= source) or
+          (cx!3!0' = val) and
+          (cx!3!1' = val) and
+          (cx!3!2' = val) and
+          (cx!3!3' = val)) and
+          (cs!516 or
+          (1 = source) or
+          (cx!0!0' = 0) and
+          (cx!0!1' = 0) and
+          (cx!0!2' = 0) and
+          (cx!0!3' = 0)) and
+          (cs!521 or
+          (2 = source) or
+          (cx!1!0' = 0) and
+          (cx!1!1' = 0) and
+          (cx!1!2' = 0) and
+          (cx!1!3' = 0)) and
+          (cs!526 or
+          (3 = source) or
+          (cx!2!0' = 0) and
+          (cx!2!1' = 0) and
+          (cx!2!2' = 0) and
+          (cx!2!3' = 0)) and
+          (cs!531 or
+          (4 = source) or
+          (cx!3!0' = 0) and
+          (cx!3!1' = 0) and
+          (cx!3!2' = 0) and
+          (cx!3!3' = 0)) and
+          (round' = 1) and
+          cs!537 and
+          cs!538 and
+          cs!539 and
+          cs!540 or
+          (choice!2 = 1) and
+          (round = 1) and
+          (cs!492 or (cy!0!0' = cs!493)) and
+          (cs!492 or (cy!1!0' = cs!493)) and
+          (cs!492 or (cy!2!0' = cs!493)) and
+          (cs!492 or (cy!3!0' = cs!493)) and
+          (cs!494 or (cy!0!1' = cs!495)) and
+          (cs!494 or (cy!1!1' = cs!495)) and
+          (cs!494 or (cy!2!1' = cs!495)) and
+          (cs!494 or (cy!3!1' = cs!495)) and
+          (cs!496 or (cy!0!2' = cs!497)) and
+          (cs!496 or (cy!1!2' = cs!497)) and
+          (cs!496 or (cy!2!2' = cs!497)) and
+          (cs!496 or (cy!3!2' = cs!497)) and
+          (cs!510 or (cy!0!3' = cs!515)) and
+          (cs!510 or (cy!1!3' = cs!515)) and
+          (cs!510 or (cy!2!3' = cs!515)) and
+          (cs!510 or (cy!3!3' = cs!515)) and
+          (round' = 2) and
+          cs!536 and
+          cs!538 and
+          cs!539 and
+          cs!540 or
+          (choice!2 = 2) and
+          (round = 2) and
+          (cs!516 or
+          (v!0' =
+          IF cs!541 AND cs!542 OR
+             cs!541 AND cs!543 OR
+             cs!542 AND cs!543 THEN
+            cy!0!0
+          ELSIF (cy!0!1 = cy!0!2) AND (cy!0!1 = cy!0!3) THEN cy!0!1
+          ELSE 0 ENDIF)) and
+          (cs!521 or
+          (v!1' =
+          IF cs!544 AND cs!545 OR
+             cs!544 AND cs!546 OR
+             cs!545 AND cs!546 THEN
+            cy!1!0
+          ELSIF (cy!1!1 = cy!1!2) AND (cy!1!1 = cy!1!3) THEN cy!1!1
+          ELSE 0 ENDIF)) and
+          (cs!526 or
+          (v!2' =
+          IF cs!547 AND cs!548 OR
+             cs!547 AND cs!549 OR
+             cs!548 AND cs!549 THEN
+            cy!2!0
+          ELSIF (cy!2!1 = cy!2!2) AND (cy!2!1 = cy!2!3) THEN cy!2!1
+          ELSE 0 ENDIF)) and
+          (cs!531 or
+          (v!3' =
+          IF cs!550 AND cs!551 OR
+             cs!550 AND cs!552 OR
+             cs!551 AND cs!552 THEN
+            cy!3!0
+          ELSIF (cy!3!1 = cy!3!2) AND (cy!3!1 = cy!3!3) THEN cy!3!1
+          ELSE 0 ENDIF)) and
+          (round' = 3) and
+          cs!536 and
+          cs!537 and
+          cs!538 and
+          cs!539 or
+          (choice!2 = 3) and
+          (round = 3) and
+          cs!536 and
+          cs!537 and
+          cs!538 and
+          cs!539 and
+          (round' = round) and
+          cs!540))
+  SKIP
+    (round' = round) and
+    (v!0' = v!0) and
+    (v!1' = v!1) and
+    (v!2' = v!2) and
+    (v!3' = v!3) and
+    (good_r!0' = good_r!0) and
+    (good_r!1' = good_r!1) and
+    (good_r!2' = good_r!2) and
+    (good_r!3' = good_r!3) and
+    (good_p!0' = good_p!0) and
+    (good_p!1' = good_p!1) and
+    (good_p!2' = good_p!2) and
+    (good_p!3' = good_p!3) and
+    (cy!0!0' = cy!0!0) and
+    (cy!0!1' = cy!0!1) and
+    (cy!0!2' = cy!0!2) and
+    (cy!0!3' = cy!0!3) and
+    (cy!1!0' = cy!1!0) and
+    (cy!1!1' = cy!1!1) and
+    (cy!1!2' = cy!1!2) and
+    (cy!1!3' = cy!1!3) and
+    (cy!2!0' = cy!2!0) and
+    (cy!2!1' = cy!2!1) and
+    (cy!2!2' = cy!2!2) and
+    (cy!2!3' = cy!2!3) and
+    (cy!3!0' = cy!3!0) and
+    (cy!3!1' = cy!3!1) and
+    (cy!3!2' = cy!3!2) and
+    (cy!3!3' = cy!3!3) and
+    (cx!0!0' = cx!0!0) and
+    (cx!0!1' = cx!0!1) and
+    (cx!0!2' = cx!0!2) and
+    (cx!0!3' = cx!0!3) and
+    (cx!1!0' = cx!1!0) and
+    (cx!1!1' = cx!1!1) and
+    (cx!1!2' = cx!1!2) and
+    (cx!1!3' = cx!1!3) and
+    (cx!2!0' = cx!2!0) and
+    (cx!2!1' = cx!2!1) and
+    (cx!2!2' = cx!2!2) and
+    (cx!2!3' = cx!2!3) and
+    (cx!3!0' = cx!3!0) and
+    (cx!3!1' = cx!3!1) and
+    (cx!3!2' = cx!3!2) and
+    (cx!3!3' = cx!3!3)
+  VALID_INPUT
+    true
+  VALID_STATE
+    true
+  VALID_CONSTANT
+    true
+END
+|- G(round < 3 or
+     (not(good_p!0) or
+     (not(good_p!1) or (v!0 = v!1)) and
+     (not(good_p!2) or (v!0 = v!2)) and
+     (not(good_p!3) or (v!0 = v!3))) and
+     (not(good_p!1) or
+     (not(good_p!0) or (v!1 = v!0)) and
+     (not(good_p!2) or (v!1 = v!2)) and
+     (not(good_p!3) or (v!1 = v!3))) and
+     (not(good_p!2) or
+     (not(good_p!0) or (v!2 = v!0)) and
+     (not(good_p!1) or (v!2 = v!1)) and
+     (not(good_p!3) or (v!2 = v!3))) and
+     (not(good_p!3) or
+     (not(good_p!0) or (v!3 = v!0)) and
+     (not(good_p!1) or (v!3 = v!1)) and
+     (not(good_p!2) or (v!3 = v!2))))
+
+%
+% Flat assertion: om1_with_relays validity
+%
+BEGIN_FLAT
+  OUTPUT cx!0!0 : DATA
+  OUTPUT cx!0!1 : DATA
+  OUTPUT cx!0!2 : DATA
+  OUTPUT cx!0!3 : DATA
+  OUTPUT cx!1!0 : DATA
+  OUTPUT cx!1!1 : DATA
+  OUTPUT cx!1!2 : DATA
+  OUTPUT cx!1!3 : DATA
+  OUTPUT cx!2!0 : DATA
+  OUTPUT cx!2!1 : DATA
+  OUTPUT cx!2!2 : DATA
+  OUTPUT cx!2!3 : DATA
+  OUTPUT cx!3!0 : DATA
+  OUTPUT cx!3!1 : DATA
+  OUTPUT cx!3!2 : DATA
+  OUTPUT cx!3!3 : DATA
+  OUTPUT cy!0!0 : DATA
+  OUTPUT cy!0!1 : DATA
+  OUTPUT cy!0!2 : DATA
+  OUTPUT cy!0!3 : DATA
+  OUTPUT cy!1!0 : DATA
+  OUTPUT cy!1!1 : DATA
+  OUTPUT cy!1!2 : DATA
+  OUTPUT cy!1!3 : DATA
+  OUTPUT cy!2!0 : DATA
+  OUTPUT cy!2!1 : DATA
+  OUTPUT cy!2!2 : DATA
+  OUTPUT cy!2!3 : DATA
+  OUTPUT cy!3!0 : DATA
+  OUTPUT cy!3!1 : DATA
+  OUTPUT cy!3!2 : DATA
+  OUTPUT cy!3!3 : DATA
+  OUTPUT good_p!0 : bool
+  OUTPUT good_p!1 : bool
+  OUTPUT good_p!2 : bool
+  OUTPUT good_p!3 : bool
+  OUTPUT good_r!0 : bool
+  OUTPUT good_r!1 : bool
+  OUTPUT good_r!2 : bool
+  OUTPUT good_r!3 : bool
+  OUTPUT v!0 : DATA
+  OUTPUT v!1 : DATA
+  OUTPUT v!2 : DATA
+  OUTPUT v!3 : DATA
+  OUTPUT round : NATURAL
+  INPUT choice!3 : [0..3]
+  DEFINITION
+    true
+  INITIALIZATION
+    (round = 0) and
+    (cx!0!0 = 0) and
+    (cx!0!1 = 0) and
+    (cx!0!2 = 0) and
+    (cx!0!3 = 0) and
+    (cx!1!0 = 0) and
+    (cx!1!1 = 0) and
+    (cx!1!2 = 0) and
+    (cx!1!3 = 0) and
+    (cx!2!0 = 0) and
+    (cx!2!1 = 0) and
+    (cx!2!2 = 0) and
+    (cx!2!3 = 0) and
+    (cx!3!0 = 0) and
+    (cx!3!1 = 0) and
+    (cx!3!2 = 0) and
+    (cx!3!3 = 0) and
+    (cy!0!0 = 0) and
+    (cy!0!1 = 0) and
+    (cy!0!2 = 0) and
+    (cy!0!3 = 0) and
+    (cy!1!0 = 0) and
+    (cy!1!1 = 0) and
+    (cy!1!2 = 0) and
+    (cy!1!3 = 0) and
+    (cy!2!0 = 0) and
+    (cy!2!1 = 0) and
+    (cy!2!2 = 0) and
+    (cy!2!3 = 0) and
+    (cy!3!0 = 0) and
+    (cy!3!1 = 0) and
+    (cy!3!2 = 0) and
+    (cy!3!3 = 0) and
+    good_p!0 AND good_p!1 AND good_p!2 AND good_p!3 and
+    good_r!0 AND good_r!1 AND good_r!2 OR
+    good_r!0 AND good_r!1 AND good_r!3 OR
+    good_r!0 AND good_r!2 AND good_r!3 OR
+    good_r!1 AND good_r!2 AND good_r!3
+  TRANSITION
+    (LET cond!23: bool = source = 2,
+        cond!24: bool = source = 3,
+        cond!25: bool = source = 4,
+        cs!776: bool = not(good_r!0),
+        cs!778: bool = not(good_r!1),
+        cs!780: bool = not(good_r!2),
+        cs!794: bool = not(good_r!3),
+        cs!800: bool = not(good_p!0),
+        cs!805: bool = not(good_p!1),
+        cs!810: bool = not(good_p!2),
+        cs!815: bool = not(good_p!3),
+        cs!820: bool
+        = (cx!0!0' = cx!0!0) and
+        (cx!0!1' = cx!0!1) and
+        (cx!0!2' = cx!0!2) and
+        (cx!0!3' = cx!0!3) and
+        (cx!1!0' = cx!1!0) and
+        (cx!1!1' = cx!1!1) and
+        (cx!1!2' = cx!1!2) and
+        (cx!1!3' = cx!1!3) and
+        (cx!2!0' = cx!2!0) and
+        (cx!2!1' = cx!2!1) and
+        (cx!2!2' = cx!2!2) and
+        (cx!2!3' = cx!2!3) and
+        (cx!3!0' = cx!3!0) and
+        (cx!3!1' = cx!3!1) and
+        (cx!3!2' = cx!3!2) and
+        (cx!3!3' = cx!3!3),
+        cs!821: bool
+        = (cy!0!0' = cy!0!0) and
+        (cy!0!1' = cy!0!1) and
+        (cy!0!2' = cy!0!2) and
+        (cy!0!3' = cy!0!3) and
+        (cy!1!0' = cy!1!0) and
+        (cy!1!1' = cy!1!1) and
+        (cy!1!2' = cy!1!2) and
+        (cy!1!3' = cy!1!3) and
+        (cy!2!0' = cy!2!0) and
+        (cy!2!1' = cy!2!1) and
+        (cy!2!2' = cy!2!2) and
+        (cy!2!3' = cy!2!3) and
+        (cy!3!0' = cy!3!0) and
+        (cy!3!1' = cy!3!1) and
+        (cy!3!2' = cy!3!2) and
+        (cy!3!3' = cy!3!3),
+        cs!822: bool
+        = (good_p!0' = good_p!0) and
+        (good_p!1' = good_p!1) and
+        (good_p!2' = good_p!2) and
+        (good_p!3' = good_p!3),
+        cs!823: bool
+        = (good_r!0' = good_r!0) and
+        (good_r!1' = good_r!1) and
+        (good_r!2' = good_r!2) and
+        (good_r!3' = good_r!3),
+        cs!824: bool
+        = (v!0' = v!0) and
+        (v!1' = v!1) and
+        (v!2' = v!2) and
+        (v!3' = v!3)
+    IN (LET cs!777: DATA
+           = IF cond!25 THEN cx!3!0
+           ELSIF cond!24 THEN cx!2!0
+           ELSIF cond!23 THEN cx!1!0
+           ELSE cx!0!0 ENDIF,
+           cs!779: DATA
+           = IF cond!25 THEN cx!3!1
+           ELSIF cond!24 THEN cx!2!1
+           ELSIF cond!23 THEN cx!1!1
+           ELSE cx!0!1 ENDIF,
+           cs!781: DATA
+           = IF cond!25 THEN cx!3!2
+           ELSIF cond!24 THEN cx!2!2
+           ELSIF cond!23 THEN cx!1!2
+           ELSE cx!0!2 ENDIF,
+           cs!799: DATA
+           = IF cond!25 THEN cx!3!3
+           ELSIF cond!24 THEN cx!2!3
+           ELSIF cond!23 THEN cx!1!3
+           ELSE cx!0!3 ENDIF,
+           cs!825: bool = cy!0!0 = cy!0!1,
+           cs!826: bool = cy!0!0 = cy!0!2,
+           cs!827: bool = cy!0!0 = cy!0!3,
+           cs!828: bool = cy!1!0 = cy!1!1,
+           cs!829: bool = cy!1!0 = cy!1!2,
+           cs!830: bool = cy!1!0 = cy!1!3,
+           cs!831: bool = cy!2!0 = cy!2!1,
+           cs!832: bool = cy!2!0 = cy!2!2,
+           cs!833: bool = cy!2!0 = cy!2!3,
+           cs!834: bool = cy!3!0 = cy!3!1,
+           cs!835: bool = cy!3!0 = cy!3!2,
+           cs!836: bool = cy!3!0 = cy!3!3
+       IN (choice!3 = 0) and
+          (round = 0) and
+          (cs!800 or
+          (1 /= source) or
+          (cx!0!0' = val) and
+          (cx!0!1' = val) and
+          (cx!0!2' = val) and
+          (cx!0!3' = val)) and
+          (cs!805 or
+          (2 /= source) or
+          (cx!1!0' = val) and
+          (cx!1!1' = val) and
+          (cx!1!2' = val) and
+          (cx!1!3' = val)) and
+          (cs!810 or
+          (3 /= source) or
+          (cx!2!0' = val) and
+          (cx!2!1' = val) and
+          (cx!2!2' = val) and
+          (cx!2!3' = val)) and
+          (cs!815 or
+          (4 /= source) or
+          (cx!3!0' = val) and
+          (cx!3!1' = val) and
+          (cx!3!2' = val) and
+          (cx!3!3' = val)) and
+          (cs!800 or
+          (1 = source) or
+          (cx!0!0' = 0) and
+          (cx!0!1' = 0) and
+          (cx!0!2' = 0) and
+          (cx!0!3' = 0)) and
+          (cs!805 or
+          (2 = source) or
+          (cx!1!0' = 0) and
+          (cx!1!1' = 0) and
+          (cx!1!2' = 0) and
+          (cx!1!3' = 0)) and
+          (cs!810 or
+          (3 = source) or
+          (cx!2!0' = 0) and
+          (cx!2!1' = 0) and
+          (cx!2!2' = 0) and
+          (cx!2!3' = 0)) and
+          (cs!815 or
+          (4 = source) or
+          (cx!3!0' = 0) and
+          (cx!3!1' = 0) and
+          (cx!3!2' = 0) and
+          (cx!3!3' = 0)) and
+          (round' = 1) and
+          cs!821 and
+          cs!822 and
+          cs!823 and
+          cs!824 or
+          (choice!3 = 1) and
+          (round = 1) and
+          (cs!776 or (cy!0!0' = cs!777)) and
+          (cs!776 or (cy!1!0' = cs!777)) and
+          (cs!776 or (cy!2!0' = cs!777)) and
+          (cs!776 or (cy!3!0' = cs!777)) and
+          (cs!778 or (cy!0!1' = cs!779)) and
+          (cs!778 or (cy!1!1' = cs!779)) and
+          (cs!778 or (cy!2!1' = cs!779)) and
+          (cs!778 or (cy!3!1' = cs!779)) and
+          (cs!780 or (cy!0!2' = cs!781)) and
+          (cs!780 or (cy!1!2' = cs!781)) and
+          (cs!780 or (cy!2!2' = cs!781)) and
+          (cs!780 or (cy!3!2' = cs!781)) and
+          (cs!794 or (cy!0!3' = cs!799)) and
+          (cs!794 or (cy!1!3' = cs!799)) and
+          (cs!794 or (cy!2!3' = cs!799)) and
+          (cs!794 or (cy!3!3' = cs!799)) and
+          (round' = 2) and
+          cs!820 and
+          cs!822 and
+          cs!823 and
+          cs!824 or
+          (choice!3 = 2) and
+          (round = 2) and
+          (cs!800 or
+          (v!0' =
+          IF cs!825 AND cs!826 OR
+             cs!825 AND cs!827 OR
+             cs!826 AND cs!827 THEN
+            cy!0!0
+          ELSIF (cy!0!1 = cy!0!2) AND (cy!0!1 = cy!0!3) THEN cy!0!1
+          ELSE 0 ENDIF)) and
+          (cs!805 or
+          (v!1' =
+          IF cs!828 AND cs!829 OR
+             cs!828 AND cs!830 OR
+             cs!829 AND cs!830 THEN
+            cy!1!0
+          ELSIF (cy!1!1 = cy!1!2) AND (cy!1!1 = cy!1!3) THEN cy!1!1
+          ELSE 0 ENDIF)) and
+          (cs!810 or
+          (v!2' =
+          IF cs!831 AND cs!832 OR
+             cs!831 AND cs!833 OR
+             cs!832 AND cs!833 THEN
+            cy!2!0
+          ELSIF (cy!2!1 = cy!2!2) AND (cy!2!1 = cy!2!3) THEN cy!2!1
+          ELSE 0 ENDIF)) and
+          (cs!815 or
+          (v!3' =
+          IF cs!834 AND cs!835 OR
+             cs!834 AND cs!836 OR
+             cs!835 AND cs!836 THEN
+            cy!3!0
+          ELSIF (cy!3!1 = cy!3!2) AND (cy!3!1 = cy!3!3) THEN cy!3!1
+          ELSE 0 ENDIF)) and
+          (round' = 3) and
+          cs!820 and
+          cs!821 and
+          cs!822 and
+          cs!823 or
+          (choice!3 = 3) and
+          (round = 3) and
+          cs!820 and
+          cs!821 and
+          cs!822 and
+          cs!823 and
+          (round' = round) and
+          cs!824))
+  SKIP
+    (round' = round) and
+    (v!0' = v!0) and
+    (v!1' = v!1) and
+    (v!2' = v!2) and
+    (v!3' = v!3) and
+    (good_r!0' = good_r!0) and
+    (good_r!1' = good_r!1) and
+    (good_r!2' = good_r!2) and
+    (good_r!3' = good_r!3) and
+    (good_p!0' = good_p!0) and
+    (good_p!1' = good_p!1) and
+    (good_p!2' = good_p!2) and
+    (good_p!3' = good_p!3) and
+    (cy!0!0' = cy!0!0) and
+    (cy!0!1' = cy!0!1) and
+    (cy!0!2' = cy!0!2) and
+    (cy!0!3' = cy!0!3) and
+    (cy!1!0' = cy!1!0) and
+    (cy!1!1' = cy!1!1) and
+    (cy!1!2' = cy!1!2) and
+    (cy!1!3' = cy!1!3) and
+    (cy!2!0' = cy!2!0) and
+    (cy!2!1' = cy!2!1) and
+    (cy!2!2' = cy!2!2) and
+    (cy!2!3' = cy!2!3) and
+    (cy!3!0' = cy!3!0) and
+    (cy!3!1' = cy!3!1) and
+    (cy!3!2' = cy!3!2) and
+    (cy!3!3' = cy!3!3) and
+    (cx!0!0' = cx!0!0) and
+    (cx!0!1' = cx!0!1) and
+    (cx!0!2' = cx!0!2) and
+    (cx!0!3' = cx!0!3) and
+    (cx!1!0' = cx!1!0) and
+    (cx!1!1' = cx!1!1) and
+    (cx!1!2' = cx!1!2) and
+    (cx!1!3' = cx!1!3) and
+    (cx!2!0' = cx!2!0) and
+    (cx!2!1' = cx!2!1) and
+    (cx!2!2' = cx!2!2) and
+    (cx!2!3' = cx!2!3) and
+    (cx!3!0' = cx!3!0) and
+    (cx!3!1' = cx!3!1) and
+    (cx!3!2' = cx!3!2) and
+    (cx!3!3' = cx!3!3)
+  VALID_INPUT
+    true
+  VALID_STATE
+    true
+  VALID_CONSTANT
+    true
+END
+|- G(not(IF source = 4 THEN good_p!3
+         ELSIF source = 3 THEN good_p!2
+         ELSIF source = 2 THEN good_p!1
+         ELSE good_p!0 ENDIF) or
+     round < 3 or
+     (not(good_p!0) or (v!0 = val)) and
+     (not(good_p!1) or (v!1 = val)) and
+     (not(good_p!2) or (v!2 = val)) and
+     (not(good_p!3) or (v!3 = val)))

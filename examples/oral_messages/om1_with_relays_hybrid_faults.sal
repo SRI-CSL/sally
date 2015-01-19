@@ -1,0 +1,169 @@
+%
+% Byzantine fault tolerant OM1 protocol with relays
+%
+
+om1_with_relays_hybrid_faults: CONTEXT =
+BEGIN
+
+  N: NATURAL = 4;  % number of processes
+  M: NATURAL = 4;  % number of relays
+
+  PID: TYPE = [1 .. N];
+  RID: TYPE = [1 .. M];
+
+  %
+  % Data encoding: 0 means nothing sent
+  %
+  DATA: TYPE = REAL;
+  missing: DATA = 0;
+
+  % Data from the source
+  source: PID;
+  val: { x: DATA | x /= missing };
+
+  %
+  % Majority of an array of M values (for M=3 or 4)
+  %
+  maj3(a, b, c: DATA): DATA =
+    IF a=b OR a=c THEN a
+    ELSIF b=c THEN b
+    ELSE missing
+    ENDIF;
+
+  maj4(a, b, c, d: DATA): DATA =
+    IF (a=b AND a=c) OR (a=b AND a=d) OR (a=c AND a=d) THEN a
+    ELSIF (b=c AND b=d) THEN b
+    ELSE missing
+    ENDIF;
+
+  maj(a: ARRAY RID OF DATA): DATA =
+    maj4(a[1], a[2], a[3], a[4]);
+
+
+  %
+  % Fault assumptions
+  % - a is an array of K Booleans for K=3 or 4
+  % - we can assert: all good, at least K-1 good, at least K-2 good
+  %
+  all_good3(a, b, c: BOOLEAN): BOOLEAN = a AND b AND c;
+
+  one_fault3(a, b, c: BOOLEAN): BOOLEAN = (a AND b) OR (a AND c) or (b AND c);
+
+  two_faults3(a, b, c: BOOLEAN): BOOLEAN = a OR b OR c;
+
+  all_good4(a, b, c, d: BOOLEAN): BOOLEAN = a AND b AND c AND d;
+
+  one_fault4(a, b, c, d: BOOLEAN): BOOLEAN =
+    (a AND b AND c) OR (a AND b AND d) OR (a AND c AND d) OR (b AND c AND d);
+
+  two_faults4(a, b, c, d: BOOLEAN): BOOLEAN =
+    (a AND b) OR (a AND c) OR (a AND d) OR (b AND c) OR (b AND d) OR (c AND d);
+
+
+  all_good_p(a: ARRAY PID OF BOOLEAN): BOOLEAN =
+    all_good4(a[1], a[2], a[3], a[4]);
+
+  one_faulty_p(a: ARRAY PID OF BOOLEAN): BOOLEAN =
+    one_fault4(a[1], a[2], a[3], a[4]);
+
+  two_faulty_p(a: ARRAY PID OF BOOLEAN): BOOLEAN =
+    two_faults4(a[1], a[2], a[3], a[4]);
+
+
+  all_good_r(a: ARRAY RID OF BOOLEAN): BOOLEAN =
+    all_good4(a[1], a[2], a[3], a[4]);
+
+  one_faulty_r(a: ARRAY RID OF BOOLEAN): BOOLEAN =
+    one_fault4(a[1], a[2], a[3], a[4]);
+
+  two_faulty_r(a: ARRAY RID OF BOOLEAN): BOOLEAN =
+    two_faults4(a[1], a[2], a[3], a[4]);
+
+
+
+  %
+  % OM protocol: flat representation
+  %  cx[i][j] = channel from process i to relay j
+  %  cy[i][j] = channel from relay j to process i
+  %  good_p[i] = true if process i is non-faulty
+  %  good_r[j] = true if relay j is non-faulty
+  %  symmetric_p[i] = true if process i is faulty but symmetric
+  %  symmetric_r[j] = true if process j is faulty but symmetric
+  %  v[i] = value chosen by process i
+  %  round = round counter
+  %
+  OM: MODULE =
+  BEGIN
+    OUTPUT
+      cx: ARRAY PID OF ARRAY RID OF DATA,
+      cy: ARRAY PID OF ARRAY RID OF DATA,
+      good_p: ARRAY PID OF BOOLEAN,
+      good_r: ARRAY RID OF BOOLEAN,
+      symmetric_p: ARRAY PID OF BOOLEAN,
+      symmetric_r: ARRAY RID OF BOOLEAN,
+      v:  ARRAY PID OF DATA,
+      round: NATURAL
+    INITIALIZATION
+      round = 0;
+      cx = [[i: PID] [[j: RID] missing]];
+      cy = [[i: PID] [[j: RID] missing]];
+      %
+      % Assumptions on fault
+      %
+      good_p IN { a: ARRAY PID OF BOOLEAN | one_faulty_p(a) };
+      good_r IN { a: ARRAY RID OF BOOLEAN | all_good_r(a) };
+
+    TRANSITION
+     [ round = 0 -->
+         %% Process i sends data:
+	 %%  cx'[i][j] can be anything if i is Byzantine
+         %%  cx'[i][j] = val if i is the source
+         %%  cx'[i][j] = missing otherwise
+         %%
+         cx' IN { c: ARRAY PID OF ARRAY RID OF DATA |
+             (FORALL (i: PID, j: RID):
+                    (good_p[i] AND i = source => c[i][j] = val)
+                AND (good_p[i] AND i/= source => c[i][j] = missing))
+         AND (FORALL (i: PID):
+                symmetric_p[i] => (FORALL (j, k: RID): c[i][k] = c[i][j])) };
+
+         round' = 1;
+    []
+       round = 1 -->
+         %% Relay j relays what it received from the source
+	 %%  cy'[i][j] can be anything if j is Byzantine
+         %%  cy'[i][j] = cx[source][j] otherwise
+         cy' IN { c: ARRAY PID OF ARRAY RID OF DATA |
+             (FORALL (i: PID, j: RID): good_r[j] => c[i][j] = cx[source][j])
+         AND (FORALL (j: RID):
+                symmetric_r[j] => (FORALL (i, k: PID): c[i][j] = c[k][j]))
+          };
+         round' = 2;
+    []
+       round = 2 -->
+         %% Process i makes a decision:
+	 %%  v[i] = maj(cy[i][1] ... cy[i][m])
+         v' IN { d: ARRAY PID OF DATA | 
+             FORALL (i: PID):  good_p[i] => d[i] = maj(cy[i]) };
+         round' = 3;
+    []
+       round = 3 --> %% done
+     ]
+  END;
+
+  agreement: LEMMA
+    OM |- G(FORALL (i, j: PID): good_p(i) AND good_p(j) AND round >= 3 => v[i] = v[j]);
+
+  validity: LEMMA
+    OM |- G(FORALL (i: PID): good_p(i) AND good_p(source) AND round >= 3 => v[i] = val);
+ 
+  test0: LEMMA
+    OM |- G(FORALL (i: PID, j, k: RID): round >= 1 => cx[i][j] = cx[i][k]);
+
+  test1: LEMMA
+    OM |- G(FORALL (i: PID, j, k: RID): round >= 2 => cy[i][j] = cy[i][k]);
+
+  test2: LEMMA
+    OM |- G(FORALL (i, j: PID, k: RID): round >= 2 => cy[i][k] = cy[j][k]);
+
+END

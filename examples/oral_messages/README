@@ -1,0 +1,57 @@
+Example mcmt models of a synchronous Fault-tolerant protocol
+============================================================
+
+This is an instance of the "Oral Messages" protocol for Byzantine
+agreement by Lamport, Shostak, and Pease (1982).
+
+The original model was written in SAL (in om1_with_relays.sal).
+The mcmt files were obtained by converting the SAL spec to a 
+flat SAL module (om1_with_relays_flat.sal) then translating this
+model to the mcmt format.
+
+Each mcmt file looks at one property, under one fault model:
+The properties are agreement and validity:
+
+Results for agreement
+---------------------
+
+1) holds for the following fault models:
+
+   no faults:            om1_with_relays_agreement.mcmt
+   a faulty process:     om1_with_realys_agreement_faulty_process.mcmt
+   a faulty relay:       om1_with_realys_agreement_faulty_relay.mcmt
+
+2) fails if we have a faulty process and a faulty relay:
+
+   om1_with_relays_agreement_two_faults.mcmt
+
+
+
+Results for validity
+--------------------
+
+1) holds for the following fault models:
+
+   no faults:            om1_with_relays_validity.mcmt
+   a faulty process:     om1_with_realys_validity_faulty_process.mcmt
+   a faulty relay:       om1_with_realys_validity_faulty_relay.mcmt
+
+
+2) holds (vacuously) if we have a faulty process and a faulty relay:
+
+   om1_with_relays_validity_two_faults.mcmt
+
+
+3) fails if we have two faulty relays:
+
+   om1_with_relays_validity_two_faulty_relays.mcmt
+
+
+
+
+
+   
+
+
+
+
