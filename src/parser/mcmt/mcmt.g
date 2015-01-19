@@ -262,7 +262,7 @@ WHITESPACE
   
 /** Matches a symbol. */
 SYMBOL
-  : ALPHA (ALPHA | DIGIT | '_' | '@' | '.')*
+  : ALPHA (ALPHA | DIGIT | '_' | '@' | '.' | '!' )*
   ;
 
 /** Matches a letter. */
