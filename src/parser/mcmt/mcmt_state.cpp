@@ -50,6 +50,11 @@ term_ref mcmt_state::get_variable(std::string id) const {
   return d_variables.get_entry(id);
 }
 
+void mcmt_state::set_variable(std::string id, expr::term_ref t) {
+  d_variables.add_entry(id, t);
+}
+
+
 system::state_type* mcmt_state::mk_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types) const {
   expr::term_ref type = tm().mk_struct(vars, types);
   return new system::state_type(tm(), id, type);

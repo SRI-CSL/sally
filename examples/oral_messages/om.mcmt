@@ -1,28 +1,39 @@
-;; State type
-(declare-state-type state_type ((x Real)))
+;; Number of stages
+(define-range Stage 0 5) 
 
-;; Initial states (a state formula over state_type)
-(define-states initial_states state_type 
-  (= x 0)
+;; Controller state type 
+(declare-state-type controller_state ((pc Stage)))
+
+;; Controller definition
+(define-transition-system controller controller_state
+  (initalization
+    (= pc 1)
+  }
+  (transition
+    (= next.pc 
+       (ite (<= state.pc 4) 
+            (+ state.pc 1)
+            state.pc
+       )
+    )
+  )
 )
 
-;; One transition 
-(define-transition transition state_type
-  ;; Implicit variables next, state of state_type
-  (= next.x (+ state.x 1))
-)
+;; Number of relays 
+(define-const n Integer 3)
+;; Number of receivers
+(define-const k Integer 2)
 
-;; The system
-(define-transition-system T 
-  state_type
-  initial_states
-  (transition)  
-)
+(define-range Relays 1 n)
+(define-range Receivers 1 k)
+(define-range Values 1 (+ n 1)) 
 
-;; Assume something on the transition system (universal on the state)
-(assume T (>= x 0)) 
+(define-const missing_val 0)
+(define-const correct_val (+ n 1))
 
-;; Query (any state formula over state_type)
-(query T (not (= x (/ 1 2))))
+;; Source state type 
+(declare-state-type ((s_out (Array Relays Values)) (pc Stage)))
 
 
+
+ 

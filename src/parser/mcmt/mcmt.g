@@ -174,13 +174,33 @@ term returns [expr::term_ref t = expr::term_ref()]
   std::vector<expr::term_ref> children;
 } 
   : symbol[id, parser::MCMT_VARIABLE, true] { t = STATE->get_variable(id); }                
-  | c = constant { t = c; } 
+  | c = constant { t = c; }
+  | '(' 'let'
+       { STATE->push_scope(); } 
+       let_assignments 
+       let_t = term { t = let_t; }
+       { STATE->pop_scope(); }
+    ')' 
   | '(' 
         op = term_op 
         term_list[children] 
      ')'   
      { t = STATE->tm().mk_term(op, children); }
   ; 
+  
+let_assignments 
+  : '(' let_assignment+ ')'
+  ; 
+  
+let_assignment 
+@declarations {
+  std::string id;
+}
+  : '(' symbol[id, parser::MCMT_VARIABLE, false] 
+        t = term 
+        { STATE->set_variable(id, t); }
+    ')'
+  ;  
   
 /** 
  * A symbol. Returns it in the id string. If obj_type is not MCMT_OBJECT_LAST

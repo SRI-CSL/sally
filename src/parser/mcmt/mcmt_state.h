@@ -89,6 +89,9 @@ public:
   /** Returns the a variable with the given id */
   expr::term_ref get_variable(std::string id) const;
 
+  /** Sets the variable to a given term */
+  void set_variable(std::string id, expr::term_ref t);
+
   /** Get the string of a token begin parsed */
   static
   std::string token_text(pANTLR3_COMMON_TOKEN token);
