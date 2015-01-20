@@ -28,14 +28,14 @@ class obligation {
   size_t d_k;
   /** The forumula in question */
   expr::term_ref d_P;
-  /** Weight used for ordering */
-  int d_weight;
+  /** Assumption depth */
+  size_t d_depth;
 
 public:
 
   /** Construct the obligation */
-  obligation(size_t k, expr::term_ref P, int weight)
-  : d_k(k), d_P(P), d_weight(weight) {}
+  obligation(size_t k, expr::term_ref P, size_t depth)
+  : d_k(k), d_P(P), d_depth(depth) {}
 
   /** Get the frame */
   size_t frame() const { return d_k; }
@@ -44,7 +44,7 @@ public:
   expr::term_ref formula() const { return d_P; }
 
   /** Get the weight */
-  int weight() const { return d_weight; }
+  size_t depth() const { return d_depth; }
 
   /** Compare for equality */
   bool operator == (const obligation& o) const {
@@ -92,14 +92,14 @@ class ic3_engine : public engine {
   expr::term_ref check_inductive_at(size_t k, expr::term_ref f);
 
   /** Push the formula forward if its inductive. Returns true if inductive. */
-  bool push_if_inductive(size_t k, expr::term_ref f, int weight);
+  bool push_if_inductive(size_t k, expr::term_ref f, size_t depth);
 
   /**
    * Add a formula that's inductive up to k-1 and holds at k. The formula will
    * be added to frames 0, ..., k, and additionally added to induction
    * obligations at k.
    */
-  void add_inductive_at(size_t k, expr::term_ref f, int weight);
+  void add_inductive_at(size_t k, expr::term_ref f, size_t depth);
 
   /** Queue of induction obligations */
   induction_obligation_queue d_induction_obligations;
@@ -114,7 +114,7 @@ class ic3_engine : public engine {
   void ensure_frame(size_t k);
 
   /** Check if f is holds at k (added if holds) */
-  bool check_valid_and_add(size_t k, expr::term_ref f, int weight);
+  bool check_valid_and_add(size_t k, expr::term_ref f, size_t depth);
 
   /** Check if f is reachable at k (nothing is added) */
   bool check_reachable(size_t k, expr::term_ref f);

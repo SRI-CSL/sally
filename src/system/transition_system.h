@@ -77,6 +77,11 @@ public:
     return d_assumptions;
   }
 
+  /** Do we have assumptions */
+  bool has_assumptions() const {
+    return !d_assumptions.empty();
+  }
+
   /** Get the assumptions in one state formula */
   expr::term_ref get_assumption() const;
 

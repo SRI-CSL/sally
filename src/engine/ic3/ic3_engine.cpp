@@ -24,6 +24,10 @@ bool obligation_compare_induction::operator () (const obligation& o1, const obli
   if (o1.frame() != o2.frame()) {
     return o1.frame() > o2.frame();
   }
+  // Smaller depth wins
+  if (o1.depth() != o2.depth()) {
+    return o1.depth() > o2.depth();
+  }
   return o1.formula() > o2.formula();
 }
 
@@ -117,7 +121,7 @@ expr::term_ref ic3_engine::check_inductive_at(size_t k, expr::term_ref F) {
   return result;
 }
 
-void ic3_engine::add_inductive_at(size_t k, expr::term_ref F, int weight) {
+void ic3_engine::add_inductive_at(size_t k, expr::term_ref F, size_t depth) {
   // Ensure frame is setup
   ensure_frame(k);
   assert(!frame_contains(k, F));
@@ -133,7 +137,7 @@ void ic3_engine::add_inductive_at(size_t k, expr::term_ref F, int weight) {
     get_solver(i)->add(F);
   }
   // Add to induction obligations
-  d_induction_obligations.push(obligation(k, F, weight));
+  d_induction_obligations.push(obligation(k, F, depth));
 }
 
 void ic3_engine::ensure_frame(size_t k) {
@@ -157,10 +161,12 @@ void ic3_engine::ensure_frame(size_t k) {
     d_frame_content.push_back(formula_set());
 
     // Also add the solver assumptions
-    expr::term_ref assumption = d_transition_system->get_assumption();
-    expr::term_ref assumption_next = state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, assumption);
-    d_solvers[k]->add(assumption);
-    d_solvers[k]->add(assumption_next);
+    if (d_transition_system->has_assumptions()) {
+      expr::term_ref assumption = d_transition_system->get_assumption();
+      expr::term_ref assumption_next = state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, assumption);
+      d_solvers[k]->add(assumption);
+      d_solvers[k]->add(assumption_next);
+    }
   }
   assert(d_solvers.size() == d_frame_content.size());
 }
@@ -217,7 +223,7 @@ bool ic3_engine::check_reachable(size_t k, expr::term_ref f) {
   return reachable;
 }
 
-bool ic3_engine::check_valid_and_add(size_t k, expr::term_ref f, int weight) {
+bool ic3_engine::check_valid_and_add(size_t k, expr::term_ref f, size_t depth) {
 
   if (output::get_verbosity(std::cout) > 0) {
      std::cout << "ic3: checking validity" << std::endl;
@@ -237,14 +243,14 @@ bool ic3_engine::check_valid_and_add(size_t k, expr::term_ref f, int weight) {
     return false;
   case smt::solver::UNSAT:
     // Valid, we continue with P
-    add_inductive_at(0, f, weight);
+    add_inductive_at(k, f, depth);
     return true;
   default:
     throw exception("Unknown SMT result.");
   }
 }
 
-bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, int weight) {
+bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, size_t depth) {
 
   ensure_frame(k);
   ensure_frame(k+1);
@@ -268,18 +274,27 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, int weight) {
       break;
     }
 
+    // We have a counterexample, we only try to refute if induction depth is not
+    // exceeded
+    if (depth > k) {
+      inductive = false;
+      break;
+    }
+
     // Check if G is reachable
     bool reachable = check_reachable(k, G);
 
-    // If we discharged all the obligations, let's re-check the induction
+    // If reachable, we're not inductive
     if (reachable) {
       inductive = false;
       break;
-    } else {
-      expr::term_ref learnt = tm().mk_term(expr::TERM_NOT, G);
-      get_solver(k)->add(learnt);
-      induction_assumptions.push_back(learnt);
     }
+
+    // Let's re-check the induction, but remember the assumption
+    expr::term_ref learnt = tm().mk_term(expr::TERM_NOT, G);
+    TRACE("ic3") << "ic3: learnt generalization: " << learnt << std::endl;
+    get_solver(k)->add(learnt);
+    induction_assumptions.push_back(learnt);
   }
 
   // Pop the solvers
@@ -289,9 +304,9 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, int weight) {
   if (inductive) {
     TRACE("ic3") << "ic3: proved at " << k << " with " << induction_assumptions.size() << " assumptions" << std::endl;
     // Add the thing we learnt
-    add_inductive_at(k+1, f, weight+1);
+    add_inductive_at(k+1, f, depth);
     for (size_t i = 0; i < induction_assumptions.size(); ++ i) {
-      add_inductive_at(k, induction_assumptions[i], weight+1);
+      add_inductive_at(k, induction_assumptions[i], depth+1);
     }
   }
 
@@ -325,8 +340,8 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
     // If already ahead, we'll prove it there
     assert(!frame_contains(ind.frame()+1, ind.formula()));
 
-    /** Push the formula forward if it's inductive at the fram */
-    bool is_inductive = push_if_inductive(ind.frame(), ind.formula(), ind.weight());
+    /** Push the formula forward if it's inductive at the frame */
+    bool is_inductive = push_if_inductive(ind.frame(), ind.formula(), ind.depth());
     if (!is_inductive) {
       // Not inductive, if P then we have a counterexample
       if (ind.formula() == P) {
