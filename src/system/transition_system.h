@@ -72,11 +72,12 @@ public:
   /** Add an assumption on the state type (takes over the pointer) */
   void add_assumption(state_formula* assumption);
 
-  /** Get all the assumptions */
+  /** Get all the individual assumptions */
   const std::vector<state_formula*>& get_assumptions() const {
     return d_assumptions;
   }
 
+  /** Get the assumptions in one state formula */
   expr::term_ref get_assumption() const;
 
   /** Print it to the stream */
