@@ -18,7 +18,9 @@ namespace expr {
 void integer::to_stream(std::ostream& out) const {
   output::language lang = output::get_output_language(out);
   switch (lang) {
-  case output::MCMT: {
+  case output::MCMT:
+  case output::HORN:
+  {
     int sgn = mpz_sgn(d_gmp_int.get_mpz_t());
     if (sgn == 0) {
       out << "0";
