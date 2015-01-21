@@ -185,7 +185,7 @@ public:
 
     // Setup the solver stream
     *d_solver_input << expr::set_tm(tm);
-    *d_solver_input << expr::set_output_language(output::SMTLIB);
+    *d_solver_input << expr::set_output_language(output::SALLY);
 
     // SMT2 preamble
     *d_solver_input << "(set-info :smt-lib-version 2.0)" << std::endl;

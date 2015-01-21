@@ -115,5 +115,20 @@ std::ostream& get_trace_stream() {
   }
 }
 
+std::string language_to_string(language lang) {
+  switch (lang) {
+  case SALLY: return "sally";
+  case NUXMV: return "nuxmv";
+  default:
+    return "unknown";
+  }
+}
+
+language language_from_string(std::string lang) {
+  if (lang == "sally") return SALLY;
+  if (lang == "nuxmv") return NUXMV;
+  return UNKNOWN;
+}
+
 }
 }

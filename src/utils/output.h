@@ -1,5 +1,5 @@
 /*
- * otuput.h
+ * output.h
  *
  *  Created on: Oct 3, 2014
  *      Author: dejan
@@ -19,9 +19,19 @@ namespace expr {
 namespace output {
 
 enum language {
-  // SMTLIB (Default)
-  SMTLIB = 0
+  // Sally/SMTLIB2 (Default)
+  SALLY = 0,
+  // nuXmv
+  NUXMV,
+  // Unknown
+  UNKNOWN
 };
+
+/** Get the string representation of the language */
+std::string language_to_string(language lang);
+
+/** Get the language from its string representation */
+language language_from_string(std::string lang);
 
 /** Get the term manager associated with out */
 const expr::term_manager_internal* get_term_manager(std::ostream& out);

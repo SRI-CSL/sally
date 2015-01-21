@@ -133,6 +133,15 @@ std::string get_solvers_list() {
   return out.str();
 }
 
+std::string get_output_languages_list() {
+  std::stringstream out;
+  out << "Output language to use: ";
+  for (int i = 0; i < output::UNKNOWN; ++ i) {
+    if (i) { out << ", "; }
+    out << output::language_to_string(output::language(i));
+  }
+  return out.str();
+}
 
 void parseOptions(int argc, char* argv[], variables_map& variables)
 {
@@ -149,6 +158,7 @@ void parseOptions(int argc, char* argv[], variables_map& variables)
       ("parse-only", "Just parse, don't solve.")
       ("engine", value<string>(), get_engines_list().c_str())
       ("solver", value<string>()->default_value("yices2"), get_solvers_list().c_str())
+      ("output-language", value<string>()->default_value("sally"), get_output_languages_list().c_str())
       ;
 
   // Get the individual engine options
