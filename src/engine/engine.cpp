@@ -36,6 +36,8 @@ std::ostream& operator << (std::ostream& out, engine::result result) {
     out << "interrupted"; break;
   case engine::UNSUPPORTED:
     out << "unsupported"; break;
+  case engine::SILENT:
+    out << "silent"; break;
   default:
     out << "unknown";
   }

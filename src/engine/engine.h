@@ -43,7 +43,9 @@ public:
     /** The query type is not supported by the engine */
     UNSUPPORTED,
     /** The engine was interrupted */
-    INTERRUPTED
+    INTERRUPTED,
+    /** Silent result (e.g. for translator) */
+    SILENT
   };
 
   /** Create the engine */

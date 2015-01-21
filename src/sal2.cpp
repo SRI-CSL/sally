@@ -26,55 +26,56 @@ void parseOptions(int argc, char* argv[], variables_map& variables);
 
 int main(int argc, char* argv[]) {
 
-  // Get the options from command line and config files
-  variables_map boost_opts;
-  parseOptions(argc, argv, boost_opts);
-  options opts(boost_opts);
+  try {
 
-  // Get the files to run
-  vector<string>& files = boost_opts.at("input").as< vector<string> >();
+    // Get the options from command line and config files
+    variables_map boost_opts;
+    parseOptions(argc, argv, boost_opts);
+    options opts(boost_opts);
 
-  // Set the verbosity
-  output::set_verbosity(cout, opts.get_unsigned("verbosity"));
-  output::set_verbosity(cerr, opts.get_unsigned("verbosity"));
+    // Get the files to run
+    vector<string>& files = boost_opts.at("input").as<vector<string> >();
 
-  // Set any trace tags if passed in
-  if (boost_opts.count("debug") > 0) {
-    vector<string>& tags = boost_opts.at("debug").as< vector<string> >();
-    for (size_t i = 0; i < tags.size(); ++ i) {
-      output::trace_tag_enable(tags[i]);
+    // Set the verbosity
+    output::set_verbosity(cout, opts.get_unsigned("verbosity"));
+    output::set_verbosity(cerr, opts.get_unsigned("verbosity"));
+
+    // Set the output language
+    output::language out_lang = output::language_from_string(
+        opts.get_string("output-language"));
+    output::set_output_language(cout, out_lang);
+    output::set_output_language(cerr, out_lang);
+
+    // Set any trace tags if passed in
+    if (boost_opts.count("debug") > 0) {
+      vector<string>& tags = boost_opts.at("debug").as<vector<string> >();
+      for (size_t i = 0; i < tags.size(); ++i) {
+        output::trace_tag_enable(tags[i]);
+      }
     }
-  }
 
-  // Typecheck by default
-  bool type_check = true;
+    // Typecheck by default
+    bool type_check = true;
 
-  // Create the term manager
-  expr::term_manager tm(type_check);
-  cout << expr::set_tm(tm);
-  cerr << expr::set_tm(tm);
+    // Create the term manager
+    expr::term_manager tm(type_check);
+    cout << expr::set_tm(tm);
+    cerr << expr::set_tm(tm);
 
-  // Create the context
-  system::context ctx(tm, opts);
+    // Create the context
+    system::context ctx(tm, opts);
 
-  // Set the default solver for the solver factory
-  smt::factory::set_default_solver(opts.get_string("solver"));
+    // Set the default solver for the solver factory
+    smt::factory::set_default_solver(opts.get_string("solver"));
 
-  // Create the engine
-  engine* engine_to_use = 0;
-  if (opts.has_option("engine") > 0) {
-    try {
+    // Create the engine
+    engine* engine_to_use = 0;
+    if (opts.has_option("engine") > 0) {
       engine_to_use = factory::mk_engine(boost_opts.at("engine").as<string>(), ctx);
-    } catch (const sal2::exception& e) {
-      cerr << e << endl;
-      exit(1);
     }
-  }
 
-  // Go through all the files and run them
-  for (size_t i = 0; i < files.size(); ++ i) {
-
-    try {
+    // Go through all the files and run them
+    for (size_t i = 0; i < files.size(); ++i) {
       if (output::get_verbosity(cout) > 0) {
         cout << "Processing " << files[i] << endl;
       }
@@ -85,27 +86,24 @@ int main(int argc, char* argv[]) {
 
       // Parse an process each command
       for (parser::command* cmd = mcmt_parser.parse_command(); cmd != 0; delete cmd, cmd = mcmt_parser.parse_command()) {
-
         if (output::get_verbosity(cout) > 2) {
           cout << "Got command " << *cmd << endl;
         }
-
         // Run the command
         cmd->run(&ctx, engine_to_use);
       }
-
-    } catch (sal2::exception& e) {
-      cerr << e << endl;
-      exit(1);
-    } catch (...) {
-      cerr << "Unexpected error!" << endl;
-      exit(1);
     }
-  }
 
-  // Delete the engine
-  if (engine_to_use != 0) {
-    delete engine_to_use;
+    // Delete the engine
+    if (engine_to_use != 0) {
+      delete engine_to_use;
+    }
+  } catch (sal2::exception& e) {
+    cerr << e << endl;
+    exit(1);
+  } catch (...) {
+    cerr << "Unexpected error!" << endl;
+    exit(1);
   }
 }
 

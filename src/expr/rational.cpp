@@ -25,7 +25,7 @@ size_t rational::hash() const {
 void rational::to_stream(std::ostream& out) const {
   output::language lang = output::get_output_language(out);
   switch (lang) {
-  case output::SALLY: {
+  case output::MCMT: {
     const mpz_class& num = d_gmp_rat.get_num();
     int sgn = mpz_sgn(num.get_mpz_t());
     if (sgn == 0) {

@@ -10,6 +10,7 @@
 #include <boost/unordered_set.hpp>
 
 #include "utils/output.h"
+#include "utils/exception.h"
 #include "expr/term_manager.h"
 
 
@@ -117,7 +118,7 @@ std::ostream& get_trace_stream() {
 
 std::string language_to_string(language lang) {
   switch (lang) {
-  case SALLY: return "sally";
+  case MCMT: return "sally";
   case NUXMV: return "nuxmv";
   case HORN: return "horn";
   default:
@@ -126,9 +127,10 @@ std::string language_to_string(language lang) {
 }
 
 language language_from_string(std::string lang) {
-  if (lang == "sally") return SALLY;
+  if (lang == "sally") return MCMT;
   if (lang == "nuxmv") return NUXMV;
   if (lang == "horn") return HORN;
+  throw exception(std::string("Unsupported language: ") + lang);
   return UNKNOWN;
 }
 

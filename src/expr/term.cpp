@@ -50,7 +50,7 @@ void term::to_stream(std::ostream& out) const {
   output::language lang = output::get_output_language(out);
   const term_manager_internal* tm = output::get_term_manager(out);
   switch (lang) {
-  case output::SALLY:
+  case output::MCMT:
     to_stream_smt(out, *tm);
     break;
   case output::NUXMV:

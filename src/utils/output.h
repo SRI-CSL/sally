@@ -20,7 +20,7 @@ namespace output {
 
 enum language {
   // Sally/SMTLIB2 (Default)
-  SALLY = 0,
+  MCMT = 0,
   // nuXmv
   NUXMV,
   // Horn clause/SMT2
