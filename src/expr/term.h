@@ -130,6 +130,9 @@ public:
   /** Output to the stream using the SMT2 language */
   void to_stream_smt(std::ostream& out, const term_manager_internal& tm) const;
 
+  /** Output to the stream using the NUXMV language */
+  void to_stream_nuxmv(std::ostream& out, const term_manager_internal& tm) const;
+
   /** What kind of term is this */
   term_op op() const { return d_op; }
 

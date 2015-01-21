@@ -23,6 +23,8 @@ enum language {
   SALLY = 0,
   // nuXmv
   NUXMV,
+  // Horn clause/SMT2
+  HORN,
   // Unknown
   UNKNOWN
 };

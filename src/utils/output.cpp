@@ -119,6 +119,7 @@ std::string language_to_string(language lang) {
   switch (lang) {
   case SALLY: return "sally";
   case NUXMV: return "nuxmv";
+  case HORN: return "horn";
   default:
     return "unknown";
   }
@@ -127,6 +128,7 @@ std::string language_to_string(language lang) {
 language language_from_string(std::string lang) {
   if (lang == "sally") return SALLY;
   if (lang == "nuxmv") return NUXMV;
+  if (lang == "horn") return HORN;
   return UNKNOWN;
 }
 

@@ -53,6 +53,12 @@ void term::to_stream(std::ostream& out) const {
   case output::SALLY:
     to_stream_smt(out, *tm);
     break;
+  case output::NUXMV:
+    to_stream_nuxmv(out, *tm);
+    break;
+  case output::HORN:
+    to_stream_smt(out, *tm);
+    break;
   default:
     assert(false);
   }
@@ -279,6 +285,9 @@ void term::to_stream_smt(std::ostream& out, const term_manager_internal& tm) con
   default:
     assert(false);
   }
+}
+
+void term::to_stream_nuxmv(std::ostream& out, const term_manager_internal& tm) const {
 }
 
 term_ref_strong::term_ref_strong(const term_ref_strong& other)
