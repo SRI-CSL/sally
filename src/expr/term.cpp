@@ -312,13 +312,13 @@ std::string get_nuxmv_operator(expr::term_op op) {
 void term::to_stream_nuxmv(std::ostream& out, const term_manager_internal& tm) const {
   switch (d_op) {
   case TYPE_BOOL:
-    out << "Boolean";
+    out << "boolean";
     break;
   case TYPE_INTEGER:
-    out << "Integer";
+    out << "integer";
     break;
   case TYPE_REAL:
-    out << "Real";
+    out << "real";
     break;
   case TYPE_BITVECTOR: {
     size_t size = tm.payload_of<size_t>(*this);

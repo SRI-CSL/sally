@@ -10,9 +10,9 @@
 #include "smt/factory.h"
 #include "utils/output.h"
 
-
 #include <sstream>
 #include <iostream>
+#include <algorithm>
 
 namespace sal2 {
 namespace output {
@@ -82,12 +82,14 @@ public:
   std::string apply(std::string id) const {
     // state.x => x
     if (6 < id.size() && id.substr(0, 6) == "state.") {
-      return id.substr(6);
-    }
+      id = id.substr(6);
+    } else
     // next.x => next(x)
     if (5 < id.size() && id.substr(0, 5) == "next.") {
-      return std::string("next(") + id.substr(5) + std::string(")");
+      id = std::string("next(") + id.substr(5) + std::string(")");
     }
+    // Replace any bad characters
+    std::replace(id.begin(), id.end(), '!', '_');
     return id;
   }
 };
@@ -109,7 +111,7 @@ void translator::to_stream_nuxmv(std::ostream& out) {
   const expr::term& state_type_term = tm().term_of(state_type->get_type());
   size_t state_type_size = tm().get_struct_type_size(state_type_term);
   for (size_t i = 0; i < state_type_size; ++ i) {
-    std::string var_name = tm().get_struct_type_field_id(state_type_term, i);
+    std::string var_name = name_transformer->apply(tm().get_struct_type_field_id(state_type_term, i));
     out << "    " << var_name << ": " << tm().get_struct_type_field_type(state_type_term, i) << ";" << std::endl;
   }
   out << std::endl;
