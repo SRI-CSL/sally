@@ -30,6 +30,9 @@ public:
   void set_default_solver(std::string id);
 
   static
+  std::string get_default_solver_id();
+
+  static
   solver* mk_default_solver(expr::term_manager& tm, const options& opts);
 
   static

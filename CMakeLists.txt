@@ -42,8 +42,21 @@ else()
 endif()
 
 # Find Yices
-SET(YICES_HOME CACHE STRING "Yices2 installation directory")
+SET(YICES2_HOME CACHE STRING "Yices2 installation directory")
 find_package(Yices2)
+if (YICES2_FOUND)
+  message(STATUS "found yices")
+  add_definitions(-DWITH_YICES2)
+  include_directories(${YICES2_INCLUDE_DIR}) 
+endif()
+
+# Find MathSAT5
+SET(MATHSAT5_HOME CACHE STRING "MathSAT5 installation directory")
+find_package(MathSAT5)
+if (MATHSAT5_FOUND)
+  add_definitions(-DWITH_MATHSAT5)
+  include_directories(${MATHSAT5_INCLUDE_DIR})
+endif()
 
 # Make sure antlr C runtime is here
 include(ExternalProject) 
@@ -60,11 +73,11 @@ set(ANTLR3C_LIBRARY_DIR "${INSTALL_DIR}/lib")
 set(ANTLR3C_LIBRARY "antlr3c")
 link_directories(${ANTLR3C_LIBRARY_DIR})
 
-# The antl2 binary
+# The antl3 binary
 set(ANTLR "${sal2_SOURCE_DIR}/antlr/antlr3")
 
 # Add includes 
-include_directories(${sal2_SOURCE_DIR}/src ${YICES_INCLUDE_DIR} ${ANTLR3C_INCLUDE_DIR})
+include_directories(${sal2_SOURCE_DIR}/src ${ANTLR3C_INCLUDE_DIR})
 
 # Configure the subdirectories
 add_subdirectory(src)

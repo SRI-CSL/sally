@@ -5,6 +5,8 @@
  *      Author: dejan
  */
 
+#ifdef WITH_YICES2
+
 #include <gmp.h>
 #include <yices.h>
 #include <boost/unordered_map.hpp>
@@ -984,4 +986,4 @@ void yices2::interpolate(std::vector<expr::term_ref>& ) {
 }
 }
 
-
+#endif

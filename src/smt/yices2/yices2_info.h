@@ -7,6 +7,8 @@
 
 #pragma once
 
+#ifdef WITH_YICES2
+
 #include "smt/yices2/yices2.h"
 
 #include <boost/program_options.hpp>
@@ -32,3 +34,5 @@ struct yices2_info {
 
 }
 }
+
+#endif

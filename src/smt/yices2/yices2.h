@@ -7,6 +7,8 @@
 
 #pragma once
 
+#ifdef WITH_YICES2
+
 #include "smt/solver.h"
 
 namespace sal2 {
@@ -57,3 +59,5 @@ public:
 
 }
 }
+
+#endif

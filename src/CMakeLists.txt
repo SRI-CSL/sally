@@ -5,10 +5,10 @@ foreach(DIR ${sal2_SRC_DIRS})
   add_subdirectory(${DIR})
 endforeach(DIR)
 
-# Add the execetuble
+# Add the executable
 add_executable(sal2 sal2.cpp)
 
-# Check depdends on the binary
+# Check depends on the binary
 add_dependencies(check sal2)
 
 # Link in all the directories
@@ -18,7 +18,13 @@ foreach(DIR ${sal2_SRC_DIRS})
 endforeach(DIR)
 
 # Link in all the other libraries
-target_link_libraries(sal2 ${sal2_LIBS} ${Boost_LIBRARIES} ${GMP_LIBRARY} ${YICES_LIBRARY} ${ANTLR3C_LIBRARY})
+target_link_libraries(sal2 ${sal2_LIBS} ${Boost_LIBRARIES} ${GMP_LIBRARY} ${ANTLR3C_LIBRARY})
+if (YICES2_FOUND)
+  target_link_libraries(sal2 ${YICES2_LIBRARY})
+endif()
+if (MATHSAT5_FOUND)
+  target_link_libraries(sal2 ${MATHSAT5_LIBRARY})
+endif()
 
 # Add tests
 
