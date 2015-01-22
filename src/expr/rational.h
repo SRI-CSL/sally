@@ -56,8 +56,14 @@ public:
   /** Returns true if it's an integer */
   bool is_integer() const;
 
+  /** Returns the sign of the number */
+  int sgn() const;
+
   /** Returns the inverse of the rational, i.e. 1/q */
   rational invert() const;
+
+  /** Negate, i.e. -Q */
+  rational negate() const;
 
   const mpq_class& mpq() const {
     return d_gmp_rat;

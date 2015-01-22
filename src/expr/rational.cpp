@@ -51,9 +51,17 @@ void rational::to_stream(std::ostream& out) const {
     }
     break;
   }
-  case output::NUXMV:
-    out << "F'" << d_gmp_rat.get_str(10);
+  case output::NUXMV: {
+    int sign = sgn();
+    if (sign == 0) {
+      out << "0";
+    } else if (sign > 0) {
+      out << "f'" << d_gmp_rat.get_str(10);
+    } else {
+      out << "-" << negate();
+    }
     break;
+  }
   default:
     assert(false);
   }
@@ -71,6 +79,14 @@ bool rational::is_integer() const {
 
 rational rational::invert() const {
   return rational(1 / d_gmp_rat);
+}
+
+rational rational::negate() const {
+  return rational(-d_gmp_rat);
+}
+
+int rational::sgn() const {
+  return mpq_sgn(d_gmp_rat.get_mpq_t());
 }
 
 rational& rational::operator = (const integer& z) {
