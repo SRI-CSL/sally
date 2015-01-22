@@ -293,7 +293,6 @@ std::string get_nuxmv_operator(expr::term_op op) {
   switch (op) {
   case TERM_AND: return "&";
   case TERM_OR: return "|";
-  case TERM_IMPLIES: return "->";
   case TERM_ADD: return "+";
   case TERM_XOR: return "xor";
   case TERM_MUL: return "*";
@@ -346,9 +345,11 @@ void term::to_stream_nuxmv(std::ostream& out, const term_manager_internal& tm) c
   case TERM_EQ:
     out << "(" << child(0) << " = " << child(1) << ")";
     break;
+  case TERM_IMPLIES:
+    out << "(" << child(0) << " -> " << child(1) << ")";
+    break;
   case TERM_AND:
   case TERM_OR:
-  case TERM_IMPLIES:
   case TERM_ADD:
   case TERM_XOR:
   case TERM_MUL:
