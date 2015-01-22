@@ -118,13 +118,13 @@ void translator::to_stream_nuxmv(std::ostream& out) {
 
   // The transition relation
   out << "TRANS" << std::endl;
-  out << "    " << d_ts->get_transition_relation() << std::endl;
+  out << "    " << d_ts->get_transition_relation() << ";" << std::endl;
   out << std::endl;
 
   // The initial state
   state_type->use_namespace(system::state_type::STATE_CURRENT);
   out << "INIT" << std::endl;
-  out << "    " << d_ts->get_initial_states() << std::endl;
+  out << "    " << d_ts->get_initial_states() << ";" << std::endl;
   out << std::endl;
   ctx().tm().pop_namespace();
 
