@@ -8,6 +8,7 @@
 #pragma once
 
 #include "expr/term.h"
+#include "utils/name_transformer.h"
 
 #include <set>
 #include <vector>
@@ -211,6 +212,9 @@ public:
 
   /** Replaces terms from t that appear in the map. */
   term_ref substitute(term_ref t, const substitution_map& subst);
+
+  /** Set a transformer for variable names (set 0 to unset) */
+  void set_name_transformer(const utils::name_transformer* transformer);
 };
 
 inline

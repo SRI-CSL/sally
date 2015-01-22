@@ -78,7 +78,29 @@ void translator::to_stream_mcmt(std::ostream& out) {
 }
 
 void translator::to_stream_nuxmv(std::ostream& out) {
+  // The state type
+  const system::state_type* state_type = d_ts->get_state_type();
+  state_type->use_namespace();
 
+  out << "MODULE main" << std::endl;
+
+  // Declare state variables
+  out << "VAR" << std::endl;
+  const expr::term& state_type_term = tm().term_of(state_type->get_type());
+  size_t state_type_size = tm().get_struct_type_size(state_type_term);
+  for (size_t i = 0; i < state_type_size; ++ i) {
+    std::string var_name = tm().get_struct_type_field_id(state_type_term, i);
+    out << "\t" << "state." << var_name << ": " << tm().get_struct_type_field_type(state_type_term, i) << ";" << std::endl;
+  }
+  out << std::endl;
+
+  // Output the query
+  state_type->use_namespace(system::state_type::STATE_CURRENT);
+  out << "INVARSPEC " << d_sf->get_formula() << ";" << std::endl;
+  ctx().tm().pop_namespace();
+
+  // State type namespace
+  ctx().tm().pop_namespace();
 }
 
 void translator::to_stream_horn(std::ostream& out) {

@@ -111,7 +111,7 @@ term_ref term_manager::mk_variable(std::string name, term_ref type) {
 std::string term_manager::get_variable_name(const term& t) const {
   assert(t.op() == VARIABLE);
   std::string name = d_tm->payload_of<std::string>(t);
-  return d_tm->namespace_normalize(name);
+  return d_tm->name_normalize(name);
 }
 
 term_ref term_manager::mk_boolean_constant(bool value) {
@@ -288,6 +288,10 @@ term_ref term_manager::mk_or(const std::vector<term_ref>& disjuncts) {
     return disjuncts[0];
   }
   return d_tm->mk_term<TERM_OR>(disjuncts.begin(), disjuncts.end());
+}
+
+void term_manager::set_name_transformer(const utils::name_transformer* transformer) {
+  d_tm->set_name_transformer(transformer);
 }
 
 term_ref term_manager::get_default_value(term_ref type) const {

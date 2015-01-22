@@ -18,6 +18,7 @@ using namespace expr;
 
 term_manager_internal::term_manager_internal(bool typecheck)
 : d_typecheck(typecheck)
+, d_name_transformer(0)
 {
   // The null id
   new_term_id();
@@ -501,14 +502,18 @@ void term_manager_internal::pop_namespace() {
 }
 
 /** Returns the id normalized with resepct to the current namespaces */
-std::string term_manager_internal::namespace_normalize(std::string id) const {
+std::string term_manager_internal::name_normalize(std::string id) const {
   for (size_t i = 0; i < d_namespaces.size(); ++ i) {
     std::string ns = d_namespaces[i];
     if (ns.size() < id.size() && id.substr(0, ns.size()) == ns) {
       id = id.substr(ns.size());
     }
   }
-  return id;
+  if (d_name_transformer) {
+    return d_name_transformer->apply(id);
+  } else {
+    return id;
+  }
 }
 
 // TODO: non-recursive
@@ -592,4 +597,8 @@ term_ref term_manager_internal::get_default_value(term_ref type_ref) {
     assert(false);
   }
   return term_ref();
+}
+
+void term_manager_internal::set_name_transformer(const utils::name_transformer* transformer) {
+  d_name_transformer = transformer;
 }

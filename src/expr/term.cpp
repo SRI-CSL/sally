@@ -192,7 +192,7 @@ void term::to_stream_smt(std::ostream& out, const term_manager_internal& tm) con
   }
   case VARIABLE: {
     std::string name = tm.payload_of<std::string>(*this);
-    name = tm.namespace_normalize(name);
+    name = tm.name_normalize(name);
     if (size() == 1) {
       out << name;
     } else {
@@ -306,7 +306,7 @@ void term::to_stream_nuxmv(std::ostream& out, const term_manager_internal& tm) c
   }
   case VARIABLE: {
     std::string name = tm.payload_of<std::string>(*this);
-    name = tm.namespace_normalize(name);
+    name = tm.name_normalize(name);
     if (size() == 1) {
       out << name;
     } else {

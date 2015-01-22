@@ -9,6 +9,7 @@
 
 #include "expr/term.h"
 #include "utils/allocator.h"
+#include "utils/name_transformer.h"
 
 #include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
@@ -220,6 +221,9 @@ private:
   /** Prefixes to be removed when printing variable names */
   std::vector<std::string> d_namespaces;
 
+  /** Name transformers */
+  const utils::name_transformer* d_name_transformer;
+
 public:
 
   /** Construct them manager */
@@ -389,8 +393,11 @@ public:
   /** Return t with subst applied */
   term_ref substitute(term_ref t, substitution_map& subst);
 
-  /** Returns the id normalized with resepct to the current namespaces */
-  std::string namespace_normalize(std::string id) const;
+  /** Set a transformer for variable names (set 0 to unset) */
+  void set_name_transformer(const utils::name_transformer* transformer);
+
+  /** Returns the id normalized with resepct to the current namespaces and the name transformer */
+  std::string name_normalize(std::string id) const;
 
   /** Returns true if the types are comparable by equality */
   bool types_comparable(term_ref t1, term_ref t2) const;
