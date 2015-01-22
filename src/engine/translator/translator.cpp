@@ -77,7 +77,27 @@ void translator::to_stream_mcmt(std::ostream& out) {
   ctx().tm().pop_namespace();
 }
 
+class nuxmv_name_transformer : public utils::name_transformer {
+public:
+  std::string apply(std::string id) const {
+    // state.x => x
+    if (6 < id.size() && id.substr(0, 6) == "state.") {
+      return id.substr(6);
+    }
+    // next.x => next(x)
+    if (5 < id.size() && id.substr(0, 5) == "next.") {
+      return std::string("next(") + id.substr(5) + std::string(")");
+    }
+    return id;
+  }
+};
+
 void translator::to_stream_nuxmv(std::ostream& out) {
+
+  // Name transformer
+  nuxmv_name_transformer* name_transformer = new nuxmv_name_transformer();
+  tm().set_name_transformer(name_transformer);
+
   // The state type
   const system::state_type* state_type = d_ts->get_state_type();
   state_type->use_namespace();
@@ -90,17 +110,34 @@ void translator::to_stream_nuxmv(std::ostream& out) {
   size_t state_type_size = tm().get_struct_type_size(state_type_term);
   for (size_t i = 0; i < state_type_size; ++ i) {
     std::string var_name = tm().get_struct_type_field_id(state_type_term, i);
-    out << "\t" << "state." << var_name << ": " << tm().get_struct_type_field_type(state_type_term, i) << ";" << std::endl;
+    out << "    " << var_name << ": " << tm().get_struct_type_field_type(state_type_term, i) << ";" << std::endl;
   }
   out << std::endl;
 
+  // The transition relation
+  out << "TRANS" << std::endl;
+  out << "    " << d_ts->get_transition_relation() << std::endl;
+  out << std::endl;
+
+  // The initial state
+  state_type->use_namespace(system::state_type::STATE_CURRENT);
+  out << "INIT" << std::endl;
+  out << "    " << d_ts->get_initial_states() << std::endl;
+  out << std::endl;
+  ctx().tm().pop_namespace();
+
   // Output the query
   state_type->use_namespace(system::state_type::STATE_CURRENT);
-  out << "INVARSPEC " << d_sf->get_formula() << ";" << std::endl;
+  out << "INVARSPEC" << std::endl;
+  out << "    " << d_sf->get_formula() << ";" << std::endl;
   ctx().tm().pop_namespace();
 
   // State type namespace
   ctx().tm().pop_namespace();
+
+  // Name transformer reset
+  delete name_transformer;
+  tm().set_name_transformer(0);
 }
 
 void translator::to_stream_horn(std::ostream& out) {

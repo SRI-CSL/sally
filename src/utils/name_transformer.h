@@ -16,7 +16,7 @@ namespace utils {
 class name_transformer {
 public:
   virtual std::string apply(std::string name) const = 0;
-  virtual ~name_transformer() = 0;
+  virtual ~name_transformer() {};
 };
 
 }

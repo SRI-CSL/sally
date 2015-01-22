@@ -288,16 +288,37 @@ void term::to_stream_smt(std::ostream& out, const term_manager_internal& tm) con
   }
 }
 
+inline
+std::string get_nuxmv_operator(expr::term_op op) {
+  switch (op) {
+  case TERM_AND: return "&";
+  case TERM_OR: return "|";
+  case TERM_IMPLIES: return "->";
+  case TERM_ADD: return "+";
+  case TERM_XOR: return "xor";
+  case TERM_MUL: return "*";
+  case TERM_BV_ADD: return "+";
+  case TERM_BV_MUL: return "*";
+  case TERM_BV_XOR: return "xor";
+  case TERM_BV_AND: return "&";
+  case TERM_BV_OR: return "|";
+  case TERM_BV_CONCAT: return "::";
+  default:
+    assert(false);
+  }
+  return "unknown";
+}
+
 void term::to_stream_nuxmv(std::ostream& out, const term_manager_internal& tm) const {
   switch (d_op) {
   case TYPE_BOOL:
-    out << "boolean";
+    out << "Boolean";
     break;
   case TYPE_INTEGER:
-    out << "integer";
+    out << "Integer";
     break;
   case TYPE_REAL:
-    out << "real";
+    out << "Real";
     break;
   case TYPE_BITVECTOR: {
     size_t size = tm.payload_of<size_t>(*this);
@@ -326,31 +347,36 @@ void term::to_stream_nuxmv(std::ostream& out, const term_manager_internal& tm) c
     out << "(" << child(0) << " = " << child(1) << ")";
     break;
   case TERM_AND:
-    out << "(" << child(0) << " & " << child(1) << ")";
-    break;
   case TERM_OR:
-    out << "(" << child(0) << " | " << child(1) << ")";
+  case TERM_IMPLIES:
+  case TERM_ADD:
+  case TERM_XOR:
+  case TERM_MUL:
+  case TERM_BV_ADD:
+  case TERM_BV_MUL:
+  case TERM_BV_XOR:
+  case TERM_BV_AND:
+  case TERM_BV_OR:
+  case TERM_BV_CONCAT:
+    out << "(";
+    for (size_t i = 0; i < size(); ++ i) {
+      if (i) out << " " << get_nuxmv_operator(d_op) << " ";
+      out << child(i);
+    }
+    out << ")";
     break;
   case TERM_NOT:
     out << "(!" << child(0) << ")";
     break;
-  case TERM_IMPLIES:
-    out << "(" << child(0) << " -> " << child(1) << ")";
-    break;
-  case TERM_XOR:
-    out << "(" << child(0) << " xor " << child(1) << ")";
-    break;
   case TERM_ITE:
     out << "(" << child(0) << " ? " << child(1) << " : " << child(2) << ")";
     break;
-  case TERM_ADD:
-    out << "(" << child(0) << " + " << child(1) << ")";
-    break;
   case TERM_SUB:
-    out << "(" << child(0) << " - " << child(1) << ")";
-    break;
-  case TERM_MUL:
-    out << "(" << child(0) << " * " << child(1) << ")";
+    if (size() == 1) {
+      out << "(- " << child(0) << ")";
+    } else {
+      out << "(" << child(0) << " - " << child(1) << ")";
+    }
     break;
   case TERM_DIV: {
     term_ref c1 = child(0);
@@ -380,17 +406,8 @@ void term::to_stream_nuxmv(std::ostream& out, const term_manager_internal& tm) c
   case TERM_GT:
     out << "(" << child(0) << " > " << child(1) << ")";
     break;
-  case TERM_BV_ADD:
-    out << "(" << child(0) << " + " << child(1) << ")";
-    break;
   case TERM_BV_SUB:
     out << "(" << child(0) << " - " << child(1) << ")";
-    break;
-  case TERM_BV_MUL:
-    out << "(" << child(0) << " * " << child(1) << ")";
-    break;
-  case TERM_BV_XOR:
-    out << "(" << child(0) << " xor " << child(1) << ")";
     break;
   case TERM_BV_SHL:
     out << "(" << child(0) << " << " << child(1) << ")";
@@ -404,12 +421,6 @@ void term::to_stream_nuxmv(std::ostream& out, const term_manager_internal& tm) c
   case TERM_BV_NOT:
     out << "(!" << child(0) << ")";
     break;
-  case TERM_BV_AND:
-    out << "(" << child(0) << " & " << child(1) << ")";
-    break;
-  case TERM_BV_OR:
-    out << "(" << child(0) << " | " << child(1) << ")";
-    break;
   case TERM_BV_NAND:
     out << "(!(" << child(0) << " & " << child(1) << "))";
     break;
@@ -418,9 +429,6 @@ void term::to_stream_nuxmv(std::ostream& out, const term_manager_internal& tm) c
     break;
   case TERM_BV_XNOR:
     out << "(" << child(0) << " xnor " << child(1) << ")";
-    break;
-  case TERM_BV_CONCAT:
-    out << "(" << child(0) << " :: " << child(1) << ")";
     break;
   case TERM_BV_ULEQ:
     out << "(" << child(0) << " <= " << child(1) << ")";
