@@ -6,6 +6,7 @@
  */
 
 #include "expr/rational.h"
+#include "expr/integer.h"
 #include "utils/output.h"
 #include "utils/hash.h"
 
@@ -25,7 +26,9 @@ size_t rational::hash() const {
 void rational::to_stream(std::ostream& out) const {
   output::language lang = output::get_output_language(out);
   switch (lang) {
-  case output::MCMT: {
+  case output::MCMT:
+  case output::HORN:
+  {
     const mpz_class& num = d_gmp_rat.get_num();
     int sgn = mpz_sgn(num.get_mpz_t());
     if (sgn == 0) {
@@ -48,6 +51,9 @@ void rational::to_stream(std::ostream& out) const {
     }
     break;
   }
+  case output::NUXMV:
+    out << "F'" << d_gmp_rat.get_str(10);
+    break;
   default:
     assert(false);
   }
@@ -61,6 +67,16 @@ std::ostream& operator << (std::ostream& out, const rational& q) {
 bool rational::is_integer() const {
   const mpz_class& den = d_gmp_rat.get_den();
   return den == 1;
+}
+
+rational rational::invert() const {
+  return rational(1 / d_gmp_rat);
+}
+
+rational& rational::operator = (const integer& z) {
+  d_gmp_rat = z.mpz();
+  d_gmp_rat.canonicalize();
+  return *this;
 }
 
 }

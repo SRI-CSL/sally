@@ -152,6 +152,12 @@ public:
   term_ref operator[] (size_t k) const {
     return begin()[k];
   }
+
+  /** Return the k-th child */
+  term_ref child(size_t k) const {
+    return begin()[k];
+  }
+
 };
 
 /** Output operator for terms */

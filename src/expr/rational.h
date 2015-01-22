@@ -16,6 +16,8 @@
 namespace sal2 {
 namespace expr {
 
+class integer;
+
 /**
  * Wrapper around the GMP rational.
  */
@@ -48,8 +50,14 @@ public:
   /** Comparison */
   bool operator == (const rational& q) const { return this->cmp(q) == 0; }
 
+  /** Assignment for itnegers */
+  rational& operator = (const integer& z);
+
   /** Returns true if it's an integer */
   bool is_integer() const;
+
+  /** Returns the inverse of the rational, i.e. 1/q */
+  rational invert() const;
 
   const mpq_class& mpq() const {
     return d_gmp_rat;

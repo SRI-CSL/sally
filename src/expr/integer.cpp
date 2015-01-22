@@ -35,10 +35,12 @@ void integer::to_stream(std::ostream& out) const {
     }
     break;
   }
+  case output::NUXMV:
+    out << d_gmp_int.get_str();
+    break;
   default:
     assert(false);
   }
-
 }
 
 std::ostream& operator << (std::ostream& out, const integer& z) {

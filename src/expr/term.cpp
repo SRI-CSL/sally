@@ -10,6 +10,7 @@
 #include "expr/term_manager_internal.h"
 #include "utils/allocator.h"
 #include "utils/output.h"
+#include "utils/exception.h"
 
 #include <iomanip>
 #include <cassert>
@@ -288,6 +289,200 @@ void term::to_stream_smt(std::ostream& out, const term_manager_internal& tm) con
 }
 
 void term::to_stream_nuxmv(std::ostream& out, const term_manager_internal& tm) const {
+  switch (d_op) {
+  case TYPE_BOOL:
+    out << "boolean";
+    break;
+  case TYPE_INTEGER:
+    out << "integer";
+    break;
+  case TYPE_REAL:
+    out << "real";
+    break;
+  case TYPE_BITVECTOR: {
+    size_t size = tm.payload_of<size_t>(*this);
+    out << "unsigned word[" << size << "]";
+    break;
+  }
+  case VARIABLE: {
+    std::string name = tm.payload_of<std::string>(*this);
+    name = tm.namespace_normalize(name);
+    if (size() == 1) {
+      out << name;
+    } else {
+      out << "[" << name << ":";
+      // The variables of the struct
+      for (size_t i = 1; i < size(); ++ i) {
+        out << " " << this->operator [](i);
+      }
+      out << "]";
+    }
+    break;
+  }
+  case CONST_BOOL:
+    out << (tm.payload_of<bool>(*this) ? "TRUE" : "FALSE");
+    break;
+  case TERM_EQ:
+    out << "(" << child(0) << " = " << child(1) << ")";
+    break;
+  case TERM_AND:
+    out << "(" << child(0) << " & " << child(1) << ")";
+    break;
+  case TERM_OR:
+    out << "(" << child(0) << " | " << child(1) << ")";
+    break;
+  case TERM_NOT:
+    out << "(!" << child(0) << ")";
+    break;
+  case TERM_IMPLIES:
+    out << "(" << child(0) << " -> " << child(1) << ")";
+    break;
+  case TERM_XOR:
+    out << "(" << child(0) << " xor " << child(1) << ")";
+    break;
+  case TERM_ITE:
+    out << "(" << child(0) << " ? " << child(1) << " : " << child(2) << ")";
+    break;
+  case TERM_ADD:
+    out << "(" << child(0) << " + " << child(1) << ")";
+    break;
+  case TERM_SUB:
+    out << "(" << child(0) << " - " << child(1) << ")";
+    break;
+  case TERM_MUL:
+    out << "(" << child(0) << " * " << child(1) << ")";
+    break;
+  case TERM_DIV: {
+    term_ref c1 = child(0);
+    term_ref c2 = child(1);
+    const term& c2_term = tm.term_of(c2);
+    expr::rational r;
+    if (c2_term.op() == CONST_RATIONAL) {
+      r = tm.payload_of<rational>(c2_term).invert();
+    } else if (c2_term.op() == CONST_INTEGER) {
+      r = tm.payload_of<integer>(c2_term);
+      r = r.invert();
+    } else {
+      throw exception("Division by non-constants is not supported!");
+    }
+    out << "(" << c1 << " * " << r << ")";
+    break;
+  }
+  case TERM_LEQ:
+    out << "(" << child(0) << " <= " << child(1) << ")";
+    break;
+  case TERM_LT:
+    out << "(" << child(0) << " < " << child(1) << ")";
+    break;
+  case TERM_GEQ:
+    out << "(" << child(0) << " >= " << child(1) << ")";
+    break;
+  case TERM_GT:
+    out << "(" << child(0) << " > " << child(1) << ")";
+    break;
+  case TERM_BV_ADD:
+    out << "(" << child(0) << " + " << child(1) << ")";
+    break;
+  case TERM_BV_SUB:
+    out << "(" << child(0) << " - " << child(1) << ")";
+    break;
+  case TERM_BV_MUL:
+    out << "(" << child(0) << " * " << child(1) << ")";
+    break;
+  case TERM_BV_XOR:
+    out << "(" << child(0) << " xor " << child(1) << ")";
+    break;
+  case TERM_BV_SHL:
+    out << "(" << child(0) << " << " << child(1) << ")";
+    break;
+  case TERM_BV_LSHR:
+    out << "(" << child(0) << " >> " << child(1) << ")";
+    break;
+  case TERM_BV_ASHR:
+    out << "unsigned(signed(" << child(0) << ") << " << child(1) << ")";
+    break;
+  case TERM_BV_NOT:
+    out << "(!" << child(0) << ")";
+    break;
+  case TERM_BV_AND:
+    out << "(" << child(0) << " & " << child(1) << ")";
+    break;
+  case TERM_BV_OR:
+    out << "(" << child(0) << " | " << child(1) << ")";
+    break;
+  case TERM_BV_NAND:
+    out << "(!(" << child(0) << " & " << child(1) << "))";
+    break;
+  case TERM_BV_NOR:
+    out << "(!(" << child(0) << " | " << child(1) << "))";
+    break;
+  case TERM_BV_XNOR:
+    out << "(" << child(0) << " xnor " << child(1) << ")";
+    break;
+  case TERM_BV_CONCAT:
+    out << "(" << child(0) << " :: " << child(1) << ")";
+    break;
+  case TERM_BV_ULEQ:
+    out << "(" << child(0) << " <= " << child(1) << ")";
+    break;
+  case TERM_BV_SLEQ:
+    out << "(signed(" << child(0) << ") <= signed(" << child(1) << "))";
+    break;
+  case TERM_BV_ULT:
+    out << "(" << child(0) << " < " << child(1) << ")";
+    break;
+  case TERM_BV_SLT:
+    out << "(signed(" << child(0) << ") < signed(" << child(1) << "))";
+    break;
+  case TERM_BV_UGEQ:
+    out << "(" << child(0) << " >= " << child(1) << ")";
+    break;
+  case TERM_BV_SGEQ:
+    out << "(signed(" << child(0) << ") >= signed(" << child(1) << "))";
+    break;
+  case TERM_BV_UGT:
+    out << "(" << child(0) << " > " << child(1) << ")";
+    break;
+  case TERM_BV_SGT:
+    out << "(signed(" << child(0) << ") > signed(" << child(1) << "))";
+    break;
+  case TERM_BV_UDIV:
+    out << "(" << child(0) << " / " << child(1) << ")";
+    break;
+  case TERM_BV_SDIV:
+    out << "(signed(" << child(0) << ") / signed(" << child(1) << "))";
+    break;
+  case TERM_BV_UREM: // MOD
+    out << "(" << child(0) << " mod " << child(1) << ")";
+    break;
+  case TERM_BV_SREM: // MOD
+    out << "(signed(" << child(0) << ") mod signed(" << child(1) << "))";
+    break;
+  case TERM_BV_SMOD:
+    throw exception("SMOD not yet supported!");
+    break;
+  case TERM_BV_EXTRACT: {
+    const bitvector_extract& extract = tm.payload_of<bitvector_extract>(*this);
+    out << "((_ extract " << extract.high << " " << extract.low << ") " << *begin() << ")";
+    break;
+  }
+  case CONST_RATIONAL:
+    // Stream is already in SMT mode
+    out << tm.payload_of<rational>(*this);
+    break;
+  case CONST_INTEGER:
+    // Stream is already in SMT mode
+    out << tm.payload_of<integer>(*this);
+    break;
+  case CONST_BITVECTOR:
+    out << tm.payload_of<bitvector>(*this);
+    break;
+  case CONST_STRING:
+    out << tm.payload_of<std::string>(*this);
+    break;
+  default:
+    assert(false);
+  }
 }
 
 term_ref_strong::term_ref_strong(const term_ref_strong& other)

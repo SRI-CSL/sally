@@ -6,8 +6,10 @@
  */
 
 #include "expr/bitvector.h"
+#include "utils/output.h"
 
 #include <iostream>
+#include <cassert>
 
 namespace sal2 {
 namespace expr {
@@ -45,9 +47,22 @@ bitvector::bitvector(std::string bits)
 {}
 
 void bitvector::to_stream(std::ostream& out) const {
-  out << "(_ bv";
-  integer::to_stream(out);
-  out  << " " << size() << ")";
+  output::language lang = output::get_output_language(out);
+  switch (lang) {
+  case output::MCMT:
+  case output::HORN:
+  {
+    out << "(_ bv";
+    integer::to_stream(out);
+    out  << " " << size() << ")";
+    break;
+  }
+  case output::NUXMV:
+    out << "0d" << d_size << d_gmp_int.get_str();
+    break;
+  default:
+    assert(false);
+  }
 }
 
 
