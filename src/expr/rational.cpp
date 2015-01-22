@@ -67,6 +67,13 @@ void rational::to_stream(std::ostream& out) const {
   }
 }
 
+std::string rational::to_string(output::language lang) const {
+  std::stringstream ss;
+  output::set_output_language(ss, lang);
+  ss << *this;
+  return ss.str();
+}
+
 std::ostream& operator << (std::ostream& out, const rational& q) {
   q.to_stream(out);
   return out;

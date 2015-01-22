@@ -44,8 +44,11 @@ public:
   size_t hash() const;
   /** Compare the two numbers */
   int cmp(const rational& q) const { return mpq_cmp(d_gmp_rat.get_mpq_t(), q.d_gmp_rat.get_mpq_t()); }
+
   /** Output to stream */
   void to_stream(std::ostream& out) const;
+  /** String representation */
+  std::string to_string(output::language lang) const;
 
   /** Comparison */
   bool operator == (const rational& q) const { return this->cmp(q) == 0; }

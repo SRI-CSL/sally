@@ -57,9 +57,6 @@ class mathsat5_internal {
   /** The map from mathsat terms to SAL terms */
   msat_to_term_cache d_msat_to_term_cache;
 
-  /** Null msat term */
-  msat_term d_msat_null;
-
   /**
    * Set the term cache from t -> t_msat. If t_msat doesn't exist in the
    * cache already, add the map t_msat -> t.
@@ -78,7 +75,9 @@ class mathsat5_internal {
     if (find != d_term_to_msat_cache.end()) {
       return find->second;
     } else {
-      return d_msat_null;
+      msat_term error;
+      MSAT_MAKE_ERROR_TERM(error);
+      return error;
     }
   }
 
@@ -101,6 +100,12 @@ class mathsat5_internal {
   /** The instance */
   size_t d_instance;
 
+  /** MathSAT configuration */
+  msat_config d_cfg;
+
+  /** The context */
+  msat_env d_env;
+
 public:
 
   /** Construct an instance of yices with the given temr manager and options */
@@ -122,7 +127,7 @@ public:
   expr::term_ref mk_term(msat_symbol_tag constructor, const std::vector<expr::term_ref>& children);
 
   /** Make a yices term with given operator and children */
-  msat_term mk_mathsat5_term(expr::term_op op, size_t n, term_t* children);
+  msat_term mk_mathsat5_term(expr::term_op op, size_t n, msat_term* children);
 
   /** Add an assertion to yices */
   void add(expr::term_ref ref);
@@ -161,189 +166,213 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
   d_bv1 = expr::term_ref_strong(d_tm, d_tm.mk_bitvector_constant(expr::bitvector(1, 1)));
 
   // The context
-  d_ctx = yices_new_context(NULL);
-  if (d_ctx == 0) {
-    throw exception("Yices error (context creation).");
-  }
+  d_cfg = msat_create_config();
+  msat_set_option(d_cfg, "model_generation", "true");
+  d_env = msat_create_env(d_cfg);
 }
 
 mathsat5_internal::~mathsat5_internal() {
-
-  // The context
-  yices_free_context(d_ctx);
-
-  // Cleanup if the last one
+  msat_destroy_env(d_env);
+  msat_destroy_config(d_cfg);
   s_instances--;
-  if (s_instances == 0) {
-    yices_exit();
-  }
 }
 
-term_t mathsat5_internal::mk_mathsat5_term(expr::term_op op, size_t n, term_t* children) {
-  term_t result = NULL_TERM;
+msat_term mathsat5_internal::mk_mathsat5_term(expr::term_op op, size_t n, msat_term* children) {
+  msat_term result;
+  MSAT_MAKE_ERROR_TERM(result);
 
   switch (op) {
   case expr::TERM_AND:
-    result = yices_and(n, children);
+    result = children[0];
+    for (size_t i = 1; i < n; ++ i) {
+      result = msat_make_and(d_env, result, children[i]);
+    }
     break;
   case expr::TERM_OR:
-    result = yices_or(n, children);
+    result = children[0];
+    for (size_t i = 1; i < n; ++ i) {
+      result = msat_make_or(d_env, result, children[i]);
+    }
     break;
   case expr::TERM_NOT:
     assert(n == 1);
-    result = yices_not(children[0]);
+    result = msat_make_not(d_env, children[0]);
     break;
   case expr::TERM_IMPLIES:
     assert(n == 2);
-    result = yices_implies(children[0], children[1]);
+    MSAT_MAKE_ERROR_TERM(result);
     break;
   case expr::TERM_XOR:
-    result = yices_xor(n, children);
+    MSAT_MAKE_ERROR_TERM(result);
     break;
   case expr::TERM_ADD:
-    result = yices_sum(n, children);
-    break;
-  case expr::TERM_SUB:
-    assert(n == 2 || n == 1);
-    if (n == 1) {
-      result = yices_neg(children[0]);
-    } else {
-      result = yices_sub(children[0], children[1]);
+    result = children[0];
+    for (size_t i = 1; i < n; ++ i) {
+      result = msat_make_plus(d_env, result, children[i]);
     }
     break;
+  case expr::TERM_SUB:
+    MSAT_MAKE_ERROR_TERM(result);
+    break;
   case expr::TERM_MUL:
-    result = yices_product(n, children);
+    result = children[0];
+    for (size_t i = 1; i < n; ++ i) {
+      result = msat_make_times(d_env, result, children[i]);
+    }
     break;
   case expr::TERM_DIV:
-    result = yices_division(children[0], children[1]);
+    MSAT_MAKE_ERROR_TERM(result);
     break;
   case expr::TERM_LEQ:
     assert(n == 2);
-    result = yices_arith_leq_atom(children[0], children[1]);
+    result = msat_make_leq(d_env, children[0], children[1]);
     break;
   case expr::TERM_LT:
     assert(n == 2);
-    result = yices_arith_lt_atom(children[0], children[1]);
+    MSAT_MAKE_ERROR_TERM(result);
     break;
   case expr::TERM_GEQ:
     assert(n == 2);
-    result = yices_arith_geq_atom(children[0], children[1]);
+    MSAT_MAKE_ERROR_TERM(result);
     break;
   case expr::TERM_GT:
     assert(n == 2);
-    result = yices_arith_gt_atom(children[0], children[1]);
+    result = msat_make_leq(d_env, children[0], children[1]);
+    result = msat_make_not(d_env, result);
     break;
   case expr::TERM_EQ:
     assert(n == 2);
-    result = yices_eq(children[0], children[1]);
+    result = msat_make_equal(d_env, children[0], children[1]);
     break;
   case expr::TERM_ITE:
     assert(n == 3);
-    result = yices_ite(children[0], children[1], children[2]);
+    result = msat_make_term_ite(d_env, children[0], children[1], children[2]);
     break;
   case expr::TERM_BV_ADD:
-    assert(n == 2);
-    result = yices_bvadd(children[0], children[1]);
+    result = children[0];
+    for (size_t i = 1; i < n; ++ i) {
+      result = msat_make_bv_plus(d_env, result, children[i]);
+    }
     break;
   case expr::TERM_BV_SUB:
     assert(n == 2);
-    result = yices_bvsub(children[0], children[1]);
+    result = msat_make_bv_minus(d_env, children[0], children[1]);
     break;
   case expr::TERM_BV_MUL:
-    assert(n == 2);
-    result = yices_bvmul(children[0], children[1]);
-    break;
+    result = children[0];
+    for (size_t i = 1; i < n; ++ i) {
+      result = msat_make_bv_times(d_env, result, children[i]);
+    }
   case expr::TERM_BV_UDIV: // NOTE: semantics of division is x/0 = 111...111
     assert(n == 2);
-    result = yices_bvdiv(children[0], children[1]);
+    result = msat_make_bv_udiv(d_env, children[0], children[1]);
     break;
   case expr::TERM_BV_SDIV:
     assert(n == 2);
-    result = yices_bvsdiv(children[0], children[1]);
+    result = msat_make_bv_sdiv(d_env, children[0], children[1]);
     break;
   case expr::TERM_BV_UREM:
     assert(n == 2);
-    result = yices_bvrem(children[0], children[1]);
+    result = msat_make_bv_urem(d_env, children[0], children[1]);
     break;
   case expr::TERM_BV_SREM:
     assert(n == 2);
-    result = yices_bvsrem(children[0], children[1]);
+    result = msat_make_bv_srem(d_env, children[0], children[1]);
     break;
   case expr::TERM_BV_SMOD:
     assert(n == 2);
-    result = yices_bvsmod(children[0], children[1]);
+    MSAT_MAKE_ERROR_TERM(result);
     break;
   case expr::TERM_BV_XOR:
-    result = yices_bvxor(n, children);
+    result = children[0];
+    for (size_t i = 1; i < n; ++ i) {
+      result = msat_make_bv_xor(d_env, result, children[i]);
+    }
     break;
   case expr::TERM_BV_SHL:
     assert(n == 2);
-    result = yices_bvshl(children[0], children[1]);
+    result = msat_make_bv_lshl(d_env, children[0], children[1]);
     break;
   case expr::TERM_BV_LSHR:
     assert(n == 2);
-    result = yices_bvlshr(children[0], children[1]);
+    result = msat_make_bv_lshr(d_env, children[0], children[1]);
     break;
   case expr::TERM_BV_ASHR:
     assert(n == 2);
-    result = yices_bvashr(children[0], children[1]);
+    result = msat_make_bv_ashr(d_env, children[0], children[1]);
     break;
   case expr::TERM_BV_NOT:
     assert(n == 1);
-    result = yices_bvnot(children[0]);
+    result = msat_make_bv_not(d_env, children[0]);
     break;
   case expr::TERM_BV_AND:
-    result = yices_bvand(n, children);
+    result = children[0];
+    for (size_t i = 1; i < n; ++ i) {
+      result = msat_make_bv_and(d_env, result, children[i]);
+    }
     break;
   case expr::TERM_BV_OR:
-    result = yices_bvor(n, children);
+    result = children[0];
+    for (size_t i = 1; i < n; ++ i) {
+      result = msat_make_bv_or(d_env, result, children[i]);
+    }
     break;
   case expr::TERM_BV_NAND:
     assert(n == 2);
-    result = yices_bvnand(children[0], children[1]);
+    result = msat_make_bv_and(d_env, children[0], children[1]);
+    result = msat_make_bv_not(d_env, result);
     break;
   case expr::TERM_BV_NOR:
     assert(n == 2);
-    result = yices_bvnor(children[0], children[1]);
+    result = msat_make_bv_or(d_env, children[0], children[1]);
+    result = msat_make_bv_not(d_env, result);
     break;
   case expr::TERM_BV_XNOR:
     assert(n == 2);
-    result = yices_bvxnor(children[0], children[1]);
+    result = msat_make_bv_xor(d_env, children[0], children[1]);
+    result = msat_make_bv_not(d_env, result);
     break;
   case expr::TERM_BV_CONCAT:
-    result = yices_bvconcat(n, children);
+    result = children[0];
+    for (size_t i = 1; i < n; ++ i) {
+      result = msat_make_bv_concat(d_env, result, children[i]);
+    }
     break;
   case expr::TERM_BV_ULEQ:
     assert(n == 2);
-    result = yices_bvle_atom(children[0], children[1]);
+    result = msat_make_bv_uleq(d_env, children[0], children[1]);
     break;
   case expr::TERM_BV_SLEQ:
     assert(n == 2);
-    result = yices_bvsle_atom(children[0], children[1]);
+    result = msat_make_bv_sleq(d_env, children[0], children[1]);
     break;
   case expr::TERM_BV_ULT:
     assert(n == 2);
-    result = yices_bvlt_atom(children[0], children[1]);
+    result = msat_make_bv_ult(d_env, children[0], children[1]);
     break;
   case expr::TERM_BV_SLT:
     assert(n == 2);
-    result = yices_bvslt_atom(children[0], children[1]);
+    result = msat_make_bv_slt(d_env, children[0], children[1]);
     break;
   case expr::TERM_BV_UGEQ:
     assert(n == 2);
-    result = yices_bvge_atom(children[0], children[1]);
+    result = msat_make_bv_ult(d_env, children[0], children[1]);
+    result = msat_make_not(d_env, result);
     break;
   case expr::TERM_BV_SGEQ:
     assert(n == 2);
-    result = yices_bvsge_atom(children[0], children[1]);
+    result = msat_make_bv_slt(d_env, children[0], children[1]);
+    result = msat_make_not(d_env, result);
     break;
   case expr::TERM_BV_UGT:
     assert(n == 2);
-    result = yices_bvgt_atom(children[0], children[1]);
+    result = msat_make_bv_uleq(d_env, children[0], children[1]);
+    result = msat_make_not(d_env, result);
     break;
   case expr::TERM_BV_SGT:
     assert(n == 2);
-    result = yices_bvsgt_atom(children[0], children[1]);
+    result = msat_make_bv_sleq(d_env, children[0], children[1]);
+    result = msat_make_not(d_env, result);
     break;
   default:
     assert(false);
@@ -352,23 +381,24 @@ term_t mathsat5_internal::mk_mathsat5_term(expr::term_op op, size_t n, term_t* c
   return result;
 }
 
-type_t mathsat5_internal::to_mathsat5_type(expr::term_ref ref) {
+msat_type mathsat5_internal::to_mathsat5_type(expr::term_ref ref) {
 
-  type_t result = NULL_TERM;
+  msat_type result;
+  MSAT_MAKE_ERROR_TERM(result);
 
   switch (d_tm.term_of(ref).op()) {
   case expr::TYPE_BOOL:
-    result = d_bool_type;
+    result = msat_get_bool_type(d_env);
     break;
   case expr::TYPE_INTEGER:
-    result = d_int_type;
+    result = msat_get_integer_type(d_env);
     break;
   case expr::TYPE_REAL:
-    result = d_real_type;
+    result = msat_get_rational_type(d_env);
     break;
   case expr::TYPE_BITVECTOR: {
     size_t size = d_tm.get_bitvector_type_size(ref);
-    result = yices_bv_type(size);
+    result = msat_get_bv_type(d_env, size);
     break;
   }
   default:
@@ -378,13 +408,11 @@ type_t mathsat5_internal::to_mathsat5_type(expr::term_ref ref) {
   return result;
 }
 
-term_t mathsat5_internal::to_mathsat5_term(expr::term_ref ref) {
-
-  term_t result = NULL_TERM;
+msat_term mathsat5_internal::to_mathsat5_term(expr::term_ref ref) {
 
   // Check the term has been translated already
-  result = get_term_cache(ref);
-  if (result != NULL_TERM) {
+  msat_term result = get_term_cache(ref);
+  if (!MSAT_ERROR_TERM(result)) {
     return result;
   }
 
@@ -393,24 +421,27 @@ term_t mathsat5_internal::to_mathsat5_term(expr::term_ref ref) {
   expr::term_op t_op = t.op();
 
   switch (t_op) {
-  case expr::VARIABLE:
-    result = yices_new_uninterpreted_term(to_mathsat5_type(t[0]));
-    yices_set_term_name(result, d_tm.get_variable_name(t).c_str());
+  case expr::VARIABLE: {
+    msat_decl var = msat_declare_function(d_env, d_tm.get_variable_name(t).c_str(), to_mathsat5_type(t[0]));
+    result = msat_make_constant(d_env, var);
     // Remember, for model construction
     d_variables.push_back(ref);
     break;
+  }
   case expr::CONST_BOOL:
-    result = d_tm.get_boolean_constant(t) ? yices_true() : yices_false();
+    result = d_tm.get_boolean_constant(t) ? msat_make_true(d_env) : msat_make_false(d_env);
     break;
-  case expr::CONST_RATIONAL:
-    result = yices_mpq(d_tm.get_rational_constant(t).mpq().get_mpq_t());
+  case expr::CONST_RATIONAL: {
+    result = msat_make_number(d_env, d_tm.get_rational_constant(t).mpq().get_str().c_str());
     break;
-  case expr::CONST_INTEGER:
-    result = yices_mpz(d_tm.get_integer_constant(t).mpz().get_mpz_t());
+  }
+  case expr::CONST_INTEGER: {
+    result = msat_make_number(d_env, d_tm.get_integer_constant(t).mpz().get_str(10).c_str());
     break;
+  }
   case expr::CONST_BITVECTOR: {
     expr::bitvector bv = d_tm.get_bitvector_constant(t);
-    result = yices_bvconst_mpz(bv.size(), bv.mpz().get_mpz_t());
+    result = msat_make_bv_number();
     break;
   }
   case expr::TERM_ITE:
