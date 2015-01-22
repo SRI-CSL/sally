@@ -118,7 +118,7 @@ std::ostream& get_trace_stream() {
 
 std::string language_to_string(language lang) {
   switch (lang) {
-  case MCMT: return "sally";
+  case MCMT: return "mcmt";
   case NUXMV: return "nuxmv";
   case HORN: return "horn";
   default:
@@ -127,7 +127,7 @@ std::string language_to_string(language lang) {
 }
 
 language language_from_string(std::string lang) {
-  if (lang == "sally") return MCMT;
+  if (lang == "mcmt") return MCMT;
   if (lang == "nuxmv") return NUXMV;
   if (lang == "horn") return HORN;
   throw exception(std::string("Unsupported language: ") + lang);

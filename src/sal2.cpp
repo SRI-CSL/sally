@@ -156,7 +156,7 @@ void parseOptions(int argc, char* argv[], variables_map& variables)
       ("parse-only", "Just parse, don't solve.")
       ("engine", value<string>(), get_engines_list().c_str())
       ("solver", value<string>()->default_value("yices2"), get_solvers_list().c_str())
-      ("output-language", value<string>()->default_value("sally"), get_output_languages_list().c_str())
+      ("output-language", value<string>()->default_value("mcmt"), get_output_languages_list().c_str())
       ;
 
   // Get the individual engine options

@@ -463,18 +463,19 @@ void term::to_stream_nuxmv(std::ostream& out, const term_manager_internal& tm) c
     break;
   case TERM_BV_EXTRACT: {
     const bitvector_extract& extract = tm.payload_of<bitvector_extract>(*this);
-    out << "((_ extract " << extract.high << " " << extract.low << ") " << *begin() << ")";
+    out << child(0) << "[" << extract.high << ":" << extract.low << "]";
     break;
   }
   case CONST_RATIONAL:
-    // Stream is already in SMT mode
+    // Stream is already in NUXMV mode
     out << tm.payload_of<rational>(*this);
     break;
   case CONST_INTEGER:
-    // Stream is already in SMT mode
+    // Stream is already in NUXMV mode
     out << tm.payload_of<integer>(*this);
     break;
   case CONST_BITVECTOR:
+    // Stream is already in NUXMV mode
     out << tm.payload_of<bitvector>(*this);
     break;
   case CONST_STRING:
