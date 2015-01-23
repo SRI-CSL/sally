@@ -54,10 +54,10 @@ public:
   /** Get the type of bitvectors of given size > 0. */
   term_ref bitvector_type(size_t size);
 
-  /** Get the size of a bitvector type or term */
+  /** Get the size of a bitvector type */
   size_t get_bitvector_type_size(term_ref bv_type) const;
 
-  /** Get the size of a bitvector type or term */
+  /** Get the size of a bitvector term */
   size_t get_bitvector_size(term_ref bv_type) const;
 
   /** Make a term, given children */

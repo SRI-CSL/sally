@@ -813,15 +813,9 @@ void yices2_internal::get_model(expr::model& m) {
       mpz_t value;
       mpz_init(value);
       yices_get_mpz_value(yices_model, yices_var, value);
-      // The rational mpq_t value
-      mpq_t value_q;
-      mpq_init(value_q);
-      mpq_set_z(value_q, value);
-      // Now, the rational
-      expr::rational rational_value(value_q);
-      var_value = d_tm.mk_rational_constant(rational_value);;
+      expr::integer integer_value(value);
+      var_value = d_tm.mk_integer_constant(integer_value);
       // Clear the temps
-      mpq_clear(value_q);
       mpz_clear(value);
       break;
     }

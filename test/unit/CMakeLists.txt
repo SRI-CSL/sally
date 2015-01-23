@@ -30,7 +30,7 @@ if (YICES2_FOUND)
   target_link_libraries(sal2_test ${YICES2_LIBRARY})
 endif()
 if (MATHSAT5_FOUND)
-  target_link_libraries(sal2_test ${MATHSAT4_LIBRARY})
+  target_link_libraries(sal2_test ${MATHSAT5_LIBRARY})
 endif()
 
 # Add the test

@@ -47,8 +47,6 @@ public:
 
   /** Output to stream */
   void to_stream(std::ostream& out) const;
-  /** String representation */
-  std::string to_string(output::language lang) const;
 
   /** Comparison */
   bool operator == (const rational& q) const { return this->cmp(q) == 0; }
@@ -61,6 +59,12 @@ public:
 
   /** Returns the sign of the number */
   int sgn() const;
+
+  /** Returns the numerator */
+  integer get_numerator() const;
+
+  /** Returns the denominator */
+  integer get_denominator() const;
 
   /** Returns the inverse of the rational, i.e. 1/q */
   rational invert() const;
