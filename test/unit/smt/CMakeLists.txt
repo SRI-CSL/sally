@@ -1,1 +1,1 @@
-add_library(smt_test yices2_test.cpp)
+add_library(smt_test yices2_test.cpp mathsat5_test.cpp)

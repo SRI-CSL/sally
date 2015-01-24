@@ -61,7 +61,7 @@ expr::term_ref ic3_engine::check_one_step_reachable(size_t k, expr::term_ref F) 
   // Add the formula (moving current -> next)
   scope.push();
   expr::term_ref F_next = state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, F);
-  solver->add(F_next);
+  solver->add(F_next, smt::solver::CLASS_C);
 
   // Figure out the result
   smt::solver::result r = solver->check();
@@ -99,7 +99,7 @@ expr::term_ref ic3_engine::check_inductive_at(size_t k, expr::term_ref F) {
   scope.push();
   expr::term_ref F_not = tm().mk_term(expr::TERM_NOT, F);
   expr::term_ref F_not_next = state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, F_not);
-  solver->add(F_not_next);
+  solver->add(F_not_next, smt::solver::CLASS_C);
 
   // Figure out the result
   expr::term_ref result;
@@ -134,7 +134,7 @@ void ic3_engine::add_inductive_at(size_t k, expr::term_ref F, size_t depth) {
       break;
     }
     d_frame_content[i].insert(F);
-    get_solver(i)->add(F);
+    get_solver(i)->add(F, smt::solver::CLASS_A);
   }
   // Add to induction obligations
   d_induction_obligations.push(obligation(k, F, depth));
@@ -152,11 +152,17 @@ void ic3_engine::ensure_frame(size_t k) {
 
     assert(!in_push());
 
-    // Make the solver with next
-    smt::solver* solver_with_next = smt::factory::mk_default_solver(tm(), ctx().get_options());
-    d_solvers.push_back(solver_with_next);
+    // Make the solver
+    smt::solver* solver = smt::factory::mk_default_solver(tm(), ctx().get_options());
+    d_solvers.push_back(solver);
+    // Add the variable classes
+    const std::vector<expr::term_ref>& x = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_CURRENT);
+    solver->add_x_variables(x.begin(), x.end());
+    const std::vector<expr::term_ref>& x_next = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_NEXT);
+    solver->add_y_variables(x_next.begin(), x_next.end());
+
     // Add the transition relation
-    solver_with_next->add(d_transition_system->get_transition_relation());
+    solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_B);
     // Add the frame content
     d_frame_content.push_back(formula_set());
 
@@ -164,8 +170,8 @@ void ic3_engine::ensure_frame(size_t k) {
     if (d_transition_system->has_assumptions()) {
       expr::term_ref assumption = d_transition_system->get_assumption();
       expr::term_ref assumption_next = state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, assumption);
-      d_solvers[k]->add(assumption);
-      d_solvers[k]->add(assumption_next);
+      d_solvers[k]->add(assumption, smt::solver::CLASS_A);
+      d_solvers[k]->add(assumption_next, smt::solver::CLASS_C);
     }
   }
   assert(d_solvers.size() == d_frame_content.size());
@@ -207,7 +213,7 @@ bool ic3_engine::check_reachable(size_t k, expr::term_ref f) {
       reachability_obligations.pop();
       // Add the negation of the obligation to known facts
       expr::term_ref learnt = tm().mk_term(expr::TERM_NOT, reach.formula());
-      get_solver(reach.frame())->add(learnt);
+      get_solver(reach.frame())->add(learnt, smt::solver::CLASS_A);
     } else {
       // New obligation to reach the counterexample
       reachability_obligations.push(obligation(reach.frame()-1, G, 0));
@@ -234,7 +240,7 @@ bool ic3_engine::check_valid_and_add(size_t k, expr::term_ref f, size_t depth) {
   expr::term_ref f_not = tm().mk_term(expr::TERM_NOT, f);
   smt::solver* solver = get_solver(k);
   solver->push();
-  solver->add(f_not);
+  solver->add(f_not, smt::solver::CLASS_A);
   smt::solver::result r = solver->check();
   solver->pop();
   switch (r) {
@@ -293,7 +299,7 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, size_t depth) {
     // Let's re-check the induction, but remember the assumption
     expr::term_ref learnt = tm().mk_term(expr::TERM_NOT, G);
     TRACE("ic3") << "ic3: learnt generalization: " << learnt << std::endl;
-    get_solver(k)->add(learnt);
+    get_solver(k)->add(learnt, smt::solver::CLASS_A);
     induction_assumptions.push_back(learnt);
   }
 
@@ -420,10 +426,8 @@ void ic3_engine::print_frame(size_t k, std::ostream& out) const {
 }
 
 expr::term_ref ic3_engine::generalize_sat_at(size_t k, smt::solver* solver) {
-  const system::state_type* state_type = d_transition_system->get_state_type();
-  const std::vector<expr::term_ref>& state_vars = state_type->get_variables(system::state_type::STATE_NEXT);
   std::vector<expr::term_ref> generalization_facts;
-  solver->generalize(state_vars, generalization_facts);
+  solver->generalize(generalization_facts);
   size_t to_keep = 0;
   for(size_t i = 0; i < generalization_facts.size(); ++ i) {
     if (!frame_contains(k, generalization_facts[i])) {

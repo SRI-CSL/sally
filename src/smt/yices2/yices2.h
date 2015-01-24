@@ -33,7 +33,7 @@ public:
   ~yices2();
 
   /** Add an assertion f to the solver */
-  void add(expr::term_ref f);
+  void add(expr::term_ref f, formula_class f_class);
 
   /** Check the assertions for satisfiability */
   result check();
@@ -51,10 +51,7 @@ public:
    * Generalize the last call to check assuming the result was SAT. The
    * variables vars are eliminated from the assertions.
    */
-  void generalize(const std::vector<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out);
-
-  /** Interpolate the last UNSAT result */
-  void interpolate(std::vector<expr::term_ref>& out);
+  void generalize(std::vector<expr::term_ref>& projection_out);
 };
 
 }

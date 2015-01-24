@@ -269,7 +269,7 @@ generic_solver::~generic_solver() {
   delete d_internal;
 }
 
-void generic_solver::add(expr::term_ref f) {
+void generic_solver::add(expr::term_ref f, formula_class f_class) {
   d_internal->add(f);
 }
 

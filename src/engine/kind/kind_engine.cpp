@@ -62,11 +62,11 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
 
   // Initial states go to solver 1
   expr::term_ref initial_states = ts->get_initial_states();
-  d_solver_1->add(d_trace->get_state_formula(initial_states, 0));
+  d_solver_1->add(d_trace->get_state_formula(initial_states, 0), smt::solver::CLASS_A);
 
   // The assumption
   expr::term_ref assumption = ts->get_assumption();
-  d_solver_1->add(assumption);
+  d_solver_1->add(assumption, smt::solver::CLASS_A);
 
   // Transition formula
   expr::term_ref transition_formula = ts->get_transition_relation();
@@ -94,7 +94,7 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
 
     // Check the current unrolling (1)
     scope1.push();
-    d_solver_1->add(property_not_k);
+    d_solver_1->add(property_not_k, smt::solver::CLASS_A);
     smt::solver::result r_1 = d_solver_1->check();
 
     if (output::get_verbosity(std::cout) > 0) {
@@ -122,14 +122,14 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
     scope1.pop();
 
     // For (2) add property and transition
-    d_solver_2->add(property_k);
+    d_solver_2->add(property_k, smt::solver::CLASS_A);
 
     // Unroll the transition relation once more
     transition_k = d_trace->get_transition_formula(transition_formula, k, k+1);
 
     // For (2) add property and transition
-    d_solver_2->add(transition_k);
-    d_solver_2->add(assumption_k_next);
+    d_solver_2->add(transition_k, smt::solver::CLASS_A);
+    d_solver_2->add(assumption_k_next, smt::solver::CLASS_A);
 
     // Should we do the check at k
     bool check_consecution = k >= kind_min;
@@ -146,7 +146,7 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
     // Check the current unrolling (2)
     if (check_consecution) {
       scope2.push();
-      d_solver_2->add(property_not_k);
+      d_solver_2->add(property_not_k, smt::solver::CLASS_A);
       smt::solver::result r_2 = d_solver_2->check();
 
       if (output::get_verbosity(std::cout) > 0) {
@@ -178,8 +178,8 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
     }
 
     // One more transition for solver 1
-    d_solver_1->add(transition_k);
-    d_solver_1->add(assumption_k_next);
+    d_solver_1->add(transition_k, smt::solver::CLASS_A);
+    d_solver_1->add(assumption_k_next, smt::solver::CLASS_A);
   }
 
   return UNKNOWN;

@@ -33,7 +33,7 @@ public:
   ~generic_solver();
 
   /** Add an assertion f to the solver */
-  void add(expr::term_ref f);
+  void add(expr::term_ref f, formula_class f_class);
 
   /** Check the assertions for satisfiability */
   result check();

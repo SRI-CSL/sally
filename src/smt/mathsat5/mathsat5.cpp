@@ -1,5 +1,5 @@
 /*
- * yices.cpp
+ * mathsat5.cpp
  *
  *  Created on: Oct 24, 2014
  *      Author: dejan
@@ -57,6 +57,11 @@ class mathsat5_internal {
   /** Bitvector 0 */
   expr::term_ref_strong d_bv0;
 
+  /** -1 in mathsat */
+  msat_term d_msat_minus_one;
+
+  /** Interpolant groups */
+  int d_msat_A, d_msat_B;
 
   /** The map from terms to mathsat terms */
   term_to_msat_cache d_term_to_msat_cache;
@@ -76,7 +81,7 @@ class mathsat5_internal {
     }
   }
 
-  /** Returns the yices term associated with t, or NULL_TERM otherwise */
+  /** Returns the mathsat5 term associated with t, or NULL_TERM otherwise */
   msat_term get_term_cache(expr::term_ref t) const {
     term_to_msat_cache::const_iterator find = d_term_to_msat_cache.find(t);
     if (find != d_term_to_msat_cache.end()) {
@@ -88,7 +93,7 @@ class mathsat5_internal {
     }
   }
 
-  /** Returns our term representative for the yices term t or null otherwise */
+  /** Returns our term representative for the mathsat5 term t or null otherwise */
   expr::term_ref get_term_cache(msat_term t) const {
     msat_to_term_cache::const_iterator find = d_msat_to_term_cache.find(t);
     if (find != d_msat_to_term_cache.end()) {
@@ -115,29 +120,29 @@ class mathsat5_internal {
 
 public:
 
-  /** Construct an instance of yices with the given temr manager and options */
+  /** Construct an instance of mathsat5 with the given temr manager and options */
   mathsat5_internal(expr::term_manager& tm, const options& opts);
 
-  /** Destroy yices instance */
+  /** Destroy mathsat5 instance */
   ~mathsat5_internal();
 
-  /** Get the yices version of the term */
+  /** Get the mathsat5 version of the term */
   msat_term to_mathsat5_term(expr::term_ref ref);
 
-  /** Get the yices version of the type */
+  /** Get the mathsat5 version of the type */
   msat_type to_mathsat5_type(expr::term_ref ref);
 
   /** Get the sal version of the term */
   expr::term_ref to_term(msat_term t);
 
-  /** Make a term given yices operator and children */
+  /** Make a term given mathsat5 operator and children */
   expr::term_ref mk_term(msat_symbol_tag constructor, const std::vector<expr::term_ref>& children);
 
-  /** Make a yices term with given operator and children */
+  /** Make a mathsat5 term with given operator and children */
   msat_term mk_mathsat5_term(expr::term_op op, size_t n, msat_term* children);
 
-  /** Add an assertion to yices */
-  void add(expr::term_ref ref);
+  /** Add an assertion to mathsat5 */
+  void add(expr::term_ref ref, solver::formula_class f_class);
 
   /** Check satisfiability */
   solver::result check();
@@ -152,7 +157,7 @@ public:
   void pop();
 
   /** Return the generalization */
-  void generalize(const std::vector<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out);
+  void interpolate(std::vector<expr::term_ref>& projection_out);
 
   /** Returns the instance id */
   size_t instance() const { return d_instance; }
@@ -175,7 +180,15 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
   // The context
   d_cfg = msat_create_config();
   msat_set_option(d_cfg, "model_generation", "true");
+  msat_set_option(d_cfg, "interpolation", "true");
   d_env = msat_create_env(d_cfg);
+
+  // Interpolation groups
+  d_msat_A = msat_create_itp_group(d_env);
+  d_msat_B = msat_create_itp_group(d_env);
+
+  // Minus one
+  d_msat_minus_one = msat_make_number(d_env, "-1");
 }
 
 mathsat5_internal::~mathsat5_internal() {
@@ -207,7 +220,8 @@ msat_term mathsat5_internal::mk_mathsat5_term(expr::term_op op, size_t n, msat_t
     break;
   case expr::TERM_IMPLIES:
     assert(n == 2);
-    MSAT_MAKE_ERROR_TERM(result);
+    result = msat_make_not(d_env, children[0]);
+    result = msat_make_or(d_env, result, children[1]);
     break;
   case expr::TERM_XOR:
     assert(n == 2);
@@ -221,7 +235,13 @@ msat_term mathsat5_internal::mk_mathsat5_term(expr::term_op op, size_t n, msat_t
     }
     break;
   case expr::TERM_SUB:
-    MSAT_MAKE_ERROR_TERM(result);
+    if (n == 1) {
+      result = msat_make_times(d_env, d_msat_minus_one, children[0]);
+    } else {
+      assert(n == 2);
+      result = msat_make_times(d_env, d_msat_minus_one, children[1]);
+      result = msat_make_plus(d_env, children[0], result);
+    }
     break;
   case expr::TERM_MUL:
     result = children[0];
@@ -229,9 +249,21 @@ msat_term mathsat5_internal::mk_mathsat5_term(expr::term_op op, size_t n, msat_t
       result = msat_make_times(d_env, result, children[i]);
     }
     break;
-  case expr::TERM_DIV:
-    MSAT_MAKE_ERROR_TERM(result);
+  case expr::TERM_DIV: {
+    assert(n == 2);
+    assert(msat_term_is_number(d_env, children[1]));
+    mpq_t constant;
+    mpq_init(constant);
+    msat_term_to_number(d_env, children[0], constant);
+    assert(mpq_sgn(constant));
+    mpq_inv(constant, constant);
+    char* constant_str = mpq_get_str(0, 10, constant);
+    result = msat_make_number(d_env, constant_str);
+    free(constant);
+    mpq_clear(constant);
+    result = msat_make_times(d_env, children[0], result);
     break;
+  }
   case expr::TERM_LEQ:
     assert(n == 2);
     result = msat_make_leq(d_env, children[0], children[1]);
@@ -588,12 +620,19 @@ expr::term_ref mathsat5_internal::to_term(msat_term t) {
   return result;
 }
 
-void mathsat5_internal::add(expr::term_ref ref) {
+void mathsat5_internal::add(expr::term_ref ref, solver::formula_class f_class) {
   // Remember the assertions
   expr::term_ref_strong ref_strong(d_tm, ref);
   d_assertions.push_back(ref_strong);
 
-  // Assert to yices
+  // Set the interpolation group
+  if (f_class == solver::CLASS_C) {
+    msat_set_itp_group(d_env, d_msat_B);
+  } else {
+    msat_set_itp_group(d_env, d_msat_A);
+  }
+
+  // Assert to mathsat5
   msat_term m_term = to_mathsat5_term(ref);
   int ret = msat_assert_formula(d_env, m_term);
   if (ret != 0) {
@@ -687,6 +726,12 @@ void mathsat5_internal::get_model(expr::model& m) {
   }
 }
 
+void mathsat5_internal::interpolate(std::vector<expr::term_ref>& projection_out) {
+  int ga[1] = { d_msat_A };
+  msat_term I = msat_get_interpolant(d_env, ga, 1);
+  projection_out.push_back(to_term(I));
+}
+
 void mathsat5_internal::push() {
   int ret = msat_push_backtrack_point(d_env);
   if (ret) {
@@ -707,10 +752,6 @@ void mathsat5_internal::pop() {
   }
 }
 
-void mathsat5_internal::generalize(const std::vector<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out) {
-  throw exception("Not supported");
-}
-
 mathsat5::mathsat5(expr::term_manager& tm, const options& opts)
 : solver("mathsat5", tm, opts)
 {
@@ -721,9 +762,9 @@ mathsat5::~mathsat5() {
   delete d_internal;
 }
 
-void mathsat5::add(expr::term_ref f) {
+void mathsat5::add(expr::term_ref f, formula_class f_class) {
   TRACE("mathsat5") << "mathsat5[" << d_internal->instance() << "]: adding " << f << std::endl;
-  d_internal->add(f);
+  d_internal->add(f, f_class);
 }
 
 solver::result mathsat5::check() {
@@ -747,13 +788,9 @@ void mathsat5::pop() {
 }
 
 
-void mathsat5::generalize(const std::vector<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out) {
-  TRACE("mathsat5") << "mathsat5[" << d_internal->instance() << "]: generalizing" << std::endl;
-  d_internal->generalize(to_eliminate, projection_out);
-}
-
-void mathsat5::interpolate(std::vector<expr::term_ref>& ) {
-
+void mathsat5::interpolate(std::vector<expr::term_ref>& interpolation_out) {
+  TRACE("mathsat5") << "mathsat5[" << d_internal->instance() << "]: interpolating" << std::endl;
+  d_internal->interpolate(interpolation_out);
 }
 
 }

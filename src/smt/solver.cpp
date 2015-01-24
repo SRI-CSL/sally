@@ -28,16 +28,28 @@ std::ostream& operator << (std::ostream& out, solver::result result) {
   return out;
 }
 
-expr::term_ref solver::generalize(const std::vector<expr::term_ref>& to_eliminate) {
+expr::term_ref solver::generalize() {
   std::vector<expr::term_ref> projection_out;
-  generalize(to_eliminate, projection_out);
-  if (projection_out.size() == 0) {
-    return d_tm.mk_boolean_constant(true);
-  }
-  if (projection_out.size() == 1) {
-    return projection_out[0];
-  }
-  return d_tm.mk_term(expr::TERM_AND, projection_out);
+  generalize(projection_out);
+  return d_tm.mk_and(projection_out);
+}
+
+expr::term_ref solver::interpolate() {
+  std::vector<expr::term_ref> interpolation_out;
+  generalize(interpolation_out);
+  return d_tm.mk_and(interpolation_out);
+}
+
+void solver::add_x_variable(expr::term_ref x_var) {
+  assert(d_x_variables.find(x_var) == d_x_variables.end());
+  assert(d_y_variables.find(x_var) == d_y_variables.end());
+  d_x_variables.insert(x_var);
+}
+
+void solver::add_y_variable(expr::term_ref x_var) {
+  assert(d_x_variables.find(x_var) == d_x_variables.end());
+  assert(d_y_variables.find(x_var) == d_y_variables.end());
+  d_y_variables.insert(x_var);
 }
 
 }

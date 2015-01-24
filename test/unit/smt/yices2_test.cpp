@@ -1,3 +1,5 @@
+#ifdef WITH_YICES2
+
 #include <boost/test/unit_test.hpp>
 
 #include "expr/term.h"
@@ -36,7 +38,7 @@ public:
 
 BOOST_FIXTURE_TEST_SUITE(smt_tests, term_manager_with_yices_test_fixture)
 
-BOOST_AUTO_TEST_CASE(basic_asserts) {
+BOOST_AUTO_TEST_CASE(yices2_basic_asserts) {
 
   // Assert something to yices
   term_ref x = tm.mk_variable("x", tm.real_type());
@@ -52,7 +54,7 @@ BOOST_AUTO_TEST_CASE(basic_asserts) {
   term_ref f = tm.mk_term(TERM_AND, b, leq);
 
   cout << "Adding: " << f << endl;
-  yices2->add(f);
+  yices2->add(f, smt::solver::CLASS_A);
 
   solver::result result = yices2->check();
   cout << "Check result: " << result << endl;
@@ -62,7 +64,7 @@ BOOST_AUTO_TEST_CASE(basic_asserts) {
   term_ref g = tm.mk_term(TERM_NOT, b);
 
   cout << "Adding: " << g << endl;
-  yices2->add(g);
+  yices2->add(g, smt::solver::CLASS_A);
 
   result = yices2->check();
   cout << "Check result: " << result << endl;
@@ -71,10 +73,7 @@ BOOST_AUTO_TEST_CASE(basic_asserts) {
 
 }
 
-BOOST_AUTO_TEST_CASE(generalization) {
-
-  output::set_verbosity(std::cerr, 10);
-  output::set_verbosity(std::cout, 10);
+BOOST_AUTO_TEST_CASE(yices2_generalization) {
 
   yices2->push();
 
@@ -83,6 +82,8 @@ BOOST_AUTO_TEST_CASE(generalization) {
   term_ref y = tm.mk_variable("y", tm.real_type());
   term_ref z = tm.mk_variable("z", tm.real_type());
   term_ref zero = tm.mk_rational_constant(rational());
+
+  expr::term_ref G;
 
   term_ref sum_x_y = tm.mk_term(TERM_ADD, x, y);
   term_ref sum_x_y_z = tm.mk_term(TERM_ADD, sum_x_y, z);
@@ -93,30 +94,28 @@ BOOST_AUTO_TEST_CASE(generalization) {
   term_ref geq_x_y = tm.mk_term(TERM_LEQ, zero, sum_x_y);
 
   // Add and check
-  yices2->add(leq_x_y);
-  yices2->add(geq_x_y);
+  yices2->add(leq_x_y, smt::solver::CLASS_A);
+  yices2->add(geq_x_y, smt::solver::CLASS_A);
 
   // Check and generalize
   solver::result result = yices2->check();
   cout << "Check result: " << result << endl;
 
   // Generalize
-  std::vector<term_ref> to_elim;
-  std::vector<term_ref> proj;
-  to_elim.push_back(y);
-  yices2->generalize(to_elim, proj);
+  G = yices2->generalize();
+  cout << "G: " << G << endl;
 
   // 0 <= x + y + z
   term_ref geq_x_y_z = tm.mk_term(TERM_LEQ, zero, sum_x_y_z);
 
   // Add some more
-  yices2->add(geq_x_y_z);
+  yices2->add(geq_x_y_z, smt::solver::CLASS_B);
 
   // Check and generalize
   result = yices2->check();
   cout << "Check result: " << result << endl;
-  proj.clear();
-  yices2->generalize(to_elim);
+  G = yices2->generalize();
+  cout << "G: " << G << endl;
 
   yices2->pop();
 
@@ -126,16 +125,20 @@ BOOST_AUTO_TEST_CASE(generalization) {
   term_ref imp1 = tm.mk_term(expr::TERM_IMPLIES, b1, geq_x_y_z);
   term_ref imp2 = tm.mk_term(expr::TERM_IMPLIES, b2, leq_x_y);
 
-  yices2->add(imp1);
-  yices2->add(imp2);
+  yices2->add(imp1, smt::solver::CLASS_B);
+  yices2->add(imp2, smt::solver::CLASS_B);
+
+  yices2->add_y_variable(b1);
 
   result = yices2->check();
   cout << "Check result: " << result << endl;
 
-  to_elim.push_back(b1);
-  proj.clear();
-  yices2->generalize(to_elim, proj);
+  G = yices2->generalize();
+  cout << "G: " << G << endl;
+
 }
 
 
 BOOST_AUTO_TEST_SUITE_END()
+
+#endif

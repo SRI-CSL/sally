@@ -40,11 +40,11 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
 
   // Initial states
   expr::term_ref initial_states = ts->get_initial_states();
-  d_solver->add(d_trace->get_state_formula(initial_states, 0));
+  d_solver->add(d_trace->get_state_formula(initial_states, 0), smt::solver::CLASS_A);
 
   // The assumption
   expr::term_ref assumption = ts->get_assumption();
-  d_solver->add(assumption);
+  d_solver->add(assumption, smt::solver::CLASS_A);
 
   // Transition formula
   expr::term_ref transition_formula = ts->get_transition_relation();
@@ -68,7 +68,7 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
 
       scope.push();
       expr::term_ref property_not = tm().mk_term(expr::TERM_NOT, property);
-      d_solver->add(d_trace->get_state_formula(property_not, k));
+      d_solver->add(d_trace->get_state_formula(property_not, k), smt::solver::CLASS_A);
       smt::solver::result r = d_solver->check();
 
       if (output::get_verbosity(std::cout) > 0) {
@@ -97,8 +97,8 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
     }
 
     // Unroll once more
-    d_solver->add(d_trace->get_transition_formula(transition_formula, k, k + 1));
-    d_solver->add(d_trace->get_state_formula(assumption, k+1));
+    d_solver->add(d_trace->get_transition_formula(transition_formula, k, k + 1), smt::solver::CLASS_A);
+    d_solver->add(d_trace->get_state_formula(assumption, k+1), smt::solver::CLASS_A);
   }
 
   return UNKNOWN;

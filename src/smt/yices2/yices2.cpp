@@ -134,7 +134,7 @@ public:
   term_t mk_yices2_term(expr::term_op op, size_t n, term_t* children);
 
   /** Add an assertion to yices */
-  void add(expr::term_ref ref);
+  void add(expr::term_ref ref, solver::formula_class f_class);
 
   /** Check satisfiability */
   solver::result check();
@@ -149,7 +149,7 @@ public:
   void pop();
 
   /** Return the generalization */
-  void generalize(const std::vector<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out);
+  void generalize(const std::set<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out);
 
   /** Returns the instance id */
   size_t instance() const { return d_instance; }
@@ -744,7 +744,7 @@ expr::term_ref yices2_internal::to_term(term_t t) {
   return result;
 }
 
-void yices2_internal::add(expr::term_ref ref) {
+void yices2_internal::add(expr::term_ref ref, solver::formula_class f_class) {
   // Remember the assertions
   expr::term_ref_strong ref_strong(d_tm, ref);
   d_assertions.push_back(ref_strong);
@@ -872,14 +872,14 @@ void yices2_internal::pop() {
   }
 }
 
-void yices2_internal::generalize(const std::vector<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out) {
+void yices2_internal::generalize(const std::set<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out) {
 
   // Get the model
   model_t* m = yices_get_model(d_ctx, true);
 
-  if (output::get_verbosity(std::cout) > 2) {
-    std::cout << "model:" << std::endl;
-    yices_pp_model(stdout, m, 80, 100, 0);
+  if (output::trace_tag_is_enabled("yices2")) {
+    std::cerr << "model:" << std::endl;
+    yices_pp_model(stderr, m, 80, 100, 0);
   }
 
   // Yices version of the assertions
@@ -890,19 +890,20 @@ void yices2_internal::generalize(const std::vector<expr::term_ref>& to_eliminate
 
   // Yices version of the variables
   term_t* variables = new term_t[to_eliminate.size()];
-  for (size_t i = 0; i < to_eliminate.size(); ++ i) {
-    variables[i] = to_yices2_term(to_eliminate[i]);
+  std::set<expr::term_ref>::const_iterator it = to_eliminate.begin(), it_end = to_eliminate.end();
+  for (size_t i = 0; it != it_end; ++ i, ++ it) {
+    variables[i] = to_yices2_term(*it);
   }
 
-  if (output::get_verbosity(std::cout) > 2) {
-    std::cout << "assertions:" << std::endl;
+  if (output::trace_tag_is_enabled("yices2")) {
+    std::cerr << "assertions:" << std::endl;
     for (size_t i = 0; i < d_assertions.size(); ++ i) {
-      std::cout << i << ": ";
-      yices_pp_term(stdout, assertions[i], 80, 100, 0);
+      std::cerr << i << ": ";
+      yices_pp_term(stderr, assertions[i], 80, 100, 0);
     }
-    std::cout << "variables:" << std::endl;
+    std::cerr << "variables:" << std::endl;
     for (size_t i = 0; i < to_eliminate.size(); ++ i) {
-      std::cout << i << ": ";
+      std::cerr << i << ": ";
       yices_pp_term(stdout, variables[i], 80, 100, 0);
     }
   }
@@ -919,10 +920,10 @@ void yices2_internal::generalize(const std::vector<expr::term_ref>& to_eliminate
   }
   yices_delete_term_vector(&G_y);
 
-  if (output::get_verbosity(std::cout) > 2) {
-    std::cout << "generalization: " << std::endl;
+  if (output::trace_tag_is_enabled("yices2")) {
+    std::cerr << "generalization: " << std::endl;
     for (size_t i = 0; i < projection_out.size(); ++ i) {
-      std::cout << i << ": " << projection_out[i] << std::endl;
+      std::cerr << i << ": " << projection_out[i] << std::endl;
     }
   }
 
@@ -942,9 +943,9 @@ yices2::~yices2() {
   delete d_internal;
 }
 
-void yices2::add(expr::term_ref f) {
+void yices2::add(expr::term_ref f, formula_class f_class) {
   TRACE("yices2") << "yices2[" << d_internal->instance() << "]: adding " << f << std::endl;
-  d_internal->add(f);
+  d_internal->add(f, f_class);
 }
 
 solver::result yices2::check() {
@@ -968,13 +969,9 @@ void yices2::pop() {
 }
 
 
-void yices2::generalize(const std::vector<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out) {
+void yices2::generalize(std::vector<expr::term_ref>& projection_out) {
   TRACE("yices2") << "yices2[" << d_internal->instance() << "]: generalizing" << std::endl;
-  d_internal->generalize(to_eliminate, projection_out);
-}
-
-void yices2::interpolate(std::vector<expr::term_ref>& ) {
-
+  d_internal->generalize(d_y_variables, projection_out);
 }
 
 }

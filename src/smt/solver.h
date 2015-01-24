@@ -27,6 +27,10 @@ struct solver_context {
 
 /**
  * SMT solver interface for solving queries.
+ *
+ * Formulas being solved are of the form (A(x) and B(x, y) and C(y)). When
+ * generalizing we eliminate the variables y. When intepolating we eliminate
+ * the variables x.
  */
 class solver {
 
@@ -46,13 +50,58 @@ protected:
     return d_opts;
   }
 
+protected:
+
+  /** All x variables */
+  std::set<expr::term_ref> d_x_variables;
+
+  /** All y variables */
+  std::set<expr::term_ref> d_y_variables;
+
 public:
 
+  /** Result of the check */
   enum result {
+    /** Formula is satisfiable */
     SAT,
+    /** Formula is unsatisfiable */
     UNSAT,
+    /** The result is unknown */
     UNKNOWN
   };
+
+  /** Class of the formula */
+  enum formula_class {
+    CLASS_A,
+    CLASS_B,
+    CLASS_C
+  };
+
+  /**
+   * Mark a variable as belonging to x (class A). This is permanent, i.e it
+   * the variable will still belong to x after a pop.
+   */
+  void add_x_variable(expr::term_ref x_var);
+
+  template<typename iterator>
+  void add_x_variables(iterator begin, iterator end) {
+    for(; begin != end; ++ begin) {
+      add_x_variable(*begin);
+    }
+  }
+
+  /**
+   * Mark a variable as belonging to y (class B).This is permanent, i.e it
+   * the variable will still belong to x after a pop.
+   */
+  void add_y_variable(expr::term_ref y_var);
+
+  template<typename iterator>
+  void add_y_variables(iterator begin, iterator end) {
+    for(; begin != end; ++ begin) {
+      add_y_variable(*begin);
+    }
+  }
 
   /** Construct with the given term manager */
   solver(std::string name, expr::term_manager& tm, const options& opts)
@@ -73,7 +122,7 @@ public:
 
   /** Assert the formula */
   virtual
-  void add(expr::term_ref f) = 0;
+  void add(expr::term_ref f, formula_class f_class) = 0;
 
   /** Check for satisfiability */
   virtual
@@ -98,24 +147,37 @@ public:
   }
 
   /**
-   * Generalize the last call to check assuming the result was SAT. The
-   * variables vars are eliminated from the assertions.
+   * Generalize the last call to check assuming the result was SAT, i.e.
+   * return the a formula G satisfiable in the current model such that
+   *
+   *   G(x) => \exists y . A(x) and B(x, y) and C(y).
+   *
+   * Variables of class C are eliminated from the assertions.
    */
   virtual
-  void generalize(const std::vector<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out) {
+  void generalize(std::vector<expr::term_ref>& projection_out) {
     throw exception("generalize() not supported by solver " + d_name);
   }
 
   /**
    * Same as above, but returns a single expressions.
    */
-  expr::term_ref generalize(const std::vector<expr::term_ref>& to_eliminate);
+  expr::term_ref generalize();
 
-  /** Interpolate an unsatisfiable answer */
+  /**
+   * Interpolate an unsatisfiable answer, i.e. return the formula such that
+   *
+   *   A(x) and B(x, y) => I(y)     and     I(y) => not C(y).
+   */
   virtual
   void interpolate(std::vector<expr::term_ref>& out) {
     throw exception("interpolate() not supported by solver " + d_name);
   };
+
+  /**
+   * Same as above, but returns a single expressions.
+   */
+  expr::term_ref interpolate();
 };
 
 std::ostream& operator << (std::ostream& out, solver::result result);
