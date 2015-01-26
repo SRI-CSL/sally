@@ -259,7 +259,6 @@ msat_term mathsat5_internal::mk_mathsat5_term(expr::term_op op, size_t n, msat_t
     mpq_inv(constant, constant);
     char* constant_str = mpq_get_str(0, 10, constant);
     result = msat_make_number(d_env, constant_str);
-    free(constant);
     mpq_clear(constant);
     result = msat_make_times(d_env, children[0], result);
     break;
