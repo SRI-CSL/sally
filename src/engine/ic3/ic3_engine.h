@@ -99,13 +99,19 @@ class ic3_engine : public engine {
    * be added to frames 0, ..., k, and additionally added to induction
    * obligations at k.
    */
-  void add_inductive_at(size_t k, expr::term_ref f, size_t depth);
+  void add_valid_up_to(size_t k, expr::term_ref f);
 
   /** Queue of induction obligations */
   induction_obligation_queue d_induction_obligations;
 
+  /** Add formula to the iduction obligation queue */
+  void add_to_induction_obligations(size_t k, expr::term_ref f, size_t depth);
+
   /** Set of facts valid per frame */
   std::vector<formula_set> d_frame_content;
+
+  /** Whether induction failed at a particular frame */
+  std::vector<bool> d_has_failed_induction;
 
   /** Check if the frame contains the fiven formula */
   bool frame_contains(size_t k, expr::term_ref f);
@@ -113,23 +119,19 @@ class ic3_engine : public engine {
   /** Make sure all frame content is ready */
   void ensure_frame(size_t k);
 
-  /** Check if f is holds at k (added if holds) */
+  /**
+   * Check if f is holds at frame k and add it if it does. Note that this adds
+   * redundant facts. We use it to check the property in the initial states. */
   bool check_valid_and_add(size_t k, expr::term_ref f, size_t depth);
 
-  /** Check if f is reachable at k (nothing is added) */
+  /**
+   * Assuming f is satisfiable at k, check if f is reachable at k. During
+   * exploration, new facts are added to frames, but no induction obligations.
+   * After return the content of frame k-1 whill be sufficient to prove
+   * unreachability at k. Note that if k == 0, this returns true without any
+   * checking.
+   */
   bool check_reachable(size_t k, expr::term_ref f);
-
-  /** Solvers modified since last push */
-  std::vector< std::set<size_t> > d_solvers_modified_per_push;
-
-  /** Will push the solvers */
-  void push_solvers();
-
-  /** Pop the solvers modified since push */
-  void pop_solvers();
-
-  /** Are we in a push state */
-  bool in_push() const;
 
   /** Print the frame content */
   void print_frame(size_t k, std::ostream& out) const;

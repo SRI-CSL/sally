@@ -121,23 +121,34 @@ expr::term_ref ic3_engine::check_inductive_at(size_t k, expr::term_ref F) {
   return result;
 }
 
-void ic3_engine::add_inductive_at(size_t k, expr::term_ref F, size_t depth) {
-  // Ensure frame is setup
-  ensure_frame(k);
-  assert(!frame_contains(k, F));
 
+
+void ic3_engine::add_valid_up_to(size_t k, expr::term_ref F) {
   TRACE("ic3") << "ic3: adding at " << k << ": " << F << std::endl;
 
-  // Add to all frames from 0..k
-  for(int i = k; i >= 0; -- i) {
-    if (frame_contains(i, F)) {
-      break;
+  // Ensure frame is setup
+  ensure_frame(k);
+
+  if (k == 0) {
+    // Special case for adding to 0 frame
+    if (!frame_contains(0, F)) {
+      d_frame_content[0].insert(F);
+      get_solver(0)->add(F, smt::solver::CLASS_A);
     }
-    d_frame_content[i].insert(F);
-    get_solver(i)->add(F, smt::solver::CLASS_A);
+  } else {
+    // Add to all frames from 1..k (not adding to 0, intiial states need no refinement)
+    for(int i = k; i >= 1; -- i) {
+      if (frame_contains(i, F)) {
+        break;
+      }
+      d_frame_content[i].insert(F);
+      get_solver(i)->add(F, smt::solver::CLASS_A);
+    }
   }
-  // Add to induction obligations
-  d_induction_obligations.push(obligation(k, F, depth));
+}
+
+void ic3_engine::add_to_induction_obligations(size_t k, expr::term_ref f, size_t depth) {
+  d_induction_obligations.push(obligation(k, f, depth));
 }
 
 void ic3_engine::ensure_frame(size_t k) {
@@ -149,8 +160,6 @@ void ic3_engine::ensure_frame(size_t k) {
   const system::state_type* state_type = d_transition_system->get_state_type();
 
   while (d_solvers.size() <= k) {
-
-    assert(!in_push());
 
     // Make the solver
     smt::solver* solver = smt::factory::mk_default_solver(tm(), ctx().get_options());
@@ -165,6 +174,8 @@ void ic3_engine::ensure_frame(size_t k) {
     solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_B);
     // Add the frame content
     d_frame_content.push_back(formula_set());
+    // No failed induction so far
+    d_has_failed_induction.push_back(false);
 
     // Also add the solver assumptions
     if (d_transition_system->has_assumptions()) {
@@ -185,9 +196,6 @@ bool ic3_engine::frame_contains(size_t k, expr::term_ref f) {
 bool ic3_engine::check_reachable(size_t k, expr::term_ref f) {
 
   TRACE("ic3") << "ic3: checking reachability at " << k << std::endl;
-
-  // Push the solvers
-  push_solvers();
 
   // Queue of reachability obligations
   std::stack<obligation> reachability_obligations;
@@ -213,15 +221,15 @@ bool ic3_engine::check_reachable(size_t k, expr::term_ref f) {
       reachability_obligations.pop();
       // Add the negation of the obligation to known facts
       expr::term_ref learnt = tm().mk_term(expr::TERM_NOT, reach.formula());
-      get_solver(reach.frame())->add(learnt, smt::solver::CLASS_A);
+      if (reach.frame() < k) {
+        // Add any unreachability learnts, but not f itself
+        add_valid_up_to(reach.frame(), learnt);
+      }
     } else {
       // New obligation to reach the counterexample
       reachability_obligations.push(obligation(reach.frame()-1, G, 0));
     }
   }
-
-  // Pop the solvers
-  pop_solvers();
 
   TRACE("ic3") << "ic3: " << (reachable ? "reachable" : "not reachable") << std::endl;
 
@@ -249,7 +257,7 @@ bool ic3_engine::check_valid_and_add(size_t k, expr::term_ref f, size_t depth) {
     return false;
   case smt::solver::UNSAT:
     // Valid, we continue with P
-    add_inductive_at(k, f, depth);
+    add_valid_up_to(k, f);
     return true;
   default:
     throw exception("Unknown SMT result.");
@@ -264,9 +272,6 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, size_t depth) {
   std::vector<expr::term_ref> induction_assumptions;
 
   TRACE("ic3") << "ic3: pushing at " << k << ":" << f << std::endl;
-
-  // Push the solvers
-  push_solvers();
 
   bool inductive = false;
   for (size_t check = 0; ; check ++) {
@@ -296,23 +301,23 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, size_t depth) {
       break;
     }
 
-    // Let's re-check the induction, but remember the assumption
+    // Let's re-check the induction, but remember the assumption that we just
+    // discharged as unreachable. In fact G is provably unreachable from the
+    // previous state.
     expr::term_ref learnt = tm().mk_term(expr::TERM_NOT, G);
     TRACE("ic3") << "ic3: learnt generalization: " << learnt << std::endl;
-    get_solver(k)->add(learnt, smt::solver::CLASS_A);
+    add_valid_up_to(k, learnt);
     induction_assumptions.push_back(learnt);
   }
 
-  // Pop the solvers
-  pop_solvers();
-
-  // If inductive, add the learnt and all the needed formulas
+  // If inductive, add the assumptions to induction obligations
   if (inductive) {
     TRACE("ic3") << "ic3: proved at " << k << " with " << induction_assumptions.size() << " assumptions" << std::endl;
     // Add the thing we learnt
-    add_inductive_at(k+1, f, depth);
+    add_valid_up_to(k+1, f);
+    add_to_induction_obligations(k+1, f, depth);
     for (size_t i = 0; i < induction_assumptions.size(); ++ i) {
-      add_inductive_at(k, induction_assumptions[i], depth+1);
+      add_to_induction_obligations(k, induction_assumptions[i], depth+1);
     }
   }
 
@@ -327,13 +332,16 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 
   // Add the initial state
   expr::term_ref I = d_transition_system->get_initial_states();
-  add_inductive_at(0, I, 0);
+  add_valid_up_to(0, I);
+  add_to_induction_obligations(0, I, 0);
 
   // Add the property we're trying to prove
   expr::term_ref P = d_property->get_formula();
   bool P_valid = check_valid_and_add(0, P, 0);
   if (!P_valid) {
     return engine::INVALID;
+  } else {
+    add_to_induction_obligations(0, P, 0);
   }
 
   // Search while we have something to do
@@ -352,10 +360,12 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
       // Not inductive, if P then we have a counterexample
       if (ind.formula() == P) {
         return engine::INVALID;
+      } else {
+        d_has_failed_induction[ind.frame()] = true;
       }
     } else {
       // Inductive, if frames equal, we have a proofs
-      if (d_frame_content[ind.frame()].size() == d_frame_content[ind.frame()+1].size()) {
+      if (!d_has_failed_induction[ind.frame()] && d_frame_content[ind.frame()].size() == d_frame_content[ind.frame()+1].size()) {
         if (output::get_verbosity(std::cout) > 1) {
           print_frames(std::cout);
         }
@@ -384,32 +394,8 @@ void ic3_engine::to_stream(std::ostream& out) const  {
 
 smt::solver* ic3_engine::get_solver(size_t k) {
   ensure_frame(k);
-  if (d_solvers_modified_per_push.size() > 0) {
-    if (d_solvers_modified_per_push.back().find(k) == d_solvers_modified_per_push.back().end()) {
-      d_solvers_modified_per_push.back().insert(k);
-      d_solvers[k]->push();
-    }
-  }
   return d_solvers[k];
 }
-
-void ic3_engine::push_solvers() {
-  d_solvers_modified_per_push.push_back(std::set<size_t>());
-}
-
-void ic3_engine::pop_solvers() {
-  assert(!d_solvers_modified_per_push.empty());
-  std::set<size_t>::iterator it = d_solvers_modified_per_push.back().begin();
-  for (; it != d_solvers_modified_per_push.back().end(); ++ it) {
-    d_solvers[*it]->pop();
-  }
-  d_solvers_modified_per_push.pop_back();
-}
-
-bool ic3_engine::in_push() const {
-  return d_solvers_modified_per_push.size() > 0;
-}
-
 
 void ic3_engine::print_frames(std::ostream& out) const {
   for (size_t k = 0; k < d_frame_content.size(); ++ k) {
