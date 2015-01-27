@@ -65,6 +65,9 @@ std::ostream& get_trace_stream();
 /** Enable trace for given tag */
 void trace_tag_enable(std::string tag);
 
+/** Enable trace for given tag */
+void trace_tag_disable(std::string tag);
+
 /** True if the trace tag is enabled */
 bool trace_tag_is_enabled(std::string tag);
 

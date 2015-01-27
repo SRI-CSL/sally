@@ -70,6 +70,10 @@ void trace_tag_enable(std::string tag) {
   trace_tags.insert(tag);
 }
 
+void trace_tag_disable(std::string tag) {
+  trace_tags.erase(tag);
+}
+
 bool trace_tag_is_enabled(std::string tag) {
   return trace_tags.find(tag) != trace_tags.end();
 }

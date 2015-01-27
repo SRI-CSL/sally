@@ -29,9 +29,12 @@ public:
   {
     mathsat5 = factory::mk_solver("mathsat5", tm, opts);
     cout << set_tm(tm);
+    cerr << set_tm(tm);
+    output::trace_tag_enable("mathsat5");
   }
 
   ~term_manager_with_mathsat5_test_fixture() {
+    output::trace_tag_disable("mathsat5");
     delete mathsat5;
   }
 };
@@ -74,6 +77,39 @@ BOOST_AUTO_TEST_CASE(mathsat5_basic_asserts) {
 }
 
 BOOST_AUTO_TEST_CASE(mathsat5_interpolation) {
+
+  cout << "Checking mathsat5 interpolation" << std::endl;
+
+  // Variables
+  term_ref x = tm.mk_variable("x", tm.real_type());
+  term_ref x_next = tm.mk_variable("x_next", tm.real_type());
+  mathsat5->add_x_variable(x);
+  mathsat5->add_y_variable(x_next);
+
+  term_ref zero = tm.mk_rational_constant(rational(0, 1));
+  term_ref one = tm.mk_rational_constant(rational(1, 1));
+  term_ref half = tm.mk_rational_constant(rational(1, 2));
+
+  // I: x = 0
+  term_ref I = tm.mk_term(TERM_EQ, x, zero);
+
+  // T: x_next = x + 1
+  term_ref T = tm.mk_term(TERM_ADD, x, one);
+  T = tm.mk_term(TERM_EQ, x_next, T);
+
+  // G: x_next = 0.5
+  term_ref G = tm.mk_term(TERM_EQ, x_next, half);
+
+  mathsat5->add(I, smt::solver::CLASS_A);
+  mathsat5->add(T, smt::solver::CLASS_A);
+  mathsat5->add(G, smt::solver::CLASS_C);
+
+  solver::result result = mathsat5->check();
+  cout << "Check result: " << result << endl;
+  BOOST_CHECK_EQUAL(result, solver::UNSAT);
+
+  term_ref interpolant = mathsat5->interpolate();
+  cout << "Interpolant: " << interpolant << endl;
 }
 
 

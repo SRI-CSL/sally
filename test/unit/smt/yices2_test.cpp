@@ -29,9 +29,12 @@ public:
   {
     yices2 = factory::mk_solver("yices2", tm, opts);
     cout << set_tm(tm);
+    cerr << set_tm(tm);
+    output::trace_tag_enable("yices2");
   }
 
   ~term_manager_with_yices_test_fixture() {
+    output::trace_tag_disable("yices2");
     delete yices2;
   }
 };

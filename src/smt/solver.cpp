@@ -36,7 +36,7 @@ expr::term_ref solver::generalize() {
 
 expr::term_ref solver::interpolate() {
   std::vector<expr::term_ref> interpolation_out;
-  generalize(interpolation_out);
+  interpolate(interpolation_out);
   return d_tm.mk_and(interpolation_out);
 }
 
@@ -46,10 +46,10 @@ void solver::add_x_variable(expr::term_ref x_var) {
   d_x_variables.insert(x_var);
 }
 
-void solver::add_y_variable(expr::term_ref x_var) {
-  assert(d_x_variables.find(x_var) == d_x_variables.end());
-  assert(d_y_variables.find(x_var) == d_y_variables.end());
-  d_y_variables.insert(x_var);
+void solver::add_y_variable(expr::term_ref y_var) {
+  assert(d_x_variables.find(y_var) == d_x_variables.end());
+  assert(d_y_variables.find(y_var) == d_y_variables.end());
+  d_y_variables.insert(y_var);
 }
 
 }

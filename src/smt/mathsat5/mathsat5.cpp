@@ -566,11 +566,9 @@ expr::term_ref mathsat5_internal::to_term(msat_term t) {
   size_t out_msb, out_lsb, out_amount;
 
   if (msat_term_is_true(d_env, t)) {
-
+    result = d_tm.mk_boolean_constant(true);
   } else if (msat_term_is_false(d_env, t)) {
     result = d_tm.mk_boolean_constant(false);
-  } else if (msat_term_is_boolean_constant(d_env, t)) {
-    result = d_tm.mk_boolean_constant(true);
   } else if (msat_term_is_number(d_env, t)) {
     mpq_t number;
     mpq_init(number);
