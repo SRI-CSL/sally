@@ -566,51 +566,197 @@ expr::term_ref mathsat5_internal::to_term(msat_term t) {
   size_t out_msb, out_lsb, out_amount;
 
   if (msat_term_is_true(d_env, t)) {
+
   } else if (msat_term_is_false(d_env, t)) {
+    result = d_tm.mk_boolean_constant(false);
   } else if (msat_term_is_boolean_constant(d_env, t)) {
-  } else if (msat_term_is_atom(d_env, t)) {
+    result = d_tm.mk_boolean_constant(true);
   } else if (msat_term_is_number(d_env, t)) {
+    mpq_t number;
+    mpq_init(number);
+    msat_term_to_number(d_env, t, number);
+    expr::rational rational(number);
+    if (rational.is_integer()) {
+      result = d_tm.mk_integer_constant(rational.get_numerator());
+    } else {
+      result = d_tm.mk_rational_constant(rational);
+    }
+    mpq_clear(number);
+
   } else if (msat_term_is_and(d_env, t)) {
+    size_t size = msat_term_arity(t);
+    std::vector<expr::term_ref> children;
+    for(size_t i = 0; i < size; ++ i) {
+      msat_term child = msat_term_get_arg(t, i);
+      children.push_back(to_term(child));
+    }
+    result = d_tm.mk_and(children);
   } else if (msat_term_is_or(d_env, t)) {
+    size_t size = msat_term_arity(t);
+    std::vector<expr::term_ref> children;
+    for(size_t i = 0; i < size; ++ i) {
+      msat_term child = msat_term_get_arg(t, i);
+      children.push_back(to_term(child));
+    }
+    result = d_tm.mk_or(children);
   } else if (msat_term_is_not(d_env, t)) {
+    msat_term child = msat_term_get_arg(t, 0);
+    result = d_tm.mk_term(expr::TERM_NOT, to_term(child));
   } else if (msat_term_is_iff(d_env, t)) {
+    msat_term child1 = msat_term_get_arg(t, 0);
+    msat_term child2 = msat_term_get_arg(t, 1);
+    result = d_tm.mk_term(expr::TERM_EQ, to_term(child1), to_term(child2));
   } else if (msat_term_is_term_ite(d_env, t)) {
+    msat_term child1 = msat_term_get_arg(t, 0);
+    msat_term child2 = msat_term_get_arg(t, 1);
+    msat_term child3 = msat_term_get_arg(t, 2);
+    result = d_tm.mk_term(expr::TERM_ITE, to_term(child1), to_term(child2), to_term(child3));
   } else if (msat_term_is_constant(d_env, t)) {
+    // Should have been cached, no new variables allowed
+    assert(false);
   } else if (msat_term_is_equal(d_env, t)) {
+    msat_term child1 = msat_term_get_arg(t, 0);
+    msat_term child2 = msat_term_get_arg(t, 1);
+    result = d_tm.mk_term(expr::TERM_EQ, to_term(child1), to_term(child2));
   } else if (msat_term_is_leq(d_env, t)) {
+    msat_term child1 = msat_term_get_arg(t, 0);
+    msat_term child2 = msat_term_get_arg(t, 1);
+    result = d_tm.mk_term(expr::TERM_LEQ, to_term(child1), to_term(child2));
   } else if (msat_term_is_plus(d_env, t)) {
+    size_t size = msat_term_arity(t);
+    std::vector<expr::term_ref> children;
+    for(size_t i = 0; i < size; ++ i) {
+      msat_term child = msat_term_get_arg(t, i);
+      children.push_back(to_term(child));
+    }
+    result = d_tm.mk_term(expr::TERM_ADD, children);
   } else if (msat_term_is_times(d_env, t)) {
+    size_t size = msat_term_arity(t);
+    std::vector<expr::term_ref> children;
+    for(size_t i = 0; i < size; ++ i) {
+      msat_term child = msat_term_get_arg(t, i);
+      children.push_back(to_term(child));
+    }
+    result = d_tm.mk_term(expr::TERM_MUL, children);
   } else if (msat_term_is_bv_concat(d_env, t)) {
+    size_t size = msat_term_arity(t);
+    std::vector<expr::term_ref> children;
+    for(size_t i = 0; i < size; ++ i) {
+      msat_term child = msat_term_get_arg(t, i);
+      children.push_back(to_term(child));
+    }
+    result = d_tm.mk_term(expr::TERM_BV_CONCAT, children);
   } else if (msat_term_is_bv_extract(d_env, t, &out_msb, &out_lsb)) {
+    msat_term child = msat_term_get_arg(t, 0);
+    result = d_tm.mk_bitvector_extract(to_term(child), expr::bitvector_extract(out_msb, out_lsb));
   } else if (msat_term_is_bv_or(d_env, t)) {
+    size_t size = msat_term_arity(t);
+    std::vector<expr::term_ref> children;
+    for(size_t i = 0; i < size; ++ i) {
+      msat_term child = msat_term_get_arg(t, i);
+      children.push_back(to_term(child));
+    }
+    result = d_tm.mk_term(expr::TERM_BV_OR, children);
   } else if (msat_term_is_bv_xor(d_env, t)) {
+    size_t size = msat_term_arity(t);
+    std::vector<expr::term_ref> children;
+    for(size_t i = 0; i < size; ++ i) {
+      msat_term child = msat_term_get_arg(t, i);
+      children.push_back(to_term(child));
+    }
+    result = d_tm.mk_term(expr::TERM_BV_XOR, children);
   } else if (msat_term_is_bv_and(d_env, t)) {
+    size_t size = msat_term_arity(t);
+    std::vector<expr::term_ref> children;
+    for(size_t i = 0; i < size; ++ i) {
+      msat_term child = msat_term_get_arg(t, i);
+      children.push_back(to_term(child));
+    }
+    result = d_tm.mk_term(expr::TERM_BV_AND, children);
   } else if (msat_term_is_bv_not(d_env, t)) {
+    msat_term child = msat_term_get_arg(t, 0);
+    result = d_tm.mk_term(expr::TERM_BV_NOT, to_term(child));
   } else if (msat_term_is_bv_plus(d_env, t)) {
+    size_t size = msat_term_arity(t);
+    std::vector<expr::term_ref> children;
+    for(size_t i = 0; i < size; ++ i) {
+      msat_term child = msat_term_get_arg(t, i);
+      children.push_back(to_term(child));
+    }
+    result = d_tm.mk_term(expr::TERM_BV_ADD, children);
   } else if (msat_term_is_bv_minus(d_env, t)) {
+    msat_term child1 = msat_term_get_arg(t, 0);
+    msat_term child2 = msat_term_get_arg(t, 1);
+    result = d_tm.mk_term(expr::TERM_BV_SUB, to_term(child1), to_term(child2));
   } else if (msat_term_is_bv_times(d_env, t)) {
+    size_t size = msat_term_arity(t);
+    std::vector<expr::term_ref> children;
+    for(size_t i = 0; i < size; ++ i) {
+      msat_term child = msat_term_get_arg(t, i);
+      children.push_back(to_term(child));
+    }
+    result = d_tm.mk_term(expr::TERM_BV_MUL, children);
   } else if (msat_term_is_bv_neg(d_env, t)) {
+    msat_term child = msat_term_get_arg(t, 0);
+    result = d_tm.mk_term(expr::TERM_BV_SUB, to_term(child));
   } else if (msat_term_is_bv_udiv(d_env, t)) {
+    msat_term child1 = msat_term_get_arg(t, 0);
+    msat_term child2 = msat_term_get_arg(t, 1);
+    result = d_tm.mk_term(expr::TERM_BV_UDIV, to_term(child1), to_term(child2));
   } else if (msat_term_is_bv_urem(d_env, t)) {
+    msat_term child1 = msat_term_get_arg(t, 0);
+    msat_term child2 = msat_term_get_arg(t, 1);
+    result = d_tm.mk_term(expr::TERM_BV_UREM, to_term(child1), to_term(child2));
   } else if (msat_term_is_bv_sdiv(d_env, t)) {
+    msat_term child1 = msat_term_get_arg(t, 0);
+    msat_term child2 = msat_term_get_arg(t, 1);
+    result = d_tm.mk_term(expr::TERM_BV_SDIV, to_term(child1), to_term(child2));
   } else if (msat_term_is_bv_srem(d_env, t)) {
+    msat_term child1 = msat_term_get_arg(t, 0);
+    msat_term child2 = msat_term_get_arg(t, 1);
+    result = d_tm.mk_term(expr::TERM_BV_SREM, to_term(child1), to_term(child2));
   } else if (msat_term_is_bv_ult(d_env, t)) {
+    msat_term child1 = msat_term_get_arg(t, 0);
+    msat_term child2 = msat_term_get_arg(t, 1);
+    result = d_tm.mk_term(expr::TERM_BV_ULT, to_term(child1), to_term(child2));
   } else if (msat_term_is_bv_uleq(d_env, t)) {
+    msat_term child1 = msat_term_get_arg(t, 0);
+    msat_term child2 = msat_term_get_arg(t, 1);
+    result = d_tm.mk_term(expr::TERM_BV_ULEQ, to_term(child1), to_term(child2));
   } else if (msat_term_is_bv_slt(d_env, t)) {
+    msat_term child1 = msat_term_get_arg(t, 0);
+    msat_term child2 = msat_term_get_arg(t, 1);
+    result = d_tm.mk_term(expr::TERM_BV_SLT, to_term(child1), to_term(child2));
   } else if (msat_term_is_bv_sleq(d_env, t)) {
+    msat_term child1 = msat_term_get_arg(t, 0);
+    msat_term child2 = msat_term_get_arg(t, 1);
+    result = d_tm.mk_term(expr::TERM_BV_SLEQ, to_term(child1), to_term(child2));
   } else if (msat_term_is_bv_lshl(d_env, t)) {
+    msat_term child1 = msat_term_get_arg(t, 0);
+    msat_term child2 = msat_term_get_arg(t, 1);
+    result = d_tm.mk_term(expr::TERM_BV_SHL, to_term(child1), to_term(child2));
   } else if (msat_term_is_bv_lshr(d_env, t)) {
+    msat_term child1 = msat_term_get_arg(t, 0);
+    msat_term child2 = msat_term_get_arg(t, 1);
+    result = d_tm.mk_term(expr::TERM_BV_LSHR, to_term(child1), to_term(child2));
   } else if (msat_term_is_bv_ashr(d_env, t)) {
+    msat_term child1 = msat_term_get_arg(t, 0);
+    msat_term child2 = msat_term_get_arg(t, 1);
+    result = d_tm.mk_term(expr::TERM_BV_ASHR, to_term(child1), to_term(child2));
   } else if (msat_term_is_bv_zext(d_env, t, &out_amount)) {
   } else if (msat_term_is_bv_sext(d_env, t, &out_amount)) {
   } else if (msat_term_is_bv_rol(d_env, t, &out_amount)) {
   } else if (msat_term_is_bv_ror(d_env, t, &out_amount)) {
   } else if (msat_term_is_bv_comp(d_env, t)) {
+    msat_term child1 = msat_term_get_arg(t, 0);
+    msat_term child2 = msat_term_get_arg(t, 1);
+    result = d_tm.mk_term(expr::TERM_EQ, to_term(child1), to_term(child2));
+    result = d_tm.mk_term(expr::TERM_ITE, result, d_bv1, d_bv0);
   }
 
   // At this point we need to be non-null
   if (result.is_null()) {
-    throw exception("Yices error (term creation)");
+    throw exception("Mathsat error (term creation)");
   }
 
   // Set the cache ref -> result

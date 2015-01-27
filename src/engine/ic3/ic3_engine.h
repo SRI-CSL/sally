@@ -104,7 +104,7 @@ class ic3_engine : public engine {
   /** Queue of induction obligations */
   induction_obligation_queue d_induction_obligations;
 
-  /** Add formula to the iduction obligation queue */
+  /** Add formula to the induction obligation queue */
   void add_to_induction_obligations(size_t k, expr::term_ref f, size_t depth);
 
   /** Set of facts valid per frame */
@@ -127,7 +127,7 @@ class ic3_engine : public engine {
   /**
    * Assuming f is satisfiable at k, check if f is reachable at k. During
    * exploration, new facts are added to frames, but no induction obligations.
-   * After return the content of frame k-1 whill be sufficient to prove
+   * After return the content of frame k-1 will be sufficient to prove
    * unreachability at k. Note that if k == 0, this returns true without any
    * checking.
    */
