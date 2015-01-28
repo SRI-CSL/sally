@@ -28,6 +28,9 @@ class term_manager {
 
   friend struct set_tm;
 
+  /** Whether to rewrite equalities to inequalities */
+  bool d_eq_rewrite;
+
 public:
 
   /** Construct them manager */
@@ -218,6 +221,9 @@ public:
 
   /** Set a transformer for variable names (set 0 to unset) */
   void set_name_transformer(const utils::name_transformer* transformer);
+
+  /** Mark whether to rewrite all equlities to inequalities at construction */
+  void set_eq_rewrite(bool flag);
 };
 
 inline

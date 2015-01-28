@@ -54,13 +54,13 @@ int main(int argc, char* argv[]) {
       }
     }
 
-    // Typecheck by default
-    bool type_check = true;
-
     // Create the term manager
-    expr::term_manager tm(type_check);
+    expr::term_manager tm(true);
     cout << expr::set_tm(tm);
     cerr << expr::set_tm(tm);
+
+    // Rewrite inequalities if asked to
+    tm.set_eq_rewrite(opts.get_bool("arith-eq-to-ineq"));
 
     // Create the context
     system::context ctx(tm, opts);
@@ -157,6 +157,7 @@ void parseOptions(int argc, char* argv[], variables_map& variables)
       ("engine", value<string>(), get_engines_list().c_str())
       ("solver", value<string>()->default_value(smt::factory::get_default_solver_id()), get_solvers_list().c_str())
       ("output-language", value<string>()->default_value("mcmt"), get_output_languages_list().c_str())
+      ("arith-eq-to-ineq", value<bool>()->default_value(false), "Rewrite equalities into inqualities.")
       ;
 
   // Get the individual engine options

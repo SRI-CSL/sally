@@ -15,6 +15,7 @@ namespace expr {
 
 term_manager::term_manager(bool typecheck)
 : d_tm(new term_manager_internal(typecheck))
+, d_eq_rewrite(false)
 {
 }
 
@@ -54,11 +55,19 @@ size_t term_manager::get_bitvector_size(term_ref t_ref) const {
 }
 
 term_ref term_manager::mk_term(term_op op, const std::vector<term_ref>& children) {
-  return d_tm->mk_term(op, children.begin(), children.end());
+  if (children.size() == 2) {
+    return mk_term(op, children[0], children[1]);
+  } else {
+    return d_tm->mk_term(op, children.begin(), children.end());
+  }
 }
 
 term_ref term_manager::mk_term(term_op op, const term_ref* children_begin, const term_ref* children_end) {
-  return d_tm->mk_term(op, children_begin, children_end);
+  if (children_end - children_begin == 2) {
+    return mk_term(op, *children_begin, *(children_begin + 1));
+  } else {
+    return d_tm->mk_term(op, children_begin, children_end);
+  }
 }
 
 term_ref term_manager::mk_term(term_op op, term_ref c) {
@@ -66,9 +75,19 @@ term_ref term_manager::mk_term(term_op op, term_ref c) {
   return d_tm->mk_term(op, children, children + 1);
 }
 
+void term_manager::set_eq_rewrite(bool flag) {
+  d_eq_rewrite = flag;
+}
+
 term_ref term_manager::mk_term(term_op op, term_ref c1, term_ref c2) {
-  term_ref children[2] = { c1 , c2 };
-  return d_tm->mk_term(op, children, children + 2);
+  if (d_eq_rewrite && op == expr::TERM_EQ && d_tm->is_subtype_of(type_of(c1), real_type())) {
+    term_ref leq = d_tm->mk_term<expr::TERM_LEQ>(c1, c2);
+    term_ref geq = d_tm->mk_term<expr::TERM_GEQ>(c1, c2);
+    return d_tm->mk_term<expr::TERM_AND>(leq, geq);
+  } else {
+    term_ref children[2] = { c1 , c2 };
+    return d_tm->mk_term(op, children, children + 2);
+  }
 }
 
 term_ref term_manager::mk_term(term_op op, term_ref c1, term_ref c2, term_ref c3) {

@@ -40,6 +40,9 @@ public:
   /** Get the value of the int option opt */
   int get_int(std::string opt) const;
 
+  /** Get the value of the bool option opt */
+  bool get_bool(std::string opt) const;
+
 };
 
 

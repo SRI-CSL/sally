@@ -35,6 +35,9 @@ int options::get_int(std::string opt) const {
   return d_options->at(opt).as<int>();
 }
 
+bool options::get_bool(std::string opt) const {
+  return d_options->at(opt).as<bool>();
+}
 
 }
 
