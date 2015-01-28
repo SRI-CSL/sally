@@ -77,10 +77,17 @@ public:
     CLASS_C
   };
 
+  /** Solver features */
+  enum feature {
+    GENERALIZATION,
+    INTERPOLATION
+  };
+
   /**
    * Mark a variable as belonging to x (class A). This is permanent, i.e it
    * the variable will still belong to x after a pop.
    */
+  virtual
   void add_x_variable(expr::term_ref x_var);
 
   template<typename iterator>
@@ -94,6 +101,7 @@ public:
    * Mark a variable as belonging to y (class B).This is permanent, i.e it
    * the variable will still belong to x after a pop.
    */
+  virtual
   void add_y_variable(expr::term_ref y_var);
 
   template<typename iterator>
@@ -119,6 +127,12 @@ public:
 
   virtual
   ~solver() {};
+
+  /** Check if the solver supports a feature */
+  virtual
+  bool supports(feature f) const {
+    return false;
+  }
 
   /** Assert the formula */
   virtual
@@ -194,6 +208,8 @@ public:
   void push() { d_solver->push(); d_pushes ++; }
   void pop() { d_solver->pop(); d_pushes --; }
 };
+
+std::ostream& operator << (std::ostream& out, solver::formula_class fc);
 
 }
 }

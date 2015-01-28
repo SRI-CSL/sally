@@ -301,11 +301,47 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, size_t depth) {
       break;
     }
 
-    // Let's re-check the induction, but remember the assumption that we just
-    // discharged as unreachable. In fact G is provably unreachable from the
-    // previous state.
-    expr::term_ref learnt = tm().mk_term(expr::TERM_NOT, G);
+    expr::term_ref learnt;
+
+    // If the solver supports interpolation, let's rock forward
+    if (get_solver(k)->supports(smt::solver::INTERPOLATION)) {
+      assert(k > 0);
+
+      TRACE("ic3") << "interpolating G: " << G << std::endl;
+
+      // Get the interpolant I1 for: (R_{k-1} and T => I1, I1 and G unsat
+      smt::solver* I1_solver = get_solver(k-1);
+      I1_solver->push();
+      expr::term_ref G_next = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, G);
+      I1_solver->add(G_next, smt::solver::CLASS_C);
+      smt::solver::result I1_result = I1_solver->check();
+      assert(I1_result == smt::solver::UNSAT);
+      expr::term_ref I1 = I1_solver->interpolate();
+      I1 = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_NEXT, system::state_type::STATE_CURRENT, G);
+      I1_solver->pop();
+
+      TRACE("ic3") << "I1: " << I1 << std::endl;
+
+      // Get the interpolant I2 for I => I2, I2 and G unsat
+      smt::solver* I2_solver = get_solver(0);
+      I2_solver->push();
+      I2_solver->add(G, smt::solver::CLASS_C);
+      smt::solver::result I2_result = I2_solver->check();
+      assert(I2_result == smt::solver::UNSAT);
+      expr::term_ref I2 = I2_solver->interpolate();
+      I2_solver->pop();
+
+      TRACE("ic3") << "I2: " << I2 << std::endl;
+
+      // Result is the disjunction of the two
+      learnt = tm().mk_term(expr::TERM_OR, I1, I2);
+    } else {
+      learnt = tm().mk_term(expr::TERM_NOT, G);
+    }
+
     TRACE("ic3") << "ic3: learnt generalization: " << learnt << std::endl;
+
+    // Add the leant
     add_valid_up_to(k, learnt);
     induction_assumptions.push_back(learnt);
   }

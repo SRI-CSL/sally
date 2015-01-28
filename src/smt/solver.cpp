@@ -52,5 +52,16 @@ void solver::add_y_variable(expr::term_ref y_var) {
   d_y_variables.insert(y_var);
 }
 
+std::ostream& operator << (std::ostream& out, solver::formula_class fc) {
+  switch(fc) {
+  case solver::CLASS_A: out << "CLASS A"; break;
+  case solver::CLASS_B: out << "CLASS B"; break;
+  case solver::CLASS_C: out << "CLASS C"; break;
+  default:
+    assert(false);
+  }
+  return out;
+}
+
 }
 }

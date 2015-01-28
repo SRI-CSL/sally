@@ -13,7 +13,9 @@
 
 #include "smt/yices2/yices2_info.h"
 #include "smt/mathsat5/mathsat5_info.h"
+#include "smt/y2m5/y2m5_info.h"
 #include "smt/generic/generic_solver_info.h"
+
 
 sal2::smt::solver_data::solver_data() {
 #ifdef WITH_YICES2
@@ -21,6 +23,11 @@ sal2::smt::solver_data::solver_data() {
 #endif
 #ifdef WITH_MATHSAT5
   add_module_info<mathsat5_info>();
+#endif
+#ifdef WITH_YICES2
+#ifdef WITH_MATHSAT5
+  add_module_info<y2m5_info>();
+#endif
 #endif
   add_module_info<generic_solver_info>();
 }

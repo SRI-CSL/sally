@@ -86,6 +86,11 @@ BOOST_AUTO_TEST_CASE(yices2_generalization) {
   term_ref z = tm.mk_variable("z", tm.real_type());
   term_ref zero = tm.mk_rational_constant(rational());
 
+  // Mark the variables
+  yices2->add_x_variable(x);
+  yices2->add_x_variable(y);
+  yices2->add_y_variable(z);
+
   expr::term_ref G;
 
   term_ref sum_x_y = tm.mk_term(TERM_ADD, x, y);
@@ -125,13 +130,15 @@ BOOST_AUTO_TEST_CASE(yices2_generalization) {
   term_ref b1 = tm.mk_variable("b1", tm.boolean_type());
   term_ref b2 = tm.mk_variable("b2", tm.boolean_type());
 
+  yices2->add_x_variable(b2);
+  yices2->add_y_variable(b1);
+
+
   term_ref imp1 = tm.mk_term(expr::TERM_IMPLIES, b1, geq_x_y_z);
   term_ref imp2 = tm.mk_term(expr::TERM_IMPLIES, b2, leq_x_y);
 
   yices2->add(imp1, smt::solver::CLASS_B);
   yices2->add(imp2, smt::solver::CLASS_B);
-
-  yices2->add_y_variable(b1);
 
   result = yices2->check();
   cout << "Check result: " << result << endl;

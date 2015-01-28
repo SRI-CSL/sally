@@ -971,6 +971,7 @@ void yices2::pop() {
 
 void yices2::generalize(std::vector<expr::term_ref>& projection_out) {
   TRACE("yices2") << "yices2[" << d_internal->instance() << "]: generalizing" << std::endl;
+  assert(!d_y_variables.empty());
   d_internal->generalize(d_y_variables, projection_out);
 }
 

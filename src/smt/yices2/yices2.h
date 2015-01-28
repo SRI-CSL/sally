@@ -32,6 +32,16 @@ public:
   /** Destructor */
   ~yices2();
 
+  /** Features */
+  bool supports(feature f) const {
+    switch (f) {
+    case GENERALIZATION:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   /** Add an assertion f to the solver */
   void add(expr::term_ref f, formula_class f_class);
 

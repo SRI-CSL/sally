@@ -7,6 +7,7 @@
 
 #pragma once
 
+#ifdef WITH_YICES2
 #ifdef WITH_MATHSAT5
 
 #include "smt/solver.h"
@@ -14,27 +15,36 @@
 namespace sal2 {
 namespace smt {
 
-class mathsat5_internal;
+class yices2;
+class mathsat5;
 
 /**
- * Yices SMT solver.
+ * Combination solver: Yices for generalization, MathSAT5 for interpolation.
+ * Note that all checks are done twice, so expect penalty.
  */
-class mathsat5 : public solver {
+class y2m5 : public solver {
 
-  /** Internal yices data */
-  mathsat5_internal* d_internal;
+  yices2* d_yices2;
+  mathsat5* d_mathsat5;
+
+  static size_t s_instance;
 
 public:
 
+  void add_x_variable(expr::term_ref x_var);
+  void add_y_variable(expr::term_ref y_var);
+
   /** Constructor */
-  mathsat5(expr::term_manager& tm, const options& opts);
+  y2m5(expr::term_manager& tm, const options& opts);
 
   /** Destructor */
-  ~mathsat5();
+  ~y2m5();
 
   /** Features */
   bool supports(feature f) const {
     switch (f) {
+    case GENERALIZATION:
+      return true;
     case INTERPOLATION:
       return true;
     default:
@@ -57,6 +67,9 @@ public:
   /** Pop the solving context */
   void pop();
 
+  /** Generalize the last call to check assuming the result was SAT. */
+  void generalize(std::vector<expr::term_ref>& out);
+
   /** Interpolate the last UNSAT result */
   void interpolate(std::vector<expr::term_ref>& out);
 };
@@ -64,4 +77,5 @@ public:
 }
 }
 
+#endif
 #endif
