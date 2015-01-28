@@ -317,7 +317,7 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, size_t depth) {
       smt::solver::result I1_result = I1_solver->check();
       assert(I1_result == smt::solver::UNSAT);
       expr::term_ref I1 = I1_solver->interpolate();
-      I1 = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_NEXT, system::state_type::STATE_CURRENT, G);
+      I1 = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_NEXT, system::state_type::STATE_CURRENT, I1);
       I1_solver->pop();
 
       TRACE("ic3") << "I1: " << I1 << std::endl;
