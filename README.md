@@ -42,14 +42,24 @@ $YD/include and $YD/lib directories with Yices2 headers and libraries, then
 build with 
 
     cd build
-    cmake .. -DYICES_HOME=$YD
+    cmake .. -DYICES2_HOME=$YD
     make
     make check
 
-If you with oo compile debug mode then pass on
+If you've installed MathSAT in the $MD directory, meaning that there are 
+$MD/include and $MD/lib directories with MathSAT5 headers and libraries, then 
+build with
 
     cd build
-    cmake .. -DCMAKE_BUILD_TYPE=Debug -DYICES_HOME=$YD 
+    cmake .. -DMATHSAT5_HOME=$MD
     make
     make check
+   
+You can use both Yices2 and MathSAT by adding both options to cmake as expected.
 
+To compile in debug mode then pass on
+
+    cd build
+    cmake .. -DCMAKE_BUILD_TYPE=Debug
+    make
+    make check
