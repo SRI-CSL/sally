@@ -18,6 +18,8 @@
 #include "smt/mathsat5/mathsat5.h"
 #include "utils/trace.h"
 
+#define unused_var(x) { (void) x; }
+
 namespace sal2 {
 namespace smt {
 
@@ -46,8 +48,6 @@ void y2m5::add(expr::term_ref f, formula_class f_class) {
 solver::result y2m5::check() {
   TRACE("y2m5") << "y2m5[" << s_instance << "]: check()" << std::endl;
   result yices2_result = d_yices2->check();
-  d_mathsat5->check();
-  // assert(yices2_result == mathsat5_result);
   return yices2_result;
 }
 
@@ -76,6 +76,9 @@ void y2m5::generalize(std::vector<expr::term_ref>& out) {
 
 void y2m5::interpolate(std::vector<expr::term_ref>& out) {
   TRACE("y2m5") << "y2m5[" << s_instance << "]: interpolating" << std::endl;
+  result mathsat5_result  = d_mathsat5->check();
+  unused_var(mathsat5_result);
+  assert(mathsat5_result == UNSAT);
   d_mathsat5->interpolate(out);
 }
 
