@@ -167,7 +167,10 @@ public:
   void pop();
 
   /** Return the generalization */
-  void interpolate(std::vector<expr::term_ref>& projection_out);
+  void generalize(const std::set<expr::term_ref>& vars_to_keep, std::vector<expr::term_ref>& out);
+
+  /** Return the interpolation */
+  void interpolate(std::vector<expr::term_ref>& out);
 
   /** Returns the instance id */
   size_t instance() const { return d_instance; }
@@ -854,7 +857,7 @@ void mathsat5_internal::get_model(expr::model& m) {
 
     switch (d_tm.term_of(var_type).op()) {
     case expr::TYPE_BOOL: {
-      assert(msat_term_is_boolean_constant(d_env, m_value));
+      assert(msat_term_is_true(d_env, m_value) || msat_term_is_false(d_env, m_value));
       var_value = d_tm.mk_boolean_constant(msat_term_is_true(d_env, m_value));
       break;
     }
@@ -921,6 +924,29 @@ void mathsat5_internal::interpolate(std::vector<expr::term_ref>& projection_out)
   projection_out.push_back(to_term(I));
 }
 
+void mathsat5_internal::generalize(const std::set<expr::term_ref>& vars_to_keep, std::vector<expr::term_ref>& out) {
+  expr::model m(d_tm);
+  get_model(m);
+
+  std::set<expr::term_ref>::const_iterator it = vars_to_keep.begin(), it_end = vars_to_keep.end();
+  for (; it != it_end; ++ it) {
+    // var = value
+    expr::term_ref var = *it;
+    assert(m.has_value(var));
+    expr::term_ref value = m.get_value(var);
+
+    if (d_tm.type_of(var) == d_tm.boolean_type()) {
+      if (d_tm.get_boolean_constant(d_tm.term_of(value))) {
+        out.push_back(var);
+      } else {
+        out.push_back(d_tm.mk_term(expr::TERM_NOT, var));
+      }
+    } else {
+      out.push_back(d_tm.mk_term(expr::TERM_EQ, var, value));
+    }
+  }
+}
+
 void mathsat5_internal::push() {
   int ret = msat_push_backtrack_point(d_env);
   if (ret) {
@@ -982,10 +1008,16 @@ void mathsat5::pop() {
   d_internal->pop();
 }
 
-
-void mathsat5::interpolate(std::vector<expr::term_ref>& interpolation_out) {
+/** Interpolate the last sat result (trivial) */
+void mathsat5::generalize(std::vector<expr::term_ref>& out) {
   TRACE("mathsat5") << "mathsat5[" << d_internal->instance() << "]: interpolating" << std::endl;
-  d_internal->interpolate(interpolation_out);
+  d_internal->generalize(d_x_variables, out);
+}
+
+
+void mathsat5::interpolate(std::vector<expr::term_ref>& out) {
+  TRACE("mathsat5") << "mathsat5[" << d_internal->instance() << "]: interpolating" << std::endl;
+  d_internal->interpolate(out);
 }
 
 }

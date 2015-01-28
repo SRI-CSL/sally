@@ -59,6 +59,9 @@ public:
 
   /** Interpolate the last UNSAT result */
   void interpolate(std::vector<expr::term_ref>& out);
+
+  /** Interpolate the last sat result (trivial) */
+  void generalize(std::vector<expr::term_ref>& out);
 };
 
 }
