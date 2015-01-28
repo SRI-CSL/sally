@@ -45,11 +45,14 @@ class mathsat5_internal {
   /** All assertions we have in context (strong) TODO: push/pop */
   std::vector<expr::term_ref_strong> d_assertions;
 
-  /** The class of the assertion */
-  std::vector<solver::formula_class> d_assertion_classes;
-
   /** The assertions size per push/pop */
   std::vector<size_t> d_assertions_size;
+
+  /** The classes for A when interpolating */
+  std::vector<int> d_assertion_classes_A;
+
+  /** The classes size per push/pop */
+  std::vector<size_t> d_assertion_classes_A_size;
 
   typedef boost::unordered_map<expr::term_ref, msat_term, expr::term_ref_hasher> term_to_msat_cache;
   typedef boost::unordered_map<msat_term, expr::term_ref, mathsat5_hasher, mathsat5_eq> msat_to_term_cache;
@@ -62,12 +65,6 @@ class mathsat5_internal {
 
   /** -1 in mathsat */
   msat_term d_msat_minus_one;
-
-  /** Interpolant group A */
-  int d_msat_A;
-
-  /** Interpolant group B */
-  int d_msat_B;
 
   /** The map from terms to mathsat terms */
   term_to_msat_cache d_term_to_msat_cache;
@@ -195,10 +192,6 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
   msat_set_option(d_cfg, "debug.api_call_trace_dump_config", "true");
   msat_set_option(d_cfg, "debug.api_call_trace_filename", ss.str().c_str());
   d_env = msat_create_env(d_cfg);
-
-  // Interpolation groups
-  d_msat_A = msat_create_itp_group(d_env);
-  d_msat_B = msat_create_itp_group(d_env);
 
   // Minus one
   d_msat_minus_one = msat_make_number(d_env, "-1");
@@ -782,13 +775,14 @@ void mathsat5_internal::add(expr::term_ref ref, solver::formula_class f_class) {
   // Remember the assertions
   expr::term_ref_strong ref_strong(d_tm, ref);
   d_assertions.push_back(ref_strong);
-  d_assertion_classes.push_back(f_class);
 
   // Set the interpolation group
+  int itp_group = msat_create_itp_group(d_env);
   if (f_class == solver::CLASS_C) {
-    msat_set_itp_group(d_env, d_msat_B);
+    msat_set_itp_group(d_env, itp_group);
   } else {
-    msat_set_itp_group(d_env, d_msat_A);
+    msat_set_itp_group(d_env, itp_group);
+    d_assertion_classes_A.push_back(itp_group);
   }
 
   // Assert to mathsat5
@@ -888,12 +882,16 @@ void mathsat5_internal::get_model(expr::model& m) {
 }
 
 void mathsat5_internal::interpolate(std::vector<expr::term_ref>& projection_out) {
-  int ga[1] = { d_msat_A };
-  msat_term I = msat_get_interpolant(d_env, ga, 1);
+  int *itp_classes = new int[d_assertion_classes_A.size()];
+  for (int i = 0; i < d_assertion_classes_A.size(); ++ i) {
+    itp_classes[i] = d_assertion_classes_A[i];
+  }
+  msat_term I = msat_get_interpolant(d_env, itp_classes, d_assertion_classes_A.size());
+  delete itp_classes;
   if (MSAT_ERROR_TERM(I)) {
     std::cerr << "Error while interpolating:" << std::endl;
     for (size_t i = 0; i < d_assertions.size(); ++ i) {
-      std::cerr << "[" << i << "]: " << d_assertion_classes[i] << ":" << d_assertions[i] << std::endl;
+      std::cerr << "[" << i << "]: " << d_assertion_classes_A[i] << ":" << d_assertions[i] << std::endl;
     }
     throw exception("MathSAT interpolation error.");
   }
@@ -906,6 +904,7 @@ void mathsat5_internal::push() {
     throw exception("MathSAT error (push).");
   }
   d_assertions_size.push_back(d_assertions.size());
+  d_assertion_classes_A_size.push_back(d_assertion_classes_A.size());
 }
 
 void mathsat5_internal::pop() {
@@ -917,7 +916,11 @@ void mathsat5_internal::pop() {
   d_assertions_size.pop_back();
   while (d_assertions.size() > size) {
     d_assertions.pop_back();
-    d_assertion_classes.pop_back();
+  }
+  size = d_assertion_classes_A_size.back();
+  d_assertion_classes_A_size.pop_back();
+  while (d_assertion_classes_A.size() > size) {
+    d_assertion_classes_A.pop_back();
   }
 }
 

@@ -114,7 +114,6 @@ BOOST_AUTO_TEST_CASE(mathsat5_interpolation) {
   cout << "Check result: " << result << endl;
   BOOST_CHECK_EQUAL(result, smt::solver::SAT);
 
-
   // The B part
   mathsat5->push();
   mathsat5->add(G, smt::solver::CLASS_C);
