@@ -275,7 +275,17 @@ term_ref term_manager::mk_and(const std::vector<term_ref>& conjuncts) {
     return mk_boolean_constant(true);
   }
   if (conjuncts.size() == 1) {
-    return conjuncts[0];
+    return *conjuncts.begin();
+  }
+  return d_tm->mk_term<TERM_AND>(conjuncts.begin(), conjuncts.end());
+}
+
+term_ref term_manager::mk_and(const std::set<term_ref>& conjuncts) {
+  if (conjuncts.size() == 0) {
+    return mk_boolean_constant(true);
+  }
+  if (conjuncts.size() == 1) {
+    return *conjuncts.begin();
   }
   return d_tm->mk_term<TERM_AND>(conjuncts.begin(), conjuncts.end());
 }

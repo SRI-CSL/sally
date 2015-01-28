@@ -34,6 +34,13 @@ struct mathsat5_eq {
   }
 };
 
+std::ostream& operator << (std::ostream& out, const msat_term& t) {
+  char* t_str = msat_term_repr(t);
+  out << t_str;
+  msat_free(t_str);
+  return out;
+}
+
 class mathsat5_internal {
 
   /** The term manager */
@@ -188,9 +195,9 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
   d_cfg = msat_create_config();
   msat_set_option(d_cfg, "model_generation", "true");
   msat_set_option(d_cfg, "interpolation", "true");
-  msat_set_option(d_cfg, "debug.api_call_trace", "2");
-  msat_set_option(d_cfg, "debug.api_call_trace_dump_config", "true");
-  msat_set_option(d_cfg, "debug.api_call_trace_filename", ss.str().c_str());
+//  msat_set_option(d_cfg, "debug.api_call_trace", "2");
+//  msat_set_option(d_cfg, "debug.api_call_trace_dump_config", "true");
+//  msat_set_option(d_cfg, "debug.api_call_trace_filename", ss.str().c_str());
   d_env = msat_create_env(d_cfg);
 
   // Minus one
@@ -289,13 +296,25 @@ msat_term mathsat5_internal::mk_mathsat5_term(expr::term_op op, size_t n, msat_t
     result = msat_make_leq(d_env, children[0], children[1]);
     result = msat_make_not(d_env, result);
     break;
-  case expr::TERM_EQ:
+  case expr::TERM_EQ: {
     assert(n == 2);
-    result = msat_make_equal(d_env, children[0], children[1]);
+    if (msat_is_bool_type(d_env, msat_term_get_type(children[0]))) {
+      result = msat_make_iff(d_env, children[0], children[1]);
+    } else {
+      result = msat_make_equal(d_env, children[0], children[1]);
+    }
     break;
+  }
   case expr::TERM_ITE:
     assert(n == 3);
-    result = msat_make_term_ite(d_env, children[0], children[1], children[2]);
+    if (msat_is_bool_type(d_env, msat_term_get_type(children[1]))) {
+      // ITE(c, t, f) = c*t + (!c)*f
+      msat_term true_branch = msat_make_and(d_env, children[0], children[1]);
+      msat_term false_branch = msat_make_and(d_env, msat_make_not(d_env, children[0]), children[1]);
+      result = msat_make_or(d_env, true_branch, false_branch);
+    } else {
+      result = msat_make_term_ite(d_env, children[0], children[1], children[2]);
+    }
     break;
   case expr::TERM_BV_ADD:
     result = children[0];
@@ -787,7 +806,11 @@ void mathsat5_internal::add(expr::term_ref ref, solver::formula_class f_class) {
 
   // Assert to mathsat5
   msat_term m_term = to_mathsat5_term(ref);
-  TRACE("mathsat5") << "msat_term: " << msat_term_repr(m_term) << std::endl;
+  if (output::trace_tag_is_enabled("mathsat5")) {
+    char* str = msat_term_repr(m_term);
+    TRACE("mathsat5") << "msat_term: " << str << std::endl;
+    msat_free(str);
+  }
 
   int ret = msat_assert_formula(d_env, m_term);
   if (ret != 0) {

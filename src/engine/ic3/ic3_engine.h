@@ -142,6 +142,9 @@ class ic3_engine : public engine {
   /** Generalize a SAT answer, but don't keep the known facts in the generalization */
   expr::term_ref generalize_sat_at(size_t k, smt::solver* solver);
 
+  /** Given G unsat at 0, ..., k, return something at valid 0...k that refutes G. */
+  expr::term_ref learn_forward(size_t k, expr::term_ref G);
+
 public:
 
   ic3_engine(const system::context& ctx);

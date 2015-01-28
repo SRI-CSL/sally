@@ -16,6 +16,8 @@
 #include <sstream>
 #include <iostream>
 
+#define unused_var(x) { (void)x; }
+
 namespace sal2 {
 namespace ic3 {
 
@@ -35,7 +37,8 @@ ic3_engine::ic3_engine(const system::context& ctx)
 : engine(ctx)
 , d_transition_system(0)
 , d_property(0)
-{}
+{
+}
 
 std::ostream& operator << (std::ostream& out, const ic3_engine& ic3) {
   ic3.to_stream(out);
@@ -120,8 +123,6 @@ expr::term_ref ic3_engine::check_inductive_at(size_t k, expr::term_ref F) {
 
   return result;
 }
-
-
 
 void ic3_engine::add_valid_up_to(size_t k, expr::term_ref F) {
   TRACE("ic3") << "ic3: adding at " << k << ": " << F << std::endl;
@@ -220,8 +221,13 @@ bool ic3_engine::check_reachable(size_t k, expr::term_ref f) {
       // Proven, remove from obligations
       reachability_obligations.pop();
       // Add the negation of the obligation to known facts
-      expr::term_ref learnt = tm().mk_term(expr::TERM_NOT, reach.formula());
       if (reach.frame() < k) {
+        expr::term_ref learnt;
+        if (get_solver(reach.frame())->supports(smt::solver::INTERPOLATION)) {
+          learnt = learn_forward(reach.frame(), reach.formula());
+        } else {
+          learnt = tm().mk_term(expr::TERM_NOT, reach.formula());
+        }
         // Add any unreachability learnts, but not f itself
         add_valid_up_to(reach.frame(), learnt);
       }
@@ -262,6 +268,44 @@ bool ic3_engine::check_valid_and_add(size_t k, expr::term_ref f, size_t depth) {
   default:
     throw exception("Unknown SMT result.");
   }
+}
+
+expr::term_ref ic3_engine::learn_forward(size_t k, expr::term_ref G) {
+
+  TRACE("ic3") << "interpolating G: " << G << std::endl;
+
+  assert(k > 0);
+
+  // Get the interpolant I1 for: (R_{k-1} and T => I1, I1 and G unsat
+  smt::solver* I1_solver = get_solver(k-1);
+  I1_solver->push();
+  expr::term_ref G_next = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, G);
+  I1_solver->add(G_next, smt::solver::CLASS_C);
+  smt::solver::result I1_result = I1_solver->check();
+  unused_var(I1_result);
+  assert(I1_result == smt::solver::UNSAT);
+  expr::term_ref I1 = I1_solver->interpolate();
+  I1 = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_NEXT, system::state_type::STATE_CURRENT, I1);
+  I1_solver->pop();
+
+  TRACE("ic3") << "I1: " << I1 << std::endl;
+
+  // Get the interpolant I2 for I => I2, I2 and G unsat
+  smt::solver* I2_solver = get_solver(0);
+  I2_solver->push();
+  I2_solver->add(G, smt::solver::CLASS_C);
+  smt::solver::result I2_result = I2_solver->check();
+  unused_var(I2_result);
+  assert(I2_result == smt::solver::UNSAT);
+  expr::term_ref I2 = I2_solver->interpolate();
+  I2_solver->pop();
+
+  TRACE("ic3") << "I2: " << I2 << std::endl;
+
+  // Result is the disjunction of the two
+  expr::term_ref learnt = tm().mk_term(expr::TERM_OR, I1, I2);
+
+  return learnt;
 }
 
 bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, size_t depth) {
@@ -305,36 +349,7 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, size_t depth) {
 
     // If the solver supports interpolation, let's rock forward
     if (get_solver(k)->supports(smt::solver::INTERPOLATION)) {
-      assert(k > 0);
-
-      TRACE("ic3") << "interpolating G: " << G << std::endl;
-
-      // Get the interpolant I1 for: (R_{k-1} and T => I1, I1 and G unsat
-      smt::solver* I1_solver = get_solver(k-1);
-      I1_solver->push();
-      expr::term_ref G_next = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, G);
-      I1_solver->add(G_next, smt::solver::CLASS_C);
-      smt::solver::result I1_result = I1_solver->check();
-      assert(I1_result == smt::solver::UNSAT);
-      expr::term_ref I1 = I1_solver->interpolate();
-      I1 = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_NEXT, system::state_type::STATE_CURRENT, I1);
-      I1_solver->pop();
-
-      TRACE("ic3") << "I1: " << I1 << std::endl;
-
-      // Get the interpolant I2 for I => I2, I2 and G unsat
-      smt::solver* I2_solver = get_solver(0);
-      I2_solver->push();
-      I2_solver->add(G, smt::solver::CLASS_C);
-      smt::solver::result I2_result = I2_solver->check();
-      assert(I2_result == smt::solver::UNSAT);
-      expr::term_ref I2 = I2_solver->interpolate();
-      I2_solver->pop();
-
-      TRACE("ic3") << "I2: " << I2 << std::endl;
-
-      // Result is the disjunction of the two
-      learnt = tm().mk_term(expr::TERM_OR, I1, I2);
+      learnt = learn_forward(k, G);
     } else {
       learnt = tm().mk_term(expr::TERM_NOT, G);
     }

@@ -46,8 +46,8 @@ void y2m5::add(expr::term_ref f, formula_class f_class) {
 solver::result y2m5::check() {
   TRACE("y2m5") << "y2m5[" << s_instance << "]: check()" << std::endl;
   result yices2_result = d_yices2->check();
-  result mathsat5_result = d_mathsat5->check();
-  assert(yices2_result == mathsat5_result);
+  d_mathsat5->check();
+  // assert(yices2_result == mathsat5_result);
   return yices2_result;
 }
 
