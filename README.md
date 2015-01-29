@@ -1,8 +1,8 @@
-# Sal2
+# Sally
 
 ## Prerequisites
 
-In order to compile SAL you will need the following
+In order to compile Sally you will need the following
 
 * A reasonable c++ compiler such as g++ or clang
 
