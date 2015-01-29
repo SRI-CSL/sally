@@ -1,0 +1,3 @@
+(sal/set-pp-max-width! 1000)
+(sal/set-pp-max-num-lines! 10000)
+(make-flat-module "om1_with_relays!OM")
