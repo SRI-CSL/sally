@@ -11,7 +11,7 @@
 
 #include <boost/program_options/options_description.hpp>
 
-namespace sal2 {
+namespace sally {
 namespace bmc {
 
 struct bmc_engine_info {

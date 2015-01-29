@@ -7,7 +7,7 @@
 
 #include "utils/allocator.h"
 
-using namespace sal2;
+using namespace sally;
 using namespace alloc;
 
 

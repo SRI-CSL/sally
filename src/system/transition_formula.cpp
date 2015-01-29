@@ -10,7 +10,7 @@
 #include <cassert>
 #include <iostream>
 
-namespace sal2 {
+namespace sally {
 namespace system {
 
 void transition_formula::to_stream(std::ostream& out) const {

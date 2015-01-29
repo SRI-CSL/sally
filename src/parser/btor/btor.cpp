@@ -11,7 +11,7 @@
 #include "parser/btor/btorLexer.h"
 #include "parser/btor/btorParser.h"
 
-namespace sal2 {
+namespace sally {
 namespace parser {
 
 template<>

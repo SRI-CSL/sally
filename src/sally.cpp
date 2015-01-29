@@ -1,5 +1,5 @@
 /*
- * sal2.cpp
+ * sally.cpp
  *
  *  Created on: Oct 2, 2014
  *      Author: dejan
@@ -18,8 +18,8 @@
 using namespace std;
 using namespace boost::program_options;
 
-using namespace sal2;
-using namespace sal2::expr;
+using namespace sally;
+using namespace sally::expr;
 
 /** Parses the program arguments. */
 void parseOptions(int argc, char* argv[], variables_map& variables);
@@ -98,7 +98,7 @@ int main(int argc, char* argv[]) {
     if (engine_to_use != 0) {
       delete engine_to_use;
     }
-  } catch (sal2::exception& e) {
+  } catch (sally::exception& e) {
     cerr << e << endl;
     exit(1);
   } catch (...) {

@@ -19,7 +19,7 @@
 #include "smt/mathsat5/mathsat5.h"
 #include "utils/trace.h"
 
-namespace sal2 {
+namespace sally {
 namespace smt {
 
 /** Yices term hash. */

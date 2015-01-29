@@ -14,7 +14,7 @@ namespace boost { namespace program_options {
   class variables_map;
 }}
 
-namespace sal2 {
+namespace sally {
 
 /**
  * Wrapper around the options for read-only access.

@@ -9,7 +9,7 @@
 
 #include <boost/program_options/variables_map.hpp>
 
-namespace sal2 {
+namespace sally {
 
 options::options(const boost::program_options::variables_map& options)
 : d_options(&options)

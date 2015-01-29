@@ -9,7 +9,7 @@
 
 #include <iosfwd>
 
-namespace sal2 {
+namespace sally {
 
 namespace expr {
   class term_manager;

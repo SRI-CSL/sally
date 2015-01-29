@@ -11,7 +11,7 @@
 #include "expr/integer.h"
 #include "utils/hash.h"
 
-namespace sal2 {
+namespace sally {
 namespace expr {
 
 class bitvector : public integer {

@@ -13,7 +13,7 @@
 
 #include <string>
 
-namespace sal2 {
+namespace sally {
 
 /**
  * Abstract engine class, and an entrypoint for creating new engines.

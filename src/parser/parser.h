@@ -10,7 +10,7 @@
 #include "utils/exception.h"
 #include "parser/command.h"
 
-namespace sal2 {
+namespace sally {
 
 namespace system {
   class context;

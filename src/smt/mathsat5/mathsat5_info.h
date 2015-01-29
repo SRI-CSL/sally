@@ -13,7 +13,7 @@
 
 #include <boost/program_options.hpp>
 
-namespace sal2 {
+namespace sally {
 namespace smt {
 
 struct mathsat5_info {

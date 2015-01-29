@@ -16,7 +16,7 @@
 #include <cassert>
 #include <sstream>
 
-namespace sal2 {
+namespace sally {
 namespace expr {
 
 /**

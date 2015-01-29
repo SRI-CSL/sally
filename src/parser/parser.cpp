@@ -14,7 +14,7 @@
 
 #include <iostream>
 
-namespace sal2 {
+namespace sally {
 namespace parser {
 
 parser_exception::parser_exception(std::string msg)
@@ -86,7 +86,7 @@ command* parser::parse_command() {
     } else {
       throw e;
     }
-  } catch (const sal2::exception& e) {
+  } catch (const sally::exception& e) {
     throw parser_exception(e.get_message(), d_internal->get_filename(), d_internal->get_current_parser_line(), d_internal->get_current_parser_position());
   }
 }

@@ -13,7 +13,7 @@
 
 #include "expr/term_manager.h"
 
-namespace sal2 {
+namespace sally {
 namespace system {
 
 /**

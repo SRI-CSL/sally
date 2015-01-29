@@ -9,7 +9,7 @@
 
 #include <sstream>
 
-namespace sal2 {
+namespace sally {
 namespace system {
 
 state_trace::state_trace(const state_type* st)

@@ -19,7 +19,7 @@
 #include "smt/yices2/yices2.h"
 #include "utils/trace.h"
 
-namespace sal2 {
+namespace sally {
 namespace smt {
 
 /** Yices term hash. */

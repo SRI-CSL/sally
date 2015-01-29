@@ -13,7 +13,7 @@
 #include <vector>
 #include <iosfwd>
 
-namespace sal2 {
+namespace sally {
 namespace system {
 
 class state_trace {

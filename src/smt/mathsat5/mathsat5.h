@@ -11,7 +11,7 @@
 
 #include "smt/solver.h"
 
-namespace sal2 {
+namespace sally {
 namespace smt {
 
 class mathsat5_internal;

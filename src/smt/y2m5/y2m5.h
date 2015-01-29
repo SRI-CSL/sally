@@ -12,7 +12,7 @@
 
 #include "smt/solver.h"
 
-namespace sal2 {
+namespace sally {
 namespace smt {
 
 class yices2;

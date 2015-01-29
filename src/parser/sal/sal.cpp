@@ -11,7 +11,7 @@
 #include "parser/sal/salLexer.h"
 #include "parser/sal/salParser.h"
 
-namespace sal2 {
+namespace sally {
 namespace parser {
 
 template<>

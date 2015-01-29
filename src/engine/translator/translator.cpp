@@ -14,7 +14,7 @@
 #include <iostream>
 #include <algorithm>
 
-namespace sal2 {
+namespace sally {
 namespace output {
 
 translator::translator(const system::context& ctx)

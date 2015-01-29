@@ -12,7 +12,7 @@
 #include <iostream>
 #include <cassert>
 
-namespace sal2 {
+namespace sally {
 namespace expr {
 
 void integer::to_stream(std::ostream& out) const {

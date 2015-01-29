@@ -11,7 +11,7 @@
 
 #include <boost/program_options.hpp>
 
-namespace sal2 {
+namespace sally {
 namespace ic3 {
 
 struct ic3_engine_info {

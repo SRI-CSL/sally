@@ -18,7 +18,7 @@
 					<folderInfo id="cdt.managedbuild.toolchain.gnu.base.680933916.756318916" name="/" resourcePath="">
 						<toolChain id="cdt.managedbuild.toolchain.gnu.base.92758102" name="Linux GCC" superClass="cdt.managedbuild.toolchain.gnu.base">
 							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="cdt.managedbuild.target.gnu.platform.base.115161113" name="Debug Platform" osList="linux,hpux,aix,qnx" superClass="cdt.managedbuild.target.gnu.platform.base"/>
-							<builder arguments="VERBOSE=1" buildPath="${workspace_loc:/sal2}/build" command="make" id="cdt.managedbuild.target.gnu.builder.base.1345482084" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="optimal" superClass="cdt.managedbuild.target.gnu.builder.base">
+							<builder arguments="VERBOSE=1" buildPath="${workspace_loc:/sally}/build" command="make" id="cdt.managedbuild.target.gnu.builder.base.1345482084" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="optimal" superClass="cdt.managedbuild.target.gnu.builder.base">
 								<outputEntries>
 									<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="outputPath" name="build"/>
 								</outputEntries>

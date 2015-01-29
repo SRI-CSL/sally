@@ -7,7 +7,7 @@
 
 #pragma once
 
-namespace sal2 {
+namespace sally {
 namespace alloc {
 
 struct empty_type {

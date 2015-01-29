@@ -12,7 +12,7 @@
 
 #include <cassert>
 
-using namespace sal2;
+using namespace sally;
 using namespace parser;
 using namespace expr;
 

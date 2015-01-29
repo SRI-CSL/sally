@@ -12,7 +12,7 @@
 
 #include <iosfwd>
 
-namespace sal2 {
+namespace sally {
 namespace system {
 
 /**

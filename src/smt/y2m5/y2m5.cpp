@@ -20,7 +20,7 @@
 
 #define unused_var(x) { (void) x; }
 
-namespace sal2 {
+namespace sally {
 namespace smt {
 
 size_t y2m5::s_instance = 0;

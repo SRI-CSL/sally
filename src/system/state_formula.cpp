@@ -9,7 +9,7 @@
 
 #include <iostream>
 
-namespace sal2 {
+namespace sally {
 namespace system {
 
 void state_formula::to_stream(std::ostream& out) const {

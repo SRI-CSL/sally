@@ -3,13 +3,13 @@ find_package(Boost 1.36.0 COMPONENTS unit_test_framework iostreams program_optio
 
 # The binary
 ADD_DEFINITIONS(-DBOOST_TEST_DYN_LINK) 
-add_executable(sal2_test test_runner.cpp)
-add_dependencies(check sal2_test)
+add_executable(sally_test test_runner.cpp)
+add_dependencies(check sally_test)
 
-# Original sal2 libraries
+# Original sally libraries
 foreach (DIR utils expr smt)
-  link_directories(${sal2_BINARY_DIR}/src/${DIR})
-  set(sal2_test_LIBS ${DIR} ${sal2_test_LIBS})
+  link_directories(${sally_BINARY_DIR}/src/${DIR})
+  set(sally_test_LIBS ${DIR} ${sally_test_LIBS})
 endforeach(DIR)
 
 # The test libraries
@@ -18,20 +18,20 @@ foreach (DIR expr smt)
   # We need to add the options, to include the whole library, otherwise boost
   # auto-registration of tests doesn't work.
   if(APPLE) 
-    set(sal2_test_LIBS -Wl,-force_load ${DIR}_test ${sal2_test_LIBS})    
+    set(sally_test_LIBS -Wl,-force_load ${DIR}_test ${sally_test_LIBS})    
   else()
-   set(sal2_test_LIBS -Wl,--whole-archive ${DIR}_test -Wl,--no-whole-archive ${sal2_test_LIBS})
+   set(sally_test_LIBS -Wl,--whole-archive ${DIR}_test -Wl,--no-whole-archive ${sally_test_LIBS})
   endif()
 endforeach(DIR)
 
 # Link the thing
-target_link_libraries(sal2_test ${sal2_test_LIBS} ${Boost_LIBRARIES} ${GMP_LIBRARY})
+target_link_libraries(sally_test ${sally_test_LIBS} ${Boost_LIBRARIES} ${GMP_LIBRARY})
 if (YICES2_FOUND)
-  target_link_libraries(sal2_test ${YICES2_LIBRARY})
+  target_link_libraries(sally_test ${YICES2_LIBRARY})
 endif()
 if (MATHSAT5_FOUND)
-  target_link_libraries(sal2_test ${MATHSAT5_LIBRARY})
+  target_link_libraries(sally_test ${MATHSAT5_LIBRARY})
 endif()
 
 # Add the test
-add_test(unit_tests sal2_test -i)
+add_test(unit_tests sally_test -i)

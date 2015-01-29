@@ -11,7 +11,7 @@
 #include <iostream>
 #include <cassert>
 
-namespace sal2 {
+namespace sally {
 namespace expr {
 
 bitvector::bitvector(size_t size)

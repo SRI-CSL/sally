@@ -10,7 +10,7 @@
 
 #include <sstream>
 
-namespace sal2 {
+namespace sally {
 namespace expr {
 
 model::model(expr::term_manager& tm)

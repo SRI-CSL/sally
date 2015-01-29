@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-project(sal2 CXX)
+project(sally CXX)
 enable_testing()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wall")
@@ -62,7 +62,7 @@ endif()
 include(ExternalProject) 
 ExternalProject_Add(
    libantlr3c-3.4
-   URL "${sal2_SOURCE_DIR}/antlr/libantlr3c-3.4.tar.gz"
+   URL "${sally_SOURCE_DIR}/antlr/libantlr3c-3.4.tar.gz"
    URL_MD5 08b1420129d5dccd0f4461cedf2a0d7d
    CONFIGURE_COMMAND <SOURCE_DIR>/configure ${ANTLR_CONFIG_FLAG} --enable-debuginfo --disable-antlrdebug --prefix=<INSTALL_DIR>
    BUILD_IN_SOURCE 1
@@ -74,10 +74,10 @@ set(ANTLR3C_LIBRARY "antlr3c")
 link_directories(${ANTLR3C_LIBRARY_DIR})
 
 # The antl3 binary
-set(ANTLR "${sal2_SOURCE_DIR}/antlr/antlr3")
+set(ANTLR "${sally_SOURCE_DIR}/antlr/antlr3")
 
 # Add includes 
-include_directories(${sal2_SOURCE_DIR}/src ${ANTLR3C_INCLUDE_DIR})
+include_directories(${sally_SOURCE_DIR}/src ${ANTLR3C_INCLUDE_DIR})
 
 # Configure the subdirectories
 add_subdirectory(src)

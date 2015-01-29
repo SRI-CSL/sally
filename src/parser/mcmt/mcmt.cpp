@@ -11,7 +11,7 @@
 #include "parser/mcmt/mcmtLexer.h"
 #include "parser/mcmt/mcmtParser.h"
 
-namespace sal2 {
+namespace sally {
 namespace parser {
 
 template<>

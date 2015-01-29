@@ -13,7 +13,7 @@
 #include <stack>
 #include <sstream>
 
-using namespace sal2;
+using namespace sally;
 using namespace expr;
 
 term_manager_internal::term_manager_internal(bool typecheck)

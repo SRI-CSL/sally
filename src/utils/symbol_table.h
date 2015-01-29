@@ -11,7 +11,7 @@
 #include <vector>
 #include <boost/unordered_map.hpp>
 
-namespace sal2 {
+namespace sally {
 namespace utils {
 
 template<typename T, bool free_pointers = true>

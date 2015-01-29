@@ -12,7 +12,7 @@
 #include <sstream>
 #include <iostream>
 
-namespace sal2 {
+namespace sally {
 namespace bmc {
 
 bmc_engine::bmc_engine(const system::context& ctx)

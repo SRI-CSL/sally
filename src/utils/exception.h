@@ -10,7 +10,7 @@
 #include <string>
 #include <iosfwd>
 
-namespace sal2 {
+namespace sally {
 
 /**
  * Generic exception class for SAL error reporting.

@@ -12,7 +12,7 @@
 
 #include <iostream>
 
-namespace sal2 {
+namespace sally {
 namespace system {
 
 state_type::state_type(expr::term_manager& tm, std::string id, expr::term_ref type)

@@ -10,7 +10,7 @@
 #include <cassert>
 #include <iostream>
 
-namespace sal2 {
+namespace sally {
 namespace smt {
 
 std::ostream& operator << (std::ostream& out, solver::result result) {

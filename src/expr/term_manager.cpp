@@ -10,7 +10,7 @@
 
 #include <sstream>
 
-namespace sal2 {
+namespace sally {
 namespace expr {
 
 term_manager::term_manager(bool typecheck)

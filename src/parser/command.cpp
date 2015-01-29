@@ -10,7 +10,7 @@
 #include <cassert>
 #include <iostream>
 
-namespace sal2 {
+namespace sally {
 namespace parser {
 
 command::command(command::type t)

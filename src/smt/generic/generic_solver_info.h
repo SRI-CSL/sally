@@ -12,7 +12,7 @@
 #include <string>
 #include <boost/program_options/options_description.hpp>
 
-namespace sal2 {
+namespace sally {
 namespace smt {
 
 struct generic_solver_info {

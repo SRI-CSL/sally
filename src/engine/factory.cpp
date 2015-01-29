@@ -12,7 +12,7 @@
 #include <vector>
 #include <map>
 
-namespace sal2 {
+namespace sally {
 
 /** Type for setting up individual engines */
 class engine_data : public module_data<engine, system::context> {

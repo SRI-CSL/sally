@@ -16,7 +16,7 @@
 
 #include <antlr3.h>
 
-namespace sal2 {
+namespace sally {
 
 namespace parser {
 

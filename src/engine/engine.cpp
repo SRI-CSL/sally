@@ -9,7 +9,7 @@
 
 #include <iostream>
 
-namespace sal2 {
+namespace sally {
 
 engine::engine(const system::context& ctx)
 : d_ctx(ctx)

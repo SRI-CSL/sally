@@ -7,7 +7,7 @@
 
 #include "system/context.h"
 
-namespace sal2 {
+namespace sally {
 namespace system {
 
 context::context(expr::term_manager& tm, const options& opts)

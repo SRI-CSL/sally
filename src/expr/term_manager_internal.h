@@ -18,7 +18,7 @@
 #include <queue>
 #include <iterator>
 
-namespace sal2 {
+namespace sally {
 namespace expr {
 
 /**

@@ -9,7 +9,7 @@
 
 #include <iostream>
 
-namespace sal2 {
+namespace sally {
 
 void exception::to_stream(std::ostream& out) const {
   out << d_msg;

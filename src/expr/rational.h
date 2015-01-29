@@ -13,7 +13,7 @@
 
 #include "utils/hash.h"
 
-namespace sal2 {
+namespace sally {
 namespace expr {
 
 class integer;

@@ -13,7 +13,7 @@
 #include <cassert>
 #include <iostream>
 
-namespace sal2 {
+namespace sally {
 namespace expr {
 
 size_t rational::hash() const {

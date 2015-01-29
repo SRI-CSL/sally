@@ -17,7 +17,7 @@
 #include "utils/output.h"
 #include "utils/allocator_types.h"
 
-namespace sal2 {
+namespace sally {
 namespace expr {
 
 // Forward declaration

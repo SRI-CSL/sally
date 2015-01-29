@@ -19,7 +19,7 @@
 #include "utils/symbol_table.h"
 
 
-namespace sal2 {
+namespace sally {
 namespace system {
 
 /**

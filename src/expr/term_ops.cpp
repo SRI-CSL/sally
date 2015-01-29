@@ -9,7 +9,7 @@
 
 #include <iostream>
 
-namespace sal2 {
+namespace sally {
 namespace expr {
 
 std::ostream& operator << (std::ostream& out, term_op op) {

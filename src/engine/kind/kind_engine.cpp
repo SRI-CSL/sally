@@ -13,7 +13,7 @@
 #include <sstream>
 #include <iostream>
 
-namespace sal2 {
+namespace sally {
 namespace kind {
 
 kind_engine::kind_engine(const system::context& ctx)

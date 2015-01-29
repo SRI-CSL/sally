@@ -12,7 +12,7 @@
 #include "utils/exception.h"
 #include "utils/options.h"
 
-namespace sal2 {
+namespace sally {
 namespace smt {
 
 /**

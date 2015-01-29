@@ -15,7 +15,7 @@
 // implementations.
 //
 
-namespace sal2 {
+namespace sally {
 
 /**
  * Class to get information about a module, setup options requrired by the

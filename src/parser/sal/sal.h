@@ -10,7 +10,7 @@
 #include "system/context.h"
 #include "parser/antlr_parser.h"
 
-namespace sal2 {
+namespace sally {
 namespace parser {
 
 antlr_parser_interface* new_sal_parser(const system::context& ctx, const char* filename);

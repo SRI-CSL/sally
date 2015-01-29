@@ -16,7 +16,7 @@
 #include "utils/hash.h"
 #include "utils/allocator_types.h"
 
-namespace sal2 {
+namespace sally {
 namespace alloc {
 
 /**

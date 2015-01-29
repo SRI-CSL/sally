@@ -18,7 +18,7 @@
 
 #define unused_var(x) { (void)x; }
 
-namespace sal2 {
+namespace sally {
 namespace ic3 {
 
 bool obligation_compare_induction::operator () (const obligation& o1, const obligation& o2) const {

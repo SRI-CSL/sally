@@ -11,7 +11,7 @@
 
 #include <boost/program_options.hpp>
 
-namespace sal2 {
+namespace sally {
 namespace kind {
 
 struct kind_engine_info {

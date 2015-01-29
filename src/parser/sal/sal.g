@@ -9,7 +9,7 @@ options {
   #include <string>
   #include "parser/command.h"
   #include "parser/sal/sal_state.h"
-  using namespace sal2;
+  using namespace sally;
 }
 
 @parser::postinclude {
@@ -19,7 +19,7 @@ options {
 
 @parser::context
 {
-  /** The sal2 part of the parser state */
+  /** The sally part of the parser state */
   parser::sal_state* pState;
 }
 

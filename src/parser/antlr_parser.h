@@ -12,7 +12,7 @@
 #include <iostream>
 #include <antlr3.h>
 
-namespace sal2 {
+namespace sally {
 namespace parser {
 
 template<input_language lang>
@@ -46,10 +46,10 @@ class antlr_parser : public antlr_parser_interface {
   typename antlr_parser_traits<lang>::langState d_state;
 
   static
-  void sal2_parser_reportError(pANTLR3_BASE_RECOGNIZER recognizer);
+  void sally_parser_reportError(pANTLR3_BASE_RECOGNIZER recognizer);
 
   static
-  void sal2_lexer_reportError(pANTLR3_BASE_RECOGNIZER recognizer);
+  void sally_lexer_reportError(pANTLR3_BASE_RECOGNIZER recognizer);
 
 public:
 
@@ -69,7 +69,7 @@ public:
     }
 
     // Report the error
-    d_lexer->pLexer->rec->reportError = sal2_lexer_reportError;
+    d_lexer->pLexer->rec->reportError = sally_lexer_reportError;
 
     // Create the token stream
     d_token_stream = antlr3CommonTokenStreamSourceNew(ANTLR3_SIZE_HINT, d_lexer->pLexer->rec->state->tokSource);
@@ -91,7 +91,7 @@ public:
     d_parser->pState = &d_state;
 
     // Add error reporting
-    d_parser->pParser->rec->reportError = sal2_parser_reportError;
+    d_parser->pParser->rec->reportError = sally_parser_reportError;
   }
 
   ~antlr_parser() {
@@ -172,7 +172,7 @@ public:
 
 
 template <input_language lang>
-void antlr_parser<lang>::sal2_lexer_reportError(pANTLR3_BASE_RECOGNIZER recognizer) {
+void antlr_parser<lang>::sally_lexer_reportError(pANTLR3_BASE_RECOGNIZER recognizer) {
 
   if (output::get_verbosity(std::cerr) > 0) {
     recognizer->displayRecognitionError(recognizer, recognizer->state->tokenNames);
@@ -193,7 +193,7 @@ void antlr_parser<lang>::sal2_lexer_reportError(pANTLR3_BASE_RECOGNIZER recogniz
 }
 
 template <input_language lang>
-void antlr_parser<lang>::sal2_parser_reportError(pANTLR3_BASE_RECOGNIZER recognizer) {
+void antlr_parser<lang>::sally_parser_reportError(pANTLR3_BASE_RECOGNIZER recognizer) {
 
   if (output::get_verbosity(std::cerr) > 0) {
     recognizer->displayRecognitionError(recognizer, recognizer->state->tokenNames);

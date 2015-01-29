@@ -12,7 +12,7 @@
 #include "system/context.h"
 #include "engine/engine.h"
 
-namespace sal2 {
+namespace sally {
 namespace parser {
 
 class command {

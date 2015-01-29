@@ -9,7 +9,7 @@
 
 #include <string>
 
-namespace sal2 {
+namespace sally {
 namespace utils {
 
 /** Transforms string -> string */

@@ -6,7 +6,7 @@
 #include <iostream>
 
 using namespace std;
-using namespace sal2;
+using namespace sally;
 using namespace expr;
 
 struct term_manager_test_fixture {

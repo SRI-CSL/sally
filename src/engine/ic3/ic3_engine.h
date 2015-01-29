@@ -14,7 +14,7 @@
 #include <boost/heap/priority_queue.hpp>
 #include <iosfwd>
 
-namespace sal2 {
+namespace sally {
 namespace ic3 {
 
 /**

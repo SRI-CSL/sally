@@ -13,7 +13,7 @@
 
 
 using namespace std;
-using namespace sal2;
+using namespace sally;
 using namespace expr;
 using namespace smt;
 

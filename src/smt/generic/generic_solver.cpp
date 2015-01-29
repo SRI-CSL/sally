@@ -18,7 +18,7 @@
 
 #include <unistd.h>
 
-namespace sal2 {
+namespace sally {
 namespace smt {
 
 // FD-based stream for writing

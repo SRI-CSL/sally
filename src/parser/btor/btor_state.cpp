@@ -13,7 +13,7 @@
 #include <cassert>
 #include <sstream>
 
-using namespace sal2;
+using namespace sally;
 using namespace parser;
 using namespace expr;
 

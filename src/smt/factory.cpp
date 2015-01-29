@@ -10,7 +10,7 @@
 
 #include <iostream>
 
-namespace sal2 {
+namespace sally {
 namespace smt {
 
 /** Type for setting up individual engines */

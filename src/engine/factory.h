@@ -13,7 +13,7 @@ namespace boost { namespace program_options {
   class options_description;
 }}
 
-namespace sal2 {
+namespace sally {
 
 /**
  * Factory to create engines.

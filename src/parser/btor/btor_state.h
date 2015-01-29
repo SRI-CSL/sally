@@ -15,7 +15,7 @@
 #include "system/context.h"
 #include "parser/command.h"
 
-namespace sal2 {
+namespace sally {
 namespace parser {
 
 /** State attached to the parser */
