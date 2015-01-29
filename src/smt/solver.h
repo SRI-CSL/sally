@@ -28,7 +28,7 @@ struct solver_context {
 /**
  * SMT solver interface for solving queries.
  *
- * Formulas being solved are of the form (A(x) and B(x, y) and C(y)). When
+ * Formulas being solved are of the form (A(x) and T(x, y) and B(y)). When
  * generalizing we eliminate the variables y. When intepolating we eliminate
  * the variables x.
  */
@@ -73,8 +73,7 @@ public:
   /** Class of the formula */
   enum formula_class {
     CLASS_A,
-    CLASS_B,
-    CLASS_C
+    CLASS_B
   };
 
   /** Solver features */
@@ -164,7 +163,7 @@ public:
    * Generalize the last call to check assuming the result was SAT, i.e.
    * return the a formula G satisfiable in the current model such that
    *
-   *   G(x) => \exists y . A(x) and B(x, y) and C(y).
+   *   G(x) => \exists y . F(x, y).
    *
    * Variables of class C are eliminated from the assertions.
    */
@@ -181,7 +180,7 @@ public:
   /**
    * Interpolate an unsatisfiable answer, i.e. return the formula such that
    *
-   *   A(x) and B(x, y) => I(y)     and     I(y) => not C(y).
+   *   A(x, y) => I(y)     and     I(y) => B(y).
    */
   virtual
   void interpolate(std::vector<expr::term_ref>& out) {

@@ -56,7 +56,6 @@ std::ostream& operator << (std::ostream& out, solver::formula_class fc) {
   switch(fc) {
   case solver::CLASS_A: out << "CLASS A"; break;
   case solver::CLASS_B: out << "CLASS B"; break;
-  case solver::CLASS_C: out << "CLASS C"; break;
   default:
     assert(false);
   }

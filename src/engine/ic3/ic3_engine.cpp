@@ -64,7 +64,7 @@ expr::term_ref ic3_engine::check_one_step_reachable(size_t k, expr::term_ref F) 
   // Add the formula (moving current -> next)
   scope.push();
   expr::term_ref F_next = state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, F);
-  solver->add(F_next, smt::solver::CLASS_C);
+  solver->add(F_next, smt::solver::CLASS_B);
 
   // Figure out the result
   smt::solver::result r = solver->check();
@@ -102,7 +102,7 @@ expr::term_ref ic3_engine::check_inductive_at(size_t k, expr::term_ref F) {
   scope.push();
   expr::term_ref F_not = tm().mk_term(expr::TERM_NOT, F);
   expr::term_ref F_not_next = state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, F_not);
-  solver->add(F_not_next, smt::solver::CLASS_C);
+  solver->add(F_not_next, smt::solver::CLASS_B);
 
   // Figure out the result
   expr::term_ref result;
@@ -172,7 +172,7 @@ void ic3_engine::ensure_frame(size_t k) {
     solver->add_y_variables(x_next.begin(), x_next.end());
 
     // Add the transition relation
-    solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_B);
+    solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_A);
     // Add the frame content
     d_frame_content.push_back(formula_set());
     // No failed induction so far
@@ -183,7 +183,7 @@ void ic3_engine::ensure_frame(size_t k) {
       expr::term_ref assumption = d_transition_system->get_assumption();
       expr::term_ref assumption_next = state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, assumption);
       d_solvers[k]->add(assumption, smt::solver::CLASS_A);
-      d_solvers[k]->add(assumption_next, smt::solver::CLASS_C);
+      d_solvers[k]->add(assumption_next, smt::solver::CLASS_B);
     }
   }
   assert(d_solvers.size() == d_frame_content.size());
@@ -220,14 +220,10 @@ bool ic3_engine::check_reachable(size_t k, expr::term_ref f) {
     if (G.is_null()) {
       // Proven, remove from obligations
       reachability_obligations.pop();
-      // Add the negation of the obligation to known facts
+      // Learn
       if (reach.frame() < k) {
-        expr::term_ref learnt;
-        if (get_solver(reach.frame())->supports(smt::solver::INTERPOLATION)) {
-          learnt = learn_forward(reach.frame(), reach.formula());
-        } else {
-          learnt = tm().mk_term(expr::TERM_NOT, reach.formula());
-        }
+        // Learn something at k that refutes the formula
+        expr::term_ref learnt = learn_forward(reach.frame(), reach.formula());
         // Add any unreachability learnts, but not f itself
         add_valid_up_to(reach.frame(), learnt);
       }
@@ -272,15 +268,21 @@ bool ic3_engine::check_valid_and_add(size_t k, expr::term_ref f, size_t depth) {
 
 expr::term_ref ic3_engine::learn_forward(size_t k, expr::term_ref G) {
 
-  TRACE("ic3") << "interpolating G: " << G << std::endl;
+
+  TRACE("ic3") << "learning forward to refute: " << G << std::endl;
 
   assert(k > 0);
+
+  // If we don't have interpolation, just learn not G
+  if (!get_solver(k-1)->supports(smt::solver::INTERPOLATION)) {
+    return tm().mk_term(expr::TERM_NOT, G);
+  }
 
   // Get the interpolant I1 for: (R_{k-1} and T => I1, I1 and G unsat
   smt::solver* I1_solver = get_solver(k-1);
   I1_solver->push();
   expr::term_ref G_next = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, G);
-  I1_solver->add(G_next, smt::solver::CLASS_C);
+  I1_solver->add(G_next, smt::solver::CLASS_B);
   smt::solver::result I1_result = I1_solver->check();
   unused_var(I1_result);
   assert(I1_result == smt::solver::UNSAT);
@@ -293,7 +295,7 @@ expr::term_ref ic3_engine::learn_forward(size_t k, expr::term_ref G) {
   // Get the interpolant I2 for I => I2, I2 and G unsat
   smt::solver* I2_solver = get_solver(0);
   I2_solver->push();
-  I2_solver->add(G, smt::solver::CLASS_C);
+  I2_solver->add(G, smt::solver::CLASS_B);
   smt::solver::result I2_result = I2_solver->check();
   unused_var(I2_result);
   assert(I2_result == smt::solver::UNSAT);
@@ -345,18 +347,11 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, size_t depth) {
       break;
     }
 
-    expr::term_ref learnt;
+    // Learn something to refute G
+    expr::term_ref learnt = learn_forward(k, G);
+    TRACE("ic3") << "ic3: learnt: " << learnt << std::endl;
 
-    // If the solver supports interpolation, let's rock forward
-    if (get_solver(k)->supports(smt::solver::INTERPOLATION)) {
-      learnt = learn_forward(k, G);
-    } else {
-      learnt = tm().mk_term(expr::TERM_NOT, G);
-    }
-
-    TRACE("ic3") << "ic3: learnt generalization: " << learnt << std::endl;
-
-    // Add the leant
+    // Add the learnt
     add_valid_up_to(k, learnt);
     induction_assumptions.push_back(learnt);
   }

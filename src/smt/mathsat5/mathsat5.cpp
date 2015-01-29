@@ -800,10 +800,8 @@ void mathsat5_internal::add(expr::term_ref ref, solver::formula_class f_class) {
 
   // Set the interpolation group
   int itp_group = msat_create_itp_group(d_env);
-  if (f_class == solver::CLASS_C) {
-    msat_set_itp_group(d_env, itp_group);
-  } else {
-    msat_set_itp_group(d_env, itp_group);
+  msat_set_itp_group(d_env, itp_group);
+  if (f_class == solver::CLASS_A) {
     d_assertion_classes_A.push_back(itp_group);
   }
 

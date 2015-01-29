@@ -44,35 +44,35 @@ BOOST_FIXTURE_TEST_SUITE(smt_tests, term_manager_with_mathsat5_test_fixture)
 BOOST_AUTO_TEST_CASE(mathsat5_basic_asserts) {
 
   // Assert something to mathsat5
-//  term_ref x = tm.mk_variable("x", tm.real_type());
-//  term_ref y = tm.mk_variable("y", tm.real_type());
-//  term_ref b = tm.mk_variable("b", tm.boolean_type());
-//  term_ref zero = tm.mk_rational_constant(rational());
-//
-//  term_ref sum = tm.mk_term(TERM_ADD, x, y);
-//
-//  // x + y <= 0
-//  term_ref leq = tm.mk_term(TERM_LEQ, sum, zero);
-//
-//  term_ref f = tm.mk_term(TERM_AND, b, leq);
-//
-//  cout << "Adding: " << f << endl;
-//  mathsat5->add(f, smt::solver::CLASS_A);
-//
-//  solver::result result = mathsat5->check();
-//  cout << "Check result: " << result << endl;
-//
-//  BOOST_CHECK_EQUAL(result, solver::SAT);
-//
-//  term_ref g = tm.mk_term(TERM_NOT, b);
-//
-//  cout << "Adding: " << g << endl;
-//  mathsat5->add(g, smt::solver::CLASS_A);
-//
-//  result = mathsat5->check();
-//  cout << "Check result: " << result << endl;
-//
-//  BOOST_CHECK_EQUAL(result, solver::UNSAT);
+  term_ref x = tm.mk_variable("x", tm.real_type());
+  term_ref y = tm.mk_variable("y", tm.real_type());
+  term_ref b = tm.mk_variable("b", tm.boolean_type());
+  term_ref zero = tm.mk_rational_constant(rational());
+
+  term_ref sum = tm.mk_term(TERM_ADD, x, y);
+
+  // x + y <= 0
+  term_ref leq = tm.mk_term(TERM_LEQ, sum, zero);
+
+  term_ref f = tm.mk_term(TERM_AND, b, leq);
+
+  cout << "Adding: " << f << endl;
+  mathsat5->add(f, smt::solver::CLASS_A);
+
+  solver::result result = mathsat5->check();
+  cout << "Check result: " << result << endl;
+
+  BOOST_CHECK_EQUAL(result, solver::SAT);
+
+  term_ref g = tm.mk_term(TERM_NOT, b);
+
+  cout << "Adding: " << g << endl;
+  mathsat5->add(g, smt::solver::CLASS_A);
+
+  result = mathsat5->check();
+  cout << "Check result: " << result << endl;
+
+  BOOST_CHECK_EQUAL(result, solver::UNSAT);
 
 }
 
@@ -116,7 +116,7 @@ BOOST_AUTO_TEST_CASE(mathsat5_interpolation) {
 
   // The B part
   mathsat5->push();
-  mathsat5->add(G, smt::solver::CLASS_C);
+  mathsat5->add(G, smt::solver::CLASS_B);
   result = mathsat5->check();
   cout << "Check result: " << result << endl;
   BOOST_CHECK_EQUAL(result, solver::UNSAT);
@@ -152,7 +152,7 @@ BOOST_AUTO_TEST_CASE(mathsat5_interpolation) {
   term_ref half_minus = tm.mk_rational_constant(rational(-1, 2));
   term_ref t4_1 = tm.mk_term(TERM_EQ, x_next, half_minus);
   term_ref t4_2 = tm.mk_term(TERM_LT, x_next, half);
-  mathsat5->add(tm.mk_term(TERM_AND, t4_1, t4_2), smt::solver::CLASS_C);
+  mathsat5->add(tm.mk_term(TERM_AND, t4_1, t4_2), smt::solver::CLASS_B);
   result = mathsat5->check();
   cout << "Check result: " << result << endl;
   BOOST_CHECK_EQUAL(result, solver::UNSAT);
