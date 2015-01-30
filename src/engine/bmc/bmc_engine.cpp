@@ -42,10 +42,6 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
   expr::term_ref initial_states = ts->get_initial_states();
   d_solver->add(d_trace->get_state_formula(initial_states, 0), smt::solver::CLASS_A);
 
-  // The assumption
-  expr::term_ref assumption = ts->get_assumption();
-  d_solver->add(d_trace->get_state_formula(assumption, 0), smt::solver::CLASS_A);
-
   // Transition formula
   expr::term_ref transition_formula = ts->get_transition_relation();
 
@@ -98,7 +94,6 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
 
     // Unroll once more
     d_solver->add(d_trace->get_transition_formula(transition_formula, k, k + 1), smt::solver::CLASS_A);
-    d_solver->add(d_trace->get_state_formula(assumption, k+1), smt::solver::CLASS_A);
   }
 
   return UNKNOWN;

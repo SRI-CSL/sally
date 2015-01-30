@@ -55,18 +55,6 @@ void translator::to_stream_mcmt(std::ostream& out) {
   out << "(define-transition-system T state_type initial_states (transition))" << std::endl;
   out << std::endl;
 
-  // Output any assumptions
-  if (d_ts->has_assumptions()) {
-    state_type->use_namespace(system::state_type::STATE_CURRENT);
-    const std::vector<system::state_formula*>& assumptions = d_ts->get_assumptions();
-    for (size_t i = 0; i < assumptions.size(); ++ i) {
-      out << ";; Assumption " << std::endl;
-      out << "(assume T " << assumptions[i]->get_formula() << ")" << std::endl;
-      out << std::endl;
-    }
-    ctx().tm().pop_namespace();
-  }
-
   // Output the query
   state_type->use_namespace(system::state_type::STATE_CURRENT);
   out << ";; Query " << std::endl;

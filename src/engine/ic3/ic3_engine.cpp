@@ -157,9 +157,6 @@ void ic3_engine::ensure_frame(size_t k) {
     std::cout << "ic3: Extending trace to " << k << std::endl;
   }
 
-  // The state type for assumption transformations
-  const system::state_type* state_type = d_transition_system->get_state_type();
-
   while (d_solvers.size() <= k) {
 
     // Make the solver
@@ -177,14 +174,6 @@ void ic3_engine::ensure_frame(size_t k) {
     d_frame_content.push_back(formula_set());
     // No failed induction so far
     d_has_failed_induction.push_back(false);
-
-    // Also add the solver assumptions
-    if (d_transition_system->has_assumptions()) {
-      expr::term_ref assumption = d_transition_system->get_assumption();
-      expr::term_ref assumption_next = state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, assumption);
-      d_solvers[k]->add(assumption, smt::solver::CLASS_A);
-      d_solvers[k]->add(assumption_next, smt::solver::CLASS_B);
-    }
   }
   assert(d_solvers.size() == d_frame_content.size());
 }

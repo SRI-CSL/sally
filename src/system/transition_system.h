@@ -30,6 +30,19 @@ class transition_system {
   /** Any assumptions */
   std::vector<state_formula*> d_assumptions;
 
+  /** Get all the individual assumptions */
+  const std::vector<state_formula*>& get_assumptions() const {
+    return d_assumptions;
+  }
+
+  /** Do we have assumptions */
+  bool has_assumptions() const {
+    return !d_assumptions.empty();
+  }
+
+  /** Get the assumptions in one state formula */
+  expr::term_ref get_assumption() const;
+
 public:
 
   transition_system(const state_type* state_type, const state_formula* initial_states, const std::vector<const transition_formula*>& transition_relation)
@@ -52,38 +65,13 @@ public:
   }
 
   /** Get the initial states */
-  expr::term_ref get_initial_states() const {
-    return d_initial_states->get_formula();
-  }
-
-  /** Get the number of transitions */
-  size_t get_transitions_count() const {
-    return d_transition_relation.size();
-  }
-
-  /** Get the transition relation */
-  expr::term_ref get_transition(size_t i) const {
-    return d_transition_relation[i]->get_formula();
-  }
+  expr::term_ref get_initial_states() const;
 
   /** Get the whole transition relation (disjunction) */
   expr::term_ref get_transition_relation() const;
 
   /** Add an assumption on the state type (takes over the pointer) */
   void add_assumption(state_formula* assumption);
-
-  /** Get all the individual assumptions */
-  const std::vector<state_formula*>& get_assumptions() const {
-    return d_assumptions;
-  }
-
-  /** Do we have assumptions */
-  bool has_assumptions() const {
-    return !d_assumptions.empty();
-  }
-
-  /** Get the assumptions in one state formula */
-  expr::term_ref get_assumption() const;
 
   /** Print it to the stream */
   void to_stream(std::ostream& out) const;
