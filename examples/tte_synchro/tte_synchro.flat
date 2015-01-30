@@ -1,6 +1,3 @@
- 
- 
- 
  (flat-module
   (output cm_clock!0::CLOCK)
   (output cm_clock!1::CLOCK)

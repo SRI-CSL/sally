@@ -127,7 +127,6 @@ void context::add_assumption_to(std::string id, state_formula* sf) {
     throw exception(id + " not declared");
   }
   d_transition_systems.get_entry(id)->add_assumption(sf);
-
 }
 
 
