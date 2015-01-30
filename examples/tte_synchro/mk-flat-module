@@ -1,12 +1,14 @@
 #!/bin/bash
 
-$HOME/Software/sal-3.3/bin/salenv-safe <<EOF |& tail -n +7 | sed s/'sal >'//g > tte_synchro.flat
+INPUT=$1
+MODULE=$2
+
+$HOME/Software/sal-3.3/bin/salenv-safe <<EOF
 (sal/set-pp-max-width! 10000)
 (sal/set-pp-max-depth! 10000)
 (sal/set-pp-max-num-lines! 100000)
 (sal/set-sal-pp-proc! sal-ast->lsal-doc) 
-(make-flat-module "tte_synchro!TTE")
-
+(make-flat-module "$INPUT!$MODULE")
 EOF
 
 

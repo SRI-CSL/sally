@@ -1,11 +1,13 @@
-#!/bin/bash
+#!/bin/bash 
 
-salenv <<EOF
-(sal/set-pp-max-width! 1000)
-(sal/set-pp-max-num-lines! 10000)
+INPUT=$1
+PROPERTY=$2
 
-(make-flat-module "tte_synchro!TTE")
+$HOME/Software/sal-3.3/bin/salenv-safe <<EOF
+(sal/set-pp-max-width! 10000)
+(sal/set-pp-max-depth! 10000)
+(sal/set-pp-max-num-lines! 100000)
+(sal/set-sal-pp-proc! sal-ast->lsal-doc) 
+(make-flat-assertion "$INPUT!$PROPERTY")
 EOF
 
-# (make-flat-assertion "tte_synchro!sm_clock_distance")
-# (make-flat-assertion "tte_synchro!sm_clock_distance_strict")
