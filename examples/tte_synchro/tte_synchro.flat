@@ -1,0 +1,644 @@
+ 
+ 
+ 
+ (flat-module
+  (output cm_clock!0::CLOCK)
+  (output cm_clock!1::CLOCK)
+  (output cm_state!0::CM_STATE)
+  (output cm_state!1::CM_STATE)
+  (output compression!0::CLOCK)
+  (output compression!1::CLOCK)
+  (local perm!0!0::SM_ID)
+  (local perm!0!1::SM_ID)
+  (local perm!0!2::SM_ID)
+  (local perm!0!3::SM_ID)
+  (local perm!0!4::SM_ID)
+  (local perm!1!0::SM_ID)
+  (local perm!1!1::SM_ID)
+  (local perm!1!2::SM_ID)
+  (local perm!1!3::SM_ID)
+  (local perm!1!4::SM_ID)
+  (output sm_clock!0::CLOCK)
+  (output sm_clock!1::CLOCK)
+  (output sm_clock!2::CLOCK)
+  (output sm_clock!3::CLOCK)
+  (output sm_clock!4::CLOCK)
+  (output sm_reading!0!0::CLOCK)
+  (output sm_reading!0!1::CLOCK)
+  (output sm_reading!0!2::CLOCK)
+  (output sm_reading!0!3::CLOCK)
+  (output sm_reading!0!4::CLOCK)
+  (output sm_reading!1!0::CLOCK)
+  (output sm_reading!1!1::CLOCK)
+  (output sm_reading!1!2::CLOCK)
+  (output sm_reading!1!3::CLOCK)
+  (output sm_reading!1!4::CLOCK)
+  (output sm_state!0::SM_STATE)
+  (output sm_state!1::SM_STATE)
+  (output sm_state!2::SM_STATE)
+  (output sm_state!3::SM_STATE)
+  (output sm_state!4::SM_STATE)
+  (output sm_valid!0!0::bool)
+  (output sm_valid!0!1::bool)
+  (output sm_valid!0!2::bool)
+  (output sm_valid!0!3::bool)
+  (output sm_valid!0!4::bool)
+  (output sm_valid!1!0::bool)
+  (output sm_valid!1!1::bool)
+  (output sm_valid!1!2::bool)
+  (output sm_valid!1!3::bool)
+  (output sm_valid!1!4::bool)
+  (input choice!1!0::(subrange 0 2))
+  (input choice!1!1::(subrange 0 2))
+  (input choice!1!2::(subrange 0 2))
+  (input choice!1!3::(subrange 0 2))
+  (input choice!1!4::(subrange 0 2))
+  (input choice!2!0::(subrange 0 4))
+  (input choice!2!1::(subrange 0 4))
+  (definition
+    (and
+      true
+      true
+      (and
+        sm_valid!0!0
+        sm_valid!1!0
+        sm_valid!0!1
+        sm_valid!1!1
+        sm_valid!0!3
+        sm_valid!1!3
+        sm_valid!0!4
+        sm_valid!1!4)
+      (and
+        (= sm_reading!0!0 sm_clock!0)
+        (= sm_reading!1!0 sm_clock!0)
+        (= sm_reading!0!1 sm_clock!1)
+        (= sm_reading!1!1 sm_clock!1)
+        (= sm_reading!0!3 sm_clock!3)
+        (= sm_reading!1!3 sm_clock!3)
+        (= sm_reading!0!4 sm_clock!4)
+        (= sm_reading!1!4 sm_clock!4))))
+  (initialization
+    (and
+      (= sm_state!0 sm_send)
+      (= sm_state!1 sm_send)
+      (= sm_state!2 sm_send)
+      (= sm_state!3 sm_send)
+      (= sm_state!4 sm_send)
+      (= sm_clock!0 0)
+      (= sm_clock!1 0)
+      (= sm_clock!2 0)
+      (= sm_clock!3 0)
+      (= sm_clock!4 0)
+      (= cm_state!0 cm_receive)
+      (= cm_state!1 cm_receive)
+      (= compression!0 0)
+      (= compression!1 0)
+      (= cm_clock!0 0)
+      (= cm_clock!1 0)))
+  (transition
+    (let ((cs!558::bool (= cm_state!0' cm_correct))
+          (cs!594::bool (= cm_state!1' cm_correct)))
+      (let ((cs!530::bool (= cm_state!0 cm_receive))
+            (cs!559::bool (= cm_clock!0' cm_clock!0))
+            (cs!561::bool (= compression!0' compression!0))
+            (cs!566::bool (= cm_state!1 cm_receive))
+            (cs!595::bool (= cm_clock!1' cm_clock!1))
+            (cs!598::bool (= compression!1' compression!1))
+            (cs!604::real (/ (+ compression!0 compression!1) 2)))
+        (let ((cs!538::bool (/= perm!0!1' perm!0!0'))
+              (cs!539::bool (/= perm!0!2' perm!0!0'))
+              (cs!540::bool (/= perm!0!3' perm!0!0'))
+              (cs!541::bool (/= perm!0!4' perm!0!0'))
+              (cs!542::bool (/= perm!0!0' perm!0!1'))
+              (cs!543::bool (/= perm!0!2' perm!0!1'))
+              (cs!544::bool (/= perm!0!3' perm!0!1'))
+              (cs!545::bool (/= perm!0!4' perm!0!1'))
+              (cs!546::bool (/= perm!0!0' perm!0!2'))
+              (cs!547::bool (/= perm!0!1' perm!0!2'))
+              (cs!548::bool (/= perm!0!3' perm!0!2'))
+              (cs!549::bool (/= perm!0!4' perm!0!2'))
+              (cs!550::bool (/= perm!0!0' perm!0!3'))
+              (cs!551::bool (/= perm!0!1' perm!0!3'))
+              (cs!552::bool (/= perm!0!2' perm!0!3'))
+              (cs!553::bool (/= perm!0!4' perm!0!3'))
+              (cs!554::bool (/= perm!0!0' perm!0!4'))
+              (cs!555::bool (/= perm!0!1' perm!0!4'))
+              (cs!556::bool (/= perm!0!2' perm!0!4'))
+              (cs!557::bool (/= perm!0!3' perm!0!4'))
+              (cs!574::bool (/= perm!1!1' perm!1!0'))
+              (cs!575::bool (/= perm!1!2' perm!1!0'))
+              (cs!576::bool (/= perm!1!3' perm!1!0'))
+              (cs!577::bool (/= perm!1!4' perm!1!0'))
+              (cs!578::bool (/= perm!1!0' perm!1!1'))
+              (cs!579::bool (/= perm!1!2' perm!1!1'))
+              (cs!580::bool (/= perm!1!3' perm!1!1'))
+              (cs!581::bool (/= perm!1!4' perm!1!1'))
+              (cs!582::bool (/= perm!1!0' perm!1!2'))
+              (cs!583::bool (/= perm!1!1' perm!1!2'))
+              (cs!584::bool (/= perm!1!3' perm!1!2'))
+              (cs!585::bool (/= perm!1!4' perm!1!2'))
+              (cs!586::bool (/= perm!1!0' perm!1!3'))
+              (cs!587::bool (/= perm!1!1' perm!1!3'))
+              (cs!588::bool (/= perm!1!2' perm!1!3'))
+              (cs!589::bool (/= perm!1!4' perm!1!3'))
+              (cs!590::bool (/= perm!1!0' perm!1!4'))
+              (cs!591::bool (/= perm!1!1' perm!1!4'))
+              (cs!592::bool (/= perm!1!2' perm!1!4'))
+              (cs!593::bool (/= perm!1!3' perm!1!4')))
+          (let ((cs!513::CLOCK
+                     (cond
+                       ((= perm!0!1' 5) sm_reading!0!4)
+                       ((= perm!0!1' 4) sm_reading!0!3)
+                       ((= perm!0!1' 3) sm_reading!0!2)
+                       ((= perm!0!1' 2) sm_reading!0!1)
+                       (else sm_reading!0!0)))
+                (cs!514::CLOCK
+                      (cond
+                        ((= perm!0!3' 5) sm_reading!0!4)
+                        ((= perm!0!3' 4) sm_reading!0!3)
+                        ((= perm!0!3' 3) sm_reading!0!2)
+                        ((= perm!0!3' 2) sm_reading!0!1)
+                        (else sm_reading!0!0)))
+                (cs!516::CLOCK
+                      (cond
+                        ((= perm!0!2' 5) sm_reading!0!4)
+                        ((= perm!0!2' 4) sm_reading!0!3)
+                        ((= perm!0!2' 3) sm_reading!0!2)
+                        ((= perm!0!2' 2) sm_reading!0!1)
+                        (else sm_reading!0!0)))
+                (cs!519::CLOCK
+                      (cond
+                        ((= perm!1!1' 5) sm_reading!1!4)
+                        ((= perm!1!1' 4) sm_reading!1!3)
+                        ((= perm!1!1' 3) sm_reading!1!2)
+                        ((= perm!1!1' 2) sm_reading!1!1)
+                        (else sm_reading!1!0)))
+                (cs!520::CLOCK
+                      (cond
+                        ((= perm!1!3' 5) sm_reading!1!4)
+                        ((= perm!1!3' 4) sm_reading!1!3)
+                        ((= perm!1!3' 3) sm_reading!1!2)
+                        ((= perm!1!3' 2) sm_reading!1!1)
+                        (else sm_reading!1!0)))
+                (cs!521::bool
+                      (cond
+                        ((= perm!1!4' 5) sm_valid!1!4)
+                        ((= perm!1!4' 4) sm_valid!1!3)
+                        ((= perm!1!4' 3) sm_valid!1!2)
+                        ((= perm!1!4' 2) sm_valid!1!1)
+                        (else sm_valid!1!0)))
+                (cs!523::CLOCK
+                      (cond
+                        ((= perm!1!2' 5) sm_reading!1!4)
+                        ((= perm!1!2' 4) sm_reading!1!3)
+                        ((= perm!1!2' 3) sm_reading!1!2)
+                        ((= perm!1!2' 2) sm_reading!1!1)
+                        (else sm_reading!1!0)))
+                (cs!528::bool
+                      (cond
+                        ((= perm!0!4' 5) sm_valid!0!4)
+                        ((= perm!0!4' 4) sm_valid!0!3)
+                        ((= perm!0!4' 3) sm_valid!0!2)
+                        ((= perm!0!4' 2) sm_valid!0!1)
+                        (else sm_valid!0!0)))
+                (cs!534::bool
+                      (cond
+                        ((= perm!0!0' 5) sm_valid!0!4)
+                        ((= perm!0!0' 4) sm_valid!0!3)
+                        ((= perm!0!0' 3) sm_valid!0!2)
+                        ((= perm!0!0' 2) sm_valid!0!1)
+                        (else sm_valid!0!0)))
+                (cs!535::bool
+                      (cond
+                        ((= perm!0!1' 5) sm_valid!0!4)
+                        ((= perm!0!1' 4) sm_valid!0!3)
+                        ((= perm!0!1' 3) sm_valid!0!2)
+                        ((= perm!0!1' 2) sm_valid!0!1)
+                        (else sm_valid!0!0)))
+                (cs!536::bool
+                      (cond
+                        ((= perm!0!2' 5) sm_valid!0!4)
+                        ((= perm!0!2' 4) sm_valid!0!3)
+                        ((= perm!0!2' 3) sm_valid!0!2)
+                        ((= perm!0!2' 2) sm_valid!0!1)
+                        (else sm_valid!0!0)))
+                (cs!537::bool
+                      (cond
+                        ((= perm!0!3' 5) sm_valid!0!4)
+                        ((= perm!0!3' 4) sm_valid!0!3)
+                        ((= perm!0!3' 3) sm_valid!0!2)
+                        ((= perm!0!3' 2) sm_valid!0!1)
+                        (else sm_valid!0!0)))
+                (cs!570::bool
+                      (cond
+                        ((= perm!1!0' 5) sm_valid!1!4)
+                        ((= perm!1!0' 4) sm_valid!1!3)
+                        ((= perm!1!0' 3) sm_valid!1!2)
+                        ((= perm!1!0' 2) sm_valid!1!1)
+                        (else sm_valid!1!0)))
+                (cs!571::bool
+                      (cond
+                        ((= perm!1!1' 5) sm_valid!1!4)
+                        ((= perm!1!1' 4) sm_valid!1!3)
+                        ((= perm!1!1' 3) sm_valid!1!2)
+                        ((= perm!1!1' 2) sm_valid!1!1)
+                        (else sm_valid!1!0)))
+                (cs!572::bool
+                      (cond
+                        ((= perm!1!2' 5) sm_valid!1!4)
+                        ((= perm!1!2' 4) sm_valid!1!3)
+                        ((= perm!1!2' 3) sm_valid!1!2)
+                        ((= perm!1!2' 2) sm_valid!1!1)
+                        (else sm_valid!1!0)))
+                (cs!573::bool
+                      (cond
+                        ((= perm!1!3' 5) sm_valid!1!4)
+                        ((= perm!1!3' 4) sm_valid!1!3)
+                        ((= perm!1!3' 3) sm_valid!1!2)
+                        ((= perm!1!3' 2) sm_valid!1!1)
+                        (else sm_valid!1!0))))
+            (let ((cs!531::bool
+                       (<=
+                         (cond
+                           ((= perm!0!0' 5) sm_reading!0!4)
+                           ((= perm!0!0' 4) sm_reading!0!3)
+                           ((= perm!0!0' 3) sm_reading!0!2)
+                           ((= perm!0!0' 2) sm_reading!0!1)
+                           (else sm_reading!0!0))
+                         cs!513))
+                  (cs!532::bool (<= cs!513 cs!516))
+                  (cs!533::bool (<= cs!516 cs!514))
+                  (cs!565::bool (not cs!521))
+                  (cs!567::bool
+                        (<=
+                          (cond
+                            ((= perm!1!0' 5) sm_reading!1!4)
+                            ((= perm!1!0' 4) sm_reading!1!3)
+                            ((= perm!1!0' 3) sm_reading!1!2)
+                            ((= perm!1!0' 2) sm_reading!1!1)
+                            (else sm_reading!1!0))
+                          cs!519))
+                  (cs!568::bool (<= cs!519 cs!523))
+                  (cs!569::bool (<= cs!523 cs!520))
+                  (cs!610::bool (not cs!528)))
+              (and
+                (or
+                  (and
+                    (= choice!1!0 0)
+                    (= sm_state!0 sm_send)
+                    (= sm_state!0' sm_correct)
+                    (= sm_clock!0' sm_clock!0))
+                  (and
+                    (= choice!1!0 1)
+                    (= sm_state!0 sm_correct)
+                    (= sm_state!0' sm_drift)
+                    (= sm_clock!0' cs!604))
+                  (and
+                    (= choice!1!0 2)
+                    (= sm_state!0 sm_drift)
+                    (AND
+                      (<= (- sm_clock!0 max_drift) sm_clock!0')
+                      (<= sm_clock!0' (+ sm_clock!0 max_drift)))
+                    (= sm_state!0' sm_send)))
+                (or
+                  (and
+                    (= choice!1!1 0)
+                    (= sm_state!1 sm_send)
+                    (= sm_state!1' sm_correct)
+                    (= sm_clock!1' sm_clock!1))
+                  (and
+                    (= choice!1!1 1)
+                    (= sm_state!1 sm_correct)
+                    (= sm_state!1' sm_drift)
+                    (= sm_clock!1' cs!604))
+                  (and
+                    (= choice!1!1 2)
+                    (= sm_state!1 sm_drift)
+                    (AND
+                      (<= (- sm_clock!1 max_drift) sm_clock!1')
+                      (<= sm_clock!1' (+ sm_clock!1 max_drift)))
+                    (= sm_state!1' sm_send)))
+                (or
+                  (and
+                    (= choice!1!2 0)
+                    (= sm_state!2 sm_send)
+                    (= sm_state!2' sm_correct)
+                    (= sm_clock!2' sm_clock!2))
+                  (and
+                    (= choice!1!2 1)
+                    (= sm_state!2 sm_correct)
+                    (= sm_state!2' sm_drift)
+                    (= sm_clock!2' cs!604))
+                  (and
+                    (= choice!1!2 2)
+                    (= sm_state!2 sm_drift)
+                    (AND
+                      (<= (- sm_clock!2 max_drift) sm_clock!2')
+                      (<= sm_clock!2' (+ sm_clock!2 max_drift)))
+                    (= sm_state!2' sm_send)))
+                (or
+                  (and
+                    (= choice!1!3 0)
+                    (= sm_state!3 sm_send)
+                    (= sm_state!3' sm_correct)
+                    (= sm_clock!3' sm_clock!3))
+                  (and
+                    (= choice!1!3 1)
+                    (= sm_state!3 sm_correct)
+                    (= sm_state!3' sm_drift)
+                    (= sm_clock!3' cs!604))
+                  (and
+                    (= choice!1!3 2)
+                    (= sm_state!3 sm_drift)
+                    (AND
+                      (<= (- sm_clock!3 max_drift) sm_clock!3')
+                      (<= sm_clock!3' (+ sm_clock!3 max_drift)))
+                    (= sm_state!3' sm_send)))
+                (or
+                  (and
+                    (= choice!1!4 0)
+                    (= sm_state!4 sm_send)
+                    (= sm_state!4' sm_correct)
+                    (= sm_clock!4' sm_clock!4))
+                  (and
+                    (= choice!1!4 1)
+                    (= sm_state!4 sm_correct)
+                    (= sm_state!4' sm_drift)
+                    (= sm_clock!4' cs!604))
+                  (and
+                    (= choice!1!4 2)
+                    (= sm_state!4 sm_drift)
+                    (AND
+                      (<= (- sm_clock!4 max_drift) sm_clock!4')
+                      (<= sm_clock!4' (+ sm_clock!4 max_drift)))
+                    (= sm_state!4' sm_send)))
+                (or
+                  (and
+                    (= choice!2!0 0)
+                    cs!530
+                    cs!531
+                    cs!532
+                    cs!534
+                    cs!535
+                    cs!536
+                    (not cs!537)
+                    cs!610
+                    cs!538
+                    cs!539
+                    cs!540
+                    cs!541
+                    cs!542
+                    cs!543
+                    cs!544
+                    cs!545
+                    cs!546
+                    cs!547
+                    cs!548
+                    cs!549
+                    cs!550
+                    cs!551
+                    cs!552
+                    cs!553
+                    cs!554
+                    cs!555
+                    cs!556
+                    cs!557
+                    cs!558
+                    (= compression!0' cs!513)
+                    cs!559)
+                  (and
+                    (= choice!2!0 1)
+                    cs!530
+                    cs!531
+                    cs!532
+                    cs!533
+                    cs!534
+                    cs!535
+                    cs!536
+                    cs!537
+                    cs!610
+                    cs!538
+                    cs!539
+                    cs!540
+                    cs!541
+                    cs!542
+                    cs!543
+                    cs!544
+                    cs!545
+                    cs!546
+                    cs!547
+                    cs!548
+                    cs!549
+                    cs!550
+                    cs!551
+                    cs!552
+                    cs!553
+                    cs!554
+                    cs!555
+                    cs!556
+                    cs!557
+                    cs!558
+                    (= compression!0' (/ (+ cs!513 cs!516) 2))
+                    cs!559)
+                  (and
+                    (= choice!2!0 2)
+                    cs!530
+                    cs!531
+                    cs!532
+                    cs!533
+                    (<=
+                      cs!514
+                      (cond
+                        ((= perm!0!4' 5) sm_reading!0!4)
+                        ((= perm!0!4' 4) sm_reading!0!3)
+                        ((= perm!0!4' 3) sm_reading!0!2)
+                        ((= perm!0!4' 2) sm_reading!0!1)
+                        (else sm_reading!0!0)))
+                    cs!534
+                    cs!535
+                    cs!536
+                    cs!537
+                    cs!528
+                    cs!538
+                    cs!539
+                    cs!540
+                    cs!541
+                    cs!542
+                    cs!543
+                    cs!544
+                    cs!545
+                    cs!546
+                    cs!547
+                    cs!548
+                    cs!549
+                    cs!550
+                    cs!551
+                    cs!552
+                    cs!553
+                    cs!554
+                    cs!555
+                    cs!556
+                    cs!557
+                    cs!558
+                    (= compression!0' cs!516)
+                    cs!559)
+                  (and
+                    (= choice!2!0 3)
+                    (= cm_state!0 cm_correct)
+                    (= cm_clock!0' compression!0)
+                    (= cm_state!0' cm_drift)
+                    cs!561)
+                  (and
+                    (= choice!2!0 4)
+                    (= cm_state!0 cm_drift)
+                    (AND
+                      (<= (- cm_clock!0 max_drift) cm_clock!0')
+                      (<= cm_clock!0' (+ cm_clock!0 max_drift)))
+                    (= cm_state!0' cm_receive)
+                    cs!561))
+                (or
+                  (and
+                    (= choice!2!1 0)
+                    cs!566
+                    cs!567
+                    cs!568
+                    cs!570
+                    cs!571
+                    cs!572
+                    (not cs!573)
+                    cs!565
+                    cs!574
+                    cs!575
+                    cs!576
+                    cs!577
+                    cs!578
+                    cs!579
+                    cs!580
+                    cs!581
+                    cs!582
+                    cs!583
+                    cs!584
+                    cs!585
+                    cs!586
+                    cs!587
+                    cs!588
+                    cs!589
+                    cs!590
+                    cs!591
+                    cs!592
+                    cs!593
+                    cs!594
+                    (= compression!1' cs!519)
+                    cs!595)
+                  (and
+                    (= choice!2!1 1)
+                    cs!566
+                    cs!567
+                    cs!568
+                    cs!569
+                    cs!570
+                    cs!571
+                    cs!572
+                    cs!573
+                    cs!565
+                    cs!574
+                    cs!575
+                    cs!576
+                    cs!577
+                    cs!578
+                    cs!579
+                    cs!580
+                    cs!581
+                    cs!582
+                    cs!583
+                    cs!584
+                    cs!585
+                    cs!586
+                    cs!587
+                    cs!588
+                    cs!589
+                    cs!590
+                    cs!591
+                    cs!592
+                    cs!593
+                    cs!594
+                    (= compression!1' (/ (+ cs!519 cs!523) 2))
+                    cs!595)
+                  (and
+                    (= choice!2!1 2)
+                    cs!566
+                    cs!567
+                    cs!568
+                    cs!569
+                    (<=
+                      cs!520
+                      (cond
+                        ((= perm!1!4' 5) sm_reading!1!4)
+                        ((= perm!1!4' 4) sm_reading!1!3)
+                        ((= perm!1!4' 3) sm_reading!1!2)
+                        ((= perm!1!4' 2) sm_reading!1!1)
+                        (else sm_reading!1!0)))
+                    cs!570
+                    cs!571
+                    cs!572
+                    cs!573
+                    cs!521
+                    cs!574
+                    cs!575
+                    cs!576
+                    cs!577
+                    cs!578
+                    cs!579
+                    cs!580
+                    cs!581
+                    cs!582
+                    cs!583
+                    cs!584
+                    cs!585
+                    cs!586
+                    cs!587
+                    cs!588
+                    cs!589
+                    cs!590
+                    cs!591
+                    cs!592
+                    cs!593
+                    cs!594
+                    (= compression!1' cs!523)
+                    cs!595)
+                  (and
+                    (= choice!2!1 3)
+                    (= cm_state!1 cm_correct)
+                    (= cm_clock!1' compression!1)
+                    (= cm_state!1' cm_drift)
+                    cs!598)
+                  (and
+                    (= choice!2!1 4)
+                    (= cm_state!1 cm_drift)
+                    (AND
+                      (<= (- cm_clock!1 max_drift) cm_clock!1')
+                      (<= cm_clock!1' (+ cm_clock!1 max_drift)))
+                    (= cm_state!1' cm_receive)
+                    cs!598)))))))))
+  (skip
+    (and
+      (= sm_clock!0' sm_clock!0)
+      (= sm_clock!1' sm_clock!1)
+      (= sm_clock!2' sm_clock!2)
+      (= sm_clock!3' sm_clock!3)
+      (= sm_clock!4' sm_clock!4)
+      (= sm_state!0' sm_state!0)
+      (= sm_state!1' sm_state!1)
+      (= sm_state!2' sm_state!2)
+      (= sm_state!3' sm_state!3)
+      (= sm_state!4' sm_state!4)
+      (= compression!0' compression!0)
+      (= compression!1' compression!1)
+      (= cm_clock!0' cm_clock!0)
+      (= cm_clock!1' cm_clock!1)
+      (= cm_state!0' cm_state!0)
+      (= cm_state!1' cm_state!1)))
+  (valid-input true)
+  (valid-state true)
+  (valid-constant true))
+ 

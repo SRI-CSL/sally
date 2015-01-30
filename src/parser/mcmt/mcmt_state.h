@@ -92,12 +92,24 @@ public:
   /** Sets the variable to a given term */
   void set_variable(std::string id, expr::term_ref t);
 
+  /**
+   * Make a condition term:
+   * if c[0] then c[1]
+   * if c[2] then c[3]
+   * ...
+   * else c[2n]
+   */
+  expr::term_ref mk_cond(const std::vector<expr::term_ref>& children);
+
   /** Get the string of a token begin parsed */
   static
   std::string token_text(pANTLR3_COMMON_TOKEN token);
 
   /** Ensure that the object is declared = true/false locally, throw exception otherwise */
   void ensure_declared(std::string id, mcmt_object type, bool declared);
+
+  /** Are we using lsal extensions (a' for next.a, a for state.a, cond operator) */
+  bool lsal_extensions() const;
 };
 
 }

@@ -23,6 +23,8 @@ options {
   parser::mcmt_state* pState;
 }
 
+start_rule : command;
+
 /** Parses a command */
 command returns [parser::command* cmd = 0] 
   : c = declare_state_type       { $cmd = c; }
@@ -31,6 +33,7 @@ command returns [parser::command* cmd = 0]
   | c = define_transition_system { $cmd = c; }
   | c = assume                   { $cmd = c; }                    
   | c = query                    { $cmd = c; }
+  | define_constant c = command  { $cmd = c; }
   | EOF { $cmd = 0; } 
   ;
   
@@ -79,7 +82,7 @@ define_transition returns [parser::command* cmd = 0]
       symbol[id, parser::MCMT_TRANSITION_FORMULA, false]
       symbol[type_id, parser::MCMT_STATE_TYPE, true] { 
       	  STATE->push_scope();
-          STATE->use_state_type(type_id, system::state_type::STATE_CURRENT, false); 
+          STATE->use_state_type(type_id, system::state_type::STATE_CURRENT, STATE->lsal_extensions()); 
           STATE->use_state_type(type_id, system::state_type::STATE_NEXT, false); 
       }
       f = state_transition_formula   { 
@@ -157,6 +160,17 @@ query returns [parser::command* cmd = 0]
     ')'
   ; 
 
+/** Parse a constant definition */
+define_constant 
+@declarations {
+  std::string id;
+}
+  : '(' 'define-constant'
+    symbol[id, parser::MCMT_TRANSITION_SYSTEM, false] 
+    c = constant { STATE->set_variable(id, c); }
+    ')'
+  ; 
+
 /** A state formula */
 state_formula returns [expr::term_ref sf = expr::term_ref()]
   : t = term { $sf = t; }
@@ -186,6 +200,20 @@ term returns [expr::term_ref t = expr::term_ref()]
         term_list[children] 
      ')'   
      { t = STATE->tm().mk_term(op, children); }
+  | '(' 'cond' { STATE->lsal_extensions() }?
+       ( '(' term_list[children] ')' )+
+       '(' 'else' else_term = term ')'
+       { 
+       	 children.push_back(else_term);
+       	 t = STATE->mk_cond(children);
+       }
+    ')'
+  | '(' '/=' { STATE->lsal_extensions() }? term_list[children] 
+    {
+  	  t = STATE->tm().mk_term(expr::TERM_EQ, children);
+  	  t = STATE->tm().mk_term(expr::TERM_NOT, t);
+    }   
+    ')'
   ; 
   
 let_assignments 
@@ -207,8 +235,12 @@ let_assignment
  * we check whether it has been declared = true/false.
  */
 symbol[std::string& id, parser::mcmt_object obj_type, bool declared] 
-  : SYMBOL { 
+@declarations {
+  bool is_next = false;
+}
+  : SYMBOL ('\'' { STATE->lsal_extensions() }? { is_next = true; })? { 
   	    id = STATE->token_text($SYMBOL);
+        if (is_next) { id = "next." + id; }
         STATE->ensure_declared(id, obj_type, declared);
     }
   ;

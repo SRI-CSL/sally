@@ -1,8 +1,11 @@
+#!/bin/bash
+
+salenv <<EOF
 (sal/set-pp-max-width! 1000)
 (sal/set-pp-max-num-lines! 10000)
 
 (make-flat-module "tte_synchro!TTE")
+EOF
 
-(make-flat-assertion "tte_synchro!sm_clock_distance")
-
-(make-flat-assertion "tte_synchro!sm_clock_distance_strict")
+# (make-flat-assertion "tte_synchro!sm_clock_distance")
+# (make-flat-assertion "tte_synchro!sm_clock_distance_strict")

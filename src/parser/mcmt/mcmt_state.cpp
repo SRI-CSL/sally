@@ -149,3 +149,26 @@ void mcmt_state::ensure_declared(std::string id, mcmt_object type, bool declared
     else throw parser_exception(id + " already declared");
   }
 }
+
+/**
+ * Make a condition term:
+ * if c[0] then c[1]
+ * elif c[2] then c[3]
+ * ...
+ * else c[2n]
+ */
+expr::term_ref mcmt_state::mk_cond(const std::vector<expr::term_ref>& children) {
+  assert(children.size() & 1);
+  assert(children.size() >= 3);
+
+  expr::term_ref result = children.back();
+  for (int i = children.size() - 3; i >= 0; i -= 2) {
+    result = tm().mk_term(expr::TERM_ITE, children[i], children[i+1], result);
+  }
+  return result;
+}
+
+bool mcmt_state::lsal_extensions() const {
+  return ctx().get_options().get_bool("lsal-extensions");
+}
+

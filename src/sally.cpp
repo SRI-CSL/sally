@@ -157,7 +157,8 @@ void parseOptions(int argc, char* argv[], variables_map& variables)
       ("engine", value<string>(), get_engines_list().c_str())
       ("solver", value<string>()->default_value(smt::factory::get_default_solver_id()), get_solvers_list().c_str())
       ("output-language", value<string>()->default_value("mcmt"), get_output_languages_list().c_str())
-      ("arith-eq-to-ineq", value<bool>()->default_value(false), "Rewrite equalities into inqualities.")
+      ("arith-eq-to-ineq", "Rewrite equalities into inqualities.")
+      ("lsal-extensions", "Use lsal extensions to the MCMT language")
       ;
 
   // Get the individual engine options

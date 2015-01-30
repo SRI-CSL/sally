@@ -36,7 +36,7 @@ int options::get_int(std::string opt) const {
 }
 
 bool options::get_bool(std::string opt) const {
-  return d_options->at(opt).as<bool>();
+  return d_options->count(opt) > 0;
 }
 
 }
