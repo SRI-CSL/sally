@@ -19,6 +19,8 @@
 #include "smt/mathsat5/mathsat5.h"
 #include "utils/trace.h"
 
+#define unused_var(x) { (void)x; }
+
 namespace sally {
 namespace smt {
 
@@ -80,18 +82,26 @@ class mathsat5_internal {
   msat_to_term_cache d_msat_to_term_cache;
 
   /**
-   * Set the term cache from t -> t_msat. If t_msat doesn't exist in the
-   * cache already, add the map t_msat -> t.
+   * Set the term cache t <-> t_msat.
    */
   void set_term_cache(expr::term_ref t, msat_term t_msat) {
-    assert(d_term_to_msat_cache.find(t) == d_term_to_msat_cache.end());
-    d_term_to_msat_cache[t] = t_msat;
+    // Due to normalization in SMT solvers, two terms t1 and t2 can map to the
+    // same term t_msat. We can't map t_msat to both t1 and t2, so we only keep
+    // one
+    bool added = false;
+    if (d_term_to_msat_cache.find(t) == d_term_to_msat_cache.end()) {
+      d_term_to_msat_cache[t] = t_msat;
+      added = true;
+    }
     if (d_msat_to_term_cache.find(t_msat) == d_msat_to_term_cache.end()) {
       d_msat_to_term_cache[t_msat] = t;
+      added = true;
     }
+    unused_var(added);
+    assert(added);
   }
 
-  /** Returns the mathsat5 term associated with t, or NULL_TERM otherwise */
+  /** Returns the mathsat5 term associated with t, or ERROR_TERM otherwise */
   msat_term get_term_cache(expr::term_ref t) const {
     term_to_msat_cache::const_iterator find = d_term_to_msat_cache.find(t);
     if (find != d_term_to_msat_cache.end()) {
@@ -849,7 +859,7 @@ void mathsat5_internal::get_model(expr::model& m) {
     expr::term_ref var_type = d_tm.type_of(var);
     expr::term_ref var_value;
 
-    msat_term m_var = d_term_to_msat_cache[var];
+    msat_term m_var = to_mathsat5_term(var);
     msat_term m_value = msat_get_model_value(d_env, m_var);
     assert(!MSAT_ERROR_TERM(m_value));
 

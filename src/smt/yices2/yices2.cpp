@@ -19,6 +19,8 @@
 #include "smt/yices2/yices2.h"
 #include "utils/trace.h"
 
+#define unused_var(x) { (void) x; }
+
 namespace sally {
 namespace smt {
 
@@ -74,11 +76,17 @@ class yices2_internal {
    * cache already, add the map t_yices -> t.
    */
   void set_term_cache(expr::term_ref t, term_t t_yices) {
-    assert(d_term_to_yices_cache.find(t) == d_term_to_yices_cache.end());
-    d_term_to_yices_cache[t] = t_yices;
+    bool added = false;
+    if (d_term_to_yices_cache.find(t) == d_term_to_yices_cache.end()) {
+      d_term_to_yices_cache[t] = t_yices;
+      added = true;
+    }
     if (d_yices_to_term_cache.find(t_yices) == d_yices_to_term_cache.end()) {
       d_yices_to_term_cache[t_yices] = t;
+      added = true;
     }
+    unused_var(added);
+    assert(added);
   }
 
   /** Returns the yices term associated with t, or NULL_TERM otherwise */
