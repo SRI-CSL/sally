@@ -1,3 +1,4 @@
+;; Invalid in 6 steps
 (query T (and
         (< (- sm_clock!0 cm_clock!0) (* max_drift 3))
         (< (- sm_clock!1 cm_clock!0) (* max_drift 3))
