@@ -44,7 +44,7 @@ public:
   expr::term_ref get_state_formula(expr::term_ref sf, size_t k);
 
   /**
-   * Given a transition formula in the state type return a transitiong formula
+   * Given a transition formula in the state type return a transition formula
    * from i to j step.
    */
   expr::term_ref get_transition_formula(expr::term_ref tf, size_t i, size_t j);

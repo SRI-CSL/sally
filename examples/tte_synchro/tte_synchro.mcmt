@@ -93,6 +93,8 @@
 
 ;; Transition relation
 (define-transition transition state_type 
+  (and                 
+    (= max_drift' max_drift)
     (let ((cs!558 (= cm_state!0' cm_correct))
           (cs!594 (= cm_state!1' cm_correct)))
       (let ((cs!530 (= cm_state!0 cm_receive))
@@ -279,7 +281,6 @@
                   (cs!569 (<= cs!523 cs!520))
                   (cs!610 (not cs!528)))
               (and
-                (= max_drift' max_drift)
                 (or
                   (and
                     (= choice!1!0 0)
@@ -617,7 +618,9 @@
                       (<= (- cm_clock!1 max_drift) cm_clock!1')
                       (<= cm_clock!1' (+ cm_clock!1 max_drift)))
                     (= cm_state!1' cm_receive)
-                    cs!598)))))))))
+                    cs!598))))))))
+  )
+)
 
 ;; Transition system 
 (define-transition-system T state_type

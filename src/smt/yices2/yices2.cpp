@@ -751,6 +751,9 @@ void yices2_internal::add(expr::term_ref ref, solver::formula_class f_class) {
 
   // Assert to yices
   term_t yices_term = to_yices2_term(ref);
+  if (output::trace_tag_is_enabled("yices2")) {
+    yices_pp_term(stderr, yices_term, 80, 100, 0);
+  }
   int ret = yices_assert_formula(d_ctx, yices_term);
   if (ret < 0) {
     throw exception("Yices error (add).");
@@ -794,6 +797,10 @@ void yices2_internal::get_model(expr::model& m) {
 
   // Get the model from yices
   model_t* yices_model = yices_get_model(d_ctx, true);
+
+  if (output::trace_tag_is_enabled("yices2")) {
+    yices_pp_model(stderr, yices_model, 80, 100, 0);
+  }
 
   for (size_t i = 0; i < d_variables.size(); ++ i) {
     expr::term_ref var = d_variables[i];

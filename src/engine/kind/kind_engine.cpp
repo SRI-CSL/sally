@@ -66,7 +66,7 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
 
   // The assumption
   expr::term_ref assumption = ts->get_assumption();
-  d_solver_1->add(assumption, smt::solver::CLASS_A);
+  d_solver_1->add(d_trace->get_state_formula(assumption, 0), smt::solver::CLASS_A);
 
   // Transition formula
   expr::term_ref transition_formula = ts->get_transition_relation();

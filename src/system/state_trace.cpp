@@ -76,31 +76,34 @@ void state_trace::to_stream(std::ostream& out) const {
   d_state_type->use_namespace();
   d_state_type->use_namespace(state_type::STATE_CURRENT);
 
+  out << "(trace " << std::endl;
+
   // Output the variables
   std::vector<expr::term_ref> state_vars;
   tm().get_variables(d_state_type->get_state(state_type::STATE_CURRENT), state_vars);
-  for (size_t i = 1; i < state_vars.size(); ++ i) {
-    out << "\t" << state_vars[i];
-  }
-  out << std::endl;
 
   // Output the values
   for (size_t k = 0; k < d_state_variables.size(); ++ k) {
-    state_vars.clear();
-    tm().get_variables(d_state_variables[k], state_vars);
-    out << k;
+    out << "  (frame" << std::endl;
+
+    std::vector<expr::term_ref> state_vars_k;
+    tm().get_variables(d_state_variables[k], state_vars_k);
     for (size_t i = 1; i < state_vars.size(); ++ i) {
-      expr::term_ref var = state_vars[i];
+      expr::term_ref var = state_vars_k[i];
+      out << "    (" << state_vars[i] << " ";
       if (d_model.has_value(var)) {
-        out << "\t" << d_model.get_value(var);
+        out <<  d_model.get_value(var);
       } else {
         expr::term_ref type = tm().type_of(var);
         expr::term_ref value = tm().get_default_value(type);
-        out << "\t" << value;
+        out << value;
       }
+      out << ")" << std::endl;
     }
-    out << std::endl;
+    out << "  )" << std::endl;
   }
+
+  out << ")" << std::endl;
 
   d_state_type->tm().pop_namespace();
   d_state_type->tm().pop_namespace();
