@@ -916,12 +916,13 @@ void mathsat5_internal::get_model(expr::model& m) {
 }
 
 void mathsat5_internal::interpolate(std::vector<expr::term_ref>& projection_out) {
+  assert(!d_assertion_classes_A.empty());
   int *itp_classes = new int[d_assertion_classes_A.size()];
   for (size_t i = 0; i < d_assertion_classes_A.size(); ++ i) {
     itp_classes[i] = d_assertion_classes_A[i];
   }
   msat_term I = msat_get_interpolant(d_env, itp_classes, d_assertion_classes_A.size());
-  delete itp_classes;
+  delete[] itp_classes;
   if (MSAT_ERROR_TERM(I)) {
     std::cerr << "Error while interpolating:" << std::endl;
     for (size_t i = 0; i < d_assertions.size(); ++ i) {

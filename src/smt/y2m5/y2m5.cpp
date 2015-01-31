@@ -25,11 +25,26 @@ namespace smt {
 
 size_t y2m5::s_instance = 0;
 
+class mathsat_constructor : public solver_constructor {
+  expr::term_manager& d_tm;
+  const options& d_opts;
+public:
+  mathsat_constructor(expr::term_manager& tm, const options& opts)
+  : d_tm(tm), d_opts(opts) {}
+  ~mathsat_constructor() {};
+  solver* mk_solver() { return new mathsat5(d_tm, d_opts); }
+};
+
 y2m5::y2m5(expr::term_manager& tm, const options& opts)
 : solver("y2m5", tm, opts)
 {
   d_yices2 = new yices2(tm, opts);
-  d_mathsat5 = new mathsat5(tm, opts);
+  if (opts.get_bool("y2m5-mathsat5-flatten")) {
+    solver_constructor* constructor = new mathsat_constructor(tm, opts);
+    d_mathsat5 = new incremental_wrapper("mathsat5_nonincremental", tm, opts, constructor);
+  } else {
+    d_mathsat5 = new mathsat5(tm, opts);
+  }
   s_instance ++;
 }
 

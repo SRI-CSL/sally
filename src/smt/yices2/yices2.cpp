@@ -582,7 +582,7 @@ expr::bitvector yices_bv_to_bitvector(size_t size, int32_t* bits) {
     bits_str[i] = bits[size-i-1] ? '1' : '0';
   }
   expr::bitvector bv(bits_str);
-  delete bits_str;
+  delete[] bits_str;
   return bv;
 }
 
@@ -621,7 +621,7 @@ expr::term_ref yices2_internal::to_term(term_t t) {
     int32_t* bits = new int32_t[size];
     yices_bv_const_value(t, bits);
     result = d_tm.mk_bitvector_constant(yices_bv_to_bitvector(size, bits));
-    delete bits;
+    delete[] bits;
     break;
   }
   case YICES_SCALAR_CONSTANT:
@@ -704,7 +704,7 @@ expr::term_ref yices2_internal::to_term(term_t t) {
     } else {
       result = d_tm.mk_term(expr::TERM_BV_ADD, sum_children);
     }
-    delete a_i_bits;
+    delete[] a_i_bits;
     break;
   }
   case YICES_ARITH_SUM: {
@@ -793,7 +793,7 @@ expr::bitvector bitvector_from_int32(size_t size, int32_t* value) {
   }
   value_str[size] = 0;
   expr::bitvector bv(value_str);
-  delete value_str;
+  delete[] value_str;
   return bv;
 }
 
@@ -852,7 +852,7 @@ void yices2_internal::get_model(expr::model& m) {
       yices_get_bv_value(yices_model, yices_var, value);
       expr::bitvector bv = bitvector_from_int32(size, value);
       var_value = d_tm.mk_bitvector_constant(bv);
-      delete value;
+      delete[] value;
       break;
     }
     default:
@@ -888,6 +888,9 @@ void yices2_internal::pop() {
 }
 
 void yices2_internal::generalize(const std::set<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out) {
+
+  assert(!to_eliminate.empty());
+  assert(!d_assertions.empty());
 
   // Get the model
   model_t* m = yices_get_model(d_ctx, true);
@@ -943,8 +946,8 @@ void yices2_internal::generalize(const std::set<expr::term_ref>& to_eliminate, s
   }
 
   // Free temps
-  delete variables;
-  delete assertions;
+  delete[] variables;
+  delete[] assertions;
   yices_free_model(m);
 }
 

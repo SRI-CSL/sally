@@ -15,17 +15,14 @@
 namespace sally {
 namespace smt {
 
-class yices2;
-class mathsat5;
-
 /**
  * Combination solver: Yices for generalization, MathSAT5 for interpolation.
  * Note that all checks are done twice, so expect penalty.
  */
 class y2m5 : public solver {
 
-  yices2* d_yices2;
-  mathsat5* d_mathsat5;
+  solver* d_yices2;
+  solver* d_mathsat5;
 
   static size_t s_instance;
 

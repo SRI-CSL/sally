@@ -193,6 +193,52 @@ public:
   expr::term_ref interpolate();
 };
 
+/** A functor that constructs a new solver on each call */
+class solver_constructor {
+public:
+  virtual ~solver_constructor() {};
+  virtual solver* mk_solver() = 0;
+};
+
+class incremental_wrapper : public solver {
+
+  /** The solver we're simulating */
+  solver_constructor* d_constructor;
+
+  struct assertion {
+    expr::term_ref f;
+    formula_class f_class;
+    assertion(expr::term_ref f, formula_class f_class)
+    : f(f), f_class(f_class) {}
+  };
+
+  /** Keep track of assertions */
+  std::vector<assertion> d_assertions;
+
+  /** Assertion sizes per push */
+  std::vector<size_t> d_assertions_size;
+
+  /** Solver previously used */
+  solver* d_solver;
+
+  /** Instance */
+  static size_t d_instance;
+
+public:
+
+  incremental_wrapper(std::string name, expr::term_manager& tm, const options& opts, solver_constructor* constructor);
+  ~incremental_wrapper();
+
+  bool supports(feature f) const;
+  void add(expr::term_ref f, formula_class f_class);
+  result check();
+  void get_model(expr::model& m) const;
+  void push();
+  void pop();
+  void generalize(std::vector<expr::term_ref>& projection_out);
+  void interpolate(std::vector<expr::term_ref>& out);
+};
+
 std::ostream& operator << (std::ostream& out, solver::result result);
 
 /**
