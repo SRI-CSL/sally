@@ -58,7 +58,7 @@ void translator::to_stream_mcmt(std::ostream& out) {
   // Output the query
   state_type->use_namespace(system::state_type::STATE_CURRENT);
   out << ";; Query " << std::endl;
-  out << "(query T " << d_sf->get_formula() << std::endl;
+  out << "(query T " << d_sf->get_formula() << ")" << std::endl;
   ctx().tm().pop_namespace();
 
   // State type namespace
