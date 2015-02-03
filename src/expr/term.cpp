@@ -593,6 +593,12 @@ void term::to_stream_lustre(std::ostream& out, const term_manager_internal& tm) 
     unsupported = true;
     break;
   }
+
+  if (unsupported) {
+    std::stringstream ss;
+    ss << "Output for " << d_op << " not supported in Lustre.";
+    throw exception(ss.str());
+  }
 }
 
 term_ref_strong::term_ref_strong(const term_ref_strong& other)
