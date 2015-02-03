@@ -62,6 +62,14 @@ void rational::to_stream(std::ostream& out) const {
     }
     break;
   }
+  case output::LUSTRE: {
+    out << "(";
+    out << get_numerator();
+    out << "/";
+    out << get_denominator();
+    out << ")";
+    break;
+  }
   default:
     assert(false);
   }

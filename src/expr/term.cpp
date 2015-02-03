@@ -57,6 +57,9 @@ void term::to_stream(std::ostream& out) const {
   case output::NUXMV:
     to_stream_nuxmv(out, *tm);
     break;
+  case output::LUSTRE:
+    to_stream_lustre(out, *tm);
+    break;
   case output::HORN:
     to_stream_smt(out, *tm);
     break;
@@ -492,6 +495,103 @@ void term::to_stream_nuxmv(std::ostream& out, const term_manager_internal& tm) c
     break;
   default:
     assert(false);
+  }
+}
+
+inline
+std::string get_lustre_operator(expr::term_op op) {
+  switch (op) {
+  case TERM_AND: return "and";
+  case TERM_OR: return "or";
+  case TERM_ADD: return "+";
+  case TERM_XOR: return "xor";
+  case TERM_MUL: return "*";
+  default:
+    return "??";
+  }
+}
+
+void term::to_stream_lustre(std::ostream& out, const term_manager_internal& tm) const {
+  bool unsupported = false;
+
+  switch (d_op) {
+  case TYPE_BOOL:
+    out << "bool";
+    break;
+  case TYPE_INTEGER:
+    out << "integer";
+    break;
+  case TYPE_REAL:
+    out << "real";
+    break;
+  case VARIABLE: {
+    std::string name = tm.payload_of<std::string>(*this);
+    name = tm.name_normalize(name);
+    if (size() == 1) {
+      out << name;
+    } else {
+      unsupported = true;
+    }
+    break;
+  }
+  case CONST_BOOL:
+    out << (tm.payload_of<bool>(*this) ? "true" : "false");
+    break;
+  case CONST_RATIONAL:
+    out << tm.payload_of<rational>(*this);
+    break;
+  case CONST_INTEGER:
+    out << tm.payload_of<integer>(*this);
+    break;
+  case TERM_EQ:
+    out << "(" << child(0) << " = " << child(1) << ")";
+    break;
+  case TERM_IMPLIES:
+    out << "(not " << child(0) << " or " << child(1) << ")";
+    break;
+  case TERM_AND:
+  case TERM_OR:
+  case TERM_ADD:
+  case TERM_XOR:
+  case TERM_MUL:
+    out << "(";
+    for (size_t i = 0; i < size(); ++ i) {
+      if (i) out << " " << get_lustre_operator(d_op) << " ";
+      out << child(i);
+    }
+    out << ")";
+    break;
+  case TERM_NOT:
+    out << "(not " << child(0) << ")";
+    break;
+  case TERM_ITE:
+    out << "(if " << child(0) << " then " << child(1) << " else " << child(2) << ")";
+    break;
+  case TERM_SUB:
+    if (size() == 1) {
+      out << "(- " << child(0) << ")";
+    } else {
+      out << "(" << child(0) << " - " << child(1) << ")";
+    }
+    break;
+  case TERM_DIV:
+    out << "(" << child(0) << "/" << child(1) << ")";
+    break;
+  case TERM_LEQ:
+    out << "(" << child(0) << " <= " << child(1) << ")";
+    break;
+  case TERM_LT:
+    out << "(" << child(0) << " < " << child(1) << ")";
+    break;
+  case TERM_GEQ:
+    out << "(" << child(0) << " >= " << child(1) << ")";
+    break;
+  case TERM_GT:
+    out << "(" << child(0) << " > " << child(1) << ")";
+    break;
+  default:
+    unsupported = true;
+    break;
   }
 }
 

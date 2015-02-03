@@ -25,6 +25,8 @@ enum language {
   NUXMV,
   // Horn clause/SMT2
   HORN,
+  // Lustre
+  LUSTRE,
   // Unknown
   UNKNOWN
 };

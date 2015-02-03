@@ -125,6 +125,7 @@ std::string language_to_string(language lang) {
   case MCMT: return "mcmt";
   case NUXMV: return "nuxmv";
   case HORN: return "horn";
+  case LUSTRE: return "lustre";
   default:
     return "unknown";
   }
@@ -134,6 +135,7 @@ language language_from_string(std::string lang) {
   if (lang == "mcmt") return MCMT;
   if (lang == "nuxmv") return NUXMV;
   if (lang == "horn") return HORN;
+  if (lang == "lustre") return LUSTRE;
   throw exception(std::string("Unsupported language: ") + lang);
   return UNKNOWN;
 }

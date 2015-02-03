@@ -27,7 +27,7 @@ translator::translator(const system::context& ctx)
 translator::~translator() {
 }
 
-void translator::to_stream_mcmt(std::ostream& out) {
+void translator::to_stream_mcmt(std::ostream& out) const {
 
   // Output the state type
   const system::state_type* state_type = d_ts->get_state_type();
@@ -82,7 +82,7 @@ public:
   }
 };
 
-void translator::to_stream_nuxmv(std::ostream& out) {
+void translator::to_stream_nuxmv(std::ostream& out) const {
 
   // Name transformer
   nuxmv_name_transformer* name_transformer = new nuxmv_name_transformer();
@@ -130,7 +130,116 @@ void translator::to_stream_nuxmv(std::ostream& out) {
   tm().set_name_transformer(0);
 }
 
-void translator::to_stream_horn(std::ostream& out) {
+class lustre_transition_name_transformer : public utils::name_transformer {
+public:
+  std::string apply(std::string id) const {
+    // state.x => x
+    if (6 < id.size() && id.substr(0, 6) == "state.") {
+      id = std::string("pre(") + id.substr(6) + std::string(")");
+    } else
+    // next.x => xx_next
+    if (5 < id.size() && id.substr(0, 5) == "next.") {
+      id = id.substr(5) + std::string("_next");
+    }
+    // Replace any bad characters
+    std::replace(id.begin(), id.end(), '!', '_');
+    return id;
+  }
+};
+
+class lustre_initial_name_transformer : public utils::name_transformer {
+public:
+  std::string apply(std::string id) const {
+    // state.x => x
+    if (6 < id.size() && id.substr(0, 6) == "state.") {
+      id = id.substr(6) + std::string("_init");
+    }
+    // Replace any bad characters
+    std::replace(id.begin(), id.end(), '!', '_');
+    return id;
+  }
+};
+
+
+void translator::to_stream_lustre(std::ostream& out) const {
+
+  lustre_initial_name_transformer init_transformer;
+  lustre_transition_name_transformer transition_transformer;
+
+  // The state type
+  const system::state_type* state_type = d_ts->get_state_type();
+  state_type->use_namespace();
+
+  // Get the variables
+  const expr::term& state_type_term = tm().term_of(state_type->get_type());
+  size_t state_type_size = tm().get_struct_type_size(state_type_term);
+  std::vector<std::string> vars;
+  std::vector<expr::term_ref> types;
+  for (size_t i = 0; i < state_type_size; ++ i) {
+    std::string id = tm().get_struct_type_field_id(state_type_term, i);
+    id = init_transformer.apply(id);
+    vars.push_back(id);
+    types.push_back(tm().get_struct_type_field_type(state_type_term, i));
+  }
+
+  // Main node start
+  out << "node main (";
+  for (size_t i = 0; i < state_type_size; ++ i) {
+    if (i) { out << "; "; }
+    out << vars[i] << "_init : " << types[i] << "; ";
+    out << vars[i] << "_next : " << types[i];
+  }
+  out << ") returns (OK: bool);" << std::endl;
+
+  // Local state variables
+  out << "  var";
+  for (size_t i = 0; i < state_type_size; ++ i) {
+    out << " " << vars[i] << " : " << types[i] << ";";
+  }
+  out << std::endl;
+
+  // Start the node definition
+  out << "let" << std::endl;
+
+  // Initial state
+  tm().set_name_transformer(&init_transformer);
+  out << "  --Initial condition" << std::endl;
+  out << "  assert(" << d_ts->get_initial_states() << ");" << std::endl;
+  out << std::endl;
+  tm().set_name_transformer(0);
+
+  // Transition relation
+  tm().set_name_transformer(&transition_transformer);
+  out << "  --Transition relation" << std::endl;
+  out << "  assert(true -> " << d_ts->get_transition_relation() << ");" << std::endl;
+  out << std::endl;
+  tm().set_name_transformer(0);
+
+  // Assign variable to their next values
+  out << "  --Assign to next" << std::endl;
+  for (size_t i = 0; i < state_type_size; ++ i) {
+    out << "  " << vars[i] << " = " << vars[i] << "_init -> " << vars[i] << "_next;" << std::endl;
+  }
+  out << std::endl;
+
+  // The property
+  state_type->use_namespace(system::state_type::STATE_CURRENT);
+  tm().set_name_transformer(&transition_transformer);
+  out << "  --The property" << std::endl;
+  out << "  OK = " << d_sf->get_formula() << ";" << std::endl;
+  tm().set_name_transformer(0);
+  ctx().tm().pop_namespace();
+
+  // Finish
+  out << "  --%PROPERTY OK;" << std::endl;
+  out << "tel" << std::endl;
+
+  // State type namespace
+  ctx().tm().pop_namespace();
+}
+
+
+void translator::to_stream_horn(std::ostream& out) const {
   // The state type
   const system::state_type* state_type = d_ts->get_state_type();
 
@@ -194,6 +303,9 @@ engine::result translator::query(const system::transition_system* ts, const syst
     break;
   case HORN:
     to_stream_horn(std::cout);
+    break;
+  case LUSTRE:
+    to_stream_lustre(std::cout);
     break;
   default:
     throw exception("Unsupported language");

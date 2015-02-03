@@ -23,13 +23,16 @@ class translator : public engine {
   const system::state_formula* d_sf;
 
   /** Output the problem */
-  void to_stream_mcmt(std::ostream& out);
+  void to_stream_mcmt(std::ostream& out) const;
 
   /** Output the problem */
-  void to_stream_nuxmv(std::ostream& out);
+  void to_stream_nuxmv(std::ostream& out) const;
 
   /** Output the problem */
-  void to_stream_horn(std::ostream& out);
+  void to_stream_horn(std::ostream& out) const;
+
+  /** Output the problem */
+  void to_stream_lustre(std::ostream& out) const;
 
 public:
 
