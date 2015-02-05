@@ -17,10 +17,13 @@ namespace ic3 {
 struct ic3_engine_info {
 
   static void setup_options(boost::program_options::options_description& options) {
+    options.add_options()
+        ("ic3-show-invariant", "Show the invariant if a property is proved true.")
+        ;
   }
 
   static std::string get_id() {
-    return "ic3-engine";
+    return "ic3";
   }
 
   static engine* new_instance(const system::context& ctx) {

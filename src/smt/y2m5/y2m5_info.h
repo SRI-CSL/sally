@@ -22,7 +22,7 @@ struct y2m5_info {
   static void setup_options(boost::program_options::options_description& options) {
     using namespace boost::program_options;
     options.add_options()
-        ("y2m5-mathsat5-flatten", "Run MathSAT in non-incremental modecd.")
+        ("y2m5-mathsat5-flatten", "Run MathSAT in non-incremental mode.")
         ;
   }
 

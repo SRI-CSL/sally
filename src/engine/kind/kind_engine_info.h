@@ -25,7 +25,7 @@ struct kind_engine_info {
   }
 
   static std::string get_id() {
-    return "kind-engine";
+    return "kind";
   }
 
   static engine* new_instance(const system::context& ctx) {

@@ -401,8 +401,8 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
     } else {
       // Inductive, if frames equal, we have a proofs
       if (!d_has_failed_induction[ind.frame()] && d_frame_content[ind.frame()].size() == d_frame_content[ind.frame()+1].size()) {
-        if (output::get_verbosity(std::cout) > 1) {
-          print_frames(std::cout);
+        if (ctx().get_options().get_bool("ic3-show-invariant")) {
+          print_frame(ind.frame(), std::cout);
         }
         return engine::VALID;
       }
@@ -439,11 +439,7 @@ void ic3_engine::print_frames(std::ostream& out) const {
 }
 
 void ic3_engine::print_frame(size_t k, std::ostream& out) const {
-  out << "ic3: frame " << k << ": " << std::endl;
-  formula_set::const_iterator it = d_frame_content[k].begin();
-  for (; it != d_frame_content[k].end(); ++ it) {
-    out << *it << std::endl;
-  }
+  out << tm().mk_and(d_frame_content[k]) << std::endl;
 }
 
 expr::term_ref ic3_engine::generalize_sat_at(size_t k, smt::solver* solver) {

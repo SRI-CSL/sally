@@ -25,7 +25,7 @@ struct bmc_engine_info {
   }
 
   static std::string get_id() {
-    return "bmc-engine";
+    return "bmc";
   }
 
   static engine* new_instance(const system::context& ctx) {
