@@ -10,13 +10,17 @@
 
 #include <sstream>
 #include <cassert>
+#include <iostream>
 
 namespace sally {
 namespace expr {
 
 model::model(expr::term_manager& tm)
 : d_term_manager(tm)
-{}
+{
+  d_true = tm.mk_boolean_constant(true);
+  d_false = tm.mk_boolean_constant(false);
+}
 
 void model::clear() {
   d_variable_to_value_map.clear();
@@ -61,10 +65,6 @@ expr::term_ref model::get_value(expr::term_ref t) const {
       children_values.push_back(value);
     }
 
-    // True/false
-    expr::term_ref t_true = d_term_manager.mk_boolean_constant(true);
-    expr::term_ref t_false = d_term_manager.mk_boolean_constant(false);
-
     // Arith value
     bool has_arith_value = false;
     expr::rational arith_value;
@@ -75,71 +75,65 @@ expr::term_ref model::get_value(expr::term_ref t) const {
     switch (op) {
     // ITE
     case TERM_ITE:
-      if (children_values[0] == t_true) {
+      if (children_values[0] == d_true) {
         value = children_values[1];
       } else {
+        assert(children_values[0] == d_false);
         value = children_values[2];
       }
       break;
       // Equality
-    case TERM_EQ:
-      if (children_values[0] == children_values[1]) {
-        value = t_true;
+    case TERM_EQ: {
+      if (d_term_manager.equal_constants(children_values[0], children_values[1])) {
+        value = d_true;
       } else {
-        value = t_false;
+        value = d_false;
       }
       break;
-      // Boolean terms
+    }
+    // Boolean terms
     case CONST_BOOL:
       value = t;
       break;
     case TERM_AND:
-      value = t_true;
+      value = d_true;
       for (size_t i = 0; i < t_size; ++ i) {
-        if (children_values[i] != t_true) {
-          value = t_false;
+        if (children_values[i] == d_false) {
+          value = d_false;
           break;
         }
       }
       break;
     case TERM_OR:
-      value = t_false;
+      value = d_false;
       for (size_t i = 0; i < t_size; ++ i) {
-        if (children_values[i] != t_false) {
-          value = t_true;
+        if (children_values[i] == d_true) {
+          value = d_true;
           break;
         }
       }
       break;
     case TERM_NOT:
-      if (children_values[0] == t_true) {
-        value = t_true;
-      } else {
-        value = t_false;
-      }
+      value = children_values[0] == d_true ? d_false : d_true;
       break;
     case TERM_IMPLIES:
-      if (children_values[0] == t_true) {
-        if (children_values[1] == t_true) {
-          value = t_true;
-        } else {
-          value = t_false;
-        }
+      if (children_values[0] == d_true && children_values[1] == d_false) {
+        value = d_false;
       } else {
-        value = t_true;
+        value = d_true;
       }
       break;
     case TERM_XOR: {
       size_t true_count = 0;
       for (size_t i = 0; i < t_size; ++ i) {
-        if (children_values[i] == t_true) {
+        if (children_values[i] == d_true) {
           true_count ++;
         }
       }
       if (true_count % 2) {
-        value = t_true;
+        value = d_true;
       } else {
-        value = t_false;
+        value = d_false;
       }
     }
     break;
@@ -166,8 +160,8 @@ expr::term_ref model::get_value(expr::term_ref t) const {
       has_arith_value = true;
       break;
     case TERM_MUL:
-      arith_value = rational(1, 1);
-      for (size_t i = 0; i < t_size; ++ i) {
+      arith_value = expr::rational(d_term_manager, children_values[0]);
+      for (size_t i = 1; i < t_size; ++ i) {
         arith_value *= expr::rational(d_term_manager, children_values[i]);
       }
       has_arith_value = true;
@@ -179,25 +173,25 @@ expr::term_ref model::get_value(expr::term_ref t) const {
     case TERM_LEQ: {
       rational a(d_term_manager, children_values[0]);
       rational b(d_term_manager, children_values[1]);
-      value = (a <= b ? t_true : t_false);
+      value = (a <= b ? d_true : d_false);
       break;
     }
     case TERM_LT: {
       rational a(d_term_manager, children_values[0]);
       rational b(d_term_manager, children_values[1]);
-      value = (a < b ? t_true : t_false);
+      value = (a < b ? d_true : d_false);
       break;
     }
     case TERM_GEQ: {
       rational a(d_term_manager, children_values[0]);
       rational b(d_term_manager, children_values[1]);
-      value = (a >= b ? t_true : t_false);
+      value = (a >= b ? d_true : d_false);
       break;
     }
     case TERM_GT: {
       rational a(d_term_manager, children_values[0]);
       rational b(d_term_manager, children_values[1]);
-      value = (a > b ? t_true : t_false);
+      value = (a > b ? d_true : d_false);
       break;
     }
 
@@ -253,6 +247,16 @@ expr::term_ref model::get_value(expr::term_ref t) const {
   }
 }
 
+bool model::is_true(expr::term_ref f) const {
+  return get_value(f) == d_true;
+}
+
+/** Is the formula false in the model */
+bool model::is_false(expr::term_ref f) const {
+  return get_value(f) == d_false;
+}
+
+
 bool model::has_value(expr::term_ref var) const {
   assert(d_term_manager.term_of(var).op() == expr::VARIABLE);
   return d_variable_to_value_map.find(var) != d_variable_to_value_map.end();
@@ -265,5 +269,17 @@ model::const_iterator model::values_begin() const {
 model::const_iterator model::values_end() const {
   return d_variable_to_value_map.end();
 }
+
+void model::to_stream(std::ostream& out) const {
+  for (const_iterator it = values_begin(); it != values_end(); ++ it) {
+    out << "(" << it->first << " " << it->second << ")" << std::endl;
+  }
+}
+
+std::ostream& operator << (std::ostream& out, const model& m) {
+  m.to_stream(out);
+  return out;
+}
+
 }
 }

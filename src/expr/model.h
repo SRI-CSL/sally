@@ -11,6 +11,7 @@
 
 #include <map>
 #include <vector>
+#include <iosfwd>
 
 namespace sally {
 namespace expr {
@@ -32,7 +33,13 @@ public:
   void set_value(expr::term_ref var, expr::term_ref value);
 
   /** Get the value of a term in the model (not just variables) */
-  expr::term_ref get_value(expr::term_ref var) const;
+  expr::term_ref get_value(expr::term_ref t) const;
+
+  /** Is the formula true in the model */
+  bool is_true(expr::term_ref f) const;
+
+  /** Is the formula false in the model */
+  bool is_false(expr::term_ref f) const;
 
   /** Return true if a variable var has a value in the model */
   bool has_value(expr::term_ref var) const;
@@ -42,6 +49,9 @@ public:
 
   /** Get the iterator for the last of var -> value */
   const_iterator values_end() const;
+
+  /** Output to stream */
+  void to_stream(std::ostream& out) const;
 
 private:
 
@@ -56,7 +66,15 @@ private:
 
   /** Cache of term values */
   term_to_value_map d_term_to_value_map;
+
+  /** True value */
+  term_ref d_true;
+
+  /** False value */
+  term_ref d_false;
 };
+
+std::ostream& operator << (std::ostream& out, const model& m);
 
 
 }
