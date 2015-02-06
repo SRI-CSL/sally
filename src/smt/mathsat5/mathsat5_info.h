@@ -20,6 +20,8 @@ struct mathsat5_info {
 
   static void setup_options(boost::program_options::options_description& options) {
     using namespace boost::program_options;
+    options.add_options()
+        ("mathsat5-generate-api-log", "Generate API logs.");
   }
 
   static std::string get_id() {

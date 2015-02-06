@@ -50,8 +50,6 @@ protected:
     return d_opts;
   }
 
-protected:
-
   /** All x variables */
   std::set<expr::term_ref> d_x_variables;
 

@@ -208,9 +208,11 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
   d_cfg = msat_create_config();
   msat_set_option(d_cfg, "model_generation", "true");
   msat_set_option(d_cfg, "interpolation", "true");
-//  msat_set_option(d_cfg, "debug.api_call_trace", "2");
-//  msat_set_option(d_cfg, "debug.api_call_trace_dump_config", "true");
-//  msat_set_option(d_cfg, "debug.api_call_trace_filename", ss.str().c_str());
+  if (opts.get_bool("mathsat5-generate-api-log")) {
+   msat_set_option(d_cfg, "debug.api_call_trace", "2");
+   msat_set_option(d_cfg, "debug.api_call_trace_dump_config", "true");
+   msat_set_option(d_cfg, "debug.api_call_trace_filename", ss.str().c_str());
+  }
   d_env = msat_create_env(d_cfg);
 
   // Minus one
