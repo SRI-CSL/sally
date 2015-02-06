@@ -38,7 +38,19 @@ void model::set_value(expr::term_ref var, expr::term_ref value) {
   }
 }
 
-expr::term_ref model::get_value(expr::term_ref t) const {
+expr::term_ref model::get_variable_value(expr::term_ref t) const {
+  assert(d_term_manager.term_of(t).op() == expr::VARIABLE);
+  const_iterator find = d_variable_to_value_map.find(t);
+  if (find == d_variable_to_value_map.end()) {
+      std::stringstream ss;
+      ss << set_tm(d_term_manager) << "Variable " << t << " is not part of the model.";
+      throw exception(ss.str());
+  } else {
+    return find->second;
+  }
+}
+
+expr::term_ref model::get_term_value(expr::term_ref t) {
 
   // If a variable and not in the model, we don't know how to evaluate
   if (d_term_manager.term_of(t).op() == expr::VARIABLE) {
@@ -61,7 +73,7 @@ expr::term_ref model::get_value(expr::term_ref t) const {
     std::vector<expr::term_ref> children_values;
     for (size_t i = 0; i < t_size; ++ i) {
       expr::term_ref child = d_term_manager.term_of(t)[i];
-      expr::term_ref value = get_value(child);
+      expr::term_ref value = get_term_value(child);
       children_values.push_back(value);
     }
 
@@ -241,19 +253,19 @@ expr::term_ref model::get_value(expr::term_ref t) const {
     assert(!value.is_null());
 
     // Remember the cache
-    const_cast<model*>(this)->d_term_to_value_map[t] = value;
+    d_term_to_value_map[t] = value;
 
     return value;
   }
 }
 
-bool model::is_true(expr::term_ref f) const {
-  return get_value(f) == d_true;
+bool model::is_true(expr::term_ref f) {
+  return get_term_value(f) == d_true;
 }
 
 /** Is the formula false in the model */
-bool model::is_false(expr::term_ref f) const {
-  return get_value(f) == d_false;
+bool model::is_false(expr::term_ref f) {
+  return get_term_value(f) == d_false;
 }
 
 

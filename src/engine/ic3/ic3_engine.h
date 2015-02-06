@@ -156,7 +156,7 @@ class ic3_engine : public engine {
    * Weaken the given formula, i.e. find W such that F => W and and W is
    * inconsistnet with the given model.
    */
-  expr::term_ref weaken(expr::term_ref F, const expr::model& m, weakening_mode mode);
+  expr::term_ref weaken(expr::term_ref F, expr::model& m, weakening_mode mode);
 
 public:
 

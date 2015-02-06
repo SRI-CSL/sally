@@ -33,13 +33,16 @@ public:
   void set_value(expr::term_ref var, expr::term_ref value);
 
   /** Get the value of a term in the model (not just variables) */
-  expr::term_ref get_value(expr::term_ref t) const;
+  expr::term_ref get_variable_value(expr::term_ref var) const;
+
+  /** Get the value of a term in the model (not just variables) */
+  expr::term_ref get_term_value(expr::term_ref t);
 
   /** Is the formula true in the model */
-  bool is_true(expr::term_ref f) const;
+  bool is_true(expr::term_ref f);
 
   /** Is the formula false in the model */
-  bool is_false(expr::term_ref f) const;
+  bool is_false(expr::term_ref f);
 
   /** Return true if a variable var has a value in the model */
   bool has_value(expr::term_ref var) const;

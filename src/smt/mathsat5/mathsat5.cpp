@@ -942,7 +942,7 @@ void mathsat5_internal::generalize(const std::set<expr::term_ref>& vars_to_keep,
     // var = value
     expr::term_ref var = *it;
     assert(m.has_value(var));
-    expr::term_ref value = m.get_value(var);
+    expr::term_ref value = m.get_term_value(var);
 
     if (d_tm.type_of(var) == d_tm.boolean_type()) {
       if (d_tm.get_boolean_constant(d_tm.term_of(value))) {

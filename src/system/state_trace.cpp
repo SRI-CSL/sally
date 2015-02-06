@@ -92,7 +92,7 @@ void state_trace::to_stream(std::ostream& out) const {
       expr::term_ref var = state_vars_k[i];
       out << "    (" << state_vars[i] << " ";
       if (d_model.has_value(var)) {
-        out <<  d_model.get_value(var);
+        out <<  d_model.get_variable_value(var);
       } else {
         expr::term_ref type = tm().type_of(var);
         expr::term_ref value = tm().get_default_value(type);
