@@ -34,7 +34,11 @@ endif (CMAKE_SIZEOF_VOID_P EQUAL 8)
 
 
 # Find the GMP number library
-find_library(GMP_LIBRARY gmp)
+if (SALLY_STATIC_BUILD)
+	find_library(GMP_LIBRARY libgmp.a gmp)
+else()
+  find_library(GMP_LIBRARY gmp)
+endif()
 if (GMP_LIBRARY)
   message(STATUS "GMP library: " ${GMP_LIBRARY})
 else()

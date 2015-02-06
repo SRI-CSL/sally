@@ -25,13 +25,14 @@ foreach (DIR expr smt)
 endforeach(DIR)
 
 # Link the thing
-target_link_libraries(sally_test ${sally_test_LIBS} ${Boost_LIBRARIES} ${GMP_LIBRARY})
+target_link_libraries(sally_test ${sally_test_LIBS} ${Boost_LIBRARIES})
 if (YICES2_FOUND)
   target_link_libraries(sally_test ${YICES2_LIBRARY})
 endif()
 if (MATHSAT5_FOUND)
   target_link_libraries(sally_test ${MATHSAT5_LIBRARY})
 endif()
+target_link_libraries(sally_test ${GMP_LIBRARY})
 
 # Add the test
 add_test(unit_tests sally_test -i)
