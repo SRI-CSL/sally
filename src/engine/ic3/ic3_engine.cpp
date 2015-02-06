@@ -255,8 +255,112 @@ bool ic3_engine::check_valid_and_add(size_t k, expr::term_ref f, size_t depth) {
   }
 }
 
-expr::term_ref ic3_engine::weaken(expr::term_ref F, const expr::model& m) {
-  return F;
+expr::term_ref ic3_engine::weaken(expr::term_ref F, const expr::model& m, weakening_mode mode) {
+
+  // WEAK_FORWARD => F_is false
+  assert(mode != WEAK_FORWARD || m.is_false(F));
+  // WEAK_BACKWARD => F is true
+  assert(mode != WEAK_BACKWARD || m.is_true(F));
+
+  size_t F_size = tm().term_of(F).size();
+  expr::term_op F_op = tm().term_of(F).op();
+
+  expr::term_ref F_weak;
+
+  expr::term_ref t_false = tm().mk_boolean_constant(false);
+  expr::term_ref t_true = tm().mk_boolean_constant(true);
+
+  switch (F_op) {
+  case expr::TERM_AND: {
+    if (mode == WEAK_FORWARD) {
+      // Get the first false one
+      for (size_t i = 0; i < F_size; ++i) {
+        expr::term_ref child = tm().term_of(F)[i];
+        if (m.get_value(child) == t_false) {
+          // Just kee this one
+          F_weak = weaken(child, m, WEAK_FORWARD);
+          break;
+        }
+      }
+    } else {
+      // Weaken the conjunction
+      std::vector<expr::term_ref> children;
+      for (size_t i = 0; i < F_size; ++ i) {
+        expr::term_ref child = tm().term_of(F)[i];
+        children.push_back(weaken(child, m, WEAK_BACKWARD));
+      }
+      F_weak = tm().mk_and(children);
+    }
+    break;
+  }
+  case expr::TERM_OR: {
+    if (mode == WEAK_FORWARD) {
+      // Weaken the disjunction
+      std::vector<expr::term_ref> children;
+      for (size_t i = 0; i < F_size; ++ i) {
+        expr::term_ref child = tm().term_of(F)[i];
+        children.push_back(weaken(child, m, WEAK_FORWARD));
+      }
+      F_weak = tm().mk_or(children);
+    } else {
+      // Get the first true one
+      for (size_t i = 0; i < F_size; ++i) {
+        expr::term_ref child = tm().term_of(F)[i];
+        if (m.get_value(child) == t_true) {
+          // Just keep this one
+          F_weak = weaken(child, m, WEAK_BACKWARD);
+          break;
+        }
+      }
+    }
+    break;
+  }
+  case expr::TERM_NOT: {
+    expr::term_ref child = tm().term_of(F)[0];
+    if (mode == WEAK_FORWARD) {
+      // (not F) => W(F)
+      // (not W(F)) => F
+      F_weak = tm().mk_term(expr::TERM_NOT, weaken(child, m, WEAK_BACKWARD));
+    } else {
+      // WEAK_BACKWARD
+      // (not W(F) => (not F)
+      // F => W(F)
+      F_weak = weaken(child, m, WEAK_FORWARD);
+    }
+    break;
+  }
+  case expr::TERM_EQ: {
+    F_weak = F;
+    if (mode == WEAK_FORWARD) {
+      expr::term_ref c1 = tm().term_of(F)[0];
+      expr::term_ref c1_type = tm().type_of(c1);
+      if (tm().is_subtype_of(c1_type, tm().real_type())) {
+        // (x = y) => x >= y and x <= y, so we pick the one that is false
+        expr::term_ref c2 = tm().term_of(F)[0];
+        expr::rational c1_value(tm(), m.get_value(c1));
+        expr::rational c2_value(tm(), m.get_value(c2));
+        if (c1_value < c2_value) {
+          F_weak = tm().mk_term(expr::TERM_GEQ, c1, c2);
+        } else {
+          assert(c1_value > c2_value);
+          F_weak = tm().mk_term(expr::TERM_LEQ, c1, c2);
+        }
+      }
+    }
+  }
+  break;
+  default:
+    F_weak = F;
+  }
+
+  assert(!F_weak.is_null());
+
+  // WEAK_FORWARD => F_weak is false
+  assert(mode != WEAK_FORWARD || m.is_false(F_weak));
+  // WEAK_BACKWARD => F_weak is true
+  assert(mode != WEAK_BACKWARD || m.is_true(F_weak));
+
+  return F_weak;
 }
 
 expr::term_ref ic3_engine::learn_forward(size_t k, expr::term_ref G) {
@@ -270,6 +374,19 @@ expr::term_ref ic3_engine::learn_forward(size_t k, expr::term_ref G) {
   if (!get_solver(k-1)->supports(smt::solver::INTERPOLATION)) {
     return tm().mk_term(expr::TERM_NOT, G);
   }
+
+  // Get a model for G in R_k
+  smt::solver* solver_k = get_solver(k);
+  solver_k->push();
+  solver_k->add(G, smt::solver::CLASS_A);
+  smt::solver::result result_k = solver_k->check();
+  unused_var(result_k);
+  assert(result_k == smt::solver::SAT);
+  expr::model G_model(tm());
+  solver_k->get_model(G_model);
+  solver_k->pop();
+
+  TRACE("ic3") << "model: " << G_model << std::endl;
 
   // Get the interpolant I1 for: (R_{k-1} and T => I1, I1 and G unsat
   smt::solver* I1_solver = get_solver(k-1);
@@ -285,6 +402,14 @@ expr::term_ref ic3_engine::learn_forward(size_t k, expr::term_ref G) {
 
   TRACE("ic3") << "I1: " << I1 << std::endl;
 
+  assert(G_model.is_false(I1));
+
+  // Try to waken I1
+  I1 = weaken(I1, G_model, WEAK_FORWARD);
+  TRACE("ic3") << "weakened I1: " << I1 << std::endl;
+
+  assert(G_model.is_false(I1));
+
   // Get the interpolant I2 for I => I2, I2 and G unsat
   smt::solver* I2_solver = get_solver(0);
   I2_solver->push();
@@ -296,6 +421,14 @@ expr::term_ref ic3_engine::learn_forward(size_t k, expr::term_ref G) {
   I2_solver->pop();
 
   TRACE("ic3") << "I2: " << I2 << std::endl;
+
+  assert(G_model.is_false(I2));
+
+  // Try to weaken I2
+  I2 = weaken(I2, G_model, WEAK_FORWARD);
+  TRACE("ic3") << "weakened I2: " << I2 << std::endl;
+
+  assert(G_model.is_false(I2));
 
   // Result is the disjunction of the two
   expr::term_ref learnt = tm().mk_term(expr::TERM_OR, I1, I2);
