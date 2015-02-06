@@ -21,12 +21,18 @@ namespace sally {
  */
 class options {
 
+  /** Options passed in */
   const boost::program_options::variables_map* d_options;
+
+  /** Options created internally */
+  boost::program_options::variables_map* d_my_options;
 
 public:
 
   options();
   options(const boost::program_options::variables_map& options);
+
+  ~options();
 
   /** Check whether the option is present */
   bool has_option(std::string opt) const;

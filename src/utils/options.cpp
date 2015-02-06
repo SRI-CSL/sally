@@ -13,11 +13,18 @@ namespace sally {
 
 options::options(const boost::program_options::variables_map& options)
 : d_options(&options)
+, d_my_options(0)
 {}
 
 options::options()
-: d_options(0)
-{}
+{
+  d_my_options = new boost::program_options::variables_map();
+  d_options = d_my_options;
+}
+
+options::~options() {
+  delete d_my_options;
+}
 
 bool options::has_option(std::string opt) const {
   return d_options->count(opt) > 0;
