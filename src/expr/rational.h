@@ -18,6 +18,9 @@ namespace expr {
 
 class integer;
 
+class term_ref;
+class term_manager;
+
 /**
  * Wrapper around the GMP rational.
  */
@@ -39,6 +42,8 @@ public:
   explicit rational(const char* s): d_gmp_rat(s, 10) { d_gmp_rat.canonicalize(); }
   /** Construct from string representation */
   explicit rational(std::string s): d_gmp_rat(s, 10) { d_gmp_rat.canonicalize(); }
+  /** Cosntruct from constant integer or rational term */
+  rational(const term_manager& tm, term_ref t);
 
   /** Hash of the rational */
   size_t hash() const;
@@ -50,6 +55,34 @@ public:
 
   /** Comparison */
   bool operator == (const rational& q) const { return this->cmp(q) == 0; }
+
+  // Arithmetic
+
+  rational operator + (const rational& other) const;
+  rational operator + (const integer& other) const;
+  rational& operator += (const rational& other);
+  rational& operator += (const integer& other);
+
+  rational operator - () const;
+  rational operator - (const rational& other) const;
+  rational operator - (const integer& other) const;
+  rational& operator -= (const rational& other);
+  rational& operator -= (const integer& other);
+
+  rational operator * (const rational& other) const;
+  rational operator * (const integer& other) const;
+  rational& operator *= (const rational& other);
+  rational& operator *= (const integer& other);
+
+  rational operator / (const rational& other) const;
+  rational operator / (const integer& other) const;
+  rational& operator /= (const rational& other);
+  rational& operator /= (const integer& other);
+
+  bool operator < (const rational& other) const;
+  bool operator <= (const rational& other) const;
+  bool operator > (const rational& other) const;
+  bool operator >= (const rational& other) const;
 
   /** Assignment for itnegers */
   rational& operator = (const integer& z);

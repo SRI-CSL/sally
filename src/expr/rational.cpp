@@ -10,6 +10,8 @@
 #include "utils/output.h"
 #include "utils/hash.h"
 
+#include "expr/term_manager.h"
+
 #include <cassert>
 #include <iostream>
 
@@ -112,5 +114,122 @@ rational& rational::operator = (const integer& z) {
   return *this;
 }
 
+rational rational::operator + (const rational& other) const {
+  return rational(d_gmp_rat + other.d_gmp_rat);
+}
+
+rational rational::operator + (const integer& other) const {
+  return rational(d_gmp_rat + other.mpz());
+}
+
+rational& rational::operator += (const rational& other) {
+  d_gmp_rat += other.d_gmp_rat;
+  d_gmp_rat.canonicalize();
+  return *this;
+}
+
+rational& rational::operator += (const integer& other) {
+  d_gmp_rat += other.mpz();
+  d_gmp_rat.canonicalize();
+  return *this;
+}
+
+rational rational::operator - () const {
+  return rational(-d_gmp_rat);
+}
+
+rational rational::operator - (const rational& other) const {
+  return rational(d_gmp_rat - other.d_gmp_rat);
+}
+
+rational rational::operator - (const integer& other) const {
+  return rational(d_gmp_rat - other.mpz());
+}
+
+rational& rational::operator -= (const rational& other) {
+  d_gmp_rat -= other.d_gmp_rat;
+  d_gmp_rat.canonicalize();
+  return *this;
+}
+
+rational& rational::operator -= (const integer& other) {
+  d_gmp_rat -= other.mpz();
+  d_gmp_rat.canonicalize();
+  return *this;
+}
+
+rational rational::operator * (const rational& other) const {
+  return rational(d_gmp_rat * other.d_gmp_rat);
+}
+
+rational rational::operator * (const integer& other) const {
+  return rational(d_gmp_rat * other.mpz());
+}
+
+rational& rational::operator *= (const rational& other) {
+  d_gmp_rat *= other.d_gmp_rat;
+  d_gmp_rat.canonicalize();
+  return *this;
+}
+
+rational& rational::operator *= (const integer& other) {
+  d_gmp_rat *= other.mpz();
+  d_gmp_rat.canonicalize();
+  return *this;
+}
+
+
+rational rational::operator / (const rational& other) const {
+  return rational(d_gmp_rat / other.d_gmp_rat);
+}
+
+rational rational::operator / (const integer& other) const {
+  return rational(d_gmp_rat / other.mpz());
+}
+
+rational& rational::operator /= (const rational& other) {
+  d_gmp_rat /= other.d_gmp_rat;
+  d_gmp_rat.canonicalize();
+  return *this;
+}
+
+rational& rational::operator /= (const integer& other) {
+  d_gmp_rat /= other.mpz();
+  d_gmp_rat.canonicalize();
+  return *this;
+}
+
+bool rational::operator < (const rational& other) const {
+  return d_gmp_rat < other.d_gmp_rat;
+}
+
+bool rational::operator <= (const rational& other) const {
+  return d_gmp_rat <= other.d_gmp_rat;
+}
+
+bool rational::operator > (const rational& other) const {
+  return d_gmp_rat > other.d_gmp_rat;
+}
+
+bool rational::operator >= (const rational& other) const {
+  return d_gmp_rat >= other.d_gmp_rat;
+}
+
+rational::rational(const term_manager& tm, term_ref t) {
+  const term& t_term = tm.term_of(t);
+  term_op t_op = t_term.op();
+  switch (t_op) {
+  case CONST_INTEGER:
+    *this = tm.get_integer_constant(t_term);
+    break;
+  case CONST_RATIONAL:
+    *this = tm.get_rational_constant(t_term);
+    break;
+  default:
+    assert(false);
+  }
+}
+
 }
 }
+

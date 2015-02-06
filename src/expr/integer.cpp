@@ -8,6 +8,7 @@
 
 #include "expr/integer.h"
 #include "utils/output.h"
+#include "expr/term_manager.h"
 
 #include <iostream>
 #include <cassert>
@@ -50,6 +51,58 @@ void integer::to_stream(std::ostream& out) const {
 std::ostream& operator << (std::ostream& out, const integer& z) {
   z.to_stream(out);
   return out;
+}
+
+integer integer::operator + (const integer& other) const {
+  return integer(d_gmp_int + other.d_gmp_int);
+}
+
+integer& integer::operator += (const integer& other) {
+  d_gmp_int += other.d_gmp_int;
+  return *this;
+}
+
+integer integer::operator - () const {
+  return integer(-d_gmp_int);
+}
+
+integer integer::operator - (const integer& other) const {
+  return integer(d_gmp_int - other.d_gmp_int);
+}
+
+integer& integer::operator -= (const integer& other) {
+  d_gmp_int -= other.d_gmp_int;
+  return *this;
+}
+
+integer integer::operator * (const integer& other) const {
+  return integer(d_gmp_int * other.d_gmp_int);
+}
+integer& integer::operator *= (const integer& other) {
+  d_gmp_int *= other.d_gmp_int;
+  return *this;
+}
+
+bool integer::operator < (const integer& other) const {
+  return d_gmp_int < other.d_gmp_int;
+}
+
+bool integer::operator <= (const integer& other) const {
+  return d_gmp_int <= other.d_gmp_int;
+}
+
+bool integer::operator > (const integer& other) const {
+  return d_gmp_int > other.d_gmp_int;
+}
+
+bool integer::operator >= (const integer& other) const {
+  return d_gmp_int >= other.d_gmp_int;
+}
+
+integer::integer(const term_manager& tm, term_ref t) {
+  const term& t_term = tm.term_of(t);
+  assert(t_term.op() == CONST_INTEGER);
+  *this = tm.get_integer_constant(t_term);
 }
 
 }

@@ -255,6 +255,10 @@ bool ic3_engine::check_valid_and_add(size_t k, expr::term_ref f, size_t depth) {
   }
 }
 
+expr::term_ref ic3_engine::weaken(expr::term_ref F, const expr::model& m) {
+  return F;
+}
+
 expr::term_ref ic3_engine::learn_forward(size_t k, expr::term_ref G) {
 
 

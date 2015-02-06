@@ -15,6 +15,9 @@
 namespace sally {
 namespace expr {
 
+class term_ref;
+class term_manager;
+
 class integer {
 
 protected:
@@ -38,6 +41,25 @@ public:
   integer(const char* s, size_t base): d_gmp_int(s, base) {}
   /** Construct from string representation */
   integer(std::string s, size_t base): d_gmp_int(s, base) {}
+  /** Construct from constant integer term */
+  integer(const term_manager& tm, term_ref t);
+
+  // Arithmetic
+
+  integer operator + (const integer& other) const;
+  integer& operator += (const integer& other);
+
+  integer operator - () const;
+  integer operator - (const integer& other) const;
+  integer& operator -= (const integer& other);
+
+  integer operator * (const integer& other) const;
+  integer& operator *= (const integer& other);
+
+  bool operator < (const integer& other) const;
+  bool operator <= (const integer& other) const;
+  bool operator > (const integer& other) const;
+  bool operator >= (const integer& other) const;
 
   /** Returns the hash of the integer */
   size_t hash() const { return d_gmp_int.get_si(); }
