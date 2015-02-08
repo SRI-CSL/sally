@@ -138,6 +138,18 @@ class mathsat5_internal {
   /** The context */
   msat_env d_env;
 
+  /** Do we need new ITP group A */
+  bool d_itp_new_A;
+
+  /** ITP group A */
+  int d_itp_A;
+
+  /** Do we need new ITP group B */
+  bool d_itp_new_B;
+
+  /** ITP group B */
+  int d_itp_B;
+
 public:
 
   /** Construct an instance of mathsat5 with the given temr manager and options */
@@ -192,6 +204,10 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
 : d_tm(tm)
 , d_last_check_status(MSAT_UNKNOWN)
 , d_instance(s_instances)
+, d_itp_new_A(true)
+, d_itp_A(0)
+, d_itp_new_B(true)
+, d_itp_B(0)
 {
   // ID
   std::stringstream ss;
@@ -810,12 +826,27 @@ void mathsat5_internal::add(expr::term_ref ref, solver::formula_class f_class) {
   expr::term_ref_strong ref_strong(d_tm, ref);
   d_assertions.push_back(ref_strong);
 
-  // Set the interpolation group
-  int itp_group = msat_create_itp_group(d_env);
-  msat_set_itp_group(d_env, itp_group);
+  // Get the interpolation group
+  int itp_group;
   if (f_class == solver::CLASS_A) {
+    if (d_itp_new_A) {
+      itp_group = d_itp_A = msat_create_itp_group(d_env);
+      d_itp_new_A = false;
+    } else {
+      itp_group = d_itp_A;
+    }
     d_assertion_classes_A.push_back(itp_group);
+  } else {
+    if (d_itp_new_B) {
+      itp_group = d_itp_B = msat_create_itp_group(d_env);
+      d_itp_new_B = false;
+    } else {
+      itp_group = d_itp_B;
+    }
   }
+
+  // Set the interpolation group
+  msat_set_itp_group(d_env, itp_group);
 
   // Assert to mathsat5
   msat_term m_term = to_mathsat5_term(ref);
@@ -965,6 +996,8 @@ void mathsat5_internal::push() {
   }
   d_assertions_size.push_back(d_assertions.size());
   d_assertion_classes_A_size.push_back(d_assertion_classes_A.size());
+  d_itp_new_A = true;
+  d_itp_new_B = true;
 }
 
 void mathsat5_internal::pop() {
@@ -982,6 +1015,8 @@ void mathsat5_internal::pop() {
   while (d_assertion_classes_A.size() > size) {
     d_assertion_classes_A.pop_back();
   }
+  d_itp_new_A = true;
+  d_itp_new_B = true;
 }
 
 mathsat5::mathsat5(expr::term_manager& tm, const options& opts)
