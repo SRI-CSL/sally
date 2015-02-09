@@ -51,7 +51,7 @@ class mathsat5_internal {
   /** Number of mathsat5 instances */
   static int s_instances;
 
-  /** All assertions we have in context (strong) TODO: push/pop */
+  /** All assertions we have in context (strong) */
   std::vector<expr::term_ref_strong> d_assertions;
 
   /** The assertions size per push/pop */

@@ -17,6 +17,8 @@
 #include "smt/yices2/yices2.h"
 #include "smt/mathsat5/mathsat5.h"
 #include "utils/trace.h"
+#include "smt/incremental_wrapper.h"
+#include "smt/delayed_wrapper.h"
 
 #define unused_var(x) { (void) x; }
 
@@ -43,7 +45,7 @@ y2m5::y2m5(expr::term_manager& tm, const options& opts)
     solver_constructor* constructor = new mathsat_constructor(tm, opts);
     d_mathsat5 = new incremental_wrapper("mathsat5_nonincremental", tm, opts, constructor);
   } else {
-    d_mathsat5 = new mathsat5(tm, opts);
+    d_mathsat5 = new delayed_wrapper("mathsat_5_incremental", tm, opts, new mathsat5(tm, opts));
   }
   s_instance ++;
 }
