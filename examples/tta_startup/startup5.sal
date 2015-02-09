@@ -1,0 +1,1212 @@
+%
+% Simplified TTA startup protocol with active hub
+% - With node failures
+% - Hub masks node failures and prevents collision
+%   by selecting (nondeterministically)
+%   one message to forward when it receives several
+%   overlapping frames from the nodes.
+% - Includes timing
+%
+% - Same hub model and abstraction as startup4, 
+%
+
+startup5: CONTEXT =
+
+BEGIN
+
+  % Number of nodes
+
+  N: NATURAL = 10;
+
+  % Ugly type definition to work around ICS's limitations
+  % (incompleteness when dealing with integers)
+
+  NODE_ID: TYPE = {x: [1 .. N] | x=1 OR x=2 OR x=3 OR x=4 OR x=5 OR 
+                                 x=6 OR x=7 OR x=8 OR x=9 OR x=10 }; 
+
+  % the hub has id 0, the nodes are indexed from 1 to N
+
+  ID: TYPE = [0 .. N];
+
+  TIME: TYPE = REAL;
+
+  TIMEOUT_ARRAY: TYPE = ARRAY ID OF TIME;
+
+
+
+  %---------------------------------------------------
+  %  Delays, assuming all slots have the same length
+  %---------------------------------------------------
+
+  slot_time: TIME = 5;
+
+  round_time: TIME = slot_time * N;
+
+
+  % propagation delays:
+  % delta1 --> transmission delay from a node to the hub
+  % delta2 --> transmission delay from the hub to a node
+
+  delta1: { x: TIME | 0 < x AND x < slot_time/2 };
+
+  delta2: { x: TIME | 0 < x AND delta1 + x < slot_time/2};
+
+  propagation: TIME = delta1 + delta2;
+
+  % maximal time in init state
+
+  max_init_time: TIME = 30;
+
+
+  % timeouts in listen and coldstart states
+
+  tau_startup(i: NODE_ID): TIME = slot_time * (i - 1);
+
+  tau_listen(i: NODE_ID): TIME = 2 * round_time + tau_startup(i);
+
+  tau_coldstart(i: NODE_ID): TIME = round_time + tau_startup(i);
+
+
+
+
+
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  %  Communications between nodes and hub  %
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  message: TYPE = { cs_frame, i_frame };
+
+  msg_status: TYPE = { hub2node, node2hub, empty };
+
+
+  %-----------------------------------------------------------------
+  % calendar data structure for communication betwen nodes and hub
+  %
+  % status[i] = status of the link between node i and the hub
+  %   -> hub2node means one frame to be received by node i
+  %   -> node2hub means one frame sent by node i
+  %   -> empty means no frame pending
+  % msg[i] = content of the message
+  % origin[i] = sender of the message
+  % delivery[i] = when the message will be received
+  %-----------------------------------------------------------------
+
+  calendar: TYPE =
+    [# status: ARRAY NODE_ID OF msg_status,
+       msg: ARRAY NODE_ID OF message,
+       origin: ARRAY NODE_ID OF NODE_ID,
+       delivery: ARRAY NODE_ID OF TIME
+     #];
+
+
+
+  %---------------------------
+  %  Operations on calendars
+  %---------------------------
+
+  %---------------------------------------------------------------
+  % empty calendar: msg, origin, and delivery are irrelevant
+  %---------------------------------------------------------------
+
+  empty_cal: calendar =
+     (# status := [[i: NODE_ID] empty],
+        msg := [[i: NODE_ID] i_frame],
+        origin := [[i: NODE_ID] i],
+        delivery := [[i: NODE_ID] 0]
+      #);
+
+  empty?(cal: calendar): bool =
+     FORALL (i: NODE_ID): cal.status[i] = empty;
+
+  hub_transmission?(cal: calendar): bool =
+     EXISTS (i: NODE_ID): cal.status[i] = hub2node;
+
+
+  %----------------------------------------
+  % Checks for pending events and messages
+  %----------------------------------------
+
+  % events to be consumed by node i
+
+  event_pending?(cal: calendar, i: NODE_ID): bool =
+     cal.status[i] = hub2node;
+
+  i_frame_pending?(cal: calendar, i: NODE_ID): bool =
+     cal.status[i] = hub2node AND cal.msg[i] = i_frame;
+
+  cs_frame_pending?(cal: calendar, i: NODE_ID): bool =
+     cal.status[i] = hub2node AND cal.msg[i] = cs_frame;
+
+
+  % events to be consumed by the hub
+
+  hub_event_pending?(cal: calendar, i: NODE_ID): bool =
+     cal.status[i] = node2hub;
+
+  hub_i_frame_pending?(cal: calendar, i: NODE_ID): bool =
+     cal.status[i] = node2hub AND cal.msg[i] = i_frame;
+
+  hub_cs_frame_pending?(cal: calendar, i: NODE_ID): bool =
+     cal.status[i] = node2hub AND cal.msg[i] = cs_frame;
+
+
+  %-------------------------------------------------------------
+  % occurrence time, origin, and content of the pending events
+  % all are meaningful only if cal.status[i] /= empty
+  %--------------------------------------------------------------
+
+  event_time(cal: calendar, i: NODE_ID): TIME = cal.delivery[i];
+
+  frame_origin(cal: calendar, i: NODE_ID): NODE_ID = cal.origin[i];
+
+  content(cal: calendar, i: NODE_ID): message = cal.msg[i];
+
+
+  %-----------------
+  % consume event i
+  %-----------------
+
+  consume_event(cal: calendar, i: NODE_ID): calendar =
+     cal WITH .status[i] := empty;
+
+
+  %----------------------------------------------------
+  %  Transmission of message m from node i to the hub
+  %  - t is the delivery time
+  %  - if there was a message in transit from hub to i
+  %    then this message is lost
+  %----------------------------------------------------
+
+  send_frame(cal: calendar, m: message, i: NODE_ID, t: TIME): calendar =
+     (((cal WITH .status[i] := node2hub)
+	    WITH .msg[i] := m)
+             WITH .origin[i] := i)
+             WITH .delivery[i] := t;
+
+
+  %-------------------------------------------------------------
+  %  Broadcast of message m from the hub to all nodes
+  %  - i: origin of the message
+  %  - t: delivery time
+  %  - all nodes that are not currently transmitting are
+  %    scheduled to receive m at time t
+  %  - if a node is transmitting a frame m1 to the hub,
+  %    then it will not receive m, but the hub will receive m1
+  %-------------------------------------------------------------
+
+  bcast(cal: calendar, m: message, i: NODE_ID, t: TIME): calendar =
+    (# status   := [[j: NODE_ID] IF cal.status[j] = empty THEN hub2node
+                                 ELSE cal.status[j] ENDIF],
+       msg      := [[j: NODE_ID] IF cal.status[j] = empty THEN m
+                                 ELSE cal.msg[j] ENDIF],
+       origin   := [[j: NODE_ID] IF cal.status[j] = empty THEN i
+                                 ELSE cal.origin[j] ENDIF],
+       delivery := [[j: NODE_ID] IF cal.status[j] = empty THEN t
+                                 ELSE cal.delivery[j] ENDIF]
+     #);
+
+
+
+
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  %  Clock module                                     %
+  %  - input: timeout of each node and of the hub     %
+  %          + calendar                               %
+  %  - if the calendar is empty, the clock module     %
+  %  advances time up to the smallest timeout         %
+  %  - if a message is in the bus, time advances      %
+  %  to the smallest timeout or to the bus delivery   %
+  %  time, whichever is smaller                       %
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  time_can_advance(cal: calendar, time_out: TIMEOUT_ARRAY, t: TIME): BOOLEAN =
+          (FORALL (i: ID): t < time_out[i])
+      AND (FORALL (i: NODE_ID): cal.status[i] = empty OR t < cal.delivery[i]);
+
+  is_next_event(cal: calendar, time_out: TIMEOUT_ARRAY, t: TIME): BOOLEAN =
+          (FORALL (i: ID): t <= time_out[i])
+      AND (FORALL (i: NODE_ID): cal.status[i] = empty OR t <= cal.delivery[i])
+      AND ((EXISTS (i: ID): t = time_out[i])
+        OR (EXISTS (i: NODE_ID): cal.status[i] /= empty AND t = cal.delivery[i]));
+
+
+  clock: MODULE =
+    BEGIN
+      INPUT time_out: TIMEOUT_ARRAY
+      INPUT cal: calendar
+      OUTPUT time: TIME
+    INITIALIZATION
+      time = 0
+    TRANSITION
+      [ time_elapses:
+        time_can_advance(cal, time_out, time) -->
+             time' IN { t: TIME | is_next_event(cal, time_out, t) } ]
+    END;
+
+
+
+
+  %%%%%%%%%%%%%%%%%
+  %  Node module  %
+  %%%%%%%%%%%%%%%%%
+
+  %------------------------
+  % Next slot after slot i
+  %------------------------
+
+  inc(i: NODE_ID): NODE_ID = IF i=N THEN 1 ELSE i+1 ENDIF;
+
+
+  %-------------------------------------------------
+  % Number of slots between slot i and next slot j
+  %     slot_delay(i, i + 1) = 0 if i<N
+  %     slot_delay(N, 1) = 0
+  %     slot_delay(i, i) = N-1
+  %-------------------------------------------------
+
+  slot_delay(i, j: NODE_ID): [0 .. N-1]  =
+     IF i < j THEN j - i - 1 ELSE N - i + j - 1 ENDIF;
+
+
+  %-----------------------------------
+  %  States of a node during startup
+  %-----------------------------------
+
+  PC: TYPE = { init, listen, coldstart, active, faulty };
+
+  %---------------------------------------------------
+  % uninterpreted constant to make sure that no more
+  % than one node is faulty
+  %---------------------------------------------------
+
+  faulty_node: NODE_ID; 
+
+  %-------------------
+  %  Node[i] process
+  %-------------------
+
+  node[i: NODE_ID]: MODULE =
+    BEGIN
+      INPUT  time: TIME
+      OUTPUT timeout: TIME
+      OUTPUT slot: NODE_ID      % slot and pc need to be output
+      OUTPUT pc: PC             % to be read by the abstraction module
+      GLOBAL cal: calendar
+   INITIALIZATION
+      pc = init;
+      timeout IN { x: TIME | time < x AND x < max_init_time};
+   TRANSITION
+      [ init_to_listen:
+	pc = init AND time = timeout AND i /= faulty_node -->
+           pc' = listen;
+           timeout' = time + tau_listen(i)
+
+     [] init_to_faulty:
+        pc = init AND i = faulty_node -->
+           pc' = faulty;
+           timeout' IN { x: TIME | time < x };
+
+     % reception of a frame in the init state ==> drop it
+     [] frame_in_init:
+        pc = init AND event_pending?(cal, i) AND time = event_time(cal, i) -->
+           cal' = consume_event(cal, i)
+
+     % end of listen phase: send cs frame, move to coldstart state
+     [] listen_to_coldstart:
+        pc = listen AND time = timeout -->
+           pc' = coldstart;
+	   timeout' = time + tau_coldstart(i);
+	   cal' = send_frame(cal, cs_frame, i, time + delta1)
+
+     % reception of a cs_frame in the listen state:
+     % move to coldstart and set timeout
+     [] cs_frame_in_listen:
+        pc = listen AND cs_frame_pending?(cal, i) AND time = event_time(cal, i) -->
+           pc' = coldstart;
+           timeout' = time + tau_coldstart(i) - propagation;
+	   cal' = consume_event(cal, i)
+
+     % for reception of an i_frame in the listen state: see below
+
+     % reception of a cs_frame in the coldstart state:
+     % synchronize on the sender and move to active state
+     [] cs_frame_in_coldstart:
+        pc = coldstart AND cs_frame_pending?(cal, i) AND time = event_time(cal, i) -->
+           pc' = active;
+	   timeout' = time + slot_time - propagation;
+           slot' = frame_origin(cal, i);
+           cal' = consume_event(cal, i)
+
+     % end of coldstart phase (timeout tau_coldstart(i) is reached)
+     % send a cs_frame and loop back to the coldstart state
+     % --> TO DO: check if it's OK to go directly to active from here
+     [] coldstart_to_coldstart:
+        pc = coldstart AND time = timeout -->
+           % pc' = coldstart;
+	   timeout' = time + tau_coldstart(i);
+	   cal' = send_frame(cal, cs_frame, i, time + delta1)
+
+     % reception of an i_frame in the listen or coldstart state:
+     % synchronize and move to the active state
+     [] i_frame_processed:
+        (pc = listen OR pc = coldstart) AND i_frame_pending?(cal, i) AND
+              time = event_time(cal, i) -->
+           pc' = active;
+           timeout' = time + slot_time - propagation;
+           slot' = frame_origin(cal, i);
+           cal' = consume_event(cal, i)
+
+     % active state: end of current slot, new slot /= i
+     [] passive_slot:
+        pc = active AND time = timeout AND inc(slot) /= i -->
+           timeout' = time + slot_time;
+	   slot' = inc(slot)
+
+     % active state: end of current slot, new slot = i
+     % send an i_frame
+     [] active_slot:
+        pc = active AND time = timeout AND inc(slot) = i -->
+           timeout' = time + slot_time;
+	   slot' = inc(slot);
+           cal' = send_frame(cal, i_frame, i, time + delta1)
+
+     % reception of an i_frame
+     % in active state: consume the event and resynchronize
+     [] i_frame_in_active:
+        pc = active AND i_frame_pending?(cal, i) AND time = event_time(cal, i) -->
+           cal' = consume_event(cal, i);
+           timeout' = time + slot_time - propagation;
+
+     % faulty node:
+     [] faulty_i_frame:
+        pc = faulty AND time = timeout -->
+           cal' = send_frame(cal, i_frame, i, time + delta1);
+           timeout' IN { t: TIME | t > time + propagation }
+
+     [] faulty_cs_frame:
+        pc = faulty AND time = timeout -->
+           cal' = send_frame(cal, cs_frame, i, time + delta1);
+           timeout' IN { t: TIME | t > time + propagation }
+
+     [] frame_faulty:
+        pc = faulty AND event_pending?(cal, i) AND time = event_time(cal, i) -->
+           cal' = consume_event(cal, i)
+      ]
+    END;
+
+
+
+   %%%%%%%%%%%%%%%%
+   %  Hub module  %
+   %%%%%%%%%%%%%%%%
+
+   HUB_STATE: TYPE = { hub_listen, cs_tentative, i_tentative, hub_active };
+   CHANNEL_STATE: TYPE = { open, close };
+
+   epsilon: { x: TIME | 0 < x AND 2 * x + propagation < slot_time/2 AND x < delta1 };
+
+   WINDOW: TYPE = { x: TIME | 0 <= x AND x < slot_time/2 };
+
+   hub: MODULE =
+     BEGIN
+       INPUT time: TIME
+       GLOBAL cal: calendar
+       %
+       OUTPUT timeout: TIME
+       OUTPUT hub_state: HUB_STATE
+       OUTPUT next_id, last_id: NODE_ID
+       OUTPUT channel_state: CHANNEL_STATE
+       OUTPUT window: WINDOW
+       %
+       %  Auxiliary variables for the proof
+       %  hub_reception = time of last frame received by the hub
+       %  shift = when an i_frame is received, shift is set 
+       %       to the difference between the expected reception time
+       %       (i.e., time_out[0] -  epsilon) and the real reception
+       %       time
+       OUTPUT hub_reception, shift: TIME
+     INITIALIZATION
+       cal = empty_cal;
+       hub_state = hub_listen;
+       channel_state = open;
+       timeout IN { t: TIME | time < t };
+       window = 0;
+       hub_reception = 0;
+       shift = 0;
+     TRANSITION
+       [ % timeout expires in listen mode: ignore it
+         timeout_ignored:
+         hub_state = hub_listen AND time = timeout -->
+	    timeout' IN { x: TIME | time + 1 < x }  % 1 prevents Zeno behavior
+
+      [] % i_frame received in listen mode: drop it
+         ([] (i: NODE_ID):
+           hub_i_frame_in_listen:
+           hub_state = hub_listen AND hub_i_frame_pending?(cal, i)
+           AND time = event_time(cal, i) -->
+              cal' = consume_event(cal, i)
+         )
+
+      [] % cs_frame received in listen mode:
+         % forward it to all nodes
+         % move to cs_tentative
+	 ([] (i: NODE_ID):
+           hub_cs_frame_in_listen:
+           hub_state = hub_listen AND hub_cs_frame_pending?(cal, i)
+           AND time = event_time(cal, i) -->
+              hub_state' =  cs_tentative;
+	      channel_state' = close;
+	      next_id' = 1;
+              last_id' = i;
+	      timeout' = time + round_time - epsilon;
+              window' = propagation + 2 * epsilon;
+              cal' = consume_event(bcast(cal, content(cal, i), i, time + delta2), i);
+              hub_reception' = time;
+	  )
+
+
+
+      [] % timeout expires when channel is close: open it
+         % for a duration equal to the current window
+         open_channel:
+         channel_state = close AND time = timeout -->
+            channel_state' = open;
+            timeout' = time + window
+
+      [] % frame received when channel is close: drop it
+         ([] (i: NODE_ID):
+           frame_when_channel_close:
+           channel_state = close AND hub_event_pending?(cal, i)
+           AND time = event_time(cal, i) -->
+             cal' = consume_event(cal, i)
+         )
+
+
+      [] % correct cs_frame received:
+         % - close the channel
+         % - move to i_frame_tentative
+         good_cs_frame:
+         channel_state = open AND hub_state = cs_tentative AND
+           hub_cs_frame_pending?(cal, next_id) AND time = event_time(cal, next_id) -->
+	     channel_state' = close;
+	     timeout' = time + slot_time - epsilon;
+             hub_state' = i_tentative;
+             window' = 2 * epsilon;
+             last_id' = next_id;
+	     next_id' = inc(next_id);
+             cal' = consume_event(bcast(cal, content(cal, next_id),
+                                        next_id, time + delta2),
+                                  next_id);
+             hub_reception' = time
+
+      [] % correct i_frame received in i_tentative state
+         % - close the channel
+         % - move to active
+         % - resynchronize with the sender
+         good_i_frame:
+         channel_state = open AND hub_state = i_tentative AND
+           hub_i_frame_pending?(cal, next_id) AND time = event_time(cal, next_id) -->
+             channel_state' = close;
+	     timeout' = time + slot_time - epsilon;
+             hub_state' = hub_active;
+             last_id' = next_id;
+             next_id' = inc(next_id);
+             cal' = consume_event(bcast(cal, content(cal, next_id),
+                                        next_id, time + delta2),
+                                   next_id);
+             hub_reception' = time;
+             shift' = time - (timeout - epsilon)
+
+      [] % correct i_frame received in active state
+         % - close the channel
+         % - prepare for the next slot
+         % - resynchronize with the sender
+         good_i_frame_in_active:
+         channel_state = open AND hub_state = hub_active AND
+           hub_i_frame_pending?(cal, next_id) AND time = event_time(cal, next_id) -->
+             channel_state' = close;
+             timeout' = time + slot_time - epsilon;
+	     next_id' = inc(next_id);
+             last_id' = next_id;
+             cal' = consume_event(bcast(cal, content(cal, next_id),
+                                        next_id, time + delta2),
+                                  next_id);
+             hub_reception' = time;
+             shift' = time - (timeout - epsilon)
+
+      [] % bad frame when channel is open: drop it
+         ([] (i: NODE_ID):
+           bad_frame_received:
+           channel_state = open AND hub_event_pending?(cal, i)
+             AND time = event_time(cal, i)
+             AND ((hub_state = cs_tentative AND
+                    (i /= next_id OR content(cal, i) /= cs_frame))
+               OR (hub_state = i_tentative AND
+                    (i /= next_id OR content(cal, i) /= i_frame))
+               OR (hub_state = hub_active AND
+                    (i /= next_id OR content(cal, i) /= i_frame))) -->
+             cal' = consume_event(cal, i)
+         )
+
+      [] % end of reception window/no frame received in the window
+         % with no change of state: prepare for next slot
+         end_window:
+         channel_state = open AND time = timeout AND
+              ((hub_state = cs_tentative AND next_id < N)
+            OR (hub_state = i_tentative AND inc(next_id) /= last_id)
+            OR (hub_state = hub_active AND next_id /= last_id)) -->
+                next_id' = inc(next_id);
+                channel_state' = close;
+	        timeout' = time + slot_time - window  % when to re-open the channel
+
+      [] % end of reception window in cs_tentative mode
+         % no cs_frame received in one full round: go back to listen
+         end_cs_tentative:
+         channel_state = open AND time = timeout AND
+           hub_state = cs_tentative AND next_id = N -->
+             hub_state' = hub_listen
+
+      [] % end of reception window in i_tentative mode
+         % no i_frame received in one round - one slot: go back to cs_tentative
+         end_i_tentative:
+         channel_state = open AND time = timeout AND
+           hub_state = i_tentative AND inc(next_id) = last_id -->
+             hub_state' = cs_tentative;
+             channel_state' = close;
+             timeout' = time + slot_time - window;
+	     next_id' = 1;
+
+      [] % end of reception window in active mode
+         % no i_frame received in one full round:
+         % if there is at most one faulty node then 
+         % this should never happen
+         empty_active_round:
+         channel_state = open AND time = timeout AND
+           hub_state = hub_active AND next_id = last_id -->
+              next_id' = inc(next_id);
+              channel_state' = close;
+	      timeout' = time + slot_time - window;
+              hub_reception' = hub_reception + round_time
+      ]
+     END;
+
+
+   %%%%%%%%%%%%%%%%%%%%%%%%%%
+   %  Complete TTA startup  %
+   %%%%%%%%%%%%%%%%%%%%%%%%%%
+
+   %----------------------------------------------------
+   %  Asynchronous composition: all processes together
+   %    time_out[i] = timeout variable of process[i]
+   %----------------------------------------------------
+
+   nodes_and_hub: MODULE =
+     WITH OUTPUT time_out: TIMEOUT_ARRAY,
+		 pc: ARRAY NODE_ID OF PC,
+                 slot: ARRAY NODE_ID OF NODE_ID
+        ([] (i: NODE_ID): RENAME timeout TO time_out[i],
+                                   pc TO pc[i], slot TO slot[i] IN node[i])
+          [] RENAME timeout TO time_out[0] IN hub;
+
+   tta: MODULE = clock [] nodes_and_hub;
+
+
+
+
+   %%%%%%%%%%%%%%%%%%
+   %  Abstractions  %
+   %%%%%%%%%%%%%%%%%%
+
+   %-------------------
+   %  Hub abstraction
+   %-------------------
+
+   hub_abstractor: MODULE =
+     BEGIN
+       INPUT
+         time: TIME,
+         time_out: TIMEOUT_ARRAY,
+         hub_state: HUB_STATE,
+         channel_state: CHANNEL_STATE,
+         next_id, last_id: NODE_ID,
+         window: WINDOW,
+         hub_reception: TIME
+       OUTPUT
+         B1, B2, B3, B4, B5, B6, B7, B8, B9: BOOLEAN
+       DEFINITION
+         B1 = hub_state = hub_listen AND channel_state = open;
+
+         B2 = hub_state = cs_tentative AND channel_state = close
+              AND window = propagation + 2 * epsilon
+              AND time_out[0] = hub_reception + round_time +
+                     (next_id - 1) * slot_time - epsilon;
+
+         B3 = hub_state = cs_tentative AND channel_state = open
+              AND window = propagation + 2 * epsilon
+              AND time_out[0] = hub_reception + round_time +
+                     (next_id - 1) * slot_time + epsilon + propagation;
+
+         B4 = hub_state = i_tentative AND channel_state = close
+              AND window = 2 * epsilon AND last_id /= next_id
+              AND time_out[0] = hub_reception + slot_time +
+                     slot_delay(last_id, next_id) * slot_time - epsilon;
+
+         B5 = hub_state = i_tentative AND channel_state = open
+              AND window = 2 * epsilon AND last_id /= next_id
+              AND time_out[0] = hub_reception + slot_time +
+                     slot_delay(last_id, next_id) * slot_time + epsilon;
+
+         B6 = hub_state = cs_tentative AND channel_state = close
+              AND window = 2 * epsilon
+              AND time_out[0] = hub_reception + round_time +
+                     (next_id - 1) * slot_time - epsilon;
+
+         B7 = hub_state = cs_tentative AND channel_state = open
+              AND window = 2 * epsilon
+              AND time_out[0] = hub_reception + round_time +
+                     (next_id - 1) * slot_time + epsilon;
+
+         B8 = hub_state = hub_active AND channel_state = close
+              AND window = 2 * epsilon
+              AND time_out[0] = hub_reception + slot_time +
+                     slot_delay(last_id, next_id) * slot_time - epsilon;
+
+         B9 = hub_state = hub_active AND channel_state = open
+              AND window = 2 * epsilon
+              AND time_out[0] = hub_reception + slot_time +
+                     slot_delay(last_id, next_id) * slot_time + epsilon;
+     END;
+
+
+   %---------------
+   %  hub monitor
+   %---------------
+
+   hub_abstract_state: TYPE = { b1, b2, b3, b4, b5, b6, b7, b8, b9, hub_bad };
+
+   hub_monitor: MODULE =
+     BEGIN
+       INPUT B1, B2, B3, B4, B5, B6, B7, B8, B9: BOOLEAN
+       LOCAL hub_abs: hub_abstract_state
+     INITIALIZATION
+       hub_abs = b1;
+     TRANSITION
+       [ hub_abs = b1 -->
+           hub_abs' = IF B1' THEN b1 ELSIF B2' THEN b2 ELSE hub_bad ENDIF
+
+      [] hub_abs = b2 -->
+           hub_abs' = IF B2' THEN b2 ELSIF B3' THEN b3 ELSE hub_bad ENDIF
+
+      [] hub_abs = b3 -->
+           hub_abs' = IF B3' THEN b3
+                      ELSIF B2' THEN b2
+                      ELSIF B4' THEN b4
+                      ELSIF B1' THEN b1
+                      ELSE hub_bad ENDIF
+
+      [] hub_abs = b4 -->
+           hub_abs' = IF B4' THEN b4 ELSIF B5' THEN b5 ELSE hub_bad ENDIF
+
+      [] hub_abs = b5 -->
+           hub_abs' = IF B5' THEN b5
+                      ELSIF B4' THEN b4
+                      ELSIF B6' THEN b6
+                      ELSIF B8' THEN b8
+                      ELSE hub_bad ENDIF
+
+      [] hub_abs = b6 -->
+           hub_abs' = IF B6' THEN b6 ELSIF B7' THEN b7 ELSE hub_bad ENDIF
+
+      [] hub_abs = b7 -->
+           hub_abs' = IF B7' THEN b7
+                      ELSIF B4' THEN b4
+                      ELSIF B6' THEN b6
+                      ELSIF B1' THEN b1
+                      ELSE hub_bad ENDIF
+
+      [] hub_abs = b8 -->
+           hub_abs' = IF B8' THEN b8 ELSIF B9' THEN b9 ELSE hub_bad ENDIF
+
+      [] hub_abs = b9 -->
+           hub_abs' = IF B9' THEN b9 ELSIF B8' THEN b8 ELSE hub_bad ENDIF
+
+      [] ELSE -->
+          hub_abs' = hub_abs
+       ]
+     END;
+
+
+
+   %--------------------
+   %  Full abstraction
+   %--------------------
+
+   abstractor: MODULE =
+     BEGIN
+       INPUT
+	 time: TIME,
+         cal: calendar,
+         time_out: TIMEOUT_ARRAY,
+         pc: ARRAY NODE_ID OF PC,
+         slot: ARRAY NODE_ID OF NODE_ID,
+
+         next_id, last_id: NODE_ID,
+         hub_reception, shift: TIME,         
+         B1, B2, B3, B4, B5, B6, B7, B8, B9: BOOLEAN
+       OUTPUT
+         A1, A2, A3, A4, A5, A6, A7, A8, A9: BOOLEAN
+       DEFINITION
+         A1 = B1 AND
+              (FORALL (i: NODE_ID):
+                    pc[i] = init
+                 OR pc[i] = faulty
+                 OR pc[i] = listen
+                 OR (pc[i] = coldstart AND hub_cs_frame_pending?(cal, i)));
+
+         % cs tentative, hub close
+
+         A2 = B2 AND 
+              (FORALL (i: NODE_ID):
+                    pc[i] = init 
+                 OR pc[i] = faulty
+                 OR (pc[i] = listen AND event_pending?(cal, i))
+                 OR (pc[i] = listen AND
+                     time_out[i] >= hub_reception + tau_listen(i))
+                 OR (pc[i] = coldstart AND i >= next_id AND
+                     NOT event_pending?(cal, i) AND
+                     time_out[i] >= hub_reception + tau_coldstart(i) - delta1 AND
+                     time_out[i] <= hub_reception + tau_coldstart(i) + delta2)
+                 OR (pc[i] = coldstart AND i = next_id AND
+                     hub_event_pending?(cal, i) AND
+                     event_time(cal, i) > time_out[0] AND
+                     event_time(cal, i) < time_out[0] + propagation + 2 * epsilon));
+
+         % cs tentative, hub open
+
+         A3 = B3 AND
+              (FORALL (i: NODE_ID):
+                    pc[i] = init 
+                 OR pc[i] = faulty
+                 OR (pc[i] = listen AND time_out[i] >= hub_reception + tau_listen(i))
+                 OR (pc[i] = coldstart AND i >= next_id AND
+                     cal.status[i] = empty AND
+                     time_out[i] >= hub_reception + tau_coldstart(i) - delta1 AND
+                     time_out[i] <= hub_reception + tau_coldstart(i) + delta2)
+                 OR (pc[i] = coldstart AND i = next_id AND 
+                     hub_event_pending?(cal, i) AND
+                     event_time(cal, i) < time_out[0]));
+
+         % i tentative, hub close
+
+         A4 = B4 AND 
+              (pc[last_id] = coldstart OR pc[last_id] = faulty) AND              
+              (FORALL (i: NODE_ID):
+                    pc[i] = init
+                 OR pc[i] = faulty
+                 OR (pc[i] = listen AND event_pending?(cal, i) AND
+                     time_out[i] > event_time(cal, i))
+                 OR (pc[i] = listen AND time_out[i] >= hub_reception + tau_listen(i))
+                 OR (pc[i] = coldstart AND event_pending?(cal, i) AND
+                     time_out[i] > event_time(cal, i) AND i /= last_id)
+                 OR (pc[i] = coldstart AND cal.status[i] = empty AND
+                     time_out[i] = hub_reception + tau_coldstart(i) - delta1)
+                 OR (pc[i] = active AND cal.status[i] = empty AND
+                     inc(slot[i]) = next_id AND 
+                     time_out[i] = time_out[0] + epsilon - delta1)
+                 OR (pc[i] = active AND cal.status[i] = empty AND
+                     slot[i] = next_id AND i /= next_id AND
+                     time_out[0] + epsilon - delta1 <= time AND
+                     time_out[i] = time_out[0] + epsilon + slot_time - delta1)
+                 OR (pc[i] = active AND i = next_id AND
+                     hub_event_pending?(cal, i) AND
+                     time_out[0] + epsilon - delta1 <= time AND
+                     event_time(cal, i) = time_out[0] + epsilon))
+             AND
+             (last_id < next_id =>
+                (FORALL (i: NODE_ID): last_id < i AND i < next_id => pc[i] /= active))
+             AND
+             (last_id >= next_id =>
+                (FORALL (i: NODE_ID): last_id < i OR i < next_id => pc[i] /= active));
+
+         % i_tentative, hub open
+
+         A5 = B5 AND
+              (pc[last_id] = coldstart OR pc[last_id] = faulty) AND              
+              (FORALL (i: NODE_ID):
+                    pc[i] = init
+                 OR pc[i] = faulty
+                 OR (pc[i] = listen AND time_out[i] >= hub_reception + tau_listen(i))
+                 OR (pc[i] = coldstart AND cal.status[i] = empty AND
+                     time_out[i] = hub_reception + tau_coldstart(i) - delta1)
+                 OR (pc[i] = active AND cal.status[i] = empty AND
+                     slot[i] = next_id AND i /= next_id AND
+                     time_out[i] = time_out[0] - epsilon + slot_time - delta1)
+                 OR (pc[i] = active AND i = next_id AND
+                     hub_event_pending?(cal, i) AND
+                     event_time(cal, i) = time_out[0] - epsilon))
+             AND
+             (last_id < next_id =>
+                (FORALL (i: NODE_ID): last_id < i AND i < next_id => pc[i] /= active))
+             AND
+             (last_id >= next_id =>
+                (FORALL (i: NODE_ID): last_id < i OR i < next_id => pc[i] /= active));
+
+
+         % cs tentative after i_tentative fails, hub close, narrow window
+
+         A6 = B6 AND
+              (FORALL (i: NODE_ID):
+                    pc[i] = init
+                 OR pc[i] = faulty
+                 OR (pc[i] = listen AND time_out[i] >= hub_reception + tau_listen(i))
+                 OR (pc[i] = coldstart AND i >= next_id AND
+                     cal.status[i] = empty AND
+                     time_out[i] = hub_reception - delta1 + tau_coldstart(i))
+                 OR (pc[i] = coldstart AND i = next_id AND
+                     hub_event_pending?(cal, i) AND
+                     event_time(cal, i) > time_out[0] AND
+                     event_time(cal, i) < time_out[0] + 2 * epsilon));
+
+         % cs tentative after i_tentative fails, hub open, narrow window
+
+         A7 = B7 AND
+              (FORALL (i: NODE_ID):
+                    pc[i] = init
+                 OR pc[i] = faulty
+                 OR (pc[i] = listen AND time_out[i] >= hub_reception + tau_listen(i))
+                 OR (pc[i] = coldstart AND i >= next_id AND
+                     cal.status[i] = empty AND
+                     time_out[i] = hub_reception - delta1 + tau_coldstart(i))
+                 OR (pc[i] = coldstart AND i = next_id AND
+                     hub_event_pending?(cal, i) AND
+                     event_time(cal, i) < time_out[0]));
+
+
+        % active, hub close
+
+        A8 = B8 AND
+             (EXISTS (i: NODE_ID): pc[i] = coldstart OR pc[i] = active) AND
+             (FORALL (i: NODE_ID):
+                   pc[i] = init
+                OR pc[i] = faulty
+                OR (pc[i] = listen AND event_pending?(cal, i) AND
+                    time_out[i] > event_time(cal, i))
+                OR (pc[i] = listen AND time_out[i] >= hub_reception + tau_listen(i))
+                OR (pc[i] = coldstart AND event_pending?(cal, i) AND
+                    time_out[i] > event_time(cal, i))
+                OR (pc[i] = active AND inc(slot[i]) = next_id AND i /= last_id AND
+                    event_pending?(cal, i) AND
+                    time_out[i] > event_time(cal, i) AND
+                    time_out[i] = time_out[0] + epsilon - delta1 - shift)
+                OR (pc[i] = active AND inc(slot[i]) = next_id AND
+                    cal.status[i] = empty AND
+                    time_out[i] = time_out[0] + epsilon - delta1)
+                OR (pc[i] = active AND slot[i] = next_id AND i /= next_id AND
+                    cal.status[i] = empty AND
+                    time_out[0] + epsilon - delta1 <= time AND
+                    time_out[i] = time_out[0] + epsilon + slot_time - delta1)
+                OR (pc[i] = active AND i = next_id AND
+                    hub_event_pending?(cal, i) AND
+                    time_out[0] + epsilon - delta1 <= time AND
+                    event_time(cal, i) = time_out[0] + epsilon)) 
+             AND
+             (last_id < next_id => 
+                (FORALL (i: NODE_ID): last_id < i AND i < next_id => pc[i] /= active))
+             AND
+             (last_id >= next_id =>
+                (FORALL (i: NODE_ID): last_id < i OR i < next_id => pc[i] /= active));
+
+        % active, hub open
+
+        A9 = B9 AND 
+             (EXISTS (i: NODE_ID): pc[i] = active) AND
+             (FORALL (i: NODE_ID):
+                   pc[i] = init
+                OR pc[i] = faulty
+                OR (pc[i] = listen AND time_out[i] >= hub_reception + tau_listen(i))
+                OR (pc[i] = active AND slot[i] = next_id AND i /= next_id AND
+                    cal.status[i] = empty AND
+                    time_out[i] = time_out[0] - epsilon + slot_time - delta1)
+                OR (pc[i] = active AND i = next_id AND
+                    hub_event_pending?(cal, i) AND
+                    event_time(cal, i) = time_out[0] - epsilon))
+             AND
+             (last_id < next_id => 
+                (FORALL (i: NODE_ID): last_id < i AND i < next_id => pc[i] /= active))
+             AND
+             (last_id >= next_id =>
+                (FORALL (i: NODE_ID): last_id < i OR i < next_id => pc[i] /= active));
+
+     END;
+
+
+   %-----------
+   %  Monitor
+   %-----------
+
+   abstract_state: TYPE = {a1, a2, a3, a4, a5, a6, a7, a8, a9, bad };
+
+   monitor: MODULE =
+     BEGIN
+       INPUT A1, A2, A3, A4, A5, A6, A7, A8, A9: BOOLEAN
+       LOCAL state: abstract_state
+     INITIALIZATION
+       state = a1
+     TRANSITION
+       [ state = a1 -->
+            state' = IF A1' THEN a1 ELSIF A2' THEN a2 ELSE bad ENDIF
+
+       [] state = a2 -->
+            state' = IF A2' THEN a2 ELSIF A3' THEN a3 ELSE bad ENDIF
+
+       [] state = a3 -->
+            state' = IF A3' THEN a3
+                     ELSIF A2' THEN a2
+                     ELSIF A4' THEN a4
+                     ELSIF A1' THEN a1
+                     ELSE bad ENDIF
+
+       [] state = a4 -->
+            state' = IF A4' THEN a4 ELSIF A5' THEN a5 ELSE bad ENDIF
+
+       [] state = a5 -->
+            state' = IF A5' THEN a5
+                     ELSIF A4' THEN a4
+                     ELSIF A6' THEN a6
+                     ELSIF A8' THEN a8
+                     ELSE bad ENDIF
+
+       [] state = a6 -->
+            state' = IF A6' THEN a6 ELSIF A7' THEN a7 ELSE bad ENDIF
+
+       [] state = a7 -->
+            state' = IF A7' THEN a7
+                     ELSIF A4' THEN a4 
+                     ELSIF A6' THEN a6
+                     ELSIF A1' THEN a1
+                     ELSE bad ENDIF
+
+       [] state = a8 -->
+            state' = IF A8' THEN a8 ELSIF A9' THEN a9 ELSE bad ENDIF
+
+       [] state = a9 -->
+            state' = IF A9' THEN a9 ELSIF A8' THEN a8 ELSE bad ENDIF
+
+       [] ELSE --> state' = state
+       ]
+     END;
+
+
+
+   %---------------
+   %  Full system
+   %---------------
+
+   system: MODULE = tta || hub_abstractor || hub_monitor
+                      || abstractor || monitor;
+
+
+
+   %----------
+   %  Lemmas
+   %----------
+
+   % time_aux0 to time_aux3: by induction at depth 1
+
+   time_aux0: LEMMA
+     system |- G(time >= 0);
+
+   time_aux1: LEMMA
+     system |- G(FORALL (i: ID): time <= time_out[i]);
+
+   time_aux2: LEMMA
+     system |-
+       G(FORALL (i: NODE_ID): event_pending?(cal, i) =>
+           event_time(cal, i) - delta2 <= time AND time <= event_time(cal, i));
+
+   time_aux3: LEMMA
+     system |-
+       G(FORALL (i: NODE_ID): hub_event_pending?(cal, i) =>
+           event_time(cal, i) - delta1 <= time AND time <= event_time(cal, i));
+
+
+   %----------------------------------
+   %  Abstraction lemmas for the hub
+   %----------------------------------
+
+   abstract_b1: LEMMA system |- G(hub_abs = b1 => B1);
+   abstract_b2: LEMMA system |- G(hub_abs = b2 => B2);
+   abstract_b3: LEMMA system |- G(hub_abs = b3 => B3);
+   abstract_b4: LEMMA system |- G(hub_abs = b4 => B4);
+   abstract_b5: LEMMA system |- G(hub_abs = b5 => B5);
+   abstract_b6: LEMMA system |- G(hub_abs = b6 => B6);
+   abstract_b7: LEMMA system |- G(hub_abs = b7 => B7);
+   abstract_b8: LEMMA system |- G(hub_abs = b8 => B8);
+   abstract_b9: LEMMA system |- G(hub_abs = b9 => B9);
+
+   abstract_b: LEMMA
+     system |- G((hub_abs = b1 => B1) AND (hub_abs = b2 => B2)
+                 AND (hub_abs = b3 => B3) AND (hub_abs = b4 => B4)
+                 AND (hub_abs = b5 => B5) AND (hub_abs = b6 => B6)
+                 AND (hub_abs = b7 => B7) AND (hub_abs = b8 => B8)
+                 AND (hub_abs = b9 => B9));
+
+   abstract_hub_invar: LEMMA system |- G(hub_abs /= hub_bad);
+
+   abstract_hub_invar2: LEMMA
+      system |- G(B1 OR B2 OR B3 OR B4 OR B5 OR B6 OR B7 OR B8 OR B9);
+
+
+
+   %------------------
+   %  hub invariants
+   %------------------
+
+   % induction at depth 1, using abstract_hub_invar as lemma
+
+   time_aux4: LEMMA
+      system |- G(hub_reception <= time);
+
+   % induction at depth 1
+
+   hub_listen: LEMMA
+     system |- G(hub_state = hub_listen => channel_state = open);
+
+   % depth 1, with time_aux2 and hub_listen as lemmas
+
+   hub_transmission: LEMMA
+     system |-
+       G(FORALL (i: NODE_ID): event_pending?(cal, i) =>
+            hub_reception <= time AND event_time(cal, i) = hub_reception + delta2
+              AND channel_state = close AND time_out[0] > hub_reception + delta2);
+
+   % weaker version
+
+   hub_transmission2: LEMMA
+     system |-
+       G(FORALL (i: NODE_ID): event_pending?(cal, i) =>
+            hub_reception <= time AND event_time(cal, i) = hub_reception + delta2);
+
+   %--------------------------------------------------------------------------
+   % content of the frame transmitted by the bus, depending on the hub state
+   %  in hub_listen --> no transmission
+   %  in cs_tentative --> cs_frame from last_id node
+   %  in i_tentative --> i_frame from last_id node
+   %  in active --> i_frame from predecessor of next_id
+   %--------------------------------------------------------------------------
+
+   % depth 0, from lemmas hub_listen and hub_transmission
+   % (or depth 1 from hub_transmission)
+
+   frame_aux1: LEMMA
+     system |-
+       G(FORALL (i: NODE_ID): hub_state = hub_listen => NOT event_pending?(cal, i));
+
+   % depth 1, from hub_listen and hub_transmission
+
+   frame_aux2: LEMMA
+     system |-
+       G(FORALL (i: NODE_ID): event_pending?(cal, i) AND hub_state = cs_tentative =>
+           content(cal, i) = cs_frame AND frame_origin(cal, i) = last_id
+              AND next_id = 1);
+
+   % depth 1, from hub_transmission
+
+   frame_aux3: LEMMA
+     system |-
+       G(FORALL (i: NODE_ID): event_pending?(cal, i) AND hub_state = i_tentative =>
+            content(cal, i) = cs_frame AND frame_origin(cal, i) = last_id
+	       AND next_id = inc(last_id));
+
+   % depth 1, from hub_transmission
+
+   frame_aux4: LEMMA
+     system |-
+       G(FORALL (i: NODE_ID): event_pending?(cal, i) AND hub_state = hub_active =>
+            content(cal, i) = i_frame AND frame_origin(cal, i) = last_id
+               AND next_id = inc(last_id));
+
+
+   %---------------------------------------------------------------
+   % Content of the frame transmitted by a node i to the bus
+   % depending on the node's state
+   %  in init or listen --> no transmission
+   %  in coldstart --> cs_frame with origin = i
+   %  in active --> cs_frame with origin = i and when slot[i] = i
+   %---------------------------------------------------------------
+
+   % depth 1
+
+   frame_aux5: LEMMA
+     system |-
+       G(FORALL (i: NODE_ID): pc[i] = init => NOT hub_event_pending?(cal, i));
+
+   % depth 1, with frame_aux5 as a lemma
+
+   frame_aux6: LEMMA
+     system |-
+       G(FORALL (i: NODE_ID): pc[i] = listen => NOT hub_event_pending?(cal, i));
+
+   % depth 1
+
+   frame_aux7: LEMMA
+     system |-
+       G(FORALL (i: NODE_ID): hub_event_pending?(cal, i) AND pc[i] = coldstart =>
+           content(cal, i) = cs_frame AND frame_origin(cal, i) = i AND
+              event_time(cal, i) = time_out[i] + delta1 - tau_coldstart(i));
+
+   % depth 1, with time_aux3 as a lemma
+
+   frame_aux8: LEMMA
+     system |-
+       G(FORALL (i: NODE_ID): hub_event_pending?(cal, i) AND pc[i] = active =>
+           content(cal, i) = i_frame AND frame_origin(cal, i) = i AND slot[i] = i
+             AND event_time(cal, i) = time_out[i] + delta1 - slot_time);
+
+
+   %------------------
+   %  Node invariant
+   %------------------
+
+   % depth 1
+
+   faulty_id: LEMMA
+     system |- G(FORALL (i: NODE_ID): pc[i] = faulty => i = faulty_node);
+
+
+
+   %------------------------------------------
+   %  Abstraction lemmas for the full system
+   %------------------------------------------
+
+   abstract_a1: LEMMA system |- G(state = a1 => A1);
+   abstract_a2: LEMMA system |- G(state = a2 => A2);
+   abstract_a3: LEMMA system |- G(state = a3 => A3);
+   abstract_a4: LEMMA system |- G(state = a4 => A4);
+   abstract_a5: LEMMA system |- G(state = a5 => A5);
+   abstract_a6: LEMMA system |- G(state = a6 => A6);
+   abstract_a7: LEMMA system |- G(state = a7 => A7);
+   abstract_a8: LEMMA system |- G(state = a8 => A8);
+   abstract_a9: LEMMA system |- G(state = a9 => A9);
+
+   abstract_a: LEMMA
+     system |- G((state = a1 => A1) AND (state = a2 => A2)
+                 AND (state = a3 => A3) AND (state = a4 => A4)
+                 AND (state = a5 => A5) AND (state = a6 => A6)
+                 AND (state = a7 => A7) AND (state = a8 => A8)
+                 AND (state = a9 => A9));
+
+   abstract_invar: LEMMA system |- G(state /= bad);
+
+   %
+   %  Safety property
+   %
+
+   synchro: THEOREM
+     tta |- G(FORALL (i, j: NODE_ID): pc[i] = active AND pc[j] = active AND
+		time < time_out[i] AND time < time_out[j] 
+                  AND (event_pending?(cal, i) => time < event_time(cal, i))
+                    AND (event_pending?(cal, j)  => time < event_time(cal, j))
+                        => time_out[i] = time_out[j] AND slot[i] = slot[j]);
+
+END
