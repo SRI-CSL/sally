@@ -14,6 +14,7 @@
 #include "parser/parser.h"
 #include "engine/factory.h"
 #include "smt/factory.h"
+#include "utils/trace.h"
 
 using namespace std;
 using namespace boost::program_options;
@@ -76,9 +77,8 @@ int main(int argc, char* argv[]) {
 
     // Go through all the files and run them
     for (size_t i = 0; i < files.size(); ++i) {
-      if (output::get_verbosity(cout) > 0) {
-        cout << "Processing " << files[i] << endl;
-      }
+
+      MSG(1) << "Processing " << files[i] << endl;
 
       // Create the parser
       parser::input_language language = parser::parser::guess_language(files[i]);
@@ -86,9 +86,8 @@ int main(int argc, char* argv[]) {
 
       // Parse an process each command
       for (parser::command* cmd = mcmt_parser.parse_command(); cmd != 0; delete cmd, cmd = mcmt_parser.parse_command()) {
-        if (output::get_verbosity(cout) > 2) {
-          cout << "Got command " << *cmd << endl;
-        }
+
+        MSG(2) << "Got command " << *cmd << endl;
         // Run the command
         cmd->run(&ctx, engine_to_use);
       }

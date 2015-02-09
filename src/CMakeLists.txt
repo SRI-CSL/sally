@@ -9,6 +9,8 @@ endforeach(DIR)
 add_executable(sally sally.cpp)
 if (SALLY_STATIC_BUILD)
 	set_target_properties(sally PROPERTIES LINK_FLAGS "-static")
+	set_target_properties (sally PROPERTIES LINK_SEARCH_START_STATIC ON)
+  set_target_properties (sally PROPERTIES LINK_SEARCH_END_STATIC ON)
 endif()
 
 # Check depends on the binary
@@ -21,14 +23,14 @@ foreach(DIR ${sally_SRC_DIRS})
 endforeach(DIR)
 
 # Link in all the other libraries
-target_link_libraries(sally ${sally_LIBS} ${Boost_LIBRARIES} ${ANTLR3C_LIBRARY})
+target_link_libraries(sally ${sally_LIBS})
 if (YICES2_FOUND)
   target_link_libraries(sally ${YICES2_LIBRARY})
 endif()
 if (MATHSAT5_FOUND)
   target_link_libraries(sally ${MATHSAT5_LIBRARY})
 endif()
-target_link_libraries(sally ${GMP_LIBRARY})
+target_link_libraries(sally ${Boost_LIBRARIES} ${ANTLR3C_LIBRARY} ${GMP_LIBRARY})
 
 # Add tests
 

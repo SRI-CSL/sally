@@ -18,3 +18,5 @@
 #else
 #define TRACE(tag) if (sally::output::trace_tag_is_enabled(tag)) sally::output::get_trace_stream()
 #endif
+
+#define MSG(verbosity) if (sally::output::get_verbosity(sally::output::get_msg_stream(false)) >= verbosity) sally::output::get_msg_stream(true)

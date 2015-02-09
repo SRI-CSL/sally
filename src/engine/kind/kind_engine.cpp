@@ -10,6 +10,8 @@
 #include "smt/factory.h"
 #include "system/state_trace.h"
 
+#include "utils/trace.h"
+
 #include <sstream>
 #include <iostream>
 
@@ -83,18 +85,14 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
   unsigned k = 0;
   while (true) {
 
-    if (output::get_verbosity(std::cout) > 0) {
-      std::cout << "K-Induction: checking initialization " << k << std::endl;
-    }
+    MSG(1) << "K-Induction: checking initialization " << k << std::endl;
 
     // Check the current unrolling (1)
     scope1.push();
     d_solver_1->add(property_not_k, smt::solver::CLASS_A);
     smt::solver::result r_1 = d_solver_1->check();
 
-    if (output::get_verbosity(std::cout) > 0) {
-      std::cout << "K-Induction: got " << r_1 << std::endl;
-    }
+    MSG(1) << "K-Induction: got " << r_1 << std::endl;
 
     // See what happened
     switch(r_1) {
@@ -127,8 +125,8 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
 
     // Should we do the check at k
     bool check_consecution = k >= kind_min;
-    if (check_consecution && output::get_verbosity(std::cout) > 0) {
-      std::cout << "K-Induction: checking consecution " << k << std::endl;
+    if (check_consecution) {
+      MSG(1) << "K-Induction: checking consecution " << k << std::endl;
     }
 
     // Unroll the propety once more
@@ -142,9 +140,7 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
       d_solver_2->add(property_not_k, smt::solver::CLASS_A);
       smt::solver::result r_2 = d_solver_2->check();
 
-      if (output::get_verbosity(std::cout) > 0) {
-        std::cout << "K-Induction: got " << r_2 << std::endl;
-      }
+      MSG(1) << "K-Induction: got " << r_2 << std::endl;
 
       // See what happened
       switch (r_2) {

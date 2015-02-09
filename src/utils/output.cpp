@@ -6,6 +6,7 @@
  */
 
 #include <string>
+#include <ctime>
 #include <iostream>
 #include <boost/unordered_set.hpp>
 
@@ -118,6 +119,33 @@ std::ostream& get_trace_stream() {
   } else {
     return *trace_stream;
   }
+}
+
+static
+std::ostream* msg_stream = 0;
+
+void set_msg_stream(std::ostream& out) {
+  msg_stream = &out;
+}
+
+std::ostream& get_msg_stream(bool show_time) {
+  std::ostream* result;
+  if (trace_stream == 0) {
+    result = &std::cout;
+  } else {
+    result = trace_stream;
+  }
+
+  if (show_time) {
+    time_t now = time(0);
+    struct tm tstruct;
+    char buf[80];
+    tstruct = *localtime(&now);
+    strftime(buf, sizeof(buf), "[%Y-%m-%d.%X] ", &tstruct);
+    *result << buf;
+  }
+
+  return *result;
 }
 
 std::string language_to_string(language lang) {

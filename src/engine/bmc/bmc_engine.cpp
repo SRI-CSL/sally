@@ -8,6 +8,7 @@
 #include "engine/bmc/bmc_engine.h"
 
 #include "smt/factory.h"
+#include "utils/trace.h"
 
 #include <sstream>
 #include <iostream>
@@ -58,18 +59,14 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
     // Check the current unrolling
     if (k >= bmc_min) {
 
-      if (output::get_verbosity(std::cout) > 0) {
-        std::cout << "BMC: checking " << k << std::endl;
-      }
+      MSG(1) << "BMC: checking " << k << std::endl;
 
       scope.push();
       expr::term_ref property_not = tm().mk_term(expr::TERM_NOT, property);
       d_solver->add(d_trace->get_state_formula(property_not, k), smt::solver::CLASS_A);
       smt::solver::result r = d_solver->check();
 
-      if (output::get_verbosity(std::cout) > 0) {
-        std::cout << "BMC: got " << r << std::endl;
-      }
+      MSG(1) << "BMC: got " << r << std::endl;
 
       // See what happened
       switch (r) {

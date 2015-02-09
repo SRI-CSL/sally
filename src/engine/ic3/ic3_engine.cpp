@@ -153,8 +153,8 @@ void ic3_engine::add_to_induction_obligations(size_t k, expr::term_ref f, size_t
 }
 
 void ic3_engine::ensure_frame(size_t k) {
-  if (d_solvers.size() <= k && output::get_verbosity(std::cout) > 0) {
-    std::cout << "ic3: Extending trace to " << k << std::endl;
+  if (d_solvers.size() <= k) {
+    MSG(1) << "ic3: Extending trace to " << k << std::endl;
   }
 
   while (d_solvers.size() <= k) {
@@ -230,9 +230,7 @@ bool ic3_engine::check_reachable(size_t k, expr::term_ref f) {
 
 bool ic3_engine::check_valid_and_add(size_t k, expr::term_ref f, size_t depth) {
 
-  if (output::get_verbosity(std::cout) > 0) {
-     std::cout << "ic3: checking validity" << std::endl;
-  }
+  MSG(1) << "ic3: checking validity" << std::endl;
 
   ensure_frame(k);
 

@@ -64,6 +64,12 @@ void set_trace_stream(std::ostream& out);
 /** Get the trace stream */
 std::ostream& get_trace_stream();
 
+/** Set the message stream */
+void set_msg_stream(std::ostream& out);
+
+/** Get the message stream */
+std::ostream& get_msg_stream(bool show_time);
+
 /** Enable trace for given tag */
 void trace_tag_enable(std::string tag);
 
