@@ -23,18 +23,25 @@ options {
   parser::mcmt_state* pState;
 }
 
-start_rule : command;
-
 /** Parses a command */
 command returns [parser::command* cmd = 0] 
+  : internal_command* c = system_command { $cmd = c; }
+  | internal_command* EOF { $cmd = 0; } 
+  ;
+
+/** Parser an internal command */
+internal_command
+  : define_constant
+  ; 
+
+/** Parses a system definition command */  
+system_command returns [parser::command* cmd = 0] 
   : c = declare_state_type       { $cmd = c; }
   | c = define_states            { $cmd = c; }
   | c = define_transition        { $cmd = c; }
   | c = define_transition_system { $cmd = c; }
   | c = assume                   { $cmd = c; }                    
   | c = query                    { $cmd = c; }
-  | define_constant c = command  { $cmd = c; }
-  | EOF { $cmd = 0; } 
   ;
   
 /** Declaration of a state type */
@@ -166,7 +173,7 @@ define_constant
   std::string id;
 }
   : '(' 'define-constant'
-    symbol[id, parser::MCMT_TRANSITION_SYSTEM, false] 
+    symbol[id, parser::MCMT_VARIABLE, false] 
     c = constant { STATE->set_variable(id, c); }
     ')'
   ; 
