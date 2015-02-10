@@ -463,6 +463,12 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, size_t depth) {
       break;
     }
 
+    // If we're doing property directed, don't check for reachability
+    if (ctx().get_options().get_bool("ic3-pdr")) {
+      inductive = false;
+      break;
+    }
+
     // Check if G is reachable
     bool reachable = check_reachable(k, G);
 
