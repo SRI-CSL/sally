@@ -464,7 +464,7 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, size_t depth) {
     }
 
     // If we're doing property directed, don't check for reachability
-    if (ctx().get_options().get_bool("ic3-pdr")) {
+    if (ctx().get_options().get_bool("ic3-pdr") && f != d_property->get_formula()) {
       inductive = false;
       break;
     }
