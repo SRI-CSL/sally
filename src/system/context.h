@@ -17,7 +17,7 @@
 #include "utils/options.h"
 #include "utils/exception.h"
 #include "utils/symbol_table.h"
-
+#include "utils/statistics.h"
 
 namespace sally {
 namespace system {
@@ -31,7 +31,7 @@ class context {
 public:
 
   /** Construct the parser state */
-  context(expr::term_manager& tm, const options& opts);
+  context(expr::term_manager& tm, const options& opts, utils::statistics& stats);
 
   /** Returns the term manager for the parser */
   expr::term_manager& tm() const { return d_term_manager; }
@@ -90,6 +90,12 @@ public:
   /** Get the command line options */
   const options& get_options() const;
 
+  /** Get the statistics */
+  const utils::statistics& get_statistics() const;
+
+  /** Add a statistic (takes over the pointer */
+  void add_statistic(utils::stat* stat);
+
 private:
 
   /** The term manager */
@@ -107,8 +113,11 @@ private:
   /** Symbol table for transition systems */
   utils::symbol_table<transition_system*> d_transition_systems;
 
-  /** Program options, if any */
+  /** Various options */
   const options& d_options;
+
+  /** Statistics manager */
+  utils::statistics& d_stats;
 };
 
 

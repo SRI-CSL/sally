@@ -1,1 +1,1 @@
-add_library(utils output.cpp allocator.cpp exception.cpp options.cpp)
+add_library(utils output.cpp allocator.cpp exception.cpp options.cpp statistics.cpp)

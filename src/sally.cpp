@@ -6,7 +6,9 @@
  */
 
 #include <iostream>
+#include <fstream>
 #include <boost/program_options.hpp>
+#include <boost/thread.hpp>
 
 #include "expr/term_manager.h"
 #include "utils/output.h"
@@ -15,6 +17,7 @@
 #include "engine/factory.h"
 #include "smt/factory.h"
 #include "utils/trace.h"
+#include "utils/statistics.h"
 
 using namespace std;
 using namespace boost::program_options;
@@ -23,7 +26,10 @@ using namespace sally;
 using namespace sally::expr;
 
 /** Parses the program arguments. */
-void parseOptions(int argc, char* argv[], variables_map& variables);
+void parse_options(int argc, char* argv[], variables_map& variables);
+
+/** Prints statistics to the given output */
+void live_stats(const utils::statistics* stats, std::string file);
 
 int main(int argc, char* argv[]) {
 
@@ -31,7 +37,7 @@ int main(int argc, char* argv[]) {
 
     // Get the options from command line and config files
     variables_map boost_opts;
-    parseOptions(argc, argv, boost_opts);
+    parse_options(argc, argv, boost_opts);
     options opts(boost_opts);
 
     // Get the files to run
@@ -63,8 +69,12 @@ int main(int argc, char* argv[]) {
     // Rewrite inequalities if asked to
     tm.set_eq_rewrite(opts.get_bool("arith-eq-to-ineq"));
 
+    // Create the statistics */
+    utils::statistics stats;
+    stats.add_statistic(new utils::stat_timer("sally::time", true));
+
     // Create the context
-    system::context ctx(tm, opts);
+    system::context ctx(tm, opts, stats);
 
     // Set the default solver for the solver factory
     smt::factory::set_default_solver(opts.get_string("solver"));
@@ -75,6 +85,13 @@ int main(int argc, char* argv[]) {
       engine_to_use = factory::mk_engine(boost_opts.at("engine").as<string>(), ctx);
     }
 
+    // Setup live stats if asked
+    boost::thread *stats_worker = 0;
+    if (opts.has_option("live-stats")) {
+      std::string stats_out = opts.get_string("live-stats");
+      stats_worker = new boost::thread(live_stats, &stats, stats_out);
+    }
+
     // Go through all the files and run them
     for (size_t i = 0; i < files.size(); ++i) {
 
@@ -82,10 +99,10 @@ int main(int argc, char* argv[]) {
 
       // Create the parser
       parser::input_language language = parser::parser::guess_language(files[i]);
-      parser::parser mcmt_parser(ctx, language, files[i].c_str());
+      parser::parser p(ctx, language, files[i].c_str());
 
       // Parse an process each command
-      for (parser::command* cmd = mcmt_parser.parse_command(); cmd != 0; delete cmd, cmd = mcmt_parser.parse_command()) {
+      for (parser::command* cmd = p.parse_command(); cmd != 0; delete cmd, cmd = p.parse_command()) {
 
         MSG(2) << "Got command " << *cmd << endl;
         // Run the command
@@ -96,6 +113,12 @@ int main(int argc, char* argv[]) {
     // Delete the engine
     if (engine_to_use != 0) {
       delete engine_to_use;
+    }
+
+    // Stop the live stats thread
+    if (stats_worker) {
+      stats_worker->interrupt();
+      stats_worker->join();
     }
   } catch (sally::exception& e) {
     cerr << e << endl;
@@ -140,7 +163,7 @@ std::string get_output_languages_list() {
   return out.str();
 }
 
-void parseOptions(int argc, char* argv[], variables_map& variables)
+void parse_options(int argc, char* argv[], variables_map& variables)
 {
   // Define the main options
   options_description description("General options");
@@ -158,6 +181,7 @@ void parseOptions(int argc, char* argv[], variables_map& variables)
       ("output-language", value<string>()->default_value("mcmt"), get_output_languages_list().c_str())
       ("arith-eq-to-ineq", "Rewrite equalities into inqualities.")
       ("lsal-extensions", "Use lsal extensions to the MCMT language")
+      ("live-stats", value<string>(), "Output live statistic to the given file.")
       ;
 
   // Get the individual engine options
@@ -190,5 +214,33 @@ void parseOptions(int argc, char* argv[], variables_map& variables)
     } else {
       exit(0);
     }
+  }
+}
+
+void live_stats(const utils::statistics* stats, std::string file) {
+
+  ostream* out = 0;
+  ofstream* of_out = 0;
+
+  if (file == "-") {
+    out = &cout;
+  } else {
+    out = of_out = new ofstream(file.c_str());
+  }
+
+  // Output headers
+  stats->headers_to_stream(*out);
+  *out << std::endl;
+
+  try {
+    // Output stats
+    for (;;) {
+      boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+      *out << *stats << endl;
+    }
+  } catch (boost::thread_interrupted&) {}
+
+  if (of_out) {
+    delete of_out;
   }
 }

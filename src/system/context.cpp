@@ -10,13 +10,14 @@
 namespace sally {
 namespace system {
 
-context::context(expr::term_manager& tm, const options& opts)
+context::context(expr::term_manager& tm, const options& opts, utils::statistics& stats)
 : d_term_manager(tm)
 , d_state_types("state types")
 , d_state_formulas("state formulas")
 , d_transition_formulas("state transition formulas")
 , d_transition_systems("state transition systems")
 , d_options(opts)
+, d_stats(stats)
 {
 }
 
@@ -134,6 +135,13 @@ const options& context::get_options() const {
   return d_options;
 }
 
-}
+const utils::statistics& context::get_statistics() const {
+  return d_stats;
 }
 
+void context::add_statistic(utils::stat* stat) {
+  d_stats.add_statistic(stat);
+}
+
+}
+}

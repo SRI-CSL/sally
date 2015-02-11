@@ -22,7 +22,7 @@ endif()
 add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND})
 
 # Find the Boost libraries
-find_package(Boost 1.53.0 COMPONENTS program_options iostreams REQUIRED)
+find_package(Boost 1.53.0 COMPONENTS program_options iostreams thread system REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 
 # Come settings based on word size

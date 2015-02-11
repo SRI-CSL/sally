@@ -38,6 +38,7 @@ ic3_engine::ic3_engine(const system::context& ctx)
 , d_transition_system(0)
 , d_property(0)
 {
+
 }
 
 std::ostream& operator << (std::ostream& out, const ic3_engine& ic3) {
