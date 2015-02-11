@@ -228,7 +228,7 @@ bool ic3_engine::check_reachable(size_t k, expr::term_ref f) {
   return reachable;
 }
 
-bool ic3_engine::check_valid_and_add(size_t k, expr::term_ref f, size_t depth) {
+bool ic3_engine::check_valid(size_t k, expr::term_ref f) {
 
   MSG(1) << "ic3: checking validity" << std::endl;
 
@@ -245,8 +245,6 @@ bool ic3_engine::check_valid_and_add(size_t k, expr::term_ref f, size_t depth) {
     // Invalid, property is not valid
     return false;
   case smt::solver::UNSAT:
-    // Valid, we continue with P
-    add_valid_up_to(k, f);
     return true;
   default:
     throw exception("Unknown SMT result.");
@@ -514,10 +512,11 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 
   // Add the property we're trying to prove
   expr::term_ref P = d_property->get_formula();
-  bool P_valid = check_valid_and_add(0, P, 0);
+  bool P_valid = check_valid(0, P);
   if (!P_valid) {
     return engine::INVALID;
   } else {
+    d_frame_content[0].insert(P);
     add_to_induction_obligations(0, P, 0);
   }
 

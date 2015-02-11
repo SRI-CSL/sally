@@ -120,9 +120,8 @@ class ic3_engine : public engine {
   void ensure_frame(size_t k);
 
   /**
-   * Check if f is holds at frame k and add it if it does. Note that this adds
-   * redundant facts. We use it to check the property in the initial states. */
-  bool check_valid_and_add(size_t k, expr::term_ref f, size_t depth);
+   * Check if f is holds at frame k. */
+  bool check_valid(size_t k, expr::term_ref f);
 
   /**
    * Assuming f is satisfiable at k, check if f is reachable at k. During
