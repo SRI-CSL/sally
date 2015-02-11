@@ -124,27 +124,27 @@ expr::term_ref ic3_engine::check_inductive_at(size_t k, expr::term_ref F) {
   return result;
 }
 
+void ic3_engine::add_valid_to_init(expr::term_ref f) {
+  TRACE("ic3") << "ic3: adding to init : " << f << std::endl;
+  assert(!frame_contains(0, f));
+  ensure_frame(0);
+  d_frame_content[0].insert(f);
+  get_solver(0)->add(f, smt::solver::CLASS_A);
+}
+
 void ic3_engine::add_valid_up_to(size_t k, expr::term_ref F) {
   TRACE("ic3") << "ic3: adding at " << k << ": " << F << std::endl;
+  assert(k > 0);
 
   // Ensure frame is setup
   ensure_frame(k);
-
-  if (k == 0) {
-    // Special case for adding to 0 frame
-    if (!frame_contains(0, F)) {
-      d_frame_content[0].insert(F);
-      get_solver(0)->add(F, smt::solver::CLASS_A);
+  // Add to all frames from 1..k (not adding to 0, intiial states need no refinement)
+  for(int i = k; i >= 1; -- i) {
+    if (frame_contains(i, F)) {
+      break;
     }
-  } else {
-    // Add to all frames from 1..k (not adding to 0, intiial states need no refinement)
-    for(int i = k; i >= 1; -- i) {
-      if (frame_contains(i, F)) {
-        break;
-      }
-      d_frame_content[i].insert(F);
-      get_solver(i)->add(F, smt::solver::CLASS_A);
-    }
+    d_frame_content[i].insert(F);
+    get_solver(i)->add(F, smt::solver::CLASS_A);
   }
 }
 
@@ -507,7 +507,7 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 
   // Add the initial state
   expr::term_ref I = d_transition_system->get_initial_states();
-  add_valid_up_to(0, I);
+  add_valid_to_init(I);
   add_to_induction_obligations(0, I, 0);
 
   // Add the property we're trying to prove

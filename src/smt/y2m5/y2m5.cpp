@@ -99,6 +99,14 @@ void y2m5::interpolate(std::vector<expr::term_ref>& out) {
   d_mathsat5->interpolate(out);
 }
 
+void y2m5::get_unsat_core(std::vector<expr::term_ref>& out) {
+  TRACE("y2m5") << "y2m5[" << s_instance << "]: unsat core" << std::endl;
+  result mathsat5_result  = d_mathsat5->check();
+  unused_var(mathsat5_result);
+  assert(mathsat5_result == UNSAT);
+  d_mathsat5->get_unsat_core(out);
+}
+
 void y2m5::add_x_variable(expr::term_ref x_var) {
   solver::add_x_variable(x_var);
   d_yices2->add_x_variable(x_var);

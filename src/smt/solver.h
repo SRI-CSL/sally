@@ -77,7 +77,8 @@ public:
   /** Solver features */
   enum feature {
     GENERALIZATION,
-    INTERPOLATION
+    INTERPOLATION,
+    UNSAT_CORE,
   };
 
   /**
@@ -184,6 +185,15 @@ public:
   void interpolate(std::vector<expr::term_ref>& out) {
     throw exception("interpolate() not supported by solver " + d_name);
   };
+
+  /**
+   * Get the unsat core of an unsatisfiable answer, i.e. return a set of
+   * assertions that are unsat.
+   */
+  virtual
+  void get_unsat_core(std::vector<expr::term_ref>& out) {
+    throw exception("get_unsat_core() not supported by solver " + d_name);
+  }
 
   /**
    * Same as above, but returns a single expressions.

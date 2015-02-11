@@ -1,0 +1,2649 @@
+;; Message enum 
+(define-constant cs_frame 0)
+(define-constant i_frame 1)
+
+;; PC enum 
+(define-constant init 0)
+(define-constant listen 1)
+(define-constant coldstart 2)
+(define-constant active 3)
+
+;; Times
+(define-constant slot_time 3)
+
+;; State type (all TCCs added to the assumptions)
+(declare-state-type state_type (
+      (cal!content Real)
+      (cal!delivery Real)
+      (cal!flag!0 Bool)
+      (cal!flag!1 Bool)
+      (cal!flag!2 Bool)
+      (cal!flag!3 Bool)
+      (cal!flag!4 Bool)
+      (cal!flag!5 Bool)
+      (cal!flag!6 Bool)
+      (cal!flag!7 Bool)
+      (cal!flag!8 Bool)
+      (cal!flag!9 Bool)
+      (cal!origin Real)
+      (cal!send Real)
+      (pc!0 Real)
+      (pc!1 Real)
+      (pc!2 Real)
+      (pc!3 Real)
+      (pc!4 Real)
+      (pc!5 Real)
+      (pc!6 Real)
+      (pc!7 Real)
+      (pc!8 Real)
+      (pc!9 Real)
+      (slot!0 Real)
+      (slot!1 Real)
+      (slot!2 Real)
+      (slot!3 Real)
+      (slot!4 Real)
+      (slot!5 Real)
+      (slot!6 Real)
+      (slot!7 Real)
+      (slot!8 Real)
+      (slot!9 Real)
+      (time Real)
+      (time_out!0 Real)
+      (time_out!1 Real)
+      (time_out!2 Real)
+      (time_out!3 Real)
+      (time_out!4 Real)
+      (time_out!5 Real)
+      (time_out!6 Real)
+      (time_out!7 Real)
+      (time_out!8 Real)
+      (time_out!9 Real)
+      (choice!3 Real)
+      (choice!2 Real)
+      (choice!1 Real)
+      (propagation Real)
+))
+
+;; Initial states
+(define-states initial_states state_type 
+        (and
+          (= time 0)
+          (= pc!0 init)
+          (= pc!1 init)
+          (= pc!2 init)
+          (= pc!3 init)
+          (= pc!4 init)
+          (= pc!5 init)
+          (= pc!6 init)
+          (= pc!7 init)
+          (= pc!8 init)
+          (= pc!9 init)
+          (and (< time time_out!0) (< time_out!0 30))
+          (and (< time time_out!1) (< time_out!1 30))
+          (and (< time time_out!2) (< time_out!2 30))
+          (and (< time time_out!3) (< time_out!3 30))
+          (and (< time time_out!4) (< time_out!4 30))
+          (and (< time time_out!5) (< time_out!5 30))
+          (and (< time time_out!6) (< time_out!6 30))
+          (and (< time time_out!7) (< time_out!7 30))
+          (and (< time time_out!8) (< time_out!8 30))
+          (and (< time time_out!9) (< time_out!9 30))
+          (= cal!content i_frame)
+          (= cal!delivery 0)
+          (= cal!flag!0 false)
+          (= cal!flag!1 false)
+          (= cal!flag!2 false)
+          (= cal!flag!3 false)
+          (= cal!flag!4 false)
+          (= cal!flag!5 false)
+          (= cal!flag!6 false)
+          (= cal!flag!7 false)
+          (= cal!flag!8 false)
+          (= cal!flag!9 false)
+          (= cal!origin 1)
+          (= cal!send 0)
+          (< 0 propagation)
+          (< propagation (/ slot_time 2))
+  	)
+)
+
+;; Transition relation
+(define-transition transition state_type 
+   (and 
+        (= propagation' propagation)
+        (let ((cs!1463 (+ time 3))
+              (cs!1474 (+ time 54))
+              (cs!1489 (+ time 57))
+              (cs!1511 (+ time 30))
+              (cs!1529 (+ time 33))
+              (cs!1547 (+ time 36))
+              (cs!1565 (+ time 39))
+              (cs!1588 (+ time 42))
+              (cs!1609 (+ time 45))
+              (cs!1628 (+ time 48))
+              (cs!1647 (+ time 51))
+              (cs!1669 (= pc!8' coldstart))
+              (cs!1674 (= pc!8' active))
+              (cs!1681 (= choice!1 0))
+              (cs!1682 (= choice!1 1))
+              (cs!1684 (= choice!1 2))
+              (cs!1685 (= choice!1 3))
+              (cs!1686 (= pc!9' coldstart))
+              (cs!1687 (= choice!1 4))
+              (cs!1689 (= choice!1 5))
+              (cs!1691 (= choice!1 6))
+              (cs!1694 (= pc!9' active))
+              (cs!1697 (= choice!1 7))
+              (cs!1698
+                     (and
+                       (= cal!content' cal!content)
+                       (= cal!delivery' cal!delivery)
+                       (= cal!flag!0' cal!flag!0)
+                       (= cal!flag!1' cal!flag!1)
+                       (= cal!flag!2' cal!flag!2)
+                       (= cal!flag!3' cal!flag!3)
+                       (= cal!flag!4' cal!flag!4)
+                       (= cal!flag!5' cal!flag!5)
+                       (= cal!flag!6' cal!flag!6)
+                       (= cal!flag!7' cal!flag!7)
+                       (= cal!flag!8' cal!flag!8)
+                       (= cal!flag!9' cal!flag!9)
+                       (= cal!origin' cal!origin)
+                       (= cal!send' cal!send)))
+              (cs!1699 (= choice!1 8))
+              (cs!1703 (+ time propagation))
+              (cs!1704 (= choice!1 9))
+              (cs!1740 (= pc!0' coldstart))
+              (cs!1747 (= pc!0' active))
+              (cs!1761 (= pc!1' coldstart))
+              (cs!1765 (= pc!1' active))
+              (cs!1773 (= pc!2' coldstart))
+              (cs!1777 (= pc!2' active))
+              (cs!1788 (= pc!3' coldstart))
+              (cs!1795 (= pc!3' active))
+              (cs!1809 (= pc!4' coldstart))
+              (cs!1816 (= pc!4' active))
+              (cs!1829 (= pc!5' coldstart))
+              (cs!1833 (= pc!5' active))
+              (cs!1841 (= pc!6' coldstart))
+              (cs!1845 (= pc!6' active))
+              (cs!1853 (= pc!7' coldstart))
+              (cs!1857 (= pc!7' active)))
+          (let ((cs!1648 (- cs!1463 propagation))
+                (cs!1668 (= pc!8 init))
+                (cs!1670 (= pc!0 init))
+                (cs!1671 (= time_out!8' cs!1474))
+                (cs!1672 (= pc!8 listen))
+                (cs!1673 (= pc!8 coldstart))
+                (cs!1676 (= slot!8' cal!origin))
+                (cs!1677 (= time time_out!8))
+                (cs!1678 (= time_out!8' cs!1463))
+                (cs!1679 (= pc!8 active))
+                (cs!1683 (= pc!9 init))
+                (cs!1688 (= cal!content cs_frame))
+                (cs!1690 (= time_out!9' cs!1489))
+                (cs!1692 (= pc!9 listen))
+                (cs!1693 (= pc!9 coldstart))
+                (cs!1696 (= slot!9' cal!origin))
+                (cs!1700 (= time time_out!9))
+                (cs!1701 (= time_out!9' cs!1463))
+                (cs!1705 (= pc!9 active))
+                (cs!1706 (= cal!content i_frame))
+                (cs!1707 (= time cal!delivery))
+                (cs!1709 (= pc!9' pc!9))
+                (cs!1710 (= slot!9' slot!9))
+                (cs!1711 (= time_out!9' time_out!9))
+                (cs!1712 (< time time_out!0))
+                (cs!1713 (= pc!0' pc!0))
+                (cs!1714 (= slot!0' slot!0))
+                (cs!1715 (= time_out!0' time_out!0))
+                (cs!1716 (= pc!1' pc!1))
+                (cs!1717 (= slot!1' slot!1))
+                (cs!1718 (= time_out!1' time_out!1))
+                (cs!1719 (= pc!2' pc!2))
+                (cs!1720 (= slot!2' slot!2))
+                (cs!1721 (= time_out!2' time_out!2))
+                (cs!1722 (= pc!3' pc!3))
+                (cs!1723 (= slot!3' slot!3))
+                (cs!1724 (= time_out!3' time_out!3))
+                (cs!1725 (= pc!4' pc!4))
+                (cs!1726 (= slot!4' slot!4))
+                (cs!1727 (= time_out!4' time_out!4))
+                (cs!1728 (= pc!5' pc!5))
+                (cs!1729 (= slot!5' slot!5))
+                (cs!1730 (= time_out!5' time_out!5))
+                (cs!1731 (= pc!6' pc!6))
+                (cs!1732 (= slot!6' slot!6))
+                (cs!1733 (= time_out!6' time_out!6))
+                (cs!1734 (= pc!7' pc!7))
+                (cs!1735 (= slot!7' slot!7))
+                (cs!1736 (= time_out!7' time_out!7))
+                (cs!1737 (= pc!8' pc!8))
+                (cs!1738 (= slot!8' slot!8))
+                (cs!1739 (= time_out!8' time_out!8))
+                (cs!1741 (< time time_out!1))
+                (cs!1742 (< time time_out!2))
+                (cs!1743 (= time_out!0' cs!1511))
+                (cs!1744 (= pc!0 listen))
+                (cs!1745 (= pc!0 coldstart))
+                (cs!1746 (< time time_out!3))
+                (cs!1749 (= slot!0' cal!origin))
+                (cs!1750 (< time time_out!4))
+                (cs!1751 (= time time_out!0))
+                (cs!1752 (= time_out!0' cs!1463))
+                (cs!1753 (< time time_out!5))
+                (cs!1754 (= pc!0 active))
+                (cs!1756 (< time time_out!6))
+                (cs!1757 (< time time_out!7))
+                (cs!1758 (< time time_out!8))
+                (cs!1759 (< time time_out!9))
+                (cs!1760 (= pc!1 init))
+                (cs!1762 (= time_out!1' cs!1529))
+                (cs!1763 (= pc!1 listen))
+                (cs!1764 (= pc!1 coldstart))
+                (cs!1767 (= slot!1' cal!origin))
+                (cs!1768 (= time time_out!1))
+                (cs!1769 (= time_out!1' cs!1463))
+                (cs!1770 (= pc!1 active))
+                (cs!1772 (= pc!2 init))
+                (cs!1774 (= time_out!2' cs!1547))
+                (cs!1775 (= pc!2 listen))
+                (cs!1776 (= pc!2 coldstart))
+                (cs!1779 (= slot!2' cal!origin))
+                (cs!1780 (= time time_out!2))
+                (cs!1781 (= time_out!2' cs!1463))
+                (cs!1782 (= pc!2 active))
+                (cs!1784 (<= time' time_out!0))
+                (cs!1785 (= pc!3 init))
+                (cs!1786 (<= time' time_out!1))
+                (cs!1787 (<= time' time_out!2))
+                (cs!1789 (<= time' time_out!3))
+                (cs!1790 (= time_out!3' cs!1565))
+                (cs!1791 (<= time' time_out!4))
+                (cs!1792 (= pc!3 listen))
+                (cs!1793 (= pc!3 coldstart))
+                (cs!1794 (<= time' time_out!5))
+                (cs!1797 (= slot!3' cal!origin))
+                (cs!1798 (<= time' time_out!6))
+                (cs!1799 (= time time_out!3))
+                (cs!1800 (= time_out!3' cs!1463))
+                (cs!1801 (<= time' time_out!7))
+                (cs!1802 (= pc!3 active))
+                (cs!1804 (<= time' time_out!8))
+                (cs!1805 (<= time' time_out!9))
+                (cs!1806 (= pc!4 init))
+                (cs!1807 (= time' time_out!0))
+                (cs!1808 (= time' time_out!1))
+                (cs!1810 (= time' time_out!2))
+                (cs!1811 (= time' time_out!3))
+                (cs!1812 (= time_out!4' cs!1588))
+                (cs!1813 (= pc!4 listen))
+                (cs!1814 (= time' time_out!4))
+                (cs!1815 (= pc!4 coldstart))
+                (cs!1818 (= slot!4' cal!origin))
+                (cs!1819 (= time' time_out!5))
+                (cs!1820 (= time time_out!4))
+                (cs!1821 (= time' time_out!6))
+                (cs!1822 (= time_out!4' cs!1463))
+                (cs!1823 (= pc!4 active))
+                (cs!1824 (= time' time_out!7))
+                (cs!1826 (= time' time_out!8))
+                (cs!1827 (= time' time_out!9))
+                (cs!1828 (= pc!5 init))
+                (cs!1830 (= time_out!5' cs!1609))
+                (cs!1831 (= pc!5 listen))
+                (cs!1832 (= pc!5 coldstart))
+                (cs!1835 (= slot!5' cal!origin))
+                (cs!1836 (= time time_out!5))
+                (cs!1837 (= time_out!5' cs!1463))
+                (cs!1838 (= pc!5 active))
+                (cs!1840 (= pc!6 init))
+                (cs!1842 (= time_out!6' cs!1628))
+                (cs!1843 (= pc!6 listen))
+                (cs!1844 (= pc!6 coldstart))
+                (cs!1847 (= slot!6' cal!origin))
+                (cs!1848 (= time time_out!6))
+                (cs!1849 (= time_out!6' cs!1463))
+                (cs!1850 (= pc!6 active))
+                (cs!1852 (= pc!7 init))
+                (cs!1854 (= time_out!7' cs!1647))
+                (cs!1855 (= pc!7 listen))
+                (cs!1856 (= pc!7 coldstart))
+                (cs!1859 (= slot!7' cal!origin))
+                (cs!1860 (= time time_out!7))
+                (cs!1861 (= time_out!7' cs!1463))
+                (cs!1862 (= pc!7 active)))
+            (let ((cs!1675 (= time_out!8' cs!1648))
+                  (cs!1680
+                         (and
+                           (= cal!content' cal!content)
+                           (= cal!delivery' cal!delivery)
+                           (= cal!flag!0' cal!flag!0)
+                           (= cal!flag!1' cal!flag!1)
+                           (= cal!flag!2' cal!flag!2)
+                           (= cal!flag!3' cal!flag!3)
+                           (= cal!flag!4' cal!flag!4)
+                           (= cal!flag!5' cal!flag!5)
+                           (= cal!flag!6' cal!flag!6)
+                           (= cal!flag!7' cal!flag!7)
+                           (= cal!flag!8' false)
+                           (= cal!flag!9' cal!flag!9)
+                           (= cal!origin' cal!origin)
+                           (= cal!send' cal!send)))
+                  (cs!1695 (= time_out!9' cs!1648))
+                  (cs!1702
+                         (and
+                           (not cal!flag!0)
+                           (not cal!flag!1)
+                           (not cal!flag!2)
+                           (not cal!flag!3)
+                           (not cal!flag!4)
+                           (not cal!flag!5)
+                           (not cal!flag!6)
+                           (not cal!flag!7)
+                           (not cal!flag!8)
+                           (not cal!flag!9)))
+                  (cs!1708
+                         (and
+                           (= cal!content' cal!content)
+                           (= cal!delivery' cal!delivery)
+                           (= cal!flag!0' cal!flag!0)
+                           (= cal!flag!1' cal!flag!1)
+                           (= cal!flag!2' cal!flag!2)
+                           (= cal!flag!3' cal!flag!3)
+                           (= cal!flag!4' cal!flag!4)
+                           (= cal!flag!5' cal!flag!5)
+                           (= cal!flag!6' cal!flag!6)
+                           (= cal!flag!7' cal!flag!7)
+                           (= cal!flag!8' cal!flag!8)
+                           (= cal!flag!9' false)
+                           (= cal!origin' cal!origin)
+                           (= cal!send' cal!send)))
+                  (cs!1748 (= time_out!0' cs!1648))
+                  (cs!1755
+                         (and
+                           (= cal!content' cal!content)
+                           (= cal!delivery' cal!delivery)
+                           (= cal!flag!0' false)
+                           (= cal!flag!1' cal!flag!1)
+                           (= cal!flag!2' cal!flag!2)
+                           (= cal!flag!3' cal!flag!3)
+                           (= cal!flag!4' cal!flag!4)
+                           (= cal!flag!5' cal!flag!5)
+                           (= cal!flag!6' cal!flag!6)
+                           (= cal!flag!7' cal!flag!7)
+                           (= cal!flag!8' cal!flag!8)
+                           (= cal!flag!9' cal!flag!9)
+                           (= cal!origin' cal!origin)
+                           (= cal!send' cal!send)))
+                  (cs!1766 (= time_out!1' cs!1648))
+                  (cs!1771
+                         (and
+                           (= cal!content' cal!content)
+                           (= cal!delivery' cal!delivery)
+                           (= cal!flag!0' cal!flag!0)
+                           (= cal!flag!1' false)
+                           (= cal!flag!2' cal!flag!2)
+                           (= cal!flag!3' cal!flag!3)
+                           (= cal!flag!4' cal!flag!4)
+                           (= cal!flag!5' cal!flag!5)
+                           (= cal!flag!6' cal!flag!6)
+                           (= cal!flag!7' cal!flag!7)
+                           (= cal!flag!8' cal!flag!8)
+                           (= cal!flag!9' cal!flag!9)
+                           (= cal!origin' cal!origin)
+                           (= cal!send' cal!send)))
+                  (cs!1778 (= time_out!2' cs!1648))
+                  (cs!1783
+                         (and
+                           (= cal!content' cal!content)
+                           (= cal!delivery' cal!delivery)
+                           (= cal!flag!0' cal!flag!0)
+                           (= cal!flag!1' cal!flag!1)
+                           (= cal!flag!2' false)
+                           (= cal!flag!3' cal!flag!3)
+                           (= cal!flag!4' cal!flag!4)
+                           (= cal!flag!5' cal!flag!5)
+                           (= cal!flag!6' cal!flag!6)
+                           (= cal!flag!7' cal!flag!7)
+                           (= cal!flag!8' cal!flag!8)
+                           (= cal!flag!9' cal!flag!9)
+                           (= cal!origin' cal!origin)
+                           (= cal!send' cal!send)))
+                  (cs!1796 (= time_out!3' cs!1648))
+                  (cs!1803
+                         (and
+                           (= cal!content' cal!content)
+                           (= cal!delivery' cal!delivery)
+                           (= cal!flag!0' cal!flag!0)
+                           (= cal!flag!1' cal!flag!1)
+                           (= cal!flag!2' cal!flag!2)
+                           (= cal!flag!3' false)
+                           (= cal!flag!4' cal!flag!4)
+                           (= cal!flag!5' cal!flag!5)
+                           (= cal!flag!6' cal!flag!6)
+                           (= cal!flag!7' cal!flag!7)
+                           (= cal!flag!8' cal!flag!8)
+                           (= cal!flag!9' cal!flag!9)
+                           (= cal!origin' cal!origin)
+                           (= cal!send' cal!send)))
+                  (cs!1817 (= time_out!4' cs!1648))
+                  (cs!1825
+                         (and
+                           (= cal!content' cal!content)
+                           (= cal!delivery' cal!delivery)
+                           (= cal!flag!0' cal!flag!0)
+                           (= cal!flag!1' cal!flag!1)
+                           (= cal!flag!2' cal!flag!2)
+                           (= cal!flag!3' cal!flag!3)
+                           (= cal!flag!4' false)
+                           (= cal!flag!5' cal!flag!5)
+                           (= cal!flag!6' cal!flag!6)
+                           (= cal!flag!7' cal!flag!7)
+                           (= cal!flag!8' cal!flag!8)
+                           (= cal!flag!9' cal!flag!9)
+                           (= cal!origin' cal!origin)
+                           (= cal!send' cal!send)))
+                  (cs!1834 (= time_out!5' cs!1648))
+                  (cs!1839
+                         (and
+                           (= cal!content' cal!content)
+                           (= cal!delivery' cal!delivery)
+                           (= cal!flag!0' cal!flag!0)
+                           (= cal!flag!1' cal!flag!1)
+                           (= cal!flag!2' cal!flag!2)
+                           (= cal!flag!3' cal!flag!3)
+                           (= cal!flag!4' cal!flag!4)
+                           (= cal!flag!5' false)
+                           (= cal!flag!6' cal!flag!6)
+                           (= cal!flag!7' cal!flag!7)
+                           (= cal!flag!8' cal!flag!8)
+                           (= cal!flag!9' cal!flag!9)
+                           (= cal!origin' cal!origin)
+                           (= cal!send' cal!send)))
+                  (cs!1846 (= time_out!6' cs!1648))
+                  (cs!1851
+                         (and
+                           (= cal!content' cal!content)
+                           (= cal!delivery' cal!delivery)
+                           (= cal!flag!0' cal!flag!0)
+                           (= cal!flag!1' cal!flag!1)
+                           (= cal!flag!2' cal!flag!2)
+                           (= cal!flag!3' cal!flag!3)
+                           (= cal!flag!4' cal!flag!4)
+                           (= cal!flag!5' cal!flag!5)
+                           (= cal!flag!6' false)
+                           (= cal!flag!7' cal!flag!7)
+                           (= cal!flag!8' cal!flag!8)
+                           (= cal!flag!9' cal!flag!9)
+                           (= cal!origin' cal!origin)
+                           (= cal!send' cal!send)))
+                  (cs!1858 (= time_out!7' cs!1648))
+                  (cs!1863
+                         (and
+                           (= cal!content' cal!content)
+                           (= cal!delivery' cal!delivery)
+                           (= cal!flag!0' cal!flag!0)
+                           (= cal!flag!1' cal!flag!1)
+                           (= cal!flag!2' cal!flag!2)
+                           (= cal!flag!3' cal!flag!3)
+                           (= cal!flag!4' cal!flag!4)
+                           (= cal!flag!5' cal!flag!5)
+                           (= cal!flag!6' cal!flag!6)
+                           (= cal!flag!7' false)
+                           (= cal!flag!8' cal!flag!8)
+                           (= cal!flag!9' cal!flag!9)
+                           (= cal!origin' cal!origin)
+                           (= cal!send' cal!send))))
+              (or
+                (and
+                  (= choice!3 0)
+                  (ite cs!1702
+                    (and
+                      cs!1712
+                      cs!1741
+                      cs!1742
+                      cs!1746
+                      cs!1750
+                      cs!1753
+                      cs!1756
+                      cs!1757
+                      cs!1758
+                      cs!1759)
+                    (and
+                      cs!1712
+                      cs!1741
+                      cs!1742
+                      cs!1746
+                      cs!1750
+                      cs!1753
+                      cs!1756
+                      cs!1757
+                      cs!1758
+                      cs!1759
+                      (< time cal!delivery)))
+                  (ite cs!1702
+                    (and
+                      cs!1784
+                      cs!1786
+                      cs!1787
+                      cs!1789
+                      cs!1791
+                      cs!1794
+                      cs!1798
+                      cs!1801
+                      cs!1804
+                      cs!1805
+                      (or
+                        cs!1807
+                        cs!1808
+                        cs!1810
+                        cs!1811
+                        cs!1814
+                        cs!1819
+                        cs!1821
+                        cs!1824
+                        cs!1826
+                        cs!1827))
+                    (and
+                      cs!1784
+                      cs!1786
+                      cs!1787
+                      cs!1789
+                      cs!1791
+                      cs!1794
+                      cs!1798
+                      cs!1801
+                      cs!1804
+                      cs!1805
+                      (<= time' cal!delivery)
+                      (or
+                        (= time' cal!delivery)
+                        cs!1807
+                        cs!1808
+                        cs!1810
+                        cs!1811
+                        cs!1814
+                        cs!1819
+                        cs!1821
+                        cs!1824
+                        cs!1826
+                        cs!1827)))
+                  cs!1713
+                  cs!1716
+                  cs!1719
+                  cs!1722
+                  cs!1725
+                  cs!1728
+                  cs!1731
+                  cs!1734
+                  cs!1737
+                  cs!1709
+                  cs!1714
+                  cs!1717
+                  cs!1720
+                  cs!1723
+                  cs!1726
+                  cs!1729
+                  cs!1732
+                  cs!1735
+                  cs!1738
+                  cs!1710
+                  cs!1715
+                  cs!1718
+                  cs!1721
+                  cs!1724
+                  cs!1727
+                  cs!1730
+                  cs!1733
+                  cs!1736
+                  cs!1739
+                  cs!1711
+                  cs!1698)
+                (and
+                  (= choice!3 1)
+                  (or
+                    (and
+                      (= choice!2 1)
+                      (or
+                        (and
+                          cs!1681
+                          cs!1670
+                          cs!1751
+                          (= pc!0' listen)
+                          (= time_out!0' (+ time 60))
+                          cs!1698
+                          cs!1714)
+                        (and
+                          cs!1682
+                          cs!1670
+                          cal!flag!0
+                          cs!1707
+                          cs!1755
+                          cs!1713
+                          cs!1714
+                          cs!1715)
+                        (and
+                          cs!1684
+                          cs!1744
+                          cs!1751
+                          cs!1740
+                          cs!1743
+                          (= cal!content' (ite cs!1702 cs_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' false)
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 1 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1714)
+                        (and
+                          cs!1685
+                          cs!1744
+                          cal!flag!0
+                          cs!1688
+                          cs!1707
+                          cs!1740
+                          (= time_out!0' (- cs!1511 propagation))
+                          cs!1755
+                          cs!1714)
+                        (and
+                          cs!1687
+                          cs!1745
+                          cal!flag!0
+                          cs!1688
+                          cs!1707
+                          cs!1747
+                          cs!1748
+                          cs!1749
+                          cs!1755)
+                        (and
+                          cs!1689
+                          cs!1745
+                          cs!1751
+                          cs!1743
+                          (= cal!content' (ite cs!1702 cs_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' false)
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 1 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1713
+                          cs!1714)
+                        (and
+                          cs!1691
+                          (or cs!1744 cs!1745)
+                          cal!flag!0
+                          cs!1706
+                          cs!1707
+                          cs!1747
+                          cs!1748
+                          cs!1749
+                          cs!1755)
+                        (and
+                          cs!1697
+                          cs!1754
+                          cs!1751
+                          (/= (ite (= slot!0 10) 1 (+ slot!0 1)) 1)
+                          cs!1752
+                          (= slot!0' (ite (= slot!0 10) 1 (+ slot!0 1)))
+                          cs!1698
+                          cs!1713)
+                        (and
+                          cs!1699
+                          cs!1754
+                          cs!1751
+                          (= (ite (= slot!0 10) 1 (+ slot!0 1)) 1)
+                          cs!1752
+                          (= slot!0' (ite (= slot!0 10) 1 (+ slot!0 1)))
+                          (= cal!content' (ite cs!1702 i_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' false)
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 1 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1713)
+                        (and
+                          cs!1704
+                          cs!1754
+                          cal!flag!0
+                          cs!1706
+                          cs!1707
+                          cs!1755
+                          cs!1713
+                          cs!1714
+                          cs!1715))
+                      cs!1716
+                      cs!1717
+                      cs!1718
+                      cs!1719
+                      cs!1720
+                      cs!1721
+                      cs!1722
+                      cs!1723
+                      cs!1724
+                      cs!1725
+                      cs!1726
+                      cs!1727
+                      cs!1728
+                      cs!1729
+                      cs!1730
+                      cs!1731
+                      cs!1732
+                      cs!1733
+                      cs!1734
+                      cs!1735
+                      cs!1736
+                      cs!1737
+                      cs!1738
+                      cs!1739
+                      cs!1709
+                      cs!1710
+                      cs!1711)
+                    (and
+                      (= choice!2 2)
+                      (or
+                        (and
+                          cs!1681
+                          cs!1760
+                          cs!1768
+                          (= pc!1' listen)
+                          (= time_out!1' (+ time 63))
+                          cs!1698
+                          cs!1717)
+                        (and
+                          cs!1682
+                          cs!1760
+                          cal!flag!1
+                          cs!1707
+                          cs!1771
+                          cs!1716
+                          cs!1717
+                          cs!1718)
+                        (and
+                          cs!1684
+                          cs!1763
+                          cs!1768
+                          cs!1761
+                          cs!1762
+                          (= cal!content' (ite cs!1702 cs_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' false)
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 2 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1717)
+                        (and
+                          cs!1685
+                          cs!1763
+                          cal!flag!1
+                          cs!1688
+                          cs!1707
+                          cs!1761
+                          (= time_out!1' (- cs!1529 propagation))
+                          cs!1771
+                          cs!1717)
+                        (and
+                          cs!1687
+                          cs!1764
+                          cal!flag!1
+                          cs!1688
+                          cs!1707
+                          cs!1765
+                          cs!1766
+                          cs!1767
+                          cs!1771)
+                        (and
+                          cs!1689
+                          cs!1764
+                          cs!1768
+                          cs!1762
+                          (= cal!content' (ite cs!1702 cs_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' false)
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 2 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1716
+                          cs!1717)
+                        (and
+                          cs!1691
+                          (or cs!1763 cs!1764)
+                          cal!flag!1
+                          cs!1706
+                          cs!1707
+                          cs!1765
+                          cs!1766
+                          cs!1767
+                          cs!1771)
+                        (and
+                          cs!1697
+                          cs!1770
+                          cs!1768
+                          (/= (ite (= slot!1 10) 1 (+ slot!1 1)) 2)
+                          cs!1769
+                          (= slot!1' (ite (= slot!1 10) 1 (+ slot!1 1)))
+                          cs!1698
+                          cs!1716)
+                        (and
+                          cs!1699
+                          cs!1770
+                          cs!1768
+                          (= (ite (= slot!1 10) 1 (+ slot!1 1)) 2)
+                          cs!1769
+                          (= slot!1' (ite (= slot!1 10) 1 (+ slot!1 1)))
+                          (= cal!content' (ite cs!1702 i_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' false)
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 2 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1716)
+                        (and
+                          cs!1704
+                          cs!1770
+                          cal!flag!1
+                          cs!1706
+                          cs!1707
+                          cs!1771
+                          cs!1716
+                          cs!1717
+                          cs!1718))
+                      cs!1713
+                      cs!1714
+                      cs!1715
+                      cs!1719
+                      cs!1720
+                      cs!1721
+                      cs!1722
+                      cs!1723
+                      cs!1724
+                      cs!1725
+                      cs!1726
+                      cs!1727
+                      cs!1728
+                      cs!1729
+                      cs!1730
+                      cs!1731
+                      cs!1732
+                      cs!1733
+                      cs!1734
+                      cs!1735
+                      cs!1736
+                      cs!1737
+                      cs!1738
+                      cs!1739
+                      cs!1709
+                      cs!1710
+                      cs!1711)
+                    (and
+                      (= choice!2 3)
+                      (or
+                        (and
+                          cs!1681
+                          cs!1772
+                          cs!1780
+                          (= pc!2' listen)
+                          (= time_out!2' (+ time 66))
+                          cs!1698
+                          cs!1720)
+                        (and
+                          cs!1682
+                          cs!1772
+                          cal!flag!2
+                          cs!1707
+                          cs!1783
+                          cs!1719
+                          cs!1720
+                          cs!1721)
+                        (and
+                          cs!1684
+                          cs!1775
+                          cs!1780
+                          cs!1773
+                          cs!1774
+                          (= cal!content' (ite cs!1702 cs_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' false)
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 3 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1720)
+                        (and
+                          cs!1685
+                          cs!1775
+                          cal!flag!2
+                          cs!1688
+                          cs!1707
+                          cs!1773
+                          (= time_out!2' (- cs!1547 propagation))
+                          cs!1783
+                          cs!1720)
+                        (and
+                          cs!1687
+                          cs!1776
+                          cal!flag!2
+                          cs!1688
+                          cs!1707
+                          cs!1777
+                          cs!1778
+                          cs!1779
+                          cs!1783)
+                        (and
+                          cs!1689
+                          cs!1776
+                          cs!1780
+                          cs!1774
+                          (= cal!content' (ite cs!1702 cs_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' false)
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 3 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1719
+                          cs!1720)
+                        (and
+                          cs!1691
+                          (or cs!1775 cs!1776)
+                          cal!flag!2
+                          cs!1706
+                          cs!1707
+                          cs!1777
+                          cs!1778
+                          cs!1779
+                          cs!1783)
+                        (and
+                          cs!1697
+                          cs!1782
+                          cs!1780
+                          (/= (ite (= slot!2 10) 1 (+ slot!2 1)) 3)
+                          cs!1781
+                          (= slot!2' (ite (= slot!2 10) 1 (+ slot!2 1)))
+                          cs!1698
+                          cs!1719)
+                        (and
+                          cs!1699
+                          cs!1782
+                          cs!1780
+                          (= (ite (= slot!2 10) 1 (+ slot!2 1)) 3)
+                          cs!1781
+                          (= slot!2' (ite (= slot!2 10) 1 (+ slot!2 1)))
+                          (= cal!content' (ite cs!1702 i_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' false)
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 3 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1719)
+                        (and
+                          cs!1704
+                          cs!1782
+                          cal!flag!2
+                          cs!1706
+                          cs!1707
+                          cs!1783
+                          cs!1719
+                          cs!1720
+                          cs!1721))
+                      cs!1713
+                      cs!1714
+                      cs!1715
+                      cs!1716
+                      cs!1717
+                      cs!1718
+                      cs!1722
+                      cs!1723
+                      cs!1724
+                      cs!1725
+                      cs!1726
+                      cs!1727
+                      cs!1728
+                      cs!1729
+                      cs!1730
+                      cs!1731
+                      cs!1732
+                      cs!1733
+                      cs!1734
+                      cs!1735
+                      cs!1736
+                      cs!1737
+                      cs!1738
+                      cs!1739
+                      cs!1709
+                      cs!1710
+                      cs!1711)
+                    (and
+                      (= choice!2 4)
+                      (or
+                        (and
+                          cs!1681
+                          cs!1785
+                          cs!1799
+                          (= pc!3' listen)
+                          (= time_out!3' (+ time 69))
+                          cs!1698
+                          cs!1723)
+                        (and
+                          cs!1682
+                          cs!1785
+                          cal!flag!3
+                          cs!1707
+                          cs!1803
+                          cs!1722
+                          cs!1723
+                          cs!1724)
+                        (and
+                          cs!1684
+                          cs!1792
+                          cs!1799
+                          cs!1788
+                          cs!1790
+                          (= cal!content' (ite cs!1702 cs_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' false)
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 4 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1723)
+                        (and
+                          cs!1685
+                          cs!1792
+                          cal!flag!3
+                          cs!1688
+                          cs!1707
+                          cs!1788
+                          (= time_out!3' (- cs!1565 propagation))
+                          cs!1803
+                          cs!1723)
+                        (and
+                          cs!1687
+                          cs!1793
+                          cal!flag!3
+                          cs!1688
+                          cs!1707
+                          cs!1795
+                          cs!1796
+                          cs!1797
+                          cs!1803)
+                        (and
+                          cs!1689
+                          cs!1793
+                          cs!1799
+                          cs!1790
+                          (= cal!content' (ite cs!1702 cs_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' false)
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 4 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1722
+                          cs!1723)
+                        (and
+                          cs!1691
+                          (or cs!1792 cs!1793)
+                          cal!flag!3
+                          cs!1706
+                          cs!1707
+                          cs!1795
+                          cs!1796
+                          cs!1797
+                          cs!1803)
+                        (and
+                          cs!1697
+                          cs!1802
+                          cs!1799
+                          (/= (ite (= slot!3 10) 1 (+ slot!3 1)) 4)
+                          cs!1800
+                          (= slot!3' (ite (= slot!3 10) 1 (+ slot!3 1)))
+                          cs!1698
+                          cs!1722)
+                        (and
+                          cs!1699
+                          cs!1802
+                          cs!1799
+                          (= (ite (= slot!3 10) 1 (+ slot!3 1)) 4)
+                          cs!1800
+                          (= slot!3' (ite (= slot!3 10) 1 (+ slot!3 1)))
+                          (= cal!content' (ite cs!1702 i_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' false)
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 4 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1722)
+                        (and
+                          cs!1704
+                          cs!1802
+                          cal!flag!3
+                          cs!1706
+                          cs!1707
+                          cs!1803
+                          cs!1722
+                          cs!1723
+                          cs!1724))
+                      cs!1713
+                      cs!1714
+                      cs!1715
+                      cs!1716
+                      cs!1717
+                      cs!1718
+                      cs!1719
+                      cs!1720
+                      cs!1721
+                      cs!1725
+                      cs!1726
+                      cs!1727
+                      cs!1728
+                      cs!1729
+                      cs!1730
+                      cs!1731
+                      cs!1732
+                      cs!1733
+                      cs!1734
+                      cs!1735
+                      cs!1736
+                      cs!1737
+                      cs!1738
+                      cs!1739
+                      cs!1709
+                      cs!1710
+                      cs!1711)
+                    (and
+                      (= choice!2 5)
+                      (or
+                        (and
+                          cs!1681
+                          cs!1806
+                          cs!1820
+                          (= pc!4' listen)
+                          (= time_out!4' (+ time 72))
+                          cs!1698
+                          cs!1726)
+                        (and
+                          cs!1682
+                          cs!1806
+                          cal!flag!4
+                          cs!1707
+                          cs!1825
+                          cs!1725
+                          cs!1726
+                          cs!1727)
+                        (and
+                          cs!1684
+                          cs!1813
+                          cs!1820
+                          cs!1809
+                          cs!1812
+                          (= cal!content' (ite cs!1702 cs_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' false)
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 5 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1726)
+                        (and
+                          cs!1685
+                          cs!1813
+                          cal!flag!4
+                          cs!1688
+                          cs!1707
+                          cs!1809
+                          (= time_out!4' (- cs!1588 propagation))
+                          cs!1825
+                          cs!1726)
+                        (and
+                          cs!1687
+                          cs!1815
+                          cal!flag!4
+                          cs!1688
+                          cs!1707
+                          cs!1816
+                          cs!1817
+                          cs!1818
+                          cs!1825)
+                        (and
+                          cs!1689
+                          cs!1815
+                          cs!1820
+                          cs!1812
+                          (= cal!content' (ite cs!1702 cs_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' false)
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 5 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1725
+                          cs!1726)
+                        (and
+                          cs!1691
+                          (or cs!1813 cs!1815)
+                          cal!flag!4
+                          cs!1706
+                          cs!1707
+                          cs!1816
+                          cs!1817
+                          cs!1818
+                          cs!1825)
+                        (and
+                          cs!1697
+                          cs!1823
+                          cs!1820
+                          (/= (ite (= slot!4 10) 1 (+ slot!4 1)) 5)
+                          cs!1822
+                          (= slot!4' (ite (= slot!4 10) 1 (+ slot!4 1)))
+                          cs!1698
+                          cs!1725)
+                        (and
+                          cs!1699
+                          cs!1823
+                          cs!1820
+                          (= (ite (= slot!4 10) 1 (+ slot!4 1)) 5)
+                          cs!1822
+                          (= slot!4' (ite (= slot!4 10) 1 (+ slot!4 1)))
+                          (= cal!content' (ite cs!1702 i_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' false)
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 5 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1725)
+                        (and
+                          cs!1704
+                          cs!1823
+                          cal!flag!4
+                          cs!1706
+                          cs!1707
+                          cs!1825
+                          cs!1725
+                          cs!1726
+                          cs!1727))
+                      cs!1713
+                      cs!1714
+                      cs!1715
+                      cs!1716
+                      cs!1717
+                      cs!1718
+                      cs!1719
+                      cs!1720
+                      cs!1721
+                      cs!1722
+                      cs!1723
+                      cs!1724
+                      cs!1728
+                      cs!1729
+                      cs!1730
+                      cs!1731
+                      cs!1732
+                      cs!1733
+                      cs!1734
+                      cs!1735
+                      cs!1736
+                      cs!1737
+                      cs!1738
+                      cs!1739
+                      cs!1709
+                      cs!1710
+                      cs!1711)
+                    (and
+                      (= choice!2 6)
+                      (or
+                        (and
+                          cs!1681
+                          cs!1828
+                          cs!1836
+                          (= pc!5' listen)
+                          (= time_out!5' (+ time 75))
+                          cs!1698
+                          cs!1729)
+                        (and
+                          cs!1682
+                          cs!1828
+                          cal!flag!5
+                          cs!1707
+                          cs!1839
+                          cs!1728
+                          cs!1729
+                          cs!1730)
+                        (and
+                          cs!1684
+                          cs!1831
+                          cs!1836
+                          cs!1829
+                          cs!1830
+                          (= cal!content' (ite cs!1702 cs_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' false)
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 6 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1729)
+                        (and
+                          cs!1685
+                          cs!1831
+                          cal!flag!5
+                          cs!1688
+                          cs!1707
+                          cs!1829
+                          (= time_out!5' (- cs!1609 propagation))
+                          cs!1839
+                          cs!1729)
+                        (and
+                          cs!1687
+                          cs!1832
+                          cal!flag!5
+                          cs!1688
+                          cs!1707
+                          cs!1833
+                          cs!1834
+                          cs!1835
+                          cs!1839)
+                        (and
+                          cs!1689
+                          cs!1832
+                          cs!1836
+                          cs!1830
+                          (= cal!content' (ite cs!1702 cs_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' false)
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 6 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1728
+                          cs!1729)
+                        (and
+                          cs!1691
+                          (or cs!1831 cs!1832)
+                          cal!flag!5
+                          cs!1706
+                          cs!1707
+                          cs!1833
+                          cs!1834
+                          cs!1835
+                          cs!1839)
+                        (and
+                          cs!1697
+                          cs!1838
+                          cs!1836
+                          (/= (ite (= slot!5 10) 1 (+ slot!5 1)) 6)
+                          cs!1837
+                          (= slot!5' (ite (= slot!5 10) 1 (+ slot!5 1)))
+                          cs!1698
+                          cs!1728)
+                        (and
+                          cs!1699
+                          cs!1838
+                          cs!1836
+                          (= (ite (= slot!5 10) 1 (+ slot!5 1)) 6)
+                          cs!1837
+                          (= slot!5' (ite (= slot!5 10) 1 (+ slot!5 1)))
+                          (= cal!content' (ite cs!1702 i_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' false)
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 6 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1728)
+                        (and
+                          cs!1704
+                          cs!1838
+                          cal!flag!5
+                          cs!1706
+                          cs!1707
+                          cs!1839
+                          cs!1728
+                          cs!1729
+                          cs!1730))
+                      cs!1713
+                      cs!1714
+                      cs!1715
+                      cs!1716
+                      cs!1717
+                      cs!1718
+                      cs!1719
+                      cs!1720
+                      cs!1721
+                      cs!1722
+                      cs!1723
+                      cs!1724
+                      cs!1725
+                      cs!1726
+                      cs!1727
+                      cs!1731
+                      cs!1732
+                      cs!1733
+                      cs!1734
+                      cs!1735
+                      cs!1736
+                      cs!1737
+                      cs!1738
+                      cs!1739
+                      cs!1709
+                      cs!1710
+                      cs!1711)
+                    (and
+                      (= choice!2 7)
+                      (or
+                        (and
+                          cs!1681
+                          cs!1840
+                          cs!1848
+                          (= pc!6' listen)
+                          (= time_out!6' (+ time 78))
+                          cs!1698
+                          cs!1732)
+                        (and
+                          cs!1682
+                          cs!1840
+                          cal!flag!6
+                          cs!1707
+                          cs!1851
+                          cs!1731
+                          cs!1732
+                          cs!1733)
+                        (and
+                          cs!1684
+                          cs!1843
+                          cs!1848
+                          cs!1841
+                          cs!1842
+                          (= cal!content' (ite cs!1702 cs_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' false)
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 7 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1732)
+                        (and
+                          cs!1685
+                          cs!1843
+                          cal!flag!6
+                          cs!1688
+                          cs!1707
+                          cs!1841
+                          (= time_out!6' (- cs!1628 propagation))
+                          cs!1851
+                          cs!1732)
+                        (and
+                          cs!1687
+                          cs!1844
+                          cal!flag!6
+                          cs!1688
+                          cs!1707
+                          cs!1845
+                          cs!1846
+                          cs!1847
+                          cs!1851)
+                        (and
+                          cs!1689
+                          cs!1844
+                          cs!1848
+                          cs!1842
+                          (= cal!content' (ite cs!1702 cs_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' false)
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 7 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1731
+                          cs!1732)
+                        (and
+                          cs!1691
+                          (or cs!1843 cs!1844)
+                          cal!flag!6
+                          cs!1706
+                          cs!1707
+                          cs!1845
+                          cs!1846
+                          cs!1847
+                          cs!1851)
+                        (and
+                          cs!1697
+                          cs!1850
+                          cs!1848
+                          (/= (ite (= slot!6 10) 1 (+ slot!6 1)) 7)
+                          cs!1849
+                          (= slot!6' (ite (= slot!6 10) 1 (+ slot!6 1)))
+                          cs!1698
+                          cs!1731)
+                        (and
+                          cs!1699
+                          cs!1850
+                          cs!1848
+                          (= (ite (= slot!6 10) 1 (+ slot!6 1)) 7)
+                          cs!1849
+                          (= slot!6' (ite (= slot!6 10) 1 (+ slot!6 1)))
+                          (= cal!content' (ite cs!1702 i_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' false)
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 7 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1731)
+                        (and
+                          cs!1704
+                          cs!1850
+                          cal!flag!6
+                          cs!1706
+                          cs!1707
+                          cs!1851
+                          cs!1731
+                          cs!1732
+                          cs!1733))
+                      cs!1713
+                      cs!1714
+                      cs!1715
+                      cs!1716
+                      cs!1717
+                      cs!1718
+                      cs!1719
+                      cs!1720
+                      cs!1721
+                      cs!1722
+                      cs!1723
+                      cs!1724
+                      cs!1725
+                      cs!1726
+                      cs!1727
+                      cs!1728
+                      cs!1729
+                      cs!1730
+                      cs!1734
+                      cs!1735
+                      cs!1736
+                      cs!1737
+                      cs!1738
+                      cs!1739
+                      cs!1709
+                      cs!1710
+                      cs!1711)
+                    (and
+                      (= choice!2 8)
+                      (or
+                        (and
+                          cs!1681
+                          cs!1852
+                          cs!1860
+                          (= pc!7' listen)
+                          (= time_out!7' (+ time 81))
+                          cs!1698
+                          cs!1735)
+                        (and
+                          cs!1682
+                          cs!1852
+                          cal!flag!7
+                          cs!1707
+                          cs!1863
+                          cs!1734
+                          cs!1735
+                          cs!1736)
+                        (and
+                          cs!1684
+                          cs!1855
+                          cs!1860
+                          cs!1853
+                          cs!1854
+                          (= cal!content' (ite cs!1702 cs_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' false)
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 8 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1735)
+                        (and
+                          cs!1685
+                          cs!1855
+                          cal!flag!7
+                          cs!1688
+                          cs!1707
+                          cs!1853
+                          (= time_out!7' (- cs!1647 propagation))
+                          cs!1863
+                          cs!1735)
+                        (and
+                          cs!1687
+                          cs!1856
+                          cal!flag!7
+                          cs!1688
+                          cs!1707
+                          cs!1857
+                          cs!1858
+                          cs!1859
+                          cs!1863)
+                        (and
+                          cs!1689
+                          cs!1856
+                          cs!1860
+                          cs!1854
+                          (= cal!content' (ite cs!1702 cs_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' false)
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 8 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1734
+                          cs!1735)
+                        (and
+                          cs!1691
+                          (or cs!1855 cs!1856)
+                          cal!flag!7
+                          cs!1706
+                          cs!1707
+                          cs!1857
+                          cs!1858
+                          cs!1859
+                          cs!1863)
+                        (and
+                          cs!1697
+                          cs!1862
+                          cs!1860
+                          (/= (ite (= slot!7 10) 1 (+ slot!7 1)) 8)
+                          cs!1861
+                          (= slot!7' (ite (= slot!7 10) 1 (+ slot!7 1)))
+                          cs!1698
+                          cs!1734)
+                        (and
+                          cs!1699
+                          cs!1862
+                          cs!1860
+                          (= (ite (= slot!7 10) 1 (+ slot!7 1)) 8)
+                          cs!1861
+                          (= slot!7' (ite (= slot!7 10) 1 (+ slot!7 1)))
+                          (= cal!content' (ite cs!1702 i_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' false)
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 8 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1734)
+                        (and
+                          cs!1704
+                          cs!1862
+                          cal!flag!7
+                          cs!1706
+                          cs!1707
+                          cs!1863
+                          cs!1734
+                          cs!1735
+                          cs!1736))
+                      cs!1713
+                      cs!1714
+                      cs!1715
+                      cs!1716
+                      cs!1717
+                      cs!1718
+                      cs!1719
+                      cs!1720
+                      cs!1721
+                      cs!1722
+                      cs!1723
+                      cs!1724
+                      cs!1725
+                      cs!1726
+                      cs!1727
+                      cs!1728
+                      cs!1729
+                      cs!1730
+                      cs!1731
+                      cs!1732
+                      cs!1733
+                      cs!1737
+                      cs!1738
+                      cs!1739
+                      cs!1709
+                      cs!1710
+                      cs!1711)
+                    (and
+                      (= choice!2 9)
+                      (or
+                        (and
+                          cs!1681
+                          cs!1668
+                          cs!1677
+                          (= pc!8' listen)
+                          (= time_out!8' (+ time 84))
+                          cs!1698
+                          cs!1738)
+                        (and
+                          cs!1682
+                          cs!1668
+                          cal!flag!8
+                          cs!1707
+                          cs!1680
+                          cs!1737
+                          cs!1738
+                          cs!1739)
+                        (and
+                          cs!1684
+                          cs!1672
+                          cs!1677
+                          cs!1669
+                          cs!1671
+                          (= cal!content' (ite cs!1702 cs_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' false)
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 9 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1738)
+                        (and
+                          cs!1685
+                          cs!1672
+                          cal!flag!8
+                          cs!1688
+                          cs!1707
+                          cs!1669
+                          (= time_out!8' (- cs!1474 propagation))
+                          cs!1680
+                          cs!1738)
+                        (and
+                          cs!1687
+                          cs!1673
+                          cal!flag!8
+                          cs!1688
+                          cs!1707
+                          cs!1674
+                          cs!1675
+                          cs!1676
+                          cs!1680)
+                        (and
+                          cs!1689
+                          cs!1673
+                          cs!1677
+                          cs!1671
+                          (= cal!content' (ite cs!1702 cs_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' false)
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 9 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1737
+                          cs!1738)
+                        (and
+                          cs!1691
+                          (or cs!1672 cs!1673)
+                          cal!flag!8
+                          cs!1706
+                          cs!1707
+                          cs!1674
+                          cs!1675
+                          cs!1676
+                          cs!1680)
+                        (and
+                          cs!1697
+                          cs!1679
+                          cs!1677
+                          (/= (ite (= slot!8 10) 1 (+ slot!8 1)) 9)
+                          cs!1678
+                          (= slot!8' (ite (= slot!8 10) 1 (+ slot!8 1)))
+                          cs!1698
+                          cs!1737)
+                        (and
+                          cs!1699
+                          cs!1679
+                          cs!1677
+                          (= (ite (= slot!8 10) 1 (+ slot!8 1)) 9)
+                          cs!1678
+                          (= slot!8' (ite (= slot!8 10) 1 (+ slot!8 1)))
+                          (= cal!content' (ite cs!1702 i_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' false)
+                          (= cal!flag!9' (or cs!1702 cal!flag!9))
+                          (= cal!origin' (ite cs!1702 9 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1737)
+                        (and
+                          cs!1704
+                          cs!1679
+                          cal!flag!8
+                          cs!1706
+                          cs!1707
+                          cs!1680
+                          cs!1737
+                          cs!1738
+                          cs!1739))
+                      cs!1713
+                      cs!1714
+                      cs!1715
+                      cs!1716
+                      cs!1717
+                      cs!1718
+                      cs!1719
+                      cs!1720
+                      cs!1721
+                      cs!1722
+                      cs!1723
+                      cs!1724
+                      cs!1725
+                      cs!1726
+                      cs!1727
+                      cs!1728
+                      cs!1729
+                      cs!1730
+                      cs!1731
+                      cs!1732
+                      cs!1733
+                      cs!1734
+                      cs!1735
+                      cs!1736
+                      cs!1709
+                      cs!1710
+                      cs!1711)
+                    (and
+                      (= choice!2 10)
+                      (or
+                        (and
+                          cs!1681
+                          cs!1683
+                          cs!1700
+                          (= pc!9' listen)
+                          (= time_out!9' (+ time 87))
+                          cs!1698
+                          cs!1710)
+                        (and
+                          cs!1682
+                          cs!1683
+                          cal!flag!9
+                          cs!1707
+                          cs!1708
+                          cs!1709
+                          cs!1710
+                          cs!1711)
+                        (and
+                          cs!1684
+                          cs!1692
+                          cs!1700
+                          cs!1686
+                          cs!1690
+                          (= cal!content' (ite cs!1702 cs_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' false)
+                          (= cal!origin' (ite cs!1702 10 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1710)
+                        (and
+                          cs!1685
+                          cs!1692
+                          cal!flag!9
+                          cs!1688
+                          cs!1707
+                          cs!1686
+                          (= time_out!9' (- cs!1489 propagation))
+                          cs!1708
+                          cs!1710)
+                        (and
+                          cs!1687
+                          cs!1693
+                          cal!flag!9
+                          cs!1688
+                          cs!1707
+                          cs!1694
+                          cs!1695
+                          cs!1696
+                          cs!1708)
+                        (and
+                          cs!1689
+                          cs!1693
+                          cs!1700
+                          cs!1690
+                          (= cal!content' (ite cs!1702 cs_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' false)
+                          (= cal!origin' (ite cs!1702 10 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1709
+                          cs!1710)
+                        (and
+                          cs!1691
+                          (or cs!1692 cs!1693)
+                          cal!flag!9
+                          cs!1706
+                          cs!1707
+                          cs!1694
+                          cs!1695
+                          cs!1696
+                          cs!1708)
+                        (and
+                          cs!1697
+                          cs!1705
+                          cs!1700
+                          (/= (ite (= slot!9 10) 1 (+ slot!9 1)) 10)
+                          cs!1701
+                          (= slot!9' (ite (= slot!9 10) 1 (+ slot!9 1)))
+                          cs!1698
+                          cs!1709)
+                        (and
+                          cs!1699
+                          cs!1705
+                          cs!1700
+                          (= (ite (= slot!9 10) 1 (+ slot!9 1)) 10)
+                          cs!1701
+                          (= slot!9' (ite (= slot!9 10) 1 (+ slot!9 1)))
+                          (= cal!content' (ite cs!1702 i_frame cal!content))
+                          (= cal!delivery' (ite cs!1702 cs!1703 cal!delivery))
+                          (= cal!flag!0' (or cs!1702 cal!flag!0))
+                          (= cal!flag!1' (or cs!1702 cal!flag!1))
+                          (= cal!flag!2' (or cs!1702 cal!flag!2))
+                          (= cal!flag!3' (or cs!1702 cal!flag!3))
+                          (= cal!flag!4' (or cs!1702 cal!flag!4))
+                          (= cal!flag!5' (or cs!1702 cal!flag!5))
+                          (= cal!flag!6' (or cs!1702 cal!flag!6))
+                          (= cal!flag!7' (or cs!1702 cal!flag!7))
+                          (= cal!flag!8' (or cs!1702 cal!flag!8))
+                          (= cal!flag!9' false)
+                          (= cal!origin' (ite cs!1702 10 cal!origin))
+                          (= cal!send' (ite cs!1702 time cal!send))
+                          cs!1709)
+                        (and
+                          cs!1704
+                          cs!1705
+                          cal!flag!9
+                          cs!1706
+                          cs!1707
+                          cs!1708
+                          cs!1709
+                          cs!1710
+                          cs!1711))
+                      cs!1713
+                      cs!1714
+                      cs!1715
+                      cs!1716
+                      cs!1717
+                      cs!1718
+                      cs!1719
+                      cs!1720
+                      cs!1721
+                      cs!1722
+                      cs!1723
+                      cs!1724
+                      cs!1725
+                      cs!1726
+                      cs!1727
+                      cs!1728
+                      cs!1729
+                      cs!1730
+                      cs!1731
+                      cs!1732
+                      cs!1733
+                      cs!1734
+                      cs!1735
+                      cs!1736
+                      cs!1737
+                      cs!1738
+                      cs!1739))
+                  (= time' time))))))))
+
+;; Transition system 
+(define-transition-system T state_type
+  initial_states
+  (transition)
+)
+
+;; TCCs
+;; message: (or (= _ cs_frame) (= _ i_frame))
+;; IDENTITY: (or (= _ 1) (= _ 2) (= _ 3) (= _ 4) (= _ 5) (= _ 6) (= _ 7) (= _ 8) (= _ 9) (= _ 10))
+;; PC: (or (= _ init) (= _ listen) (= _ coldstart) (= _ active))
+(assume T (and
+      (or (= cal!content cs_frame) (= cal!content i_frame))
+      (or (= cal!origin 1) (= cal!origin 2) (= cal!origin 3) (= cal!origin 4) (= cal!origin 5) (= cal!origin 6) (= cal!origin 7) (= cal!origin 8) (= cal!origin 9) (= cal!origin 10))
+      (or (= pc!0 init) (= pc!0 listen) (= pc!0 coldstart) (= pc!0 active))
+      (or (= pc!1 init) (= pc!1 listen) (= pc!1 coldstart) (= pc!1 active))
+      (or (= pc!2 init) (= pc!2 listen) (= pc!2 coldstart) (= pc!2 active))
+      (or (= pc!3 init) (= pc!3 listen) (= pc!3 coldstart) (= pc!3 active))
+      (or (= pc!4 init) (= pc!4 listen) (= pc!4 coldstart) (= pc!4 active))
+      (or (= pc!5 init) (= pc!5 listen) (= pc!5 coldstart) (= pc!5 active))
+      (or (= pc!6 init) (= pc!6 listen) (= pc!6 coldstart) (= pc!6 active))
+      (or (= pc!7 init) (= pc!7 listen) (= pc!7 coldstart) (= pc!7 active))
+      (or (= pc!8 init) (= pc!8 listen) (= pc!8 coldstart) (= pc!8 active))
+      (or (= pc!9 init) (= pc!9 listen) (= pc!9 coldstart) (= pc!9 active))
+      (or (= slot!0 1) (= slot!0 2) (= slot!0 3) (= slot!0 4) (= slot!0 5) (= slot!0 6) (= slot!0 7) (= slot!0 8) (= slot!0 9) (= slot!0 10))
+      (or (= slot!1 1) (= slot!1 2) (= slot!1 3) (= slot!1 4) (= slot!1 5) (= slot!1 6) (= slot!1 7) (= slot!1 8) (= slot!1 9) (= slot!1 10))
+      (or (= slot!2 1) (= slot!2 2) (= slot!2 3) (= slot!2 4) (= slot!2 5) (= slot!2 6) (= slot!2 7) (= slot!2 8) (= slot!2 9) (= slot!2 10))
+      (or (= slot!3 1) (= slot!3 2) (= slot!3 3) (= slot!3 4) (= slot!3 5) (= slot!3 6) (= slot!3 7) (= slot!3 8) (= slot!3 9) (= slot!3 10))
+      (or (= slot!4 1) (= slot!4 2) (= slot!4 3) (= slot!4 4) (= slot!4 5) (= slot!4 6) (= slot!4 7) (= slot!4 8) (= slot!4 9) (= slot!4 10))
+      (or (= slot!5 1) (= slot!5 2) (= slot!5 3) (= slot!5 4) (= slot!5 5) (= slot!5 6) (= slot!5 7) (= slot!5 8) (= slot!5 9) (= slot!5 10))
+      (or (= slot!6 1) (= slot!6 2) (= slot!6 3) (= slot!6 4) (= slot!6 5) (= slot!6 6) (= slot!6 7) (= slot!6 8) (= slot!6 9) (= slot!6 10))
+      (or (= slot!7 1) (= slot!7 2) (= slot!7 3) (= slot!7 4) (= slot!7 5) (= slot!7 6) (= slot!7 7) (= slot!7 8) (= slot!7 9) (= slot!7 10))
+      (or (= slot!8 1) (= slot!8 2) (= slot!8 3) (= slot!8 4) (= slot!8 5) (= slot!8 6) (= slot!8 7) (= slot!8 8) (= slot!8 9) (= slot!8 10))
+      (or (= slot!9 1) (= slot!9 2) (= slot!9 3) (= slot!9 4) (= slot!9 5) (= slot!9 6) (= slot!9 7) (= slot!9 8) (= slot!9 9) (= slot!9 10))
+      (or (= choice!3 0) (= choice!3 1))
+      (or (= choice!2 1) (= choice!2 2) (= choice!2 3) (= choice!2 4) (= choice!2 5) (= choice!2 6) (= choice!2 7) (= choice!2 8) (= choice!2 9) (= choice!2 10))
+     (or (= choice!1 0) (= choice!1 1) (= choice!1 2) (= choice!1 3) (= choice!1 4) (= choice!1 5) (= choice!1 6) (= choice!1 7) (= choice!1 8) (= choice!1 9))
+  )
+)
+
+;; The property
+(query T
+      (and
+        (or
+          (/= pc!0 active)
+          (not (< time time_out!0))
+          (and
+            (or
+              (/= pc!1 active)
+              (not (< time time_out!1))
+              (and (= time_out!0 time_out!1) (= slot!0 slot!1)))
+            (or
+              (/= pc!2 active)
+              (not (< time time_out!2))
+              (and (= time_out!0 time_out!2) (= slot!0 slot!2)))
+            (or
+              (/= pc!3 active)
+              (not (< time time_out!3))
+              (and (= time_out!0 time_out!3) (= slot!0 slot!3)))
+            (or
+              (/= pc!4 active)
+              (not (< time time_out!4))
+              (and (= time_out!0 time_out!4) (= slot!0 slot!4)))
+            (or
+              (/= pc!5 active)
+              (not (< time time_out!5))
+              (and (= time_out!0 time_out!5) (= slot!0 slot!5)))
+            (or
+              (/= pc!6 active)
+              (not (< time time_out!6))
+              (and (= time_out!0 time_out!6) (= slot!0 slot!6)))
+            (or
+              (/= pc!7 active)
+              (not (< time time_out!7))
+              (and (= time_out!0 time_out!7) (= slot!0 slot!7)))
+            (or
+              (/= pc!8 active)
+              (not (< time time_out!8))
+              (and (= time_out!0 time_out!8) (= slot!0 slot!8)))
+            (or
+              (/= pc!9 active)
+              (not (< time time_out!9))
+              (and (= time_out!0 time_out!9) (= slot!0 slot!9)))))
+        (or
+          (/= pc!1 active)
+          (not (< time time_out!1))
+          (and
+            (or
+              (/= pc!0 active)
+              (not (< time time_out!0))
+              (and (= time_out!1 time_out!0) (= slot!1 slot!0)))
+            (or
+              (/= pc!2 active)
+              (not (< time time_out!2))
+              (and (= time_out!1 time_out!2) (= slot!1 slot!2)))
+            (or
+              (/= pc!3 active)
+              (not (< time time_out!3))
+              (and (= time_out!1 time_out!3) (= slot!1 slot!3)))
+            (or
+              (/= pc!4 active)
+              (not (< time time_out!4))
+              (and (= time_out!1 time_out!4) (= slot!1 slot!4)))
+            (or
+              (/= pc!5 active)
+              (not (< time time_out!5))
+              (and (= time_out!1 time_out!5) (= slot!1 slot!5)))
+            (or
+              (/= pc!6 active)
+              (not (< time time_out!6))
+              (and (= time_out!1 time_out!6) (= slot!1 slot!6)))
+            (or
+              (/= pc!7 active)
+              (not (< time time_out!7))
+              (and (= time_out!1 time_out!7) (= slot!1 slot!7)))
+            (or
+              (/= pc!8 active)
+              (not (< time time_out!8))
+              (and (= time_out!1 time_out!8) (= slot!1 slot!8)))
+            (or
+              (/= pc!9 active)
+              (not (< time time_out!9))
+              (and (= time_out!1 time_out!9) (= slot!1 slot!9)))))
+        (or
+          (/= pc!2 active)
+          (not (< time time_out!2))
+          (and
+            (or
+              (/= pc!0 active)
+              (not (< time time_out!0))
+              (and (= time_out!2 time_out!0) (= slot!2 slot!0)))
+            (or
+              (/= pc!1 active)
+              (not (< time time_out!1))
+              (and (= time_out!2 time_out!1) (= slot!2 slot!1)))
+            (or
+              (/= pc!3 active)
+              (not (< time time_out!3))
+              (and (= time_out!2 time_out!3) (= slot!2 slot!3)))
+            (or
+              (/= pc!4 active)
+              (not (< time time_out!4))
+              (and (= time_out!2 time_out!4) (= slot!2 slot!4)))
+            (or
+              (/= pc!5 active)
+              (not (< time time_out!5))
+              (and (= time_out!2 time_out!5) (= slot!2 slot!5)))
+            (or
+              (/= pc!6 active)
+              (not (< time time_out!6))
+              (and (= time_out!2 time_out!6) (= slot!2 slot!6)))
+            (or
+              (/= pc!7 active)
+              (not (< time time_out!7))
+              (and (= time_out!2 time_out!7) (= slot!2 slot!7)))
+            (or
+              (/= pc!8 active)
+              (not (< time time_out!8))
+              (and (= time_out!2 time_out!8) (= slot!2 slot!8)))
+            (or
+              (/= pc!9 active)
+              (not (< time time_out!9))
+              (and (= time_out!2 time_out!9) (= slot!2 slot!9)))))
+        (or
+          (/= pc!3 active)
+          (not (< time time_out!3))
+          (and
+            (or
+              (/= pc!0 active)
+              (not (< time time_out!0))
+              (and (= time_out!3 time_out!0) (= slot!3 slot!0)))
+            (or
+              (/= pc!1 active)
+              (not (< time time_out!1))
+              (and (= time_out!3 time_out!1) (= slot!3 slot!1)))
+            (or
+              (/= pc!2 active)
+              (not (< time time_out!2))
+              (and (= time_out!3 time_out!2) (= slot!3 slot!2)))
+            (or
+              (/= pc!4 active)
+              (not (< time time_out!4))
+              (and (= time_out!3 time_out!4) (= slot!3 slot!4)))
+            (or
+              (/= pc!5 active)
+              (not (< time time_out!5))
+              (and (= time_out!3 time_out!5) (= slot!3 slot!5)))
+            (or
+              (/= pc!6 active)
+              (not (< time time_out!6))
+              (and (= time_out!3 time_out!6) (= slot!3 slot!6)))
+            (or
+              (/= pc!7 active)
+              (not (< time time_out!7))
+              (and (= time_out!3 time_out!7) (= slot!3 slot!7)))
+            (or
+              (/= pc!8 active)
+              (not (< time time_out!8))
+              (and (= time_out!3 time_out!8) (= slot!3 slot!8)))
+            (or
+              (/= pc!9 active)
+              (not (< time time_out!9))
+              (and (= time_out!3 time_out!9) (= slot!3 slot!9)))))
+        (or
+          (/= pc!4 active)
+          (not (< time time_out!4))
+          (and
+            (or
+              (/= pc!0 active)
+              (not (< time time_out!0))
+              (and (= time_out!4 time_out!0) (= slot!4 slot!0)))
+            (or
+              (/= pc!1 active)
+              (not (< time time_out!1))
+              (and (= time_out!4 time_out!1) (= slot!4 slot!1)))
+            (or
+              (/= pc!2 active)
+              (not (< time time_out!2))
+              (and (= time_out!4 time_out!2) (= slot!4 slot!2)))
+            (or
+              (/= pc!3 active)
+              (not (< time time_out!3))
+              (and (= time_out!4 time_out!3) (= slot!4 slot!3)))
+            (or
+              (/= pc!5 active)
+              (not (< time time_out!5))
+              (and (= time_out!4 time_out!5) (= slot!4 slot!5)))
+            (or
+              (/= pc!6 active)
+              (not (< time time_out!6))
+              (and (= time_out!4 time_out!6) (= slot!4 slot!6)))
+            (or
+              (/= pc!7 active)
+              (not (< time time_out!7))
+              (and (= time_out!4 time_out!7) (= slot!4 slot!7)))
+            (or
+              (/= pc!8 active)
+              (not (< time time_out!8))
+              (and (= time_out!4 time_out!8) (= slot!4 slot!8)))
+            (or
+              (/= pc!9 active)
+              (not (< time time_out!9))
+              (and (= time_out!4 time_out!9) (= slot!4 slot!9)))))
+        (or
+          (/= pc!5 active)
+          (not (< time time_out!5))
+          (and
+            (or
+              (/= pc!0 active)
+              (not (< time time_out!0))
+              (and (= time_out!5 time_out!0) (= slot!5 slot!0)))
+            (or
+              (/= pc!1 active)
+              (not (< time time_out!1))
+              (and (= time_out!5 time_out!1) (= slot!5 slot!1)))
+            (or
+              (/= pc!2 active)
+              (not (< time time_out!2))
+              (and (= time_out!5 time_out!2) (= slot!5 slot!2)))
+            (or
+              (/= pc!3 active)
+              (not (< time time_out!3))
+              (and (= time_out!5 time_out!3) (= slot!5 slot!3)))
+            (or
+              (/= pc!4 active)
+              (not (< time time_out!4))
+              (and (= time_out!5 time_out!4) (= slot!5 slot!4)))
+            (or
+              (/= pc!6 active)
+              (not (< time time_out!6))
+              (and (= time_out!5 time_out!6) (= slot!5 slot!6)))
+            (or
+              (/= pc!7 active)
+              (not (< time time_out!7))
+              (and (= time_out!5 time_out!7) (= slot!5 slot!7)))
+            (or
+              (/= pc!8 active)
+              (not (< time time_out!8))
+              (and (= time_out!5 time_out!8) (= slot!5 slot!8)))
+            (or
+              (/= pc!9 active)
+              (not (< time time_out!9))
+              (and (= time_out!5 time_out!9) (= slot!5 slot!9)))))
+        (or
+          (/= pc!6 active)
+          (not (< time time_out!6))
+          (and
+            (or
+              (/= pc!0 active)
+              (not (< time time_out!0))
+              (and (= time_out!6 time_out!0) (= slot!6 slot!0)))
+            (or
+              (/= pc!1 active)
+              (not (< time time_out!1))
+              (and (= time_out!6 time_out!1) (= slot!6 slot!1)))
+            (or
+              (/= pc!2 active)
+              (not (< time time_out!2))
+              (and (= time_out!6 time_out!2) (= slot!6 slot!2)))
+            (or
+              (/= pc!3 active)
+              (not (< time time_out!3))
+              (and (= time_out!6 time_out!3) (= slot!6 slot!3)))
+            (or
+              (/= pc!4 active)
+              (not (< time time_out!4))
+              (and (= time_out!6 time_out!4) (= slot!6 slot!4)))
+            (or
+              (/= pc!5 active)
+              (not (< time time_out!5))
+              (and (= time_out!6 time_out!5) (= slot!6 slot!5)))
+            (or
+              (/= pc!7 active)
+              (not (< time time_out!7))
+              (and (= time_out!6 time_out!7) (= slot!6 slot!7)))
+            (or
+              (/= pc!8 active)
+              (not (< time time_out!8))
+              (and (= time_out!6 time_out!8) (= slot!6 slot!8)))
+            (or
+              (/= pc!9 active)
+              (not (< time time_out!9))
+              (and (= time_out!6 time_out!9) (= slot!6 slot!9)))))
+        (or
+          (/= pc!7 active)
+          (not (< time time_out!7))
+          (and
+            (or
+              (/= pc!0 active)
+              (not (< time time_out!0))
+              (and (= time_out!7 time_out!0) (= slot!7 slot!0)))
+            (or
+              (/= pc!1 active)
+              (not (< time time_out!1))
+              (and (= time_out!7 time_out!1) (= slot!7 slot!1)))
+            (or
+              (/= pc!2 active)
+              (not (< time time_out!2))
+              (and (= time_out!7 time_out!2) (= slot!7 slot!2)))
+            (or
+              (/= pc!3 active)
+              (not (< time time_out!3))
+              (and (= time_out!7 time_out!3) (= slot!7 slot!3)))
+            (or
+              (/= pc!4 active)
+              (not (< time time_out!4))
+              (and (= time_out!7 time_out!4) (= slot!7 slot!4)))
+            (or
+              (/= pc!5 active)
+              (not (< time time_out!5))
+              (and (= time_out!7 time_out!5) (= slot!7 slot!5)))
+            (or
+              (/= pc!6 active)
+              (not (< time time_out!6))
+              (and (= time_out!7 time_out!6) (= slot!7 slot!6)))
+            (or
+              (/= pc!8 active)
+              (not (< time time_out!8))
+              (and (= time_out!7 time_out!8) (= slot!7 slot!8)))
+            (or
+              (/= pc!9 active)
+              (not (< time time_out!9))
+              (and (= time_out!7 time_out!9) (= slot!7 slot!9)))))
+        (or
+          (/= pc!8 active)
+          (not (< time time_out!8))
+          (and
+            (or
+              (/= pc!0 active)
+              (not (< time time_out!0))
+              (and (= time_out!8 time_out!0) (= slot!8 slot!0)))
+            (or
+              (/= pc!1 active)
+              (not (< time time_out!1))
+              (and (= time_out!8 time_out!1) (= slot!8 slot!1)))
+            (or
+              (/= pc!2 active)
+              (not (< time time_out!2))
+              (and (= time_out!8 time_out!2) (= slot!8 slot!2)))
+            (or
+              (/= pc!3 active)
+              (not (< time time_out!3))
+              (and (= time_out!8 time_out!3) (= slot!8 slot!3)))
+            (or
+              (/= pc!4 active)
+              (not (< time time_out!4))
+              (and (= time_out!8 time_out!4) (= slot!8 slot!4)))
+            (or
+              (/= pc!5 active)
+              (not (< time time_out!5))
+              (and (= time_out!8 time_out!5) (= slot!8 slot!5)))
+            (or
+              (/= pc!6 active)
+              (not (< time time_out!6))
+              (and (= time_out!8 time_out!6) (= slot!8 slot!6)))
+            (or
+              (/= pc!7 active)
+              (not (< time time_out!7))
+              (and (= time_out!8 time_out!7) (= slot!8 slot!7)))
+            (or
+              (/= pc!9 active)
+              (not (< time time_out!9))
+              (and (= time_out!8 time_out!9) (= slot!8 slot!9)))))
+        (or
+          (/= pc!9 active)
+          (not (< time time_out!9))
+          (and
+            (or
+              (/= pc!0 active)
+              (not (< time time_out!0))
+              (and (= time_out!9 time_out!0) (= slot!9 slot!0)))
+            (or
+              (/= pc!1 active)
+              (not (< time time_out!1))
+              (and (= time_out!9 time_out!1) (= slot!9 slot!1)))
+            (or
+              (/= pc!2 active)
+              (not (< time time_out!2))
+              (and (= time_out!9 time_out!2) (= slot!9 slot!2)))
+            (or
+              (/= pc!3 active)
+              (not (< time time_out!3))
+              (and (= time_out!9 time_out!3) (= slot!9 slot!3)))
+            (or
+              (/= pc!4 active)
+              (not (< time time_out!4))
+              (and (= time_out!9 time_out!4) (= slot!9 slot!4)))
+            (or
+              (/= pc!5 active)
+              (not (< time time_out!5))
+              (and (= time_out!9 time_out!5) (= slot!9 slot!5)))
+            (or
+              (/= pc!6 active)
+              (not (< time time_out!6))
+              (and (= time_out!9 time_out!6) (= slot!9 slot!6)))
+            (or
+              (/= pc!7 active)
+              (not (< time time_out!7))
+              (and (= time_out!9 time_out!7) (= slot!9 slot!7)))
+            (or
+              (/= pc!8 active)
+              (not (< time time_out!8))
+              (and (= time_out!9 time_out!8) (= slot!9 slot!8)))))))

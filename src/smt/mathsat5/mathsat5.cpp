@@ -194,6 +194,9 @@ public:
   /** Return the interpolation */
   void interpolate(std::vector<expr::term_ref>& out);
 
+  /** Return the unsat core */
+  void get_unsat_core(std::vector<expr::term_ref>& out);
+
   /** Returns the instance id */
   size_t instance() const { return d_instance; }
 };
@@ -224,6 +227,9 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
   d_cfg = msat_create_config();
   msat_set_option(d_cfg, "model_generation", "true");
   msat_set_option(d_cfg, "interpolation", "true");
+  if (opts.get_bool("mathsat5-unsat-cores")) {
+    msat_set_option(d_cfg, "unsat_core_generation", "1");
+  }
   if (opts.get_bool("mathsat5-generate-api-log")) {
    msat_set_option(d_cfg, "debug.api_call_trace", "2");
    msat_set_option(d_cfg, "debug.api_call_trace_dump_config", "true");
@@ -966,6 +972,15 @@ void mathsat5_internal::interpolate(std::vector<expr::term_ref>& projection_out)
   projection_out.push_back(to_term(I));
 }
 
+void mathsat5_internal::get_unsat_core(std::vector<expr::term_ref>& out) {
+  size_t core_size;
+  msat_term* core = msat_get_unsat_core(d_env, &core_size);
+  for (size_t i = 0; i < core_size; ++ i) {
+    out.push_back(to_term(core[i]));
+  }
+  msat_free(core);
+}
+
 void mathsat5_internal::generalize(const std::set<expr::term_ref>& vars_to_keep, std::vector<expr::term_ref>& out) {
   expr::model m(d_tm);
   get_model(m);
@@ -1064,6 +1079,11 @@ void mathsat5::generalize(std::vector<expr::term_ref>& out) {
 void mathsat5::interpolate(std::vector<expr::term_ref>& out) {
   TRACE("mathsat5") << "mathsat5[" << d_internal->instance() << "]: interpolating" << std::endl;
   d_internal->interpolate(out);
+}
+
+void mathsat5::get_unsat_core(std::vector<expr::term_ref>& out) {
+  TRACE("mathsat5") << "mathsat5[" << d_internal->instance() << "]: unsat core" << std::endl;
+  d_internal->get_unsat_core(out);
 }
 
 }

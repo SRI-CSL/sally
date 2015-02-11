@@ -37,6 +37,8 @@ public:
     switch (f) {
     case INTERPOLATION:
       return true;
+    case UNSAT_CORE:
+      return true;
     default:
       return false;
     }
@@ -57,11 +59,14 @@ public:
   /** Pop the solving context */
   void pop();
 
+  /** Interpolate the last sat result (trivial) */
+  void generalize(std::vector<expr::term_ref>& out);
+
   /** Interpolate the last UNSAT result */
   void interpolate(std::vector<expr::term_ref>& out);
 
-  /** Interpolate the last sat result (trivial) */
-  void generalize(std::vector<expr::term_ref>& out);
+  /** Unsat core of the last UNSAT result */
+  void get_unsat_core(std::vector<expr::term_ref>& out);
 };
 
 }

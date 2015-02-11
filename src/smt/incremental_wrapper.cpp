@@ -72,6 +72,9 @@ void incremental_wrapper::interpolate(std::vector<expr::term_ref>& out) {
   d_solver->interpolate(out);
 }
 
+void incremental_wrapper::get_unsat_core(std::vector<expr::term_ref>& out) {
+  d_solver->get_unsat_core(out);
+}
 
 }
 }

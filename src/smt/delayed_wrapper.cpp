@@ -77,6 +77,10 @@ void delayed_wrapper::interpolate(std::vector<expr::term_ref>& out) {
   d_solver->interpolate(out);
 }
 
+void delayed_wrapper::get_unsat_core(std::vector<expr::term_ref>& out) {
+  d_solver->get_unsat_core(out);
+}
+
 void delayed_wrapper::add_x_variable(expr::term_ref x_var) {
   d_solver->add_x_variable(x_var);
 }

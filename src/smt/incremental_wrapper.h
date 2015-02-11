@@ -60,6 +60,7 @@ public:
   void pop();
   void generalize(std::vector<expr::term_ref>& projection_out);
   void interpolate(std::vector<expr::term_ref>& out);
+  void get_unsat_core(std::vector<expr::term_ref>& out);
 };
 
 }

@@ -69,6 +69,9 @@ public:
 
   /** Interpolate the last UNSAT result */
   void interpolate(std::vector<expr::term_ref>& out);
+
+  /** Unsat core of the last UNSAT result */
+  void get_unsat_core(std::vector<expr::term_ref>& out);
 };
 
 }
