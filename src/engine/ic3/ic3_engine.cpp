@@ -38,7 +38,13 @@ ic3_engine::ic3_engine(const system::context& ctx)
 , d_transition_system(0)
 , d_property(0)
 {
-
+  for (size_t i = 0; i < 10; ++ i) {
+    std::stringstream ss;
+    ss << "sally::ic3::frame_size[" << i << "]";
+    utils::stat_int* s = new utils::stat_int(ss.str(), 0);
+    d_stat_frame_size.push_back(s);
+    ctx.get_statistics().add(s);
+  }
 }
 
 std::ostream& operator << (std::ostream& out, const ic3_engine& ic3) {
@@ -129,7 +135,7 @@ void ic3_engine::add_valid_to_init(expr::term_ref f) {
   TRACE("ic3") << "ic3: adding to init : " << f << std::endl;
   assert(!frame_contains(0, f));
   ensure_frame(0);
-  d_frame_content[0].insert(f);
+  add_to_frame(0, f);
   get_solver(0)->add(f, smt::solver::CLASS_A);
 }
 
@@ -144,7 +150,7 @@ void ic3_engine::add_valid_up_to(size_t k, expr::term_ref F) {
     if (frame_contains(i, F)) {
       break;
     }
-    d_frame_content[i].insert(F);
+    add_to_frame(i, F);
     get_solver(i)->add(F, smt::solver::CLASS_A);
   }
 }
@@ -500,6 +506,14 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, size_t depth) {
   return inductive;
 }
 
+void ic3_engine::add_to_frame(size_t k, expr::term_ref f) {
+  ensure_frame(k);
+  d_frame_content[k].insert(f);
+  if (k < d_stat_frame_size.size()) {
+    d_stat_frame_size[k]->get_value() ++;
+  }
+}
+
 engine::result ic3_engine::query(const system::transition_system* ts, const system::state_formula* sf) {
 
   // Remember the input
@@ -517,7 +531,7 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   if (!P_valid) {
     return engine::INVALID;
   } else {
-    d_frame_content[0].insert(P);
+    add_to_frame(0, P);
     add_to_induction_obligations(0, P, 0);
   }
 

@@ -139,9 +139,5 @@ const utils::statistics& context::get_statistics() const {
   return d_stats;
 }
 
-void context::add_statistic(utils::stat* stat) {
-  d_stats.add_statistic(stat);
-}
-
 }
 }

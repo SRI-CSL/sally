@@ -59,11 +59,11 @@ statistics::~statistics() {
   }
 }
 
-void statistics::add_statistic(stat* s) {
+void statistics::add(stat* s) const {
   if (d_locked) {
     throw exception("Statistics already locked");
   }
-  d_stats.push_back(s);
+  const_cast<statistics*>(this)->d_stats.push_back(s);
 }
 
 void statistics::lock() {

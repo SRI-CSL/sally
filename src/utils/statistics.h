@@ -35,6 +35,7 @@ public:
   : stat(id)
   , d_value(value)
   {}
+  double& get_value() { return d_value; }
   void to_stream(std::ostream& out) const;
 };
 
@@ -46,6 +47,7 @@ public:
   : stat(id)
   , d_value(value)
   {}
+  int& get_value() { return d_value; }
   void to_stream(std::ostream& out) const;
 };
 
@@ -76,7 +78,7 @@ public:
   ~statistics();
 
   /** Add a statistic (takes over pointer, but you can modify the value) */
-  void add_statistic(stat* s);
+  void add(stat* s) const;
 
   /** Lock, i.e. no more additional statistics */
   void lock();

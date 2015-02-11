@@ -93,9 +93,6 @@ public:
   /** Get the statistics */
   const utils::statistics& get_statistics() const;
 
-  /** Add a statistic (takes over the pointer */
-  void add_statistic(utils::stat* stat);
-
 private:
 
   /** The term manager */

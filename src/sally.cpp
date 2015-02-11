@@ -71,7 +71,7 @@ int main(int argc, char* argv[]) {
 
     // Create the statistics */
     utils::statistics stats;
-    stats.add_statistic(new utils::stat_timer("sally::time", true));
+    stats.add(new utils::stat_timer("sally::time", true));
 
     // Create the context
     system::context ctx(tm, opts, stats);

@@ -115,6 +115,9 @@ class ic3_engine : public engine {
   /** Set of facts valid per frame */
   std::vector<formula_set> d_frame_content;
 
+  /** Add the formul to frame */
+  void add_to_frame(size_t k, expr::term_ref f);
+
   /** Whether induction failed at a particular frame */
   std::vector<bool> d_has_failed_induction;
 
@@ -161,6 +164,9 @@ class ic3_engine : public engine {
    * inconsistnet with the given model.
    */
   expr::term_ref weaken(expr::term_ref F, expr::model& m, weakening_mode mode);
+
+  /** Statistics per frame (some number of frames) */
+  std::vector<utils::stat_int*> d_stat_frame_size;
 
 public:
 
