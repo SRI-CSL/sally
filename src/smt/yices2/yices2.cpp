@@ -172,6 +172,7 @@ yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
 {
   // Initialize
   if (s_instances == 0) {
+    TRACE("yices2") << "yices2: first instance." << std::endl;
     yices_init();
   }
   s_instances ++;
@@ -200,6 +201,7 @@ yices2_internal::~yices2_internal() {
   // Cleanup if the last one
   s_instances--;
   if (s_instances == 0) {
+    TRACE("yices2") << "yices2: last instance removed." << std::endl;
     yices_exit();
   }
 }

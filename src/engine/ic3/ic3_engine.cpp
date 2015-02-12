@@ -37,6 +37,7 @@ ic3_engine::ic3_engine(const system::context& ctx)
 : engine(ctx)
 , d_transition_system(0)
 , d_property(0)
+, d_last_restart_frame(0)
 {
   for (size_t i = 0; i < 10; ++ i) {
     std::stringstream ss;
@@ -157,6 +158,16 @@ void ic3_engine::add_valid_up_to(size_t k, expr::term_ref F) {
 
 void ic3_engine::add_to_induction_obligations(size_t k, expr::term_ref f, size_t depth) {
   d_induction_obligations.push(obligation(k, f, depth));
+  d_induction_obligations_count[k] ++;
+}
+
+obligation ic3_engine::pop_induction_obligation() {
+  assert(d_induction_obligations.size() > 0);
+  obligation ind = d_induction_obligations.top();
+  d_induction_obligations.pop();
+  assert(d_induction_obligations_count[ind.frame()] > 0);
+  d_induction_obligations_count[ind.frame()] --;
+  return ind;
 }
 
 void ic3_engine::ensure_frame(size_t k) {
@@ -179,10 +190,27 @@ void ic3_engine::ensure_frame(size_t k) {
     solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_A);
     // Add the frame content
     d_frame_content.push_back(formula_set());
+    d_frame_inductive_content.push_back(formula_set());
     // No failed induction so far
     d_has_failed_induction.push_back(false);
+    // Number of obligations per frame
+    d_induction_obligations_count.push_back(0);
   }
-  assert(d_solvers.size() == d_frame_content.size());
+}
+
+void ic3_engine::clear() {
+  for (size_t i = 0; i < d_solvers.size(); ++ i) {
+    delete d_solvers[i];
+  }
+  for (size_t i = 0; i < d_stat_frame_size.size(); ++ i) {
+    d_stat_frame_size[i]->get_value() = 0;
+  }
+  d_solvers.clear();
+  d_frame_content.clear();
+  d_frame_inductive_content.clear();
+  d_has_failed_induction.clear();
+  d_induction_obligations.clear();
+  d_induction_obligations_count.clear();
 }
 
 bool ic3_engine::frame_contains(size_t k, expr::term_ref f) {
@@ -445,6 +473,8 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, size_t depth) {
   ensure_frame(k);
   ensure_frame(k+1);
 
+  assert(frame_contains(k, f));
+
   std::vector<expr::term_ref> induction_assumptions;
 
   TRACE("ic3") << "ic3: pushing at " << k << ":" << f << std::endl;
@@ -497,6 +527,7 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, size_t depth) {
     TRACE("ic3") << "ic3: proved at " << k << " with " << induction_assumptions.size() << " assumptions" << std::endl;
     // Add the thing we learnt
     add_valid_up_to(k+1, f);
+    d_frame_inductive_content[k].insert(f);
     add_to_induction_obligations(k+1, f, depth);
     for (size_t i = 0; i < induction_assumptions.size(); ++ i) {
       add_to_induction_obligations(k, induction_assumptions[i], depth+1);
@@ -514,11 +545,10 @@ void ic3_engine::add_to_frame(size_t k, expr::term_ref f) {
   }
 }
 
-engine::result ic3_engine::query(const system::transition_system* ts, const system::state_formula* sf) {
+engine::result ic3_engine::search(formula_set& inductive_set) {
 
-  // Remember the input
-  d_transition_system = ts;
-  d_property = sf;
+  // Start with at least one frame
+  ensure_frame(0);
 
   // Add the initial state
   expr::term_ref I = d_transition_system->get_initial_states();
@@ -535,38 +565,88 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
     add_to_induction_obligations(0, P, 0);
   }
 
+  // Add all the formulas passed in
+  formula_set::const_iterator it = inductive_set.begin();
+  for (; it != inductive_set.end(); ++ it) {
+    if (!frame_contains(0, *it)) {
+      add_to_frame(0, *it);
+      add_to_induction_obligations(0, *it, 1);
+    }
+  }
+
   // Search while we have something to do
   while (!d_induction_obligations.empty()) {
 
     // Pick a formula to try and prove inductive, i.e. that F_k & P & T => P'
-    obligation ind = d_induction_obligations.top();
-    d_induction_obligations.pop();
+    obligation ind = pop_induction_obligation();
 
-    // If already ahead, we'll prove it there
-    assert(!frame_contains(ind.frame()+1, ind.formula()));
+    // The frame we're working at
+    size_t frame = ind.frame();
+    assert(!frame_contains(frame+1, ind.formula()));
 
     /** Push the formula forward if it's inductive at the frame */
-    bool is_inductive = push_if_inductive(ind.frame(), ind.formula(), ind.depth());
+    bool is_inductive = push_if_inductive(frame, ind.formula(), ind.depth());
+
+    // If not inductive, we might have a counterexample
     if (!is_inductive) {
       // Not inductive, if P then we have a counterexample
       if (ind.formula() == P) {
         return engine::INVALID;
       } else {
-        d_has_failed_induction[ind.frame()] = true;
+        // Remember that we failed induction
+        d_has_failed_induction[frame] = true;
       }
-    } else {
-      // Inductive, if frames equal, we have a proofs
-      if (!d_has_failed_induction[ind.frame()] && d_frame_content[ind.frame()].size() == d_frame_content[ind.frame()+1].size()) {
+    }
+
+    // We're done with this frame
+    if (d_induction_obligations_count[ind.frame()] == 0) {
+      // Are we done
+      if (!d_has_failed_induction[frame]) {
         if (ctx().get_options().get_bool("ic3-show-invariant")) {
           print_frame(ind.frame(), std::cout);
         }
+        inductive_set = d_frame_inductive_content[frame];
         return engine::VALID;
+      } else {
+        // Check if we should restart
+        if (frame > d_last_restart_frame && d_frame_inductive_content[frame].size() < 0.9*d_frame_content[frame].size()) {
+          inductive_set = d_frame_inductive_content[frame];
+          d_last_restart_frame = frame;
+          return engine::UNKNOWN;
+        }
       }
     }
   }
 
   // Didn't prove or disprove, so unknown
   return engine::UNKNOWN;
+}
+
+
+engine::result ic3_engine::query(const system::transition_system* ts, const system::state_formula* sf) {
+
+  result r = UNKNOWN;
+
+  // Remember the input
+  d_transition_system = ts;
+  d_property = sf;
+
+  // Set of formulas to start with
+  formula_set inductive_set;
+
+  while(r == UNKNOWN) {
+
+    MSG(1) << "ic3: starting search" << std::endl;
+
+    // Drop all frames
+    clear();
+
+    // Search (inductive content of the last frame returned)
+    r = search(inductive_set);
+
+  }
+
+  return r;
 }
 
 const system::state_trace* ic3_engine::get_trace() {

@@ -109,11 +109,20 @@ class ic3_engine : public engine {
   /** Queue of induction obligations */
   induction_obligation_queue d_induction_obligations;
 
+  /** Count of obligations per frame */
+  std::vector<size_t> d_induction_obligations_count;
+
   /** Add formula to the induction obligation queue */
   void add_to_induction_obligations(size_t k, expr::term_ref f, size_t depth);
 
+  /** Get the next induction obligations */
+  obligation pop_induction_obligation();
+
   /** Set of facts valid per frame */
   std::vector<formula_set> d_frame_content;
+
+  /** set of facts that are inductive at frame */
+  std::vector<formula_set> d_frame_inductive_content;
 
   /** Add the formul to frame */
   void add_to_frame(size_t k, expr::term_ref f);
@@ -126,6 +135,9 @@ class ic3_engine : public engine {
 
   /** Make sure all frame content is ready */
   void ensure_frame(size_t k);
+
+  /** Drop frames 1.. */
+  void clear();
 
   /**
    * Check if f is holds at frame k. */
@@ -167,6 +179,12 @@ class ic3_engine : public engine {
 
   /** Statistics per frame (some number of frames) */
   std::vector<utils::stat_int*> d_stat_frame_size;
+
+  /** Search with given facts */
+  result search(formula_set& formula_set);
+
+  /** Frame we last restarted from */
+  size_t d_last_restart_frame;
 
 public:
 
