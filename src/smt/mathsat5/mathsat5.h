@@ -33,16 +33,7 @@ public:
   ~mathsat5();
 
   /** Features */
-  bool supports(feature f) const {
-    switch (f) {
-    case INTERPOLATION:
-      return true;
-    case UNSAT_CORE:
-      return true;
-    default:
-      return false;
-    }
-  }
+  bool supports(feature f) const;
 
   /** Add an assertion f to the solver */
   void add(expr::term_ref f, formula_class f_class);

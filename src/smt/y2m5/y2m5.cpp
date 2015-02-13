@@ -39,6 +39,7 @@ public:
 
 y2m5::y2m5(expr::term_manager& tm, const options& opts)
 : solver("y2m5", tm, opts)
+, d_last_mathsat5_result(UNKNOWN)
 {
   d_yices2 = new yices2(tm, opts);
   if (opts.get_bool("y2m5-mathsat5-flatten")) {
@@ -60,12 +61,14 @@ void y2m5::add(expr::term_ref f, formula_class f_class) {
   TRACE("y2m5") << "y2m5[" << s_instance << "]: adding " << f << std::endl;
   d_yices2->add(f, f_class);
   d_mathsat5->add(f, f_class);
+  d_last_mathsat5_result = UNKNOWN;
 }
 
 solver::result y2m5::check() {
   TRACE("y2m5") << "y2m5[" << s_instance << "]: check()" << std::endl;
   result yices2_result = d_yices2->check();
   return yices2_result;
+  d_last_mathsat5_result = UNKNOWN;
 }
 
 void y2m5::get_model(expr::model& m) const {
@@ -77,12 +80,14 @@ void y2m5::push() {
   TRACE("y2m5") << "y2m5[" << s_instance << "]: push()" << std::endl;
   d_yices2->push();
   d_mathsat5->push();
+  d_last_mathsat5_result = UNKNOWN;
 }
 
 void y2m5::pop() {
   TRACE("y2m5") << "y2m5[" << s_instance << "]: pop()" << std::endl;
   d_yices2->pop();
   d_mathsat5->pop();
+  d_last_mathsat5_result = UNKNOWN;
 }
 
 
@@ -93,17 +98,21 @@ void y2m5::generalize(std::vector<expr::term_ref>& out) {
 
 void y2m5::interpolate(std::vector<expr::term_ref>& out) {
   TRACE("y2m5") << "y2m5[" << s_instance << "]: interpolating" << std::endl;
-  result mathsat5_result  = d_mathsat5->check();
-  unused_var(mathsat5_result);
-  assert(mathsat5_result == UNSAT);
+  if (d_last_mathsat5_result != UNSAT) {
+    result mathsat5_result  = d_mathsat5->check();
+    unused_var(mathsat5_result);
+    assert(mathsat5_result == UNSAT);
+  }
   d_mathsat5->interpolate(out);
 }
 
 void y2m5::get_unsat_core(std::vector<expr::term_ref>& out) {
   TRACE("y2m5") << "y2m5[" << s_instance << "]: unsat core" << std::endl;
-  result mathsat5_result  = d_mathsat5->check();
-  unused_var(mathsat5_result);
-  assert(mathsat5_result == UNSAT);
+  if (d_last_mathsat5_result != UNSAT) {
+    result mathsat5_result  = d_mathsat5->check();
+    unused_var(mathsat5_result);
+    assert(mathsat5_result == UNSAT);
+  }
   d_mathsat5->get_unsat_core(out);
 }
 
@@ -119,6 +128,19 @@ void y2m5::add_y_variable(expr::term_ref y_var) {
   d_mathsat5->add_y_variable(y_var);
 }
 
+
+bool y2m5::supports(feature f) const {
+  switch (f) {
+  case GENERALIZATION:
+    return d_yices2->supports(f);
+  case INTERPOLATION:
+    return d_mathsat5->supports(f);
+  case UNSAT_CORE:
+    return d_mathsat5->supports(f);
+  default:
+    return false;
+  }
+}
 
 }
 }

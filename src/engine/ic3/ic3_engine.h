@@ -12,6 +12,7 @@
 
 #include <vector>
 #include <boost/heap/priority_queue.hpp>
+#include <boost/unordered_map.hpp>
 #include <iosfwd>
 
 namespace sally {
@@ -127,17 +128,17 @@ class ic3_engine : public engine {
   /** Add the formul to frame */
   void add_to_frame(size_t k, expr::term_ref f);
 
-  /** Whether induction failed at a particular frame */
-  std::vector<bool> d_has_failed_induction;
-
   /** Check if the frame contains the fiven formula */
   bool frame_contains(size_t k, expr::term_ref f);
+
+  /** Create and initialize the solver k */
+  void init_solver(size_t k);
 
   /** Make sure all frame content is ready */
   void ensure_frame(size_t k);
 
-  /** Drop frames 1.. */
-  void clear();
+  /** Remove some learnt formulas */
+  void reduce_learnts();
 
   /**
    * Check if f is holds at frame k. */
@@ -180,11 +181,29 @@ class ic3_engine : public engine {
   /** Statistics per frame (some number of frames) */
   std::vector<utils::stat_int*> d_stat_frame_size;
 
-  /** Search with given facts */
-  result search(formula_set& formula_set);
+  /** Search */
+  result search();
 
-  /** Frame we last restarted from */
-  size_t d_last_restart_frame;
+  typedef boost::unordered_map<expr::term_ref, size_t, expr::term_ref_hasher> formula_scores_map;
+
+  /** Map from formulas to their scores */
+  formula_scores_map d_formula_scores;
+
+  /** Returns the score of the formula (or 0 if it doesn't have one) */
+  size_t get_score(expr::term_ref f) const;
+
+  /** Comparator for scores */
+  struct learnt_cmp {
+    const formula_scores_map& scores;
+    bool operator () (expr::term_ref f1, expr::term_ref f2) const;
+    learnt_cmp(const formula_scores_map& scores): scores(scores) {}
+  };
+
+  /** Bump the scores of the formula */
+  void bump_formula(expr::term_ref formulas);
+
+  /** Bump the scores of the formulas */
+  void bump_formulas(const std::vector<expr::term_ref>& formulas);
 
 public:
 

@@ -26,6 +26,9 @@ class y2m5 : public solver {
 
   static size_t s_instance;
 
+  /** Last result */
+  result d_last_mathsat5_result;
+
 public:
 
   void add_x_variable(expr::term_ref x_var);
@@ -38,16 +41,7 @@ public:
   ~y2m5();
 
   /** Features */
-  bool supports(feature f) const {
-    switch (f) {
-    case GENERALIZATION:
-      return true;
-    case INTERPOLATION:
-      return true;
-    default:
-      return false;
-    }
-  }
+  bool supports(feature f) const;
 
   /** Add an assertion f to the solver */
   void add(expr::term_ref f, formula_class f_class);

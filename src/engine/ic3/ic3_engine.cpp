@@ -37,7 +37,6 @@ ic3_engine::ic3_engine(const system::context& ctx)
 : engine(ctx)
 , d_transition_system(0)
 , d_property(0)
-, d_last_restart_frame(0)
 {
   for (size_t i = 0; i < 10; ++ i) {
     std::stringstream ss;
@@ -157,6 +156,7 @@ void ic3_engine::add_valid_up_to(size_t k, expr::term_ref F) {
 }
 
 void ic3_engine::add_to_induction_obligations(size_t k, expr::term_ref f, size_t depth) {
+  ensure_frame(k);
   d_induction_obligations.push(obligation(k, f, depth));
   d_induction_obligations_count[k] ++;
 }
@@ -170,47 +170,139 @@ obligation ic3_engine::pop_induction_obligation() {
   return ind;
 }
 
+void ic3_engine::init_solver(size_t k) {
+  assert(k < d_solvers.size());
+  assert(d_solvers[k] == 0);
+  smt::solver* solver = smt::factory::mk_default_solver(tm(), ctx().get_options());
+  d_solvers[k] = solver;
+  // Add the variable classes
+  const std::vector<expr::term_ref>& x = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_CURRENT);
+  solver->add_x_variables(x.begin(), x.end());
+  const std::vector<expr::term_ref>& x_next = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_NEXT);
+  solver->add_y_variables(x_next.begin(), x_next.end());
+  // Add the transition relation
+  solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_A);
+}
+
 void ic3_engine::ensure_frame(size_t k) {
   if (d_solvers.size() <= k) {
     MSG(1) << "ic3: Extending trace to " << k << std::endl;
   }
 
   while (d_solvers.size() <= k) {
-
     // Make the solver
-    smt::solver* solver = smt::factory::mk_default_solver(tm(), ctx().get_options());
-    d_solvers.push_back(solver);
-    // Add the variable classes
-    const std::vector<expr::term_ref>& x = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_CURRENT);
-    solver->add_x_variables(x.begin(), x.end());
-    const std::vector<expr::term_ref>& x_next = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_NEXT);
-    solver->add_y_variables(x_next.begin(), x_next.end());
+    size_t i = d_solvers.size();
+    d_solvers.push_back(0);
+    init_solver(i);
 
-    // Add the transition relation
-    solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_A);
-    // Add the frame content
+    // Add the empty frame content
     d_frame_content.push_back(formula_set());
     d_frame_inductive_content.push_back(formula_set());
-    // No failed induction so far
-    d_has_failed_induction.push_back(false);
     // Number of obligations per frame
     d_induction_obligations_count.push_back(0);
   }
 }
 
-void ic3_engine::clear() {
-  for (size_t i = 0; i < d_solvers.size(); ++ i) {
-    delete d_solvers[i];
+size_t ic3_engine::get_score(expr::term_ref f) const {
+  formula_scores_map::const_iterator find = d_formula_scores.find(f);
+  if (find == d_formula_scores.end()) {
+    return 0;
+  } else {
+    return find->second;
   }
-  for (size_t i = 0; i < d_stat_frame_size.size(); ++ i) {
-    d_stat_frame_size[i]->get_value() = 0;
+}
+
+void ic3_engine::reduce_learnts() {
+
+  if (d_frame_content.size() < 2) {
+    // Nothing to reduce
+    return;
   }
-  d_solvers.clear();
-  d_frame_content.clear();
-  d_frame_inductive_content.clear();
-  d_has_failed_induction.clear();
-  d_induction_obligations.clear();
-  d_induction_obligations_count.clear();
+
+  MSG(1) << "ic3: reducing learnts" << std::endl;
+
+  std::vector<expr::term_ref> to_remove;
+  std::copy(d_frame_content[1].begin(), d_frame_content[1].end(), std::back_inserter(to_remove));
+
+  // We don't remove the last frame
+  size_t last_frame = d_frame_content.size()-1;
+  size_t to_keep_in_remove = 0;
+  for (size_t i = 0; i < to_remove.size(); ++ i) {
+    if (d_frame_content[last_frame].count(to_remove[i]) == 0) {
+      // We keep this one in to_remove
+      to_remove[to_keep_in_remove ++] = to_remove[i];
+    }
+  }
+  to_remove.resize(to_keep_in_remove);
+
+  // Sort removables by increasing score
+  learnt_cmp cmp(d_formula_scores);
+  std::sort(to_remove.begin(), to_remove.end(), cmp);
+  assert(get_score(to_remove[0]) <= get_score(to_remove.back()));
+
+  // If no score, remove all, otherwise half
+  size_t median = get_score(to_remove[to_remove.size()/2]);
+
+
+  // Remove the from frames 1..last-1
+  for (size_t k = 1; k < last_frame; ++ k) {
+
+    assert(d_induction_obligations_count[k] == 0);
+
+    // Remove the frame content
+    for (size_t i = 0; i < to_remove.size(); ++ i) {
+      expr::term_ref f = to_remove[i];
+      if (get_score(f) <= median) {
+        d_frame_content[k].erase(f);
+      }
+    }
+
+    // Inductiveness is not valid any more
+    d_frame_inductive_content[k].clear();
+
+    // Update the stats
+    if (k < d_stat_frame_size.size()) {
+      d_stat_frame_size[k]->get_value() = d_frame_content[k].size();
+    }
+
+    // Reboot the solver
+    delete d_solvers[k];
+    d_solvers[k] = 0;
+    init_solver(k);
+
+    // Add the content again
+    formula_set::const_iterator it = d_frame_content[k].begin();
+    for (; it != d_frame_content[k].end(); ++ it) {
+      d_solvers[k]->add(*it, smt::solver::CLASS_A);
+    }
+  }
+
+  // Clear the scores
+  d_formula_scores.clear();
+}
+
+
+bool ic3_engine::learnt_cmp::operator () (expr::term_ref f1, expr::term_ref f2) const {
+  formula_scores_map::const_iterator f1_find = scores.find(f1);
+  formula_scores_map::const_iterator f2_find = scores.find(f2);
+  if (f1_find == f2_find) {
+    // Both out, or same
+    return f1 < f2;
+  }
+  if (f1_find == scores.end()) {
+    // Other has a score, 0 is smaler
+    return true;
+  }
+  if (f2_find == scores.end()) {
+    // First has a score, 0 is smaller
+    return false;
+  }
+  // Same score, break tie
+  if (f1_find->second == f2_find->second) {
+    return f1 < f2;
+  }
+  // Different scores, compare
+  return f1_find->second < f2_find->second;
 }
 
 bool ic3_engine::frame_contains(size_t k, expr::term_ref f) {
@@ -239,6 +331,7 @@ bool ic3_engine::check_reachable(size_t k, expr::term_ref f) {
       reachable = true;
       break;
     }
+
     // Check if the obligation is reachable
     expr::term_ref G = check_one_step_reachable(reach.frame(), reach.formula());
     if (G.is_null()) {
@@ -430,6 +523,14 @@ expr::term_ref ic3_engine::learn_forward(size_t k, expr::term_ref G) {
   assert(I1_result == smt::solver::UNSAT);
   expr::term_ref I1 = I1_solver->interpolate();
   I1 = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_NEXT, system::state_type::STATE_CURRENT, I1);
+
+  // If unsat cores available, get the core
+  if (I1_solver->supports(smt::solver::UNSAT_CORE)) {
+    std::vector<expr::term_ref> core;
+    I1_solver->get_unsat_core(core);
+    bump_formulas(core);
+  }
+
   I1_solver->pop();
 
   TRACE("ic3") << "I1: " << I1 << std::endl;
@@ -545,7 +646,62 @@ void ic3_engine::add_to_frame(size_t k, expr::term_ref f) {
   }
 }
 
-engine::result ic3_engine::search(formula_set& inductive_set) {
+engine::result ic3_engine::search() {
+
+  bool has_failed_induction = false;
+
+  // Search while we have something to do
+  while (!d_induction_obligations.empty()) {
+
+    // Pick a formula to try and prove inductive, i.e. that F_k & P & T => P'
+    obligation ind = pop_induction_obligation();
+
+    // The frame we're working at
+    size_t frame = ind.frame();
+    assert(!frame_contains(frame+1, ind.formula()));
+
+    /** Push the formula forward if it's inductive at the frame */
+    bool is_inductive = push_if_inductive(frame, ind.formula(), ind.depth());
+
+    // If not inductive, we might have a counterexample
+    if (!is_inductive) {
+      // Not inductive, if P then we have a counterexample
+      if (ind.formula() == d_property->get_formula()) {
+        return engine::INVALID;
+      } else {
+        // Remember that we failed induction
+        has_failed_induction = true;
+      }
+    }
+
+    // We're done with this frame
+    if (d_induction_obligations_count[ind.frame()] == 0) {
+      // Are we done
+      if (!has_failed_induction) {
+        if (ctx().get_options().get_bool("ic3-show-invariant")) {
+          print_frame(ind.frame(), std::cout);
+        }
+        return engine::VALID;
+      } else {
+        return engine::UNKNOWN;
+      }
+      // Continue with the next frame
+      has_failed_induction = false;
+    }
+  }
+
+  // Didn't prove or disprove, so unknown
+  return engine::UNKNOWN;
+}
+
+
+engine::result ic3_engine::query(const system::transition_system* ts, const system::state_formula* sf) {
+
+  result r = UNKNOWN;
+
+  // Remember the input
+  d_transition_system = ts;
+  d_property = sf;
 
   // Start with at least one frame
   ensure_frame(0);
@@ -565,85 +721,15 @@ engine::result ic3_engine::search(formula_set& inductive_set) {
     add_to_induction_obligations(0, P, 0);
   }
 
-  // Add all the formulas passed in
-  formula_set::const_iterator it = inductive_set.begin();
-  for (; it != inductive_set.end(); ++ it) {
-    if (!frame_contains(0, *it)) {
-      add_to_frame(0, *it);
-      add_to_induction_obligations(0, *it, 1);
-    }
-  }
-
-  // Search while we have something to do
-  while (!d_induction_obligations.empty()) {
-
-    // Pick a formula to try and prove inductive, i.e. that F_k & P & T => P'
-    obligation ind = pop_induction_obligation();
-
-    // The frame we're working at
-    size_t frame = ind.frame();
-    assert(!frame_contains(frame+1, ind.formula()));
-
-    /** Push the formula forward if it's inductive at the frame */
-    bool is_inductive = push_if_inductive(frame, ind.formula(), ind.depth());
-
-    // If not inductive, we might have a counterexample
-    if (!is_inductive) {
-      // Not inductive, if P then we have a counterexample
-      if (ind.formula() == P) {
-        return engine::INVALID;
-      } else {
-        // Remember that we failed induction
-        d_has_failed_induction[frame] = true;
-      }
-    }
-
-    // We're done with this frame
-    if (d_induction_obligations_count[ind.frame()] == 0) {
-      // Are we done
-      if (!d_has_failed_induction[frame]) {
-        if (ctx().get_options().get_bool("ic3-show-invariant")) {
-          print_frame(ind.frame(), std::cout);
-        }
-        inductive_set = d_frame_inductive_content[frame];
-        return engine::VALID;
-      } else {
-        // Check if we should restart
-        if (frame > d_last_restart_frame && d_frame_inductive_content[frame].size() < 0.9*d_frame_content[frame].size()) {
-          inductive_set = d_frame_inductive_content[frame];
-          d_last_restart_frame = frame;
-          return engine::UNKNOWN;
-        }
-      }
-    }
-  }
-
-  // Didn't prove or disprove, so unknown
-  return engine::UNKNOWN;
-}
-
-
-engine::result ic3_engine::query(const system::transition_system* ts, const system::state_formula* sf) {
-
-  result r = UNKNOWN;
-
-  // Remember the input
-  d_transition_system = ts;
-  d_property = sf;
-
-  // Set of formulas to start with
-  formula_set inductive_set;
-
   while(r == UNKNOWN) {
 
     MSG(1) << "ic3: starting search" << std::endl;
 
-    // Drop all frames
-    clear();
+    // Reduce learnts
+    reduce_learnts();
 
     // Search (inductive content of the last frame returned)
-    r = search(inductive_set);
-
+    r = search();
   }
 
   return r;
@@ -682,6 +768,16 @@ expr::term_ref ic3_engine::generalize_sat_at(size_t k, smt::solver* solver) {
   std::vector<expr::term_ref> generalization_facts;
   solver->generalize(generalization_facts);
   return tm().mk_and(generalization_facts);
+}
+
+void ic3_engine::bump_formula(expr::term_ref formula) {
+  d_formula_scores[formula] ++;
+}
+
+void ic3_engine::bump_formulas(const std::vector<expr::term_ref>& formulas) {
+  for (size_t i = 0; i < formulas.size(); ++ i) {
+    bump_formula(formulas[i]);
+  }
 }
 
 }

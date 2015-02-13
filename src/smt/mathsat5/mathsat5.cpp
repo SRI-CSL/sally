@@ -199,6 +199,20 @@ public:
 
   /** Returns the instance id */
   size_t instance() const { return d_instance; }
+
+  /** Do we generate unsat cores */
+  bool d_unsat_cores;
+
+  bool supports(solver::feature f) const {
+     switch (f) {
+     case solver::INTERPOLATION:
+       return true;
+     case solver::UNSAT_CORE:
+       return d_unsat_cores;
+     default:
+       return false;
+     }
+   }
 };
 
 int mathsat5_internal::s_instances = 0;
@@ -211,6 +225,7 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
 , d_itp_A(0)
 , d_itp_new_B(true)
 , d_itp_B(0)
+, d_unsat_cores(opts.get_bool("mathsat5-unsat-cores"))
 {
   // ID
   std::stringstream ss;
@@ -973,8 +988,11 @@ void mathsat5_internal::interpolate(std::vector<expr::term_ref>& projection_out)
 }
 
 void mathsat5_internal::get_unsat_core(std::vector<expr::term_ref>& out) {
-  size_t core_size;
+  size_t core_size = 0;
   msat_term* core = msat_get_unsat_core(d_env, &core_size);
+  if (core == 0) {
+    throw exception("MathSAT unsat core error.");
+  }
   for (size_t i = 0; i < core_size; ++ i) {
     out.push_back(to_term(core[i]));
   }
@@ -1084,6 +1102,10 @@ void mathsat5::interpolate(std::vector<expr::term_ref>& out) {
 void mathsat5::get_unsat_core(std::vector<expr::term_ref>& out) {
   TRACE("mathsat5") << "mathsat5[" << d_internal->instance() << "]: unsat core" << std::endl;
   d_internal->get_unsat_core(out);
+}
+
+bool mathsat5::supports(solver::feature f) const {
+  return d_internal->supports(f);
 }
 
 }
