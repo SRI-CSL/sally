@@ -56,6 +56,9 @@ public:
   /** Output to stream */
   void to_stream(std::ostream& out) const;
 
+  /** Clear the cache */
+  void clear_cache();
+
 private:
 
   /** The term manager */

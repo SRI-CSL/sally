@@ -7,6 +7,7 @@
 
 #include "expr/model.h"
 #include "utils/exception.h"
+#include "utils/trace.h"
 
 #include <sstream>
 #include <cassert>
@@ -52,6 +53,8 @@ expr::term_ref model::get_variable_value(expr::term_ref t) const {
 
 expr::term_ref model::get_term_value(expr::term_ref t) {
 
+  TRACE("expr::model") << "get_term_value(" << t << ")" << std::endl;
+
   // If a variable and not in the model, we don't know how to evaluate
   if (d_term_manager.term_of(t).op() == expr::VARIABLE) {
     const_iterator find = d_variable_to_value_map.find(t);
@@ -60,11 +63,13 @@ expr::term_ref model::get_term_value(expr::term_ref t) {
       ss << set_tm(d_term_manager) << "Variable " << t << " is not part of the model.";
       throw exception(ss.str());
     }
+    TRACE("expr::model") << "get_term_value(" << t << ") => " << find->second << std::endl;
     return find->second;
   } else {
     // Proper term, we have to evaluate, if not in the cache already
     const_iterator find = d_term_to_value_map.find(t);
     if (find != d_term_to_value_map.end()) {
+      TRACE("expr::model") << "get_term_value(" << t << ") => " << find->second << std::endl;
       return find->second;
     }
 
@@ -252,6 +257,8 @@ expr::term_ref model::get_term_value(expr::term_ref t) {
 
     assert(!value.is_null());
 
+    TRACE("expr::model") << "get_term_value(" << t << ") => " << value << std::endl;
+
     // Remember the cache
     d_term_to_value_map[t] = value;
 
@@ -280,6 +287,10 @@ model::const_iterator model::values_begin() const {
 
 model::const_iterator model::values_end() const {
   return d_variable_to_value_map.end();
+}
+
+void model::clear_cache() {
+  d_term_to_value_map.clear();
 }
 
 void model::to_stream(std::ostream& out) const {

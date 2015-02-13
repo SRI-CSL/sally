@@ -324,7 +324,7 @@ bool term_manager::is_subtype_of(term_ref t1, term_ref t2) const {
 }
 
 bool term_manager::equal_constants(term_ref t1, term_ref t2) const {
-  if (type_of(t1) == real_type()) {
+  if (is_subtype_of(type_of(t1), real_type())) {
     return rational(*this, t1) == rational(*this, t2);
   }
   return t1 == t2;
