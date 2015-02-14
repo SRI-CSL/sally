@@ -224,16 +224,20 @@ void ic3_engine::reduce_learnts() {
   std::vector<expr::term_ref> to_remove;
   std::copy(d_frame_content[1].begin(), d_frame_content[1].end(), std::back_inserter(to_remove));
 
+  // Frame with the content
+  size_t last_frame = d_frame_content.size() - 1;
+
   // We don't remove the last frame
-  size_t last_frame = d_frame_content.size()-1;
-  size_t to_keep_in_remove = 0;
-  for (size_t i = 0; i < to_remove.size(); ++ i) {
-    if (d_frame_content[last_frame].count(to_remove[i]) == 0) {
-      // We keep this one in to_remove
-      to_remove[to_keep_in_remove ++] = to_remove[i];
+  if (!ctx().get_options().get_bool("ic3-aggresive-reduce")) {
+    size_t to_keep_in_remove = 0;
+    for (size_t i = 0; i < to_remove.size(); ++i) {
+      if (d_frame_content[last_frame].count(to_remove[i]) == 0) {
+        // We keep this one in to_remove
+        to_remove[to_keep_in_remove++] = to_remove[i];
+      }
     }
+    to_remove.resize(to_keep_in_remove);
   }
-  to_remove.resize(to_keep_in_remove);
 
   // Sort removables by increasing score
   learnt_cmp cmp(d_formula_scores);
@@ -243,9 +247,9 @@ void ic3_engine::reduce_learnts() {
   // If no score, remove all, otherwise half
   size_t median = get_score(to_remove[to_remove.size()/2]);
 
-
   // Remove the from frames 1..last-1
-  for (size_t k = 1; k < last_frame; ++ k) {
+  size_t last_k = ctx().get_options().get_bool("ic3-aggresive-reduce") ? last_frame+1 : last_frame;
+  for (size_t k = 1; k < last_k; ++ k) {
 
     assert(d_induction_obligations_count[k] == 0);
 
@@ -274,6 +278,18 @@ void ic3_engine::reduce_learnts() {
     formula_set::const_iterator it = d_frame_content[k].begin();
     for (; it != d_frame_content[k].end(); ++ it) {
       d_solvers[k]->add(*it, smt::solver::CLASS_A);
+    }
+
+    if (k == last_frame) {
+      // Keep obligations
+      induction_obligation_queue new_obligations;
+      induction_obligation_queue::iterator ind_it = d_induction_obligations.begin();
+      for (; ind_it != d_induction_obligations.end(); ++ind_it) {
+        if (ind_it->formula() == d_property->get_formula() || get_score(ind_it->formula()) > median) {
+          new_obligations.push(*ind_it);
+        }
+      }
+      d_induction_obligations.swap(new_obligations);
     }
   }
 

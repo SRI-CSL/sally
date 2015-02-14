@@ -21,6 +21,7 @@ struct ic3_engine_info {
         ("ic3-use-weakening", "Use weakening in forward reasoning.")
         ("ic3-show-invariant", "Show the invariant if a property is proved true.")
         ("ic3-pdr", "Focus only on the property.")
+        ("ic3-aggresive-reduce", "Do aggressive learnts reduction")
         ;
   }
 

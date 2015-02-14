@@ -249,39 +249,74 @@ void translator::to_stream_horn(std::ostream& out) const {
   // Collect the state variables into these streams
   std::stringstream state_vars;
   std::stringstream next_vars;
+  std::stringstream quant_vars;
+
+  quant_vars << expr::set_output_language(output::HORN);
+  quant_vars << expr::set_tm(ctx().tm());
+
+  out << "(set-logic HORN)" << std::endl;
 
   // The invariant we're looking for
-  out << "(declare-rel invariant (";
+  out << "(declare-fun invariant (";
   const expr::term& state_type_term = tm().term_of(state_type->get_type());
   size_t state_type_size = tm().get_struct_type_size(state_type_term);
   for (size_t i = 0; i < state_type_size; ++ i) {
-    if (i) { out << " "; state_vars << " "; next_vars << " "; }
-    out << tm().get_struct_type_field_type(state_type_term, i);
-    state_vars << "state." << tm().get_struct_type_field_id(state_type_term, i);
-    next_vars << "next." << tm().get_struct_type_field_id(state_type_term, i);
+    std::string id = tm().get_struct_type_field_id(state_type_term, i);
+    expr::term_ref type = tm().get_struct_type_field_type(state_type_term, i);
+    if (i) {
+      out << " ";
+      state_vars << " ";
+      next_vars << " ";
+      quant_vars << " ";
+    }
+    out << type;
+    state_vars << "state." << id;
+    next_vars << "next." << id;
+    quant_vars << "(state." << id << " " << type << ")";
+    quant_vars << " (next." << id << " " << type << ")";
   }
-  out << "))" << std::endl;
-  out << std::endl;
-
-  // Declare state and next variables
-  for (size_t i = 0; i < state_type_size; ++ i) {
-    out << "(declare-var " << "state." << tm().get_struct_type_field_id(state_type_term, i) << " " << tm().get_struct_type_field_type(state_type_term, i) << ")" << std::endl;
-    out << "(declare-var " << "next." << tm().get_struct_type_field_id(state_type_term, i) << " " << tm().get_struct_type_field_type(state_type_term, i) << ")" << std::endl;
-  }
+  out << ") Bool)" << std::endl;
   out << std::endl;
 
   // The initial state
   expr::term_ref I = d_ts->get_initial_states();
-  out << "(rule (=> " << I << "(invariant " << state_vars.str() << ")))" << std::endl;
+  out << ";; Initial state" << std::endl;
+  out << "(assert" << std::endl;
+  out << "  (forall (" << quant_vars.str() << ")" << std::endl;
+  out << "    (=> " << I << std::endl;
+  out << "        (invariant " << state_vars.str() << "))" << std::endl;
+  out << "  )" << std::endl;
+  out << ")" << std::endl;
+  out << std::endl;
 
   // The transition relation
   expr::term_ref T = d_ts->get_transition_relation();
-  out << "(rule (=> (and (invariant " << state_vars.str() << ") " << T << ") (invariant " << next_vars.str() << ")))" << std::endl;
+  out << ";; Transition relation state" << std::endl;
+  out << "(assert" << std::endl;
+  out << "  (forall (" << quant_vars.str() << ")" << std::endl;
+  out << "    (=> (and (invariant " << state_vars.str() << ")" << std::endl;
+  out << "             " << T << std::endl;
+  out << "        )" << std::endl;
+  out << "        (invariant " << next_vars.str() << ")" << std::endl;
+  out << "    )" << std::endl;
+  out << "  )" << std::endl;
+  out << ")" << std::endl;
+  out << std::endl;
 
   // The query
-  out << std::endl;
   expr::term_ref Q = d_sf->get_formula();
-  out << "(query (and (invariant " << state_vars.str() << ") (not " << Q << ")))" << std::endl;
+  out << ";; Property" << std::endl;
+  out << "(assert" << std::endl;
+  out << "  (forall (" << quant_vars.str() << ")" << std::endl;
+  out << "    (=> (invariant " << state_vars.str() << ")" << std::endl;
+  out << "        " << Q << std::endl;
+  out << "    )" << std::endl;
+  out << "  )" << std::endl;
+  out << ")" << std::endl;
+  out << std::endl;
+
+  out << ";; Check the property" << std::endl;
+  out << "(check-sat)" << std::endl;
 
   // State type namespace
   ctx().tm().pop_namespace();
