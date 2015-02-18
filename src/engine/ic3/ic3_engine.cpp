@@ -181,7 +181,7 @@ void ic3_engine::init_solver(size_t k) {
   const std::vector<expr::term_ref>& x_next = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_NEXT);
   solver->add_y_variables(x_next.begin(), x_next.end());
   // Add the transition relation
-  solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_A);
+  solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_T);
 }
 
 void ic3_engine::ensure_frame(size_t k) {

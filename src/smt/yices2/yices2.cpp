@@ -49,8 +49,11 @@ class yices2_internal {
   /** The yices context */
   context_t *d_ctx;
 
-  /** All assertions we have in context (strong) TODO: push/pop */
+  /** All assertions we have in context (strong)  */
   std::vector<expr::term_ref_strong> d_assertions;
+
+  /** The assertion classes */
+  std::vector<solver::formula_class> d_assertion_classes;
 
   /** The assertions size per push/pop */
   std::vector<size_t> d_assertions_size;
@@ -758,6 +761,7 @@ void yices2_internal::add(expr::term_ref ref, solver::formula_class f_class) {
   // Remember the assertions
   expr::term_ref_strong ref_strong(d_tm, ref);
   d_assertions.push_back(ref_strong);
+  d_assertion_classes.push_back(f_class);
 
   // Assert to yices
   term_t yices_term = to_yices2_term(ref);
@@ -886,6 +890,7 @@ void yices2_internal::pop() {
   d_assertions_size.pop_back();
   while (d_assertions.size() > size) {
     d_assertions.pop_back();
+    d_assertion_classes.pop_back();
   }
 }
 
@@ -902,10 +907,22 @@ void yices2_internal::generalize(const std::set<expr::term_ref>& to_eliminate, s
     yices_pp_model(stderr, m, 80, 100, 0);
   }
 
-  // Yices version of the assertions
-  term_t* assertions = new term_t[d_assertions.size()];
+  // Copy over A formulas and count the rest
+  size_t to_generalize = 0;
   for (size_t i = 0; i < d_assertions.size(); ++ i) {
-    assertions[i] = to_yices2_term(d_assertions[i]);
+    if (d_assertion_classes[i] == solver::CLASS_A) {
+      projection_out.push_back(d_assertions[i]);
+    } else {
+      to_generalize ++;
+    }
+  }
+
+  // Yices version of the assertions
+  term_t* assertions = new term_t[to_generalize];
+  for (size_t i = 0, j = 0; i < d_assertions.size(); ++ i) {
+    if (d_assertion_classes[i] != solver::CLASS_A) {
+      assertions[j++] = to_yices2_term(d_assertions[i]);
+    }
   }
 
   // Yices version of the variables
@@ -917,7 +934,7 @@ void yices2_internal::generalize(const std::set<expr::term_ref>& to_eliminate, s
 
   if (output::trace_tag_is_enabled("yices2")) {
     std::cerr << "assertions:" << std::endl;
-    for (size_t i = 0; i < d_assertions.size(); ++ i) {
+    for (size_t i = 0; i < to_generalize; ++ i) {
       std::cerr << i << ": ";
       yices_pp_term(stderr, assertions[i], 80, 100, 0);
     }
@@ -931,7 +948,7 @@ void yices2_internal::generalize(const std::set<expr::term_ref>& to_eliminate, s
   // Generalize
   term_vector_t G_y;
   yices_init_term_vector(&G_y);
-  int32_t ret = yices_generalize_model_array(m, d_assertions.size(), assertions, to_eliminate.size(), variables, YICES_GEN_DEFAULT, &G_y);
+  int32_t ret = yices_generalize_model_array(m, to_generalize, assertions, to_eliminate.size(), variables, YICES_GEN_DEFAULT, &G_y);
   if (ret < 0) {
     throw exception("Generalization failed in Yices.");
   }

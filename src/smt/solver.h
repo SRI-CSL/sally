@@ -71,6 +71,7 @@ public:
   /** Class of the formula */
   enum formula_class {
     CLASS_A,
+    CLASS_T,
     CLASS_B
   };
 

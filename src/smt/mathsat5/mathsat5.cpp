@@ -849,7 +849,14 @@ void mathsat5_internal::add(expr::term_ref ref, solver::formula_class f_class) {
 
   // Get the interpolation group
   int itp_group;
-  if (f_class == solver::CLASS_A) {
+  if (f_class == solver::CLASS_B) {
+    if (d_itp_new_B) {
+      itp_group = d_itp_B = msat_create_itp_group(d_env);
+      d_itp_new_B = false;
+    } else {
+      itp_group = d_itp_B;
+    }
+  } else {
     if (d_itp_new_A) {
       itp_group = d_itp_A = msat_create_itp_group(d_env);
       d_itp_new_A = false;
@@ -857,13 +864,6 @@ void mathsat5_internal::add(expr::term_ref ref, solver::formula_class f_class) {
       itp_group = d_itp_A;
     }
     d_assertion_classes_A.push_back(itp_group);
-  } else {
-    if (d_itp_new_B) {
-      itp_group = d_itp_B = msat_create_itp_group(d_env);
-      d_itp_new_B = false;
-    } else {
-      itp_group = d_itp_B;
-    }
   }
 
   // Set the interpolation group
