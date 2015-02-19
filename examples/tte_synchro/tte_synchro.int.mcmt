@@ -1,0 +1,687 @@
+;; Enum constants
+(define-constant good 0)
+(define-constant omisive 1)
+(define-constant byzantine 2)
+
+;; Enum constants
+(define-constant sm_send 0)
+(define-constant sm_correct 1)
+(define-constant sm_drift 2)
+
+;; Enum constants
+(define-constant cm_receive 0)
+(define-constant cm_correct 1)
+(define-constant cm_drift 2)
+
+;; State type (all TCCs added to the assumptions)
+(declare-state-type state_type (
+  (max_drift Real)
+  (cm_clock!0 Real)
+  (cm_clock!1 Real)
+  (cm_state!0 Integer)
+  (cm_state!1 Integer)
+  (compression!0 Real)
+  (compression!1 Real)
+  (perm!0!0 Integer)
+  (perm!0!1 Integer)
+  (perm!0!2 Integer)
+  (perm!0!3 Integer)
+  (perm!0!4 Integer)
+  (perm!1!0 Integer)
+  (perm!1!1 Integer)
+  (perm!1!2 Integer)
+  (perm!1!3 Integer)
+  (perm!1!4 Integer)
+  (sm_clock!0 Real)
+  (sm_clock!1 Real)
+  (sm_clock!2 Real)
+  (sm_clock!3 Real)
+  (sm_clock!4 Real)
+  (sm_reading!0!0 Real)
+  (sm_reading!0!1 Real)
+  (sm_reading!0!2 Real)
+  (sm_reading!0!3 Real)
+  (sm_reading!0!4 Real)
+  (sm_reading!1!0 Real)
+  (sm_reading!1!1 Real)
+  (sm_reading!1!2 Real)
+  (sm_reading!1!3 Real)
+  (sm_reading!1!4 Real)
+  (sm_state!0 Integer)
+  (sm_state!1 Integer)
+  (sm_state!2 Integer)
+  (sm_state!3 Integer)
+  (sm_state!4 Integer)
+  (sm_valid!0!0 Bool)
+  (sm_valid!0!1 Bool)
+  (sm_valid!0!2 Bool)
+  (sm_valid!0!3 Bool)
+  (sm_valid!0!4 Bool)
+  (sm_valid!1!0 Bool)
+  (sm_valid!1!1 Bool)
+  (sm_valid!1!2 Bool)
+  (sm_valid!1!3 Bool)
+  (sm_valid!1!4 Bool)
+  (choice!1!0 Integer)
+  (choice!1!1 Integer)
+  (choice!1!2 Integer)
+  (choice!1!3 Integer)
+  (choice!1!4 Integer)
+  (choice!2!0 Integer)
+  (choice!2!1 Integer)
+))
+
+;; Initial states
+(define-states initial_states state_type (and
+    (= sm_state!0 sm_send)
+    (= sm_state!1 sm_send)
+    (= sm_state!2 sm_send)
+    (= sm_state!3 sm_send)
+    (= sm_state!4 sm_send)
+    (= sm_clock!0 0)
+    (= sm_clock!1 0)
+    (= sm_clock!2 0)
+    (= sm_clock!3 0)
+    (= sm_clock!4 0)
+    (= cm_state!0 cm_receive)
+    (= cm_state!1 cm_receive)
+    (= compression!0 0)
+    (= compression!1 0)
+    (= cm_clock!0 0)
+    (= cm_clock!1 0)
+))
+
+;; Transition relation
+(define-transition transition state_type 
+  (and                 
+    (= max_drift' max_drift)
+    (let ((cs!558 (= cm_state!0' cm_correct))
+          (cs!594 (= cm_state!1' cm_correct)))
+      (let ((cs!530 (= cm_state!0 cm_receive))
+            (cs!559 (= cm_clock!0' cm_clock!0))
+            (cs!561 (= compression!0' compression!0))
+            (cs!566 (= cm_state!1 cm_receive))
+            (cs!595 (= cm_clock!1' cm_clock!1))
+            (cs!598 (= compression!1' compression!1))
+            (cs!604 (/ (+ compression!0 compression!1) 2)))
+        (let ((cs!538 (/= perm!0!1' perm!0!0'))
+              (cs!539 (/= perm!0!2' perm!0!0'))
+              (cs!540 (/= perm!0!3' perm!0!0'))
+              (cs!541 (/= perm!0!4' perm!0!0'))
+              (cs!542 (/= perm!0!0' perm!0!1'))
+              (cs!543 (/= perm!0!2' perm!0!1'))
+              (cs!544 (/= perm!0!3' perm!0!1'))
+              (cs!545 (/= perm!0!4' perm!0!1'))
+              (cs!546 (/= perm!0!0' perm!0!2'))
+              (cs!547 (/= perm!0!1' perm!0!2'))
+              (cs!548 (/= perm!0!3' perm!0!2'))
+              (cs!549 (/= perm!0!4' perm!0!2'))
+              (cs!550 (/= perm!0!0' perm!0!3'))
+              (cs!551 (/= perm!0!1' perm!0!3'))
+              (cs!552 (/= perm!0!2' perm!0!3'))
+              (cs!553 (/= perm!0!4' perm!0!3'))
+              (cs!554 (/= perm!0!0' perm!0!4'))
+              (cs!555 (/= perm!0!1' perm!0!4'))
+              (cs!556 (/= perm!0!2' perm!0!4'))
+              (cs!557 (/= perm!0!3' perm!0!4'))
+              (cs!574 (/= perm!1!1' perm!1!0'))
+              (cs!575 (/= perm!1!2' perm!1!0'))
+              (cs!576 (/= perm!1!3' perm!1!0'))
+              (cs!577 (/= perm!1!4' perm!1!0'))
+              (cs!578 (/= perm!1!0' perm!1!1'))
+              (cs!579 (/= perm!1!2' perm!1!1'))
+              (cs!580 (/= perm!1!3' perm!1!1'))
+              (cs!581 (/= perm!1!4' perm!1!1'))
+              (cs!582 (/= perm!1!0' perm!1!2'))
+              (cs!583 (/= perm!1!1' perm!1!2'))
+              (cs!584 (/= perm!1!3' perm!1!2'))
+              (cs!585 (/= perm!1!4' perm!1!2'))
+              (cs!586 (/= perm!1!0' perm!1!3'))
+              (cs!587 (/= perm!1!1' perm!1!3'))
+              (cs!588 (/= perm!1!2' perm!1!3'))
+              (cs!589 (/= perm!1!4' perm!1!3'))
+              (cs!590 (/= perm!1!0' perm!1!4'))
+              (cs!591 (/= perm!1!1' perm!1!4'))
+              (cs!592 (/= perm!1!2' perm!1!4'))
+              (cs!593 (/= perm!1!3' perm!1!4')))
+          (let ((cs!513
+                     (cond
+                       ((= perm!0!1' 5) sm_reading!0!4)
+                       ((= perm!0!1' 4) sm_reading!0!3)
+                       ((= perm!0!1' 3) sm_reading!0!2)
+                       ((= perm!0!1' 2) sm_reading!0!1)
+                       (else sm_reading!0!0)))
+                (cs!514
+                      (cond
+                        ((= perm!0!3' 5) sm_reading!0!4)
+                        ((= perm!0!3' 4) sm_reading!0!3)
+                        ((= perm!0!3' 3) sm_reading!0!2)
+                        ((= perm!0!3' 2) sm_reading!0!1)
+                        (else sm_reading!0!0)))
+                (cs!516
+                      (cond
+                        ((= perm!0!2' 5) sm_reading!0!4)
+                        ((= perm!0!2' 4) sm_reading!0!3)
+                        ((= perm!0!2' 3) sm_reading!0!2)
+                        ((= perm!0!2' 2) sm_reading!0!1)
+                        (else sm_reading!0!0)))
+                (cs!519
+                      (cond
+                        ((= perm!1!1' 5) sm_reading!1!4)
+                        ((= perm!1!1' 4) sm_reading!1!3)
+                        ((= perm!1!1' 3) sm_reading!1!2)
+                        ((= perm!1!1' 2) sm_reading!1!1)
+                        (else sm_reading!1!0)))
+                (cs!520
+                      (cond
+                        ((= perm!1!3' 5) sm_reading!1!4)
+                        ((= perm!1!3' 4) sm_reading!1!3)
+                        ((= perm!1!3' 3) sm_reading!1!2)
+                        ((= perm!1!3' 2) sm_reading!1!1)
+                        (else sm_reading!1!0)))
+                (cs!521
+                      (cond
+                        ((= perm!1!4' 5) sm_valid!1!4)
+                        ((= perm!1!4' 4) sm_valid!1!3)
+                        ((= perm!1!4' 3) sm_valid!1!2)
+                        ((= perm!1!4' 2) sm_valid!1!1)
+                        (else sm_valid!1!0)))
+                (cs!523
+                      (cond
+                        ((= perm!1!2' 5) sm_reading!1!4)
+                        ((= perm!1!2' 4) sm_reading!1!3)
+                        ((= perm!1!2' 3) sm_reading!1!2)
+                        ((= perm!1!2' 2) sm_reading!1!1)
+                        (else sm_reading!1!0)))
+                (cs!528
+                      (cond
+                        ((= perm!0!4' 5) sm_valid!0!4)
+                        ((= perm!0!4' 4) sm_valid!0!3)
+                        ((= perm!0!4' 3) sm_valid!0!2)
+                        ((= perm!0!4' 2) sm_valid!0!1)
+                        (else sm_valid!0!0)))
+                (cs!534
+                      (cond
+                        ((= perm!0!0' 5) sm_valid!0!4)
+                        ((= perm!0!0' 4) sm_valid!0!3)
+                        ((= perm!0!0' 3) sm_valid!0!2)
+                        ((= perm!0!0' 2) sm_valid!0!1)
+                        (else sm_valid!0!0)))
+                (cs!535
+                      (cond
+                        ((= perm!0!1' 5) sm_valid!0!4)
+                        ((= perm!0!1' 4) sm_valid!0!3)
+                        ((= perm!0!1' 3) sm_valid!0!2)
+                        ((= perm!0!1' 2) sm_valid!0!1)
+                        (else sm_valid!0!0)))
+                (cs!536
+                      (cond
+                        ((= perm!0!2' 5) sm_valid!0!4)
+                        ((= perm!0!2' 4) sm_valid!0!3)
+                        ((= perm!0!2' 3) sm_valid!0!2)
+                        ((= perm!0!2' 2) sm_valid!0!1)
+                        (else sm_valid!0!0)))
+                (cs!537
+                      (cond
+                        ((= perm!0!3' 5) sm_valid!0!4)
+                        ((= perm!0!3' 4) sm_valid!0!3)
+                        ((= perm!0!3' 3) sm_valid!0!2)
+                        ((= perm!0!3' 2) sm_valid!0!1)
+                        (else sm_valid!0!0)))
+                (cs!570
+                      (cond
+                        ((= perm!1!0' 5) sm_valid!1!4)
+                        ((= perm!1!0' 4) sm_valid!1!3)
+                        ((= perm!1!0' 3) sm_valid!1!2)
+                        ((= perm!1!0' 2) sm_valid!1!1)
+                        (else sm_valid!1!0)))
+                (cs!571
+                      (cond
+                        ((= perm!1!1' 5) sm_valid!1!4)
+                        ((= perm!1!1' 4) sm_valid!1!3)
+                        ((= perm!1!1' 3) sm_valid!1!2)
+                        ((= perm!1!1' 2) sm_valid!1!1)
+                        (else sm_valid!1!0)))
+                (cs!572
+                      (cond
+                        ((= perm!1!2' 5) sm_valid!1!4)
+                        ((= perm!1!2' 4) sm_valid!1!3)
+                        ((= perm!1!2' 3) sm_valid!1!2)
+                        ((= perm!1!2' 2) sm_valid!1!1)
+                        (else sm_valid!1!0)))
+                (cs!573
+                      (cond
+                        ((= perm!1!3' 5) sm_valid!1!4)
+                        ((= perm!1!3' 4) sm_valid!1!3)
+                        ((= perm!1!3' 3) sm_valid!1!2)
+                        ((= perm!1!3' 2) sm_valid!1!1)
+                        (else sm_valid!1!0))))
+            (let ((cs!531
+                       (<=
+                         (cond
+                           ((= perm!0!0' 5) sm_reading!0!4)
+                           ((= perm!0!0' 4) sm_reading!0!3)
+                           ((= perm!0!0' 3) sm_reading!0!2)
+                           ((= perm!0!0' 2) sm_reading!0!1)
+                           (else sm_reading!0!0))
+                         cs!513))
+                  (cs!532 (<= cs!513 cs!516))
+                  (cs!533 (<= cs!516 cs!514))
+                  (cs!565 (not cs!521))
+                  (cs!567
+                        (<=
+                          (cond
+                            ((= perm!1!0' 5) sm_reading!1!4)
+                            ((= perm!1!0' 4) sm_reading!1!3)
+                            ((= perm!1!0' 3) sm_reading!1!2)
+                            ((= perm!1!0' 2) sm_reading!1!1)
+                            (else sm_reading!1!0))
+                          cs!519))
+                  (cs!568 (<= cs!519 cs!523))
+                  (cs!569 (<= cs!523 cs!520))
+                  (cs!610 (not cs!528)))
+              (and
+                (or
+                  (and
+                    (= choice!1!0 0)
+                    (= sm_state!0 sm_send)
+                    (= sm_state!0' sm_correct)
+                    (= sm_clock!0' sm_clock!0))
+                  (and
+                    (= choice!1!0 1)
+                    (= sm_state!0 sm_correct)
+                    (= sm_state!0' sm_drift)
+                    (= sm_clock!0' cs!604))
+                  (and
+                    (= choice!1!0 2)
+                    (= sm_state!0 sm_drift)
+                    (and
+                      (<= (- sm_clock!0 max_drift) sm_clock!0')
+                      (<= sm_clock!0' (+ sm_clock!0 max_drift)))
+                    (= sm_state!0' sm_send)))
+                (or
+                  (and
+                    (= choice!1!1 0)
+                    (= sm_state!1 sm_send)
+                    (= sm_state!1' sm_correct)
+                    (= sm_clock!1' sm_clock!1))
+                  (and
+                    (= choice!1!1 1)
+                    (= sm_state!1 sm_correct)
+                    (= sm_state!1' sm_drift)
+                    (= sm_clock!1' cs!604))
+                  (and
+                    (= choice!1!1 2)
+                    (= sm_state!1 sm_drift)
+                    (and
+                      (<= (- sm_clock!1 max_drift) sm_clock!1')
+                      (<= sm_clock!1' (+ sm_clock!1 max_drift)))
+                    (= sm_state!1' sm_send)))
+                (or
+                  (and
+                    (= choice!1!2 0)
+                    (= sm_state!2 sm_send)
+                    (= sm_state!2' sm_correct)
+                    (= sm_clock!2' sm_clock!2))
+                  (and
+                    (= choice!1!2 1)
+                    (= sm_state!2 sm_correct)
+                    (= sm_state!2' sm_drift)
+                    (= sm_clock!2' cs!604))
+                  (and
+                    (= choice!1!2 2)
+                    (= sm_state!2 sm_drift)
+                    (and
+                      (<= (- sm_clock!2 max_drift) sm_clock!2')
+                      (<= sm_clock!2' (+ sm_clock!2 max_drift)))
+                    (= sm_state!2' sm_send)))
+                (or
+                  (and
+                    (= choice!1!3 0)
+                    (= sm_state!3 sm_send)
+                    (= sm_state!3' sm_correct)
+                    (= sm_clock!3' sm_clock!3))
+                  (and
+                    (= choice!1!3 1)
+                    (= sm_state!3 sm_correct)
+                    (= sm_state!3' sm_drift)
+                    (= sm_clock!3' cs!604))
+                  (and
+                    (= choice!1!3 2)
+                    (= sm_state!3 sm_drift)
+                    (and
+                      (<= (- sm_clock!3 max_drift) sm_clock!3')
+                      (<= sm_clock!3' (+ sm_clock!3 max_drift)))
+                    (= sm_state!3' sm_send)))
+                (or
+                  (and
+                    (= choice!1!4 0)
+                    (= sm_state!4 sm_send)
+                    (= sm_state!4' sm_correct)
+                    (= sm_clock!4' sm_clock!4))
+                  (and
+                    (= choice!1!4 1)
+                    (= sm_state!4 sm_correct)
+                    (= sm_state!4' sm_drift)
+                    (= sm_clock!4' cs!604))
+                  (and
+                    (= choice!1!4 2)
+                    (= sm_state!4 sm_drift)
+                    (and
+                      (<= (- sm_clock!4 max_drift) sm_clock!4')
+                      (<= sm_clock!4' (+ sm_clock!4 max_drift)))
+                    (= sm_state!4' sm_send)))
+                (or
+                  (and
+                    (= choice!2!0 0)
+                    cs!530
+                    cs!531
+                    cs!532
+                    cs!534
+                    cs!535
+                    cs!536
+                    (not cs!537)
+                    cs!610
+                    cs!538
+                    cs!539
+                    cs!540
+                    cs!541
+                    cs!542
+                    cs!543
+                    cs!544
+                    cs!545
+                    cs!546
+                    cs!547
+                    cs!548
+                    cs!549
+                    cs!550
+                    cs!551
+                    cs!552
+                    cs!553
+                    cs!554
+                    cs!555
+                    cs!556
+                    cs!557
+                    cs!558
+                    (= compression!0' cs!513)
+                    cs!559)
+                  (and
+                    (= choice!2!0 1)
+                    cs!530
+                    cs!531
+                    cs!532
+                    cs!533
+                    cs!534
+                    cs!535
+                    cs!536
+                    cs!537
+                    cs!610
+                    cs!538
+                    cs!539
+                    cs!540
+                    cs!541
+                    cs!542
+                    cs!543
+                    cs!544
+                    cs!545
+                    cs!546
+                    cs!547
+                    cs!548
+                    cs!549
+                    cs!550
+                    cs!551
+                    cs!552
+                    cs!553
+                    cs!554
+                    cs!555
+                    cs!556
+                    cs!557
+                    cs!558
+                    (= compression!0' (/ (+ cs!513 cs!516) 2))
+                    cs!559)
+                  (and
+                    (= choice!2!0 2)
+                    cs!530
+                    cs!531
+                    cs!532
+                    cs!533
+                    (<=
+                      cs!514
+                      (cond
+                        ((= perm!0!4' 5) sm_reading!0!4)
+                        ((= perm!0!4' 4) sm_reading!0!3)
+                        ((= perm!0!4' 3) sm_reading!0!2)
+                        ((= perm!0!4' 2) sm_reading!0!1)
+                        (else sm_reading!0!0)))
+                    cs!534
+                    cs!535
+                    cs!536
+                    cs!537
+                    cs!528
+                    cs!538
+                    cs!539
+                    cs!540
+                    cs!541
+                    cs!542
+                    cs!543
+                    cs!544
+                    cs!545
+                    cs!546
+                    cs!547
+                    cs!548
+                    cs!549
+                    cs!550
+                    cs!551
+                    cs!552
+                    cs!553
+                    cs!554
+                    cs!555
+                    cs!556
+                    cs!557
+                    cs!558
+                    (= compression!0' cs!516)
+                    cs!559)
+                  (and
+                    (= choice!2!0 3)
+                    (= cm_state!0 cm_correct)
+                    (= cm_clock!0' compression!0)
+                    (= cm_state!0' cm_drift)
+                    cs!561)
+                  (and
+                    (= choice!2!0 4)
+                    (= cm_state!0 cm_drift)
+                    (and
+                      (<= (- cm_clock!0 max_drift) cm_clock!0')
+                      (<= cm_clock!0' (+ cm_clock!0 max_drift)))
+                    (= cm_state!0' cm_receive)
+                    cs!561))
+                (or
+                  (and
+                    (= choice!2!1 0)
+                    cs!566
+                    cs!567
+                    cs!568
+                    cs!570
+                    cs!571
+                    cs!572
+                    (not cs!573)
+                    cs!565
+                    cs!574
+                    cs!575
+                    cs!576
+                    cs!577
+                    cs!578
+                    cs!579
+                    cs!580
+                    cs!581
+                    cs!582
+                    cs!583
+                    cs!584
+                    cs!585
+                    cs!586
+                    cs!587
+                    cs!588
+                    cs!589
+                    cs!590
+                    cs!591
+                    cs!592
+                    cs!593
+                    cs!594
+                    (= compression!1' cs!519)
+                    cs!595)
+                  (and
+                    (= choice!2!1 1)
+                    cs!566
+                    cs!567
+                    cs!568
+                    cs!569
+                    cs!570
+                    cs!571
+                    cs!572
+                    cs!573
+                    cs!565
+                    cs!574
+                    cs!575
+                    cs!576
+                    cs!577
+                    cs!578
+                    cs!579
+                    cs!580
+                    cs!581
+                    cs!582
+                    cs!583
+                    cs!584
+                    cs!585
+                    cs!586
+                    cs!587
+                    cs!588
+                    cs!589
+                    cs!590
+                    cs!591
+                    cs!592
+                    cs!593
+                    cs!594
+                    (= compression!1' (/ (+ cs!519 cs!523) 2))
+                    cs!595)
+                  (and
+                    (= choice!2!1 2)
+                    cs!566
+                    cs!567
+                    cs!568
+                    cs!569
+                    (<=
+                      cs!520
+                      (cond
+                        ((= perm!1!4' 5) sm_reading!1!4)
+                        ((= perm!1!4' 4) sm_reading!1!3)
+                        ((= perm!1!4' 3) sm_reading!1!2)
+                        ((= perm!1!4' 2) sm_reading!1!1)
+                        (else sm_reading!1!0)))
+                    cs!570
+                    cs!571
+                    cs!572
+                    cs!573
+                    cs!521
+                    cs!574
+                    cs!575
+                    cs!576
+                    cs!577
+                    cs!578
+                    cs!579
+                    cs!580
+                    cs!581
+                    cs!582
+                    cs!583
+                    cs!584
+                    cs!585
+                    cs!586
+                    cs!587
+                    cs!588
+                    cs!589
+                    cs!590
+                    cs!591
+                    cs!592
+                    cs!593
+                    cs!594
+                    (= compression!1' cs!523)
+                    cs!595)
+                  (and
+                    (= choice!2!1 3)
+                    (= cm_state!1 cm_correct)
+                    (= cm_clock!1' compression!1)
+                    (= cm_state!1' cm_drift)
+                    cs!598)
+                  (and
+                    (= choice!2!1 4)
+                    (= cm_state!1 cm_drift)
+                    (and
+                      (<= (- cm_clock!1 max_drift) cm_clock!1')
+                      (<= cm_clock!1' (+ cm_clock!1 max_drift)))
+                    (= cm_state!1' cm_receive)
+                    cs!598))))))))
+  )
+)
+
+;; Transition system 
+(define-transition-system T state_type
+  initial_states
+  (transition)
+)
+
+;; SAL definitions
+(assume T (and
+    true
+    true
+    sm_valid!0!0
+    sm_valid!1!0
+    sm_valid!0!1
+    sm_valid!1!1
+    sm_valid!0!3
+    sm_valid!1!3
+    sm_valid!0!4
+    sm_valid!1!4
+    (= sm_reading!0!0 sm_clock!0)
+    (= sm_reading!1!0 sm_clock!0)
+    (= sm_reading!0!1 sm_clock!1)
+    (= sm_reading!1!1 sm_clock!1)
+    (= sm_reading!0!3 sm_clock!3)
+    (= sm_reading!1!3 sm_clock!3)
+    (= sm_reading!0!4 sm_clock!4)
+    (= sm_reading!1!4 sm_clock!4)
+))
+
+;; TCC for variables
+;; CM_STATE: (or (= _ cm_receive) (= _ cm_correct) (= _ cm_drift))
+;; SM_STATE: (or (= _ sm_send) (= _ sm_correct) (= _ sm_drift))
+;; SM_ID: (or (= _ 1) (= _ 2) (= _ 3) (= _ 4) (= _ 5))
+;; CM_ID: (or (= _ 1) (= _ 2))
+;; [0..2]: (or (= _ 0) (= _ 1) (= _ 2))
+;; [0..4]: (or (= _ 0) (= _ 1) (= _ 2) (= _ 3) (= _ 4))
+(assume T (and
+  (> max_drift 0)
+  (or (= cm_state!0 cm_receive) (= cm_state!0 cm_correct) (= cm_state!0 cm_drift))
+  (or (= cm_state!1 cm_receive) (= cm_state!1 cm_correct) (= cm_state!1 cm_drift))
+  (or (= perm!0!0 1) (= perm!0!0 2) (= perm!0!0 3) (= perm!0!0 4) (= perm!0!0 5))
+  (or (= perm!0!1 1) (= perm!0!1 2) (= perm!0!1 3) (= perm!0!1 4) (= perm!0!1 5))
+  (or (= perm!0!2 1) (= perm!0!2 2) (= perm!0!2 3) (= perm!0!2 4) (= perm!0!2 5))
+  (or (= perm!0!3 1) (= perm!0!3 2) (= perm!0!3 3) (= perm!0!3 4) (= perm!0!3 5))
+  (or (= perm!0!4 1) (= perm!0!4 2) (= perm!0!4 3) (= perm!0!4 4) (= perm!0!4 5))
+  (or (= perm!1!0 1) (= perm!1!0 2) (= perm!1!0 3) (= perm!1!0 4) (= perm!1!0 5))
+  (or (= perm!1!1 1) (= perm!1!1 2) (= perm!1!1 3) (= perm!1!1 4) (= perm!1!1 5))
+  (or (= perm!1!2 1) (= perm!1!2 2) (= perm!1!2 3) (= perm!1!2 4) (= perm!1!2 5))
+  (or (= perm!1!3 1) (= perm!1!3 2) (= perm!1!3 3) (= perm!1!3 4) (= perm!1!3 5))
+  (or (= perm!1!4 1) (= perm!1!4 2) (= perm!1!4 3) (= perm!1!4 4) (= perm!1!4 5))
+  (or (= sm_state!0 sm_send) (= sm_state!0 sm_correct) (= sm_state!0 sm_drift))
+  (or (= sm_state!1 sm_send) (= sm_state!1 sm_correct) (= sm_state!1 sm_drift))
+  (or (= sm_state!2 sm_send) (= sm_state!2 sm_correct) (= sm_state!2 sm_drift))
+  (or (= sm_state!3 sm_send) (= sm_state!3 sm_correct) (= sm_state!3 sm_drift))
+  (or (= sm_state!4 sm_send) (= sm_state!4 sm_correct) (= sm_state!4 sm_drift))
+  (or (= choice!1!0 0) (= choice!1!0 1) (= choice!1!0 2))
+  (or (= choice!1!1 0) (= choice!1!1 1) (= choice!1!1 2))
+  (or (= choice!1!2 0) (= choice!1!2 1) (= choice!1!2 2))
+  (or (= choice!1!3 0) (= choice!1!3 1) (= choice!1!3 2))
+  (or (= choice!1!4 0) (= choice!1!4 1) (= choice!1!4 2))
+  (or (= choice!2!0 0) (= choice!2!0 1) (= choice!2!0 2) (= choice!2!0 3) (= choice!2!0 4))
+  (or (= choice!2!1 0) (= choice!2!1 1) (= choice!2!1 2) (= choice!2!1 3) (= choice!2!1 4))
+))
+
