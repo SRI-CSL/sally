@@ -1,0 +1,208 @@
+% Two identical counters (increment by 1) with indiviual clocks each running with a period of 5
+% The two clocks are not synced initially
+
+Ex3 : CONTEXT =
+BEGIN
+
+N : NATURAL = 2;
+TIME : TYPE = REAL;
+COMPONENT_NUM : TYPE = [1 .. N];
+TIMEOUT_ARR : TYPE = ARRAY COMPONENT_NUM OF TIME;
+
+is_min(x: TIMEOUT_ARR, t: TIME): bool =
+  (FORALL (i: COMPONENT_NUM): t <= x[i]) AND
+  (EXISTS (i: COMPONENT_NUM): t = x[i]);
+
+Ex3_top_Add_Out1 : MODULE =
+  BEGIN
+    OUTPUT Ex3_top_Add_Out1_output_1 : REAL
+    INPUT Ex3_top_Add_Out1_input_1 : REAL
+    DEFINITION
+      Ex3_top_Add_Out1_output_1 = Ex3_top_Add_Out1_input_1;
+  END;
+
+Ex3_top_Add_Sum : MODULE =
+  BEGIN
+    OUTPUT Ex3_top_Add_Sum_output_1 : REAL
+    INPUT Ex3_top_Add_Sum_input_1 : REAL
+    INPUT Ex3_top_Add_Sum_input_2 : REAL
+    DEFINITION
+      Ex3_top_Add_Sum_output_1 = 0 + Ex3_top_Add_Sum_input_1 + Ex3_top_Add_Sum_input_2 ;
+  END;
+
+Ex3_top_Add_Constant : MODULE =
+  BEGIN
+    OUTPUT Ex3_top_Add_Constant_output_1 : REAL
+    DEFINITION
+      Ex3_top_Add_Constant_output_1 = 1;
+  END;
+
+Ex3_top_Add_Unit_Delay : MODULE =
+  BEGIN
+    INPUT Ex3_top_Add_Unit_Delay_input_1 : REAL
+    OUTPUT Ex3_top_Add_Unit_Delay_output_1 : REAL
+    INITIALIZATION
+      Ex3_top_Add_Unit_Delay_output_1 = 0;
+    TRANSITION [
+      TRUE --> Ex3_top_Add_Unit_Delay_output_1' = Ex3_top_Add_Unit_Delay_input_1
+    ]
+  END;
+
+% a subsystem module is formed by synchronously composing the blocks it contains; renames handle the wiring among the blocks
+Ex3_top_Add : MODULE =
+  (RENAME Ex3_top_Add_Out1_input_1 to Ex3_top_Add_Unit_Delay_output_1 in Ex3_top_Add_Out1)
+  ||
+  (RENAME Ex3_top_Add_Sum_input_1 to Ex3_top_Add_Constant_output_1, Ex3_top_Add_Sum_input_2 to Ex3_top_Add_Unit_Delay_output_1 in Ex3_top_Add_Sum)
+  ||
+  Ex3_top_Add_Constant
+  ||
+  (RENAME Ex3_top_Add_Unit_Delay_input_1 to Ex3_top_Add_Sum_output_1 in Ex3_top_Add_Unit_Delay)
+  ;
+
+% transition occurs only when time equals to local timeout; it then sets the value for the next timeout
+Ex3_top_Add_clock : MODULE =
+BEGIN
+  INPUT time: TIME
+  OUTPUT Ex3_top_Add_timeout : TIME
+  INITIALIZATION
+    Ex3_top_Add_timeout IN {x : TIME | x >= 0 AND x < 5};
+  TRANSITION
+    [
+    time= Ex3_top_Add_timeout --> Ex3_top_Add_timeout' IN {x : TIME | x >= time+ 5 AND x <= time+ 5}
+    ]
+END;
+
+% by synchronously composing the computation module with its local clock, 
+% we ensures that a single discrete transition occurs when time equals to the local timeout
+Ex3_top_Add_periodic : MODULE =
+  Ex3_top_Add
+  ||
+  Ex3_top_Add_clock;
+
+Ex3_top_Sub_Out1 : MODULE =
+  BEGIN
+    OUTPUT Ex3_top_Sub_Out1_output_1 : REAL
+    INPUT Ex3_top_Sub_Out1_input_1 : REAL
+    DEFINITION
+      Ex3_top_Sub_Out1_output_1 = Ex3_top_Sub_Out1_input_1;
+  END;
+
+Ex3_top_Sub_Sum : MODULE =
+  BEGIN
+    OUTPUT Ex3_top_Sub_Sum_output_1 : REAL
+    INPUT Ex3_top_Sub_Sum_input_1 : REAL
+    INPUT Ex3_top_Sub_Sum_input_2 : REAL
+    DEFINITION
+      Ex3_top_Sub_Sum_output_1 = 0 + Ex3_top_Sub_Sum_input_1 + Ex3_top_Sub_Sum_input_2 ;
+  END;
+
+Ex3_top_Sub_Constant : MODULE =
+  BEGIN
+    OUTPUT Ex3_top_Sub_Constant_output_1 : REAL
+    DEFINITION
+      Ex3_top_Sub_Constant_output_1 = 1;
+  END;
+
+Ex3_top_Sub_Unit_Delay : MODULE =
+  BEGIN
+    INPUT Ex3_top_Sub_Unit_Delay_input_1 : REAL
+    OUTPUT Ex3_top_Sub_Unit_Delay_output_1 : REAL
+    INITIALIZATION
+      Ex3_top_Sub_Unit_Delay_output_1 = 0;
+    TRANSITION [
+      TRUE --> Ex3_top_Sub_Unit_Delay_output_1' = Ex3_top_Sub_Unit_Delay_input_1
+    ]
+  END;
+
+% a subsystem module is formed by synchronously composing the blocks it contains; renames handle the wiring among the blocks
+Ex3_top_Sub : MODULE =
+  (RENAME Ex3_top_Sub_Out1_input_1 to Ex3_top_Sub_Unit_Delay_output_1 in Ex3_top_Sub_Out1)
+  ||
+  (RENAME Ex3_top_Sub_Sum_input_1 to Ex3_top_Sub_Constant_output_1, Ex3_top_Sub_Sum_input_2 to Ex3_top_Sub_Unit_Delay_output_1 in Ex3_top_Sub_Sum)
+  ||
+  Ex3_top_Sub_Constant
+  ||
+  (RENAME Ex3_top_Sub_Unit_Delay_input_1 to Ex3_top_Sub_Sum_output_1 in Ex3_top_Sub_Unit_Delay)
+  ;
+
+% transition occurs only when time equals to local timeout; it then sets the value for the next timeout
+Ex3_top_Sub_clock : MODULE =
+BEGIN
+  INPUT time: TIME
+  OUTPUT Ex3_top_Sub_timeout : TIME
+  INITIALIZATION
+    Ex3_top_Sub_timeout IN {x : TIME | x >= 0 AND x < 5};
+  TRANSITION
+    [
+    time= Ex3_top_Sub_timeout --> Ex3_top_Sub_timeout' IN {x : TIME | x >= time+ 5 AND x <= time+ 5}
+    ]
+END;
+
+% by synchronously composing the computation module with its local clock, 
+% we ensures that a single discrete transition occurs when time equals to the local timeout
+Ex3_top_Sub_periodic : MODULE =
+  Ex3_top_Sub
+  ||
+  Ex3_top_Sub_clock;
+
+Ex3_top_comp : MODULE =
+  WITH OUTPUT time_arr: TIMEOUT_ARR
+  (RENAME Ex3_top_Add_timeout to time_arr[1] IN Ex3_top_Add_periodic)
+  []
+  (RENAME Ex3_top_Sub_timeout to time_arr[2] IN Ex3_top_Sub_periodic)
+  ;
+
+% each time-progress transition in the scheduler moves time to the next timeout
+Ex3_top_scheduler : MODULE =
+BEGIN
+  INPUT time_arr : TIMEOUT_ARR
+  OUTPUT time : TIME
+  INITIALIZATION
+    time = 0;
+  TRANSITION
+    [
+    (FORALL (i: COMPONENT_NUM): time < time_arr[i]) -->
+    time' IN {t: TIME | is_min(time_arr, t)}
+    ]
+END;
+
+% asynchronous composition of the Simulink model with the scheduler
+Ex3_top : MODULE =
+  Ex3_top_comp
+  []
+  Ex3_top_scheduler;
+
+
+%%% auxiliary invariants %%%
+% aux1 and aux2 are always true for timeout automata-based formalization
+aux1: LEMMA Ex3_top |- G (FORALL (i: COMPONENT_NUM): time <= time_arr[i]);
+aux2: LEMMA Ex3_top |- G (time >= 0);
+
+% aux3 and aux4 can be automatically extracted from the communication model 
+% aux3 and aux4 can be proven inductively
+aux3: LEMMA Ex3_top |- G (FORALL (i: COMPONENT_NUM): time_arr[i] <= time + 5);
+aux4: LEMMA Ex3_top |- G (time_arr[1] - time_arr[2] >= -5 AND time_arr[1] - time_arr[2] <= 5);
+
+% aux5 and aux6 describe relationship of the values of the two subsystems relative to the two timeouts
+% note: the relationship of the values has more to do with the property of interest than with the computation that each subsystem performs
+% aux5 and aux6 can be proven inductively using either aux3 or aux4
+% general form for a class of systems/properties: G (timeout_i <= timeout_j + c_{ij} => value_i <= value_j + d_{ij}), where c_{ij} and d_{ij} are some constants
+% hypothesis: can search for c and d to get sufficient inductive invariants
+aux5: LEMMA Ex3_top |- G (time_arr[1] <= time_arr[2] => Ex3_top_Add_Unit_Delay_output_1 <= Ex3_top_Sub_Unit_Delay_output_1); 
+aux6: LEMMA Ex3_top |- G (time_arr[2] <= time_arr[1] => Ex3_top_Sub_Unit_Delay_output_1 <= Ex3_top_Add_Unit_Delay_output_1);
+
+
+%%% properties of interest %%%
+% sync: difference of values of the two subsystems is bounded by 1 
+% sync can be proven inductively using aux5 and aux6
+sync : THEOREM Ex3_top |- G (Ex3_top_Sub_Unit_Delay_output_1 - Ex3_top_Add_Unit_Delay_output_1 <= 1 AND Ex3_top_Sub_Unit_Delay_output_1 - Ex3_top_Add_Unit_Delay_output_1 >= -1); 
+
+%%% proof steps %%%
+% sal-inf-bmc -d 2 -i Ex3 aux4
+% sal-inf-bmc -d 3 -i -l aux4 Ex3 aux5
+% sal-inf-bmc -d 3 -i -l aux4 Ex3 aux6
+% sal-inf-bmc -d 2 -i -l aux5 -l aux6 Ex3 sync
+% note: sync itself cannot proven using k-induction without aux nor with just aux4
+
+
+END

@@ -1,0 +1,121 @@
+SALenv (Version 3.3). Copyright (c) 2003-2011 SRI International.
+Build date: Wed Jul 17 17:41:18 PDT 2013
+Type `(exit)' with parentheses to exit.
+Type `(help)' with parentheses for help.
+
+sal > 
+sal > 
+sal > 
+sal > 
+sal > (|- (flat-module
+      (output Ex3_top_Add_Constant_output_1::REAL)
+      (output Ex3_top_Add_Out1_output_1::REAL)
+      (output Ex3_top_Add_Sum_output_1::REAL)
+      (output Ex3_top_Add_Unit_Delay_output_1::REAL)
+      (output Ex3_top_Sub_Constant_output_1::REAL)
+      (output Ex3_top_Sub_Out1_output_1::REAL)
+      (output Ex3_top_Sub_Sum_output_1::REAL)
+      (output Ex3_top_Sub_Unit_Delay_output_1::REAL)
+      (output time::TIME)
+      (output time_arr!0::TIME)
+      (output time_arr!1::TIME)
+      (input choice!2::(subrange 0 1))
+      (input choice!1::(subrange 0 1))
+      (definition
+        (and
+          (=
+            Ex3_top_Add_Out1_output_1
+            Ex3_top_Add_Unit_Delay_output_1)
+          (=
+            Ex3_top_Add_Sum_output_1
+            (+ Ex3_top_Add_Unit_Delay_output_1 1))
+          (= Ex3_top_Add_Constant_output_1 1)
+          (=
+            Ex3_top_Sub_Out1_output_1
+            Ex3_top_Sub_Unit_Delay_output_1)
+          (=
+            Ex3_top_Sub_Sum_output_1
+            (+ Ex3_top_Sub_Unit_Delay_output_1 1))
+          (= Ex3_top_Sub_Constant_output_1 1)))
+      (initialization
+        (and
+          (= Ex3_top_Add_Unit_Delay_output_1 0)
+          (AND (not (< time_arr!0 0)) (< time_arr!0 5))
+          (= Ex3_top_Sub_Unit_Delay_output_1 0)
+          (AND (not (< time_arr!1 0)) (< time_arr!1 5))
+          (= time 0)))
+      (transition
+        (let ((cs!27::bool
+                  (=
+                    Ex3_top_Add_Unit_Delay_output_1'
+                    Ex3_top_Add_Unit_Delay_output_1))
+              (cs!29::bool
+                   (=
+                     Ex3_top_Sub_Unit_Delay_output_1'
+                     Ex3_top_Sub_Unit_Delay_output_1))
+              (cs!31::real (+ time 5)))
+          (let ((cs!28::bool (= time_arr!0' time_arr!0))
+                (cs!30::bool (= time_arr!1' time_arr!1)))
+            (or
+              (and
+                (= choice!2 0)
+                (or
+                  (and
+                    (= choice!1 0)
+                    (=
+                      Ex3_top_Add_Unit_Delay_output_1'
+                      Ex3_top_Add_Sum_output_1)
+                    (= time time_arr!0)
+                    (AND (not (< time_arr!0' cs!31)) (<= time_arr!0' cs!31))
+                    cs!29
+                    cs!30)
+                  (and
+                    (= choice!1 1)
+                    (=
+                      Ex3_top_Sub_Unit_Delay_output_1'
+                      Ex3_top_Sub_Sum_output_1)
+                    (= time time_arr!1)
+                    (AND (not (< time_arr!1' cs!31)) (<= time_arr!1' cs!31))
+                    cs!27
+                    cs!28))
+                (= time' time))
+              (and
+                (= choice!2 1)
+                (< time time_arr!0)
+                (< time time_arr!1)
+                (AND
+                  (<= time' time_arr!0)
+                  (<= time' time_arr!1)
+                  (or (= time' time_arr!0) (= time' time_arr!1)))
+                cs!27
+                cs!28
+                cs!29
+                cs!30)))))
+      (skip
+        (and
+          (=
+            Ex3_top_Add_Unit_Delay_output_1'
+            Ex3_top_Add_Unit_Delay_output_1)
+          (= time_arr!0' time_arr!0)
+          (=
+            Ex3_top_Sub_Unit_Delay_output_1'
+            Ex3_top_Sub_Unit_Delay_output_1)
+          (= time_arr!1' time_arr!1)
+          (= time' time)))
+      (valid-input true)
+      (valid-state true)
+      (valid-constant true))
+    (G
+      (AND
+        (<=
+          (-
+            Ex3_top_Sub_Unit_Delay_output_1
+            Ex3_top_Add_Unit_Delay_output_1)
+          1)
+        (not
+          (<
+            (-
+              Ex3_top_Sub_Unit_Delay_output_1
+              Ex3_top_Add_Unit_Delay_output_1)
+            -1)))))
+sal > 

@@ -1,0 +1,111 @@
+(define-state-type state_type (
+      (Ex3_top_Add_Constant_output_1 Real)
+      (Ex3_top_Add_Out1_output_1 Real)
+      (Ex3_top_Add_Sum_output_1 Real)
+      (Ex3_top_Add_Unit_Delay_output_1 Real)
+      (Ex3_top_Sub_Constant_output_1 Real)
+      (Ex3_top_Sub_Out1_output_1 Real)
+      (Ex3_top_Sub_Sum_output_1 Real)
+      (Ex3_top_Sub_Unit_Delay_output_1 Real)
+      (time Real)
+      (time_arr!0 Real)
+      (time_arr!1 Real)
+))
+
+(define-states initial_state state_type 
+        (and
+          (= Ex3_top_Add_Unit_Delay_output_1 0)
+          (and (not (< time_arr!0 0)) (< time_arr!0 5))
+          (= Ex3_top_Sub_Unit_Delay_output_1 0)
+          (and (not (< time_arr!1 0)) (< time_arr!1 5))
+          (= time 0))
+)
+
+(define-transition transition state_type 
+        (let ((cs!27
+                  (=
+                    Ex3_top_Add_Unit_Delay_output_1'
+                    Ex3_top_Add_Unit_Delay_output_1))
+              (cs!29
+                   (=
+                     Ex3_top_Sub_Unit_Delay_output_1'
+                     Ex3_top_Sub_Unit_Delay_output_1))
+              (cs!31 (+ time 5)))
+          (let ((cs!28 (= time_arr!0' time_arr!0))
+                (cs!30 (= time_arr!1' time_arr!1)))
+            (or
+              (and
+                (or
+                  (and
+                    (=
+                      Ex3_top_Add_Unit_Delay_output_1'
+                      Ex3_top_Add_Sum_output_1)
+                    (= time time_arr!0)
+                    (and (not (< time_arr!0' cs!31)) (<= time_arr!0' cs!31))
+                    cs!29
+                    cs!30)
+                  (and
+                    (=
+                      Ex3_top_Sub_Unit_Delay_output_1'
+                      Ex3_top_Sub_Sum_output_1)
+                    (= time time_arr!1)
+                    (and (not (< time_arr!1' cs!31)) (<= time_arr!1' cs!31))
+                    cs!27
+                    cs!28))
+                (= time' time))
+              (and
+                (< time time_arr!0)
+                (< time time_arr!1)
+                (and
+                  (<= time' time_arr!0)
+                  (<= time' time_arr!1)
+                  (or (= time' time_arr!0) (= time' time_arr!1)))
+                cs!27
+                cs!28
+                cs!29
+                cs!30))))
+)
+
+(define-transition-system T 
+  state_type
+  initial_state
+  (transition)
+)
+
+(assume T 
+        (and
+          (=
+            Ex3_top_Add_Out1_output_1
+            Ex3_top_Add_Unit_Delay_output_1)
+          (=
+            Ex3_top_Add_Sum_output_1
+            (+ Ex3_top_Add_Unit_Delay_output_1 1))
+          (= Ex3_top_Add_Constant_output_1 1)
+          (=
+            Ex3_top_Sub_Out1_output_1
+            Ex3_top_Sub_Unit_Delay_output_1)
+          (=
+            Ex3_top_Sub_Sum_output_1
+            (+ Ex3_top_Sub_Unit_Delay_output_1 1))
+          (= Ex3_top_Sub_Constant_output_1 1))
+)
+
+(query T
+      (and
+        (<=
+          (-
+            Ex3_top_Sub_Unit_Delay_output_1
+            Ex3_top_Add_Unit_Delay_output_1)
+          1)
+        (not
+          (<
+            (-
+              Ex3_top_Sub_Unit_Delay_output_1
+              Ex3_top_Add_Unit_Delay_output_1)
+            (- 1))))
+)
+
+
+
+ 
+
