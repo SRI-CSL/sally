@@ -51,7 +51,7 @@ declare_state_type returns [parser::command* cmd = 0]
   std::vector<std::string> vars;  
   std::vector<expr::term_ref> types;
 }
-  : '(' 'declare-state-type' 
+  : '(' 'define-state-type' 
         symbol[id, parser::MCMT_STATE_TYPE, false]  
         variable_list[vars, types] 
     ')' 

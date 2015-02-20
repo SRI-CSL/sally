@@ -15,7 +15,7 @@
 ;;  val is assumed non-zero.
 ;;
 
-(declare-state-type state
+(define-state-type state
    ((cx!0!0 Real)
     (cx!0!1 Real)
     (cx!0!2 Real)

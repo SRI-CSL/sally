@@ -12,7 +12,7 @@
 (define-constant slot_time 3)
 
 ;; State type (all TCCs added to the assumptions)
-(declare-state-type state_type (
+(define-state-type state_type (
       (cal!content Real)
       (cal!delivery Real)
       (cal!flag!0 Bool)

@@ -14,7 +14,7 @@
 (define-constant cm_drift 2)
 
 ;; State type (all TCCs added to the assumptions)
-(declare-state-type state_type (
+(define-state-type state_type (
   (max_drift Real)
   (cm_clock!0 Real)
   (cm_clock!1 Real)

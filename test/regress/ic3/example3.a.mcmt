@@ -1,5 +1,5 @@
 ;; State type
-(declare-state-type state_type (
+(define-state-type state_type (
   (x Real) 
   (y Real)
   (n Real)
