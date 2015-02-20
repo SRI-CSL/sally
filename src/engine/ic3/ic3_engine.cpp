@@ -783,6 +783,15 @@ void ic3_engine::print_frame(size_t k, std::ostream& out) const {
 expr::term_ref ic3_engine::generalize_sat_at(size_t k, smt::solver* solver) {
   std::vector<expr::term_ref> generalization_facts;
   solver->generalize(generalization_facts);
+
+  size_t to_keep = 0;
+  for (size_t i = 0; i < generalization_facts.size(); ++ i) {
+    if (!frame_contains(k, generalization_facts[i])) {
+      generalization_facts[to_keep++] = generalization_facts[i];
+    }
+  }
+  generalization_facts.reserve(to_keep);
+
   return tm().mk_and(generalization_facts);
 }
 
