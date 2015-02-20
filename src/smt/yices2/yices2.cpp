@@ -31,6 +31,9 @@ struct yices_hasher {
 
 class yices2_internal {
 
+  typedef boost::unordered_map<expr::term_ref, term_t, expr::term_ref_hasher> term_to_yices_cache;
+  typedef boost::unordered_map<term_t, expr::term_ref, yices_hasher> yices_to_term_cache;
+
   /** The term manager */
   expr::term_manager& d_tm;
 
@@ -38,13 +41,19 @@ class yices2_internal {
   static int s_instances;
 
   /** Yices boolean type */
-  type_t d_bool_type;
+  static type_t s_bool_type;
 
   /** Yices integer type */
-  type_t d_int_type;
+  static type_t s_int_type;
 
   /** Yices real type */
-  type_t d_real_type;
+  static type_t s_real_type;
+
+  /** The map from terms to yices terms */
+  static term_to_yices_cache s_term_to_yices_cache;
+
+  /** The map from yices terms to SAL terms */
+  static yices_to_term_cache s_yices_to_term_cache;
 
   /** The yices context */
   context_t *d_ctx;
@@ -58,21 +67,11 @@ class yices2_internal {
   /** The assertions size per push/pop */
   std::vector<size_t> d_assertions_size;
 
-  typedef boost::unordered_map<expr::term_ref, term_t, expr::term_ref_hasher> term_to_yices_cache;
-  typedef boost::unordered_map<term_t, expr::term_ref, yices_hasher> yices_to_term_cache;
-
   /** Bitvector 1 */
   expr::term_ref_strong d_bv1;
 
   /** Bitvector 0 */
   expr::term_ref_strong d_bv0;
-
-
-  /** The map from terms to yices terms */
-  term_to_yices_cache d_term_to_yices_cache;
-
-  /** The map from yices terms to SAL terms */
-  yices_to_term_cache d_yices_to_term_cache;
 
   /**
    * Set the term cache from t -> t_yices. If t_yices doesn't exist in the
@@ -80,12 +79,12 @@ class yices2_internal {
    */
   void set_term_cache(expr::term_ref t, term_t t_yices) {
     bool added = false;
-    if (d_term_to_yices_cache.find(t) == d_term_to_yices_cache.end()) {
-      d_term_to_yices_cache[t] = t_yices;
+    if (s_term_to_yices_cache.find(t) == s_term_to_yices_cache.end()) {
+      s_term_to_yices_cache[t] = t_yices;
       added = true;
     }
-    if (d_yices_to_term_cache.find(t_yices) == d_yices_to_term_cache.end()) {
-      d_yices_to_term_cache[t_yices] = t;
+    if (s_yices_to_term_cache.find(t_yices) == s_yices_to_term_cache.end()) {
+      s_yices_to_term_cache[t_yices] = t;
       added = true;
     }
     unused_var(added);
@@ -94,8 +93,8 @@ class yices2_internal {
 
   /** Returns the yices term associated with t, or NULL_TERM otherwise */
   term_t get_term_cache(expr::term_ref t) const {
-    term_to_yices_cache::const_iterator find = d_term_to_yices_cache.find(t);
-    if (find != d_term_to_yices_cache.end()) {
+    term_to_yices_cache::const_iterator find = s_term_to_yices_cache.find(t);
+    if (find != s_term_to_yices_cache.end()) {
       return find->second;
     } else {
       return NULL_TERM;
@@ -104,8 +103,8 @@ class yices2_internal {
 
   /** Returns our term representative for the yices term t or null otherwise */
   expr::term_ref get_term_cache(term_t t) const {
-    yices_to_term_cache::const_iterator find = d_yices_to_term_cache.find(t);
-    if (find != d_yices_to_term_cache.end()) {
+    yices_to_term_cache::const_iterator find = s_yices_to_term_cache.find(t);
+    if (find != s_yices_to_term_cache.end()) {
       return find->second;
     } else {
       return expr::term_ref();
@@ -168,6 +167,13 @@ public:
 
 int yices2_internal::s_instances = 0;
 
+type_t yices2_internal::s_bool_type = NULL_TYPE;
+type_t yices2_internal::s_int_type = NULL_TYPE;
+type_t yices2_internal::s_real_type = NULL_TYPE;
+
+yices2_internal::term_to_yices_cache yices2_internal::s_term_to_yices_cache;
+yices2_internal::yices_to_term_cache yices2_internal::s_yices_to_term_cache;
+
 yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
 : d_tm(tm)
 , d_last_check_status(STATUS_UNKNOWN)
@@ -176,14 +182,17 @@ yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
   // Initialize
   if (s_instances == 0) {
     TRACE("yices2") << "yices2: first instance." << std::endl;
+
+    // Initialize it
     yices_init();
+
+    // The basic types
+    s_bool_type = yices_bool_type();
+    s_int_type = yices_int_type();
+    s_real_type = yices_real_type();
   }
   s_instances ++;
 
-  // The basic types
-  d_bool_type = yices_bool_type();
-  d_int_type = yices_int_type();
-  d_real_type = yices_real_type();
 
   // Bitvector bits
   d_bv0 = expr::term_ref_strong(d_tm, d_tm.mk_bitvector_constant(expr::bitvector(1, 0)));
@@ -205,6 +214,12 @@ yices2_internal::~yices2_internal() {
   s_instances--;
   if (s_instances == 0) {
     TRACE("yices2") << "yices2: last instance removed." << std::endl;
+
+    // Clear the cache
+    s_term_to_yices_cache.clear();
+    s_yices_to_term_cache.clear();
+
+    // Delete yices
     yices_exit();
   }
 }
@@ -388,13 +403,13 @@ type_t yices2_internal::to_yices2_type(expr::term_ref ref) {
 
   switch (d_tm.term_of(ref).op()) {
   case expr::TYPE_BOOL:
-    result = d_bool_type;
+    result = s_bool_type;
     break;
   case expr::TYPE_INTEGER:
-    result = d_int_type;
+    result = s_int_type;
     break;
   case expr::TYPE_REAL:
-    result = d_real_type;
+    result = s_real_type;
     break;
   case expr::TYPE_BITVECTOR: {
     size_t size = d_tm.get_bitvector_type_size(ref);
@@ -818,7 +833,7 @@ void yices2_internal::get_model(expr::model& m) {
 
   for (size_t i = 0; i < d_variables.size(); ++ i) {
     expr::term_ref var = d_variables[i];
-    term_t yices_var = d_term_to_yices_cache[var];
+    term_t yices_var = s_term_to_yices_cache[var];
     expr::term_ref var_type = d_tm.type_of(var);
 
     expr::term_ref var_value;
