@@ -26,6 +26,7 @@ model::model(expr::term_manager& tm, bool undef_to_default)
 
 void model::clear() {
   d_variable_to_value_map.clear();
+  d_term_to_value_map.clear();
   d_variables.clear();
 }
 
