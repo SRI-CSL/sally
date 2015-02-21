@@ -28,7 +28,10 @@ class state_trace {
   expr::model d_model;
 
   /** Returns the state variables for step k */
-  expr::term_ref get_state_variable(size_t k);
+  expr::term_ref get_state_type_variable(size_t k);
+
+  /** Returns the variables of state */
+  void get_state_variables(expr::term_ref state_type_var, std::vector<expr::term_ref>& vars) const;
 
   /** Returns the term manager */
   expr::term_manager& tm() const;
@@ -37,6 +40,11 @@ public:
 
   /** Create ta trace for the given type */
   state_trace(const state_type* st);
+
+  /**
+   * Get the state variables at k.
+   */
+  void get_state_variables(size_t k, std::vector<expr::term_ref>& vars);
 
   /**
    * Given a formula in the state type return a state formula in the k-th step.

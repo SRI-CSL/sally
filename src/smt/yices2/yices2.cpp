@@ -111,9 +111,6 @@ class yices2_internal {
     }
   }
 
-  /** List of variables, for model construction */
-  std::vector<expr::term_ref> d_variables;
-
   /** Last check return */
   smt_status_t d_last_check_status;
 
@@ -150,7 +147,7 @@ public:
   solver::result check();
 
   /** Returns the model */
-  void get_model(expr::model& m);
+  void get_model(expr::model& m, const std::set<expr::term_ref>& x_variables, const std::set<expr::term_ref>& y_variables);
 
   /** Push the context */
   void push();
@@ -441,8 +438,6 @@ term_t yices2_internal::to_yices2_term(expr::term_ref ref) {
   case expr::VARIABLE:
     result = yices_new_uninterpreted_term(to_yices2_type(t[0]));
     yices_set_term_name(result, d_tm.get_variable_name(t).c_str());
-    // Remember, for model construction
-    d_variables.push_back(ref);
     break;
   case expr::CONST_BOOL:
     result = d_tm.get_boolean_constant(t) ? yices_true() : yices_false();
@@ -818,7 +813,7 @@ expr::bitvector bitvector_from_int32(size_t size, int32_t* value) {
   return bv;
 }
 
-void yices2_internal::get_model(expr::model& m) {
+void yices2_internal::get_model(expr::model& m, const std::set<expr::term_ref>& x_variables, const std::set<expr::term_ref>& y_variables) {
   assert(d_last_check_status == STATUS_SAT);
 
   // Clear any data already there
@@ -831,8 +826,37 @@ void yices2_internal::get_model(expr::model& m) {
     yices_pp_model(stderr, yices_model, 80, 100, 0);
   }
 
-  for (size_t i = 0; i < d_variables.size(); ++ i) {
-    expr::term_ref var = d_variables[i];
+  // Get the variables
+  std::vector<expr::term_ref> variables;
+  bool class_A_used = false;
+  bool class_B_used = false;
+  for (size_t i = 0; i < d_assertion_classes.size(); ++ i) {
+    switch (d_assertion_classes[i]) {
+    case solver::CLASS_A:
+      class_A_used = true;
+      break;
+    case solver::CLASS_B:
+      class_B_used = true;
+      break;
+    case solver::CLASS_T:
+      class_A_used = true;
+      class_B_used = true;
+      break;
+    default:
+      assert(false);
+    }
+  }
+
+  if (class_A_used) {
+    variables.insert(variables.end(), x_variables.begin(), x_variables.end());
+  }
+  if (class_B_used) {
+    variables.insert(variables.end(), y_variables.begin(), y_variables.end());
+  }
+
+  // See which variables we have to reason about
+  for (size_t i = 0; i < variables.size(); ++ i) {
+    expr::term_ref var = variables[i];
     term_t yices_var = s_term_to_yices_cache[var];
     expr::term_ref var_type = d_tm.type_of(var);
 
@@ -1007,7 +1031,7 @@ solver::result yices2::check() {
 
 void yices2::get_model(expr::model& m) const {
   TRACE("yices2") << "yices2[" << d_internal->instance() << "]: get_model()" << std::endl;
-  d_internal->get_model(m);
+  d_internal->get_model(m, d_x_variables, d_y_variables);
 }
 
 void yices2::push() {

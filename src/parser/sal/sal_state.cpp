@@ -51,7 +51,7 @@ term_ref sal_state::get_variable(std::string id) const {
 }
 
 system::state_type* sal_state::mk_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types) const {
-  expr::term_ref type = tm().mk_struct(vars, types);
+  expr::term_ref type = tm().mk_struct_type(vars, types);
   return new system::state_type(tm(), id, type);
 }
 

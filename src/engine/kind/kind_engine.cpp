@@ -97,8 +97,16 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
     // See what happened
     switch(r_1) {
     case smt::solver::SAT: {
+      // Add the variables, so that the solver can make a model
+      std::vector<expr::term_ref> vars;
+      for (size_t i = 0; i <= k; ++ i) {
+        d_trace->get_state_variables(i, vars);
+      }
+      d_solver_1->add_x_variables(vars.begin(), vars.end());
+      // Get the model
       expr::model m(tm(), false);
       d_solver_1->get_model(m);
+      // Add model to trace
       d_trace->add_model(m);
       return INVALID;
     }

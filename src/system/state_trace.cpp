@@ -21,7 +21,7 @@ expr::term_manager& state_trace::tm() const {
   return d_state_type->tm();
 }
 
-expr::term_ref state_trace::get_state_variable(size_t k) {
+expr::term_ref state_trace::get_state_type_variable(size_t k) {
   // Ensure we have enough
   while (d_state_variables.size() <= k) {
     std::stringstream ss;
@@ -33,13 +33,25 @@ expr::term_ref state_trace::get_state_variable(size_t k) {
   return d_state_variables[k];
 }
 
+void state_trace::get_state_variables(expr::term_ref state_type_var, std::vector<expr::term_ref>& vars) const {
+  const expr::term& state_type_var_term = tm().term_of(state_type_var);
+  size_t size = tm().get_struct_size(state_type_var_term);
+  for (size_t i = 0; i < size; ++ i) {
+    vars.push_back(tm().get_struct_field(state_type_var_term, i));
+  }
+}
+
+void state_trace::get_state_variables(size_t k, std::vector<expr::term_ref>& vars) {
+  get_state_variables(get_state_type_variable(k), vars);
+}
+
 expr::term_ref state_trace::get_state_formula(expr::term_ref sf, size_t k) {
   // Setup the substitution map
   expr::term_manager::substitution_map subst;
   std::vector<expr::term_ref> from_vars;
   std::vector<expr::term_ref> to_vars;
-  tm().get_variables(d_state_type->get_state(state_type::STATE_CURRENT), from_vars);
-  tm().get_variables(get_state_variable(k), to_vars);
+  get_state_variables(d_state_type->get_state_type_variable(state_type::STATE_CURRENT), from_vars);
+  get_state_variables(get_state_type_variable(k), to_vars);
   for (size_t i = 0; i < from_vars.size(); ++ i) {
     subst[from_vars[i]] = to_vars[i];
   }
@@ -53,10 +65,10 @@ expr::term_ref state_trace::get_transition_formula(expr::term_ref tf, size_t i, 
   expr::term_manager::substitution_map subst;
   std::vector<expr::term_ref> from_vars;
   std::vector<expr::term_ref> to_vars;
-  tm().get_variables(d_state_type->get_state(state_type::STATE_CURRENT), from_vars);
-  tm().get_variables(d_state_type->get_state(state_type::STATE_NEXT), from_vars);
-  tm().get_variables(get_state_variable(i), to_vars);
-  tm().get_variables(get_state_variable(j), to_vars);
+  get_state_variables(d_state_type->get_state_type_variable(state_type::STATE_CURRENT), from_vars);
+  get_state_variables(d_state_type->get_state_type_variable(state_type::STATE_NEXT), from_vars);
+  get_state_variables(get_state_type_variable(i), to_vars);
+  get_state_variables(get_state_type_variable(j), to_vars);
   for (size_t i = 0; i < from_vars.size(); ++ i) {
     subst[from_vars[i]] = to_vars[i];
   }
@@ -80,7 +92,7 @@ void state_trace::to_stream(std::ostream& out) const {
 
   // Output the variables
   std::vector<expr::term_ref> state_vars;
-  tm().get_variables(d_state_type->get_state(state_type::STATE_CURRENT), state_vars);
+  get_state_variables(d_state_type->get_state_type_variable(state_type::STATE_CURRENT), state_vars);
 
   // Output the values
   for (size_t k = 0; k < d_state_variables.size(); ++ k) {

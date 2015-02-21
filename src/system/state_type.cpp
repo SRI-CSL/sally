@@ -55,7 +55,7 @@ void state_type::to_stream(std::ostream& out) const {
   out << "[" << d_id << ": " << d_type << "]";
 }
 
-expr::term_ref state_type::get_state(var_class vc) const {
+expr::term_ref state_type::get_state_type_variable(var_class vc) const {
   switch (vc) {
   case STATE_CURRENT:
     return d_current_state;
@@ -97,7 +97,7 @@ const std::vector<expr::term_ref>& state_type::get_variables(var_class vc) const
 bool state_type::is_state_formula(expr::term_ref f) const {
   // State variables
   std::set<expr::term_ref> state_variables;
-  d_tm.get_variables(get_state(STATE_CURRENT), state_variables);
+  d_tm.get_variables(get_state_type_variable(STATE_CURRENT), state_variables);
   // Formula variables
   std::set<expr::term_ref> f_variables;
   d_tm.get_variables(f, f_variables);
@@ -108,8 +108,8 @@ bool state_type::is_state_formula(expr::term_ref f) const {
 bool state_type::is_transition_formula(expr::term_ref f) const {
   // State and next variables
   std::set<expr::term_ref> state_variables;
-  d_tm.get_variables(get_state(STATE_CURRENT), state_variables);
-  d_tm.get_variables(get_state(STATE_NEXT), state_variables);
+  d_tm.get_variables(get_state_type_variable(STATE_CURRENT), state_variables);
+  d_tm.get_variables(get_state_type_variable(STATE_NEXT), state_variables);
   // Formula variables
   std::set<expr::term_ref> f_variables;
   d_tm.get_variables(f, f_variables);

@@ -187,7 +187,7 @@ std::string term_manager::get_string_constant(const term& t) const {
   return d_tm->payload_of<std::string>(t);
 }
 
-term_ref term_manager::mk_struct(const std::vector<std::string>& names, const std::vector<term_ref>& types) {
+term_ref term_manager::mk_struct_type(const std::vector<std::string>& names, const std::vector<term_ref>& types) {
 
   std::vector<term_ref> type_argumens;
 

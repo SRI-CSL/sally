@@ -224,6 +224,8 @@ void ic3_engine::reduce_learnts() {
     return;
   }
 
+  bool agressive = ctx().get_options().get_bool("ic3-aggresive-reduce");
+
   MSG(1) << "ic3: reducing learnts" << std::endl;
 
   std::vector<expr::term_ref> to_remove;
@@ -233,7 +235,7 @@ void ic3_engine::reduce_learnts() {
   size_t last_frame = d_frame_content.size() - 1;
 
   // We don't remove the last frame
-  if (!ctx().get_options().get_bool("ic3-aggresive-reduce")) {
+  if (!agressive) {
     size_t to_keep_in_remove = 0;
     for (size_t i = 0; i < to_remove.size(); ++i) {
       if (d_frame_content[last_frame].count(to_remove[i]) == 0) {
@@ -252,11 +254,8 @@ void ic3_engine::reduce_learnts() {
   // If no score, remove all, otherwise half
   size_t median = get_score(to_remove[to_remove.size()/2]);
 
-  // Remove the from frames 1..last-1
-  size_t last_k = ctx().get_options().get_bool("ic3-aggresive-reduce") ? last_frame+1 : last_frame;
-  for (size_t k = 1; k < last_k; ++ k) {
-
-    assert(d_induction_obligations_count[k] == 0);
+  // Remove the from frames 1..last
+  for (size_t k = 1; k < last_frame; ++ k) {
 
     // Remove the frame content
     for (size_t i = 0; i < to_remove.size(); ++ i) {
@@ -284,20 +283,20 @@ void ic3_engine::reduce_learnts() {
     for (; it != d_frame_content[k].end(); ++ it) {
       d_solvers[k]->add(*it, smt::solver::CLASS_A);
     }
+  }
 
-    if (k == last_frame) {
-      // Keep obligations
-      induction_obligation_queue new_obligations;
-      induction_obligation_queue::iterator ind_it = d_induction_obligations.begin();
-      for (; ind_it != d_induction_obligations.end(); ++ind_it) {
-        if (ind_it->formula() == d_property->get_formula() || get_score(ind_it->formula()) > median) {
-          obligation new_obligation(ind_it->frame(), ind_it->formula(), ind_it->depth(), ind_it->score());
-          new_obligations.push(*ind_it);
-        }
-      }
-      d_induction_obligations.swap(new_obligations);
+   // Keep obligations
+  induction_obligation_queue new_obligations;
+  induction_obligation_queue::iterator ind_it = d_induction_obligations.begin();
+  for (; ind_it != d_induction_obligations.end(); ++ind_it) {
+    // Keep the obligation if (a) we're not aggressive (b) if it's the property itself or (c) if it has a good score
+    if (!agressive || ind_it->formula() == d_property->get_formula() || get_score(ind_it->formula()) > median) {
+      obligation new_obligation(ind_it->frame(), ind_it->formula(), 0, get_score(ind_it->formula()));
+      new_obligations.push(*ind_it);
+      assert(frame_contains(last_frame, ind_it->formula()));
     }
   }
+  d_induction_obligations.swap(new_obligations);
 
   // Clear the scores
   d_formula_scores.clear();

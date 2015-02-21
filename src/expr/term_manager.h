@@ -141,7 +141,7 @@ public:
   std::string get_string_constant(const term& t) const;
 
   /** Make a new struct type */
-  term_ref mk_struct(const std::vector<std::string>& names, const std::vector<term_ref>& types);
+  term_ref mk_struct_type(const std::vector<std::string>& names, const std::vector<term_ref>& types);
 
   /** Get the size of the type */
   size_t get_struct_type_size(const term& t) const;

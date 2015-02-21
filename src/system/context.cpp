@@ -30,7 +30,7 @@ void context::add_state_type(std::string id, state_type* st) {
 }
 
 void context::add_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types) {
-  expr::term_ref type = tm().mk_struct(vars, types);
+  expr::term_ref type = tm().mk_struct_type(vars, types);
   add_state_type(id, new state_type(tm(), id, type));
 }
 

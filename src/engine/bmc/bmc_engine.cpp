@@ -56,6 +56,11 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
   // BMC loop
   for (size_t k = 0; k <= bmc_max; ++ k) {
 
+    // Add the variables to the solver
+    std::vector<expr::term_ref> vars;
+    d_trace->get_state_variables(k, vars);
+    d_solver->add_x_variables(vars.begin(), vars.end());
+
     // Check the current unrolling
     if (k >= bmc_min) {
 
