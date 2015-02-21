@@ -14,7 +14,7 @@ namespace system {
 
 state_trace::state_trace(const state_type* st)
 : d_state_type(st)
-, d_model(st->tm())
+, d_model(st->tm(), true)
 {}
 
 expr::term_manager& state_trace::tm() const {
@@ -91,13 +91,7 @@ void state_trace::to_stream(std::ostream& out) const {
     for (size_t i = 1; i < state_vars.size(); ++ i) {
       expr::term_ref var = state_vars_k[i];
       out << "    (" << state_vars[i] << " ";
-      if (d_model.has_value(var)) {
-        out <<  d_model.get_variable_value(var);
-      } else {
-        expr::term_ref type = tm().type_of(var);
-        expr::term_ref value = tm().get_default_value(type);
-        out << value;
-      }
+      out <<  d_model.get_variable_value(var);
       out << ")" << std::endl;
     }
     out << "  )" << std::endl;

@@ -97,7 +97,7 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
     // See what happened
     switch(r_1) {
     case smt::solver::SAT: {
-      expr::model m(tm());
+      expr::model m(tm(), false);
       d_solver_1->get_model(m);
       d_trace->add_model(m);
       return INVALID;

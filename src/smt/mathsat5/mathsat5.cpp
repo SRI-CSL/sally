@@ -1000,7 +1000,7 @@ void mathsat5_internal::get_unsat_core(std::vector<expr::term_ref>& out) {
 }
 
 void mathsat5_internal::generalize(const std::set<expr::term_ref>& vars_to_keep, std::vector<expr::term_ref>& out) {
-  expr::model m(d_tm);
+  expr::model m(d_tm, true);
   get_model(m);
 
   std::set<expr::term_ref>::const_iterator it = vars_to_keep.begin(), it_end = vars_to_keep.end();

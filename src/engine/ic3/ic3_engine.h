@@ -31,12 +31,15 @@ class obligation {
   expr::term_ref d_P;
   /** Assumption depth */
   size_t d_depth;
+  /** Any score */
+  size_t d_score;
+
 
 public:
 
   /** Construct the obligation */
-  obligation(size_t k, expr::term_ref P, size_t depth)
-  : d_k(k), d_P(P), d_depth(depth) {}
+  obligation(size_t k, expr::term_ref P, size_t depth, size_t score = 0)
+  : d_k(k), d_P(P), d_depth(depth), d_score(score) {}
 
   /** Get the frame */
   size_t frame() const { return d_k; }
@@ -46,6 +49,9 @@ public:
 
   /** Get the weight */
   size_t depth() const { return d_depth; }
+
+  /** Get the score */
+  size_t score() const { return d_score; }
 
   /** Compare for equality */
   bool operator == (const obligation& o) const {

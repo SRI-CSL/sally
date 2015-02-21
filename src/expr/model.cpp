@@ -16,8 +16,9 @@
 namespace sally {
 namespace expr {
 
-model::model(expr::term_manager& tm)
+model::model(expr::term_manager& tm, bool undef_to_default)
 : d_term_manager(tm)
+, d_undef_to_default(undef_to_default)
 {
   d_true = tm.mk_boolean_constant(true);
   d_false = tm.mk_boolean_constant(false);
@@ -39,13 +40,20 @@ void model::set_value(expr::term_ref var, expr::term_ref value) {
   }
 }
 
-expr::term_ref model::get_variable_value(expr::term_ref t) const {
-  assert(d_term_manager.term_of(t).op() == expr::VARIABLE);
-  const_iterator find = d_variable_to_value_map.find(t);
+expr::term_ref model::get_variable_value(expr::term_ref var) const {
+  assert(d_term_manager.term_of(var).op() == expr::VARIABLE);
+  const_iterator find = d_variable_to_value_map.find(var);
   if (find == d_variable_to_value_map.end()) {
+    if (d_undef_to_default) {
+      expr::term_ref type = d_term_manager.type_of(var);
+      expr::term_ref value = d_term_manager.get_default_value(type);
+      TRACE("expr::model") << "get_term_value(" << var << ") => [default] " << value << std::endl;
+      return value;
+    } else {
       std::stringstream ss;
-      ss << set_tm(d_term_manager) << "Variable " << t << " is not part of the model.";
+      ss << set_tm(d_term_manager) << "Variable " << var << " is not part of the model.";
       throw exception(ss.str());
+    }
   } else {
     return find->second;
   }
@@ -57,14 +65,7 @@ expr::term_ref model::get_term_value(expr::term_ref t) {
 
   // If a variable and not in the model, we don't know how to evaluate
   if (d_term_manager.term_of(t).op() == expr::VARIABLE) {
-    const_iterator find = d_variable_to_value_map.find(t);
-    if (find == d_variable_to_value_map.end()) {
-      std::stringstream ss;
-      ss << set_tm(d_term_manager) << "Variable " << t << " is not part of the model.";
-      throw exception(ss.str());
-    }
-    TRACE("expr::model") << "get_term_value(" << t << ") => " << find->second << std::endl;
-    return find->second;
+    return get_variable_value(t);
   } else {
     // Proper term, we have to evaluate, if not in the cache already
     const_iterator find = d_term_to_value_map.find(t);

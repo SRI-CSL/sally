@@ -24,7 +24,11 @@ public:
   typedef term_to_value_map::const_iterator const_iterator;
   typedef term_to_value_map::iterator iterator;
 
-  model(expr::term_manager& tm);
+  /**
+   * Create a model. If undef_to_default is true, it will return default
+   * values for undefined variables. Otherwise an exception is thrown.
+   */
+  model(expr::term_manager& tm, bool undef_to_default);
 
   /** Clear the model */
   void clear();
@@ -63,6 +67,9 @@ private:
 
   /** The term manager */
   expr::term_manager& d_term_manager;
+
+  /** Undefined variables are interpreted with default values */
+  bool d_undef_to_default;
 
   /** All the variables */
   std::vector<expr::term_ref_strong> d_variables;

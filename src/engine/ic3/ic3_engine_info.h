@@ -22,6 +22,7 @@ struct ic3_engine_info {
         ("ic3-show-invariant", "Show the invariant if a property is proved true.")
         ("ic3-pdr", "Focus only on the property.")
         ("ic3-aggresive-reduce", "Do aggressive learnts reduction")
+        ("ic3-no-depth-bound", "Don't bound the reasoning depth for induction checks.");
         ;
   }
 

@@ -30,6 +30,11 @@ bool obligation_compare_induction::operator () (const obligation& o1, const obli
   if (o1.depth() != o2.depth()) {
     return o1.depth() > o2.depth();
   }
+  // Large score wins
+  if (o1.score() != o2.score()) {
+    return o1.score() < o2.score();
+  }
+
   return o1.formula() > o2.formula();
 }
 
@@ -286,6 +291,7 @@ void ic3_engine::reduce_learnts() {
       induction_obligation_queue::iterator ind_it = d_induction_obligations.begin();
       for (; ind_it != d_induction_obligations.end(); ++ind_it) {
         if (ind_it->formula() == d_property->get_formula() || get_score(ind_it->formula()) > median) {
+          obligation new_obligation(ind_it->frame(), ind_it->formula(), ind_it->depth(), ind_it->score());
           new_obligations.push(*ind_it);
         }
       }
@@ -515,8 +521,8 @@ expr::term_ref ic3_engine::learn_forward(size_t k, expr::term_ref G) {
     return tm().mk_term(expr::TERM_NOT, G);
   }
 
-  // Get a model for G in R_k (only if weakening)
-  expr::model G_model(tm());
+  // Get a model for G in R_k (only if weakening). Default values for undefined.
+  expr::model G_model(tm(), true);
   if (ctx().get_options().get_bool("ic3-use-weakening")) {
     smt::solver* solver_k = get_solver(k);
     solver_k->push();
@@ -610,7 +616,7 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, size_t depth) {
 
     // We have a counterexample, we only try to refute if induction depth is not
     // exceeded
-    if (depth > k) {
+    if (!ctx().get_options().get_bool("ic3-no-depth-bound") && depth > k) {
       inductive = false;
       break;
     }
