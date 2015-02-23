@@ -85,6 +85,11 @@ int main(int argc, char* argv[]) {
       engine_to_use = factory::mk_engine(boost_opts.at("engine").as<string>(), ctx);
     }
 
+    // Enable smt2 output if enabled
+    if (opts.get_bool("smt2-output")) {
+      smt::factory::enable_smt2_output("solver");
+    }
+
     // Setup live stats if asked
     boost::thread *stats_worker = 0;
     if (opts.has_option("live-stats")) {
@@ -182,6 +187,7 @@ void parse_options(int argc, char* argv[], variables_map& variables)
       ("arith-eq-to-ineq", "Rewrite equalities into inqualities.")
       ("lsal-extensions", "Use lsal extensions to the MCMT language")
       ("live-stats", value<string>(), "Output live statistic to the given file.")
+      ("smt2-output", "Generate smt2 logs of solver queries.")
       ;
 
   // Get the individual engine options

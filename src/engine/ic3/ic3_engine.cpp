@@ -254,6 +254,12 @@ void ic3_engine::reduce_learnts() {
   // If no score, remove all, otherwise half
   size_t median = get_score(to_remove[to_remove.size()/2]);
 
+  // Remove the first solver
+  delete d_solvers[0];
+  d_solvers[0] = 0;
+  init_solver(0);
+  d_solvers[0]->add(d_transition_system->get_initial_states(), smt::solver::CLASS_A);
+
   // Remove the from frames 1..last
   for (size_t k = 1; k < last_frame; ++ k) {
 

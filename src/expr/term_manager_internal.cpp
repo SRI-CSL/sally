@@ -602,3 +602,7 @@ term_ref term_manager_internal::get_default_value(term_ref type_ref) {
 void term_manager_internal::set_name_transformer(const utils::name_transformer* transformer) {
   d_name_transformer = transformer;
 }
+
+const utils::name_transformer* term_manager_internal::get_name_transformer() const {
+  return d_name_transformer;
+}

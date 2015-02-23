@@ -232,6 +232,9 @@ public:
   /** Set a transformer for variable names (set 0 to unset) */
   void set_name_transformer(const utils::name_transformer* transformer);
 
+  /** Get the current name transformer */
+  const utils::name_transformer* get_name_transformer() const;
+
   /** Mark whether to rewrite all equlities to inequalities at construction */
   void set_eq_rewrite(bool flag);
 };

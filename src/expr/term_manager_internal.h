@@ -396,6 +396,9 @@ public:
   /** Set a transformer for variable names (set 0 to unset) */
   void set_name_transformer(const utils::name_transformer* transformer);
 
+  /** Get the transformer for variable names (set 0 to unset) */
+  const utils::name_transformer* get_name_transformer() const;
+
   /** Returns the id normalized with resepct to the current namespaces and the name transformer */
   std::string name_normalize(std::string id) const;
 

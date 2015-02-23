@@ -19,6 +19,8 @@
 #include "utils/trace.h"
 #include "smt/incremental_wrapper.h"
 #include "smt/delayed_wrapper.h"
+#include "smt/factory.h"
+
 
 #define unused_var(x) { (void) x; }
 
@@ -34,7 +36,7 @@ public:
   mathsat_constructor(expr::term_manager& tm, const options& opts)
   : d_tm(tm), d_opts(opts) {}
   ~mathsat_constructor() {};
-  solver* mk_solver() { return new mathsat5(d_tm, d_opts); }
+  solver* mk_solver() { return factory::mk_solver("mathsat5", d_tm, d_opts); }
 };
 
 y2m5::y2m5(expr::term_manager& tm, const options& opts)
@@ -46,7 +48,7 @@ y2m5::y2m5(expr::term_manager& tm, const options& opts)
     solver_constructor* constructor = new mathsat_constructor(tm, opts);
     d_mathsat5 = new incremental_wrapper("mathsat5_nonincremental", tm, opts, constructor);
   } else {
-    d_mathsat5 = new delayed_wrapper("mathsat_5_incremental", tm, opts, new mathsat5(tm, opts));
+    d_mathsat5 = new delayed_wrapper("mathsat_5_incremental", tm, opts, factory::mk_solver("mathsat5", tm, opts));
   }
   s_instance ++;
 }

@@ -24,6 +24,15 @@ class factory {
   /** The default solver */
   static std::string s_default_solver;
 
+  /** Number of instances created */
+  static size_t s_total_instances;
+
+  /** Wrap solvers to generate smt2 files */
+  static bool s_generate_smt;
+
+  /** Prefix of smt2 files */
+  static std::string s_smt2_prefix;
+
 public:
 
   static
@@ -43,6 +52,10 @@ public:
 
   static
   void get_solvers(std::vector<std::string>& out);
+
+  static
+  void enable_smt2_output(std::string prefix);
+
 };
 
 }

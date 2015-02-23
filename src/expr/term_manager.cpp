@@ -334,6 +334,10 @@ void term_manager::set_name_transformer(const utils::name_transformer* transform
   d_tm->set_name_transformer(transformer);
 }
 
+const utils::name_transformer* term_manager::get_name_transformer() const {
+  return d_tm->get_name_transformer();
+}
+
 term_ref term_manager::get_default_value(term_ref type) const {
   return d_tm->get_default_value(type);
 }

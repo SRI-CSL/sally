@@ -7,6 +7,7 @@
 
 #include "smt/factory.h"
 #include "utils/module_setup.h"
+#include "smt/smt2_output_wrapper.h"
 
 #include <iostream>
 
@@ -24,6 +25,12 @@ static solver_data s_solver_data;
 
 std::string factory::s_default_solver;
 
+size_t factory::s_total_instances = 0;
+
+bool factory::s_generate_smt = false;
+
+std::string factory::s_smt2_prefix;
+
 void factory::set_default_solver(std::string id) {
   s_default_solver = id;
 }
@@ -40,7 +47,14 @@ solver* factory::mk_solver(std::string id, expr::term_manager& tm, const options
   if (output::get_verbosity(std::cout) > 2) {
     std::cout << "Creating an instance of " + id + " solver." << std::endl;
   }
-  return s_solver_data.get_module_info(id).new_instance(ctx);
+  solver* solver = s_solver_data.get_module_info(id).new_instance(ctx);
+  s_total_instances ++;
+  if (s_generate_smt) {
+    std::stringstream ss;
+    ss << s_smt2_prefix << "_" << s_total_instances << ".smt2";
+    solver = new smt2_output_wrapper(tm, opts, solver, ss.str());
+  }
+  return solver;
 }
 
 void factory::setup_options(boost::program_options::options_description& options) {
@@ -60,6 +74,12 @@ void factory::get_solvers(std::vector<std::string>& out) {
     out.push_back(it->second->get_id());
   }
 }
+
+void factory::enable_smt2_output(std::string prefix) {
+  s_generate_smt = true;
+  s_smt2_prefix = prefix;
+}
+
 
 }
 }
