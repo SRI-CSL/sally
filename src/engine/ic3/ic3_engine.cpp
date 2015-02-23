@@ -136,14 +136,6 @@ expr::term_ref ic3_engine::check_inductive_at(size_t k, expr::term_ref F) {
   return result;
 }
 
-void ic3_engine::add_valid_to_init(expr::term_ref f) {
-  TRACE("ic3") << "ic3: adding to init : " << f << std::endl;
-  assert(!frame_contains(0, f));
-  ensure_frame(0);
-  add_to_frame(0, f);
-  get_solver(0)->add(f, smt::solver::CLASS_A);
-}
-
 void ic3_engine::add_valid_up_to(size_t k, expr::term_ref F) {
   TRACE("ic3") << "ic3: adding at " << k << ": " << F << std::endl;
   assert(k > 0);
@@ -735,7 +727,8 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 
   // Add the initial state
   expr::term_ref I = d_transition_system->get_initial_states();
-  add_valid_to_init(I);
+  add_to_frame(0, I);
+  get_solver(0)->add(I, smt::solver::CLASS_A);
   add_to_induction_obligations(0, I, 0);
 
   // Add the property we're trying to prove
@@ -752,11 +745,13 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 
     MSG(1) << "ic3: starting search" << std::endl;
 
-    // Reduce learnts
-    reduce_learnts();
-
     // Search (inductive content of the last frame returned)
     r = search();
+
+    // Reduce learnts
+    if (r == UNKNOWN) {
+      reduce_learnts();
+    }
   }
 
   return r;

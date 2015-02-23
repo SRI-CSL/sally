@@ -102,11 +102,6 @@ class ic3_engine : public engine {
   bool push_if_inductive(size_t k, expr::term_ref f, size_t depth);
 
   /**
-   * Add formula to frame 0.
-   */
-  void add_valid_to_init(expr::term_ref f);
-
-  /**
    * Add a formula that's inductive up to k-1 and holds at k. The formula will
    * be added to frames 0, ..., k, and additionally added to induction
    * obligations at k.

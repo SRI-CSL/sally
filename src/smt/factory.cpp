@@ -10,6 +10,7 @@
 #include "smt/smt2_output_wrapper.h"
 
 #include <iostream>
+#include <iomanip>
 
 namespace sally {
 namespace smt {
@@ -51,7 +52,7 @@ solver* factory::mk_solver(std::string id, expr::term_manager& tm, const options
   s_total_instances ++;
   if (s_generate_smt) {
     std::stringstream ss;
-    ss << s_smt2_prefix << "_" << s_total_instances << ".smt2";
+    ss << s_smt2_prefix << "." << std::setfill('0') << std::setw(3) << s_total_instances << "." << solver->get_name() << ".smt2";
     solver = new smt2_output_wrapper(tm, opts, solver, ss.str());
   }
   return solver;

@@ -43,7 +43,7 @@ y2m5::y2m5(expr::term_manager& tm, const options& opts)
 : solver("y2m5", tm, opts)
 , d_last_mathsat5_result(UNKNOWN)
 {
-  d_yices2 = new yices2(tm, opts);
+  d_yices2 = factory::mk_solver("yices2", tm, opts);
   if (opts.get_bool("y2m5-mathsat5-flatten")) {
     solver_constructor* constructor = new mathsat_constructor(tm, opts);
     d_mathsat5 = new incremental_wrapper("mathsat5_nonincremental", tm, opts, constructor);

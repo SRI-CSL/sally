@@ -127,6 +127,11 @@ public:
   virtual
   ~solver() {};
 
+  /** Get the solver name */
+  std::string get_name() const {
+    return d_name;
+  }
+
   /** Check if the solver supports a feature */
   virtual
   bool supports(feature f) const {

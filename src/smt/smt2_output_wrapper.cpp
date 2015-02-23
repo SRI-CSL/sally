@@ -63,11 +63,6 @@ smt2_output_wrapper::smt2_output_wrapper(expr::term_manager& tm, const options& 
     d_output << "(set-option :produce-unsat-cores true)" << std::endl;
   }
 
-  // Generalization if supported
-  if (solver->supports(solver::GENERALIZATION)) {
-    d_output << "(set-option :produce-generalization true)" << std::endl;
-  }
-
   // Interpolation if supported
   if (solver->supports(solver::INTERPOLATION)) {
     d_output << "(set-option :produce-interpolants true)" << std::endl;
@@ -88,7 +83,24 @@ void smt2_output_wrapper::add(expr::term_ref f, formula_class f_class) {
 
   assertion a(d_total_assertions_count ++, f, f_class);
   d_assertions.push_back(a);
-  d_output << "(assert (! " << f << " :named a" << a.index << " :interpolation-group g" << a.index << "))" << std::endl;
+
+  bool needs_annotation = d_solver->supports(solver::UNSAT_CORE) || d_solver->supports(solver::INTERPOLATION);
+
+  d_output << "(assert ";
+  if (needs_annotation) {
+    d_output << "(! ";
+  }
+  d_output << f;
+  if (d_solver->supports(solver::UNSAT_CORE)) {
+    d_output << " :named a" << a.index;
+  }
+  if (d_solver->supports(solver::INTERPOLATION)) {
+    d_output << " :interpolation-group g" << a.index;
+  }
+  if (needs_annotation) {
+    d_output << ")";
+  }
+  d_output << ")" << std::endl;
 
   d_solver->add(f, f_class);
 }
