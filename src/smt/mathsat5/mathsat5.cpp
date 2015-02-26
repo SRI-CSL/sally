@@ -57,12 +57,6 @@ class mathsat5_internal {
   /** The assertions size per push/pop */
   std::vector<size_t> d_assertions_size;
 
-  /** The classes for A when interpolating */
-  std::vector<int> d_assertion_classes_A;
-
-  /** The classes size per push/pop */
-  std::vector<size_t> d_assertion_classes_A_size;
-
   typedef boost::unordered_map<expr::term_ref, msat_term, expr::term_ref_hasher> term_to_msat_cache;
   typedef boost::unordered_map<msat_term, expr::term_ref, mathsat5_hasher, mathsat5_eq> msat_to_term_cache;
 
@@ -138,14 +132,8 @@ class mathsat5_internal {
   /** The context */
   msat_env d_env;
 
-  /** Do we need new ITP group A */
-  bool d_itp_new_A;
-
   /** ITP group A */
   int d_itp_A;
-
-  /** Do we need new ITP group B */
-  bool d_itp_new_B;
 
   /** ITP group B */
   int d_itp_B;
@@ -221,9 +209,7 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
 : d_tm(tm)
 , d_last_check_status(MSAT_UNKNOWN)
 , d_instance(s_instances)
-, d_itp_new_A(true)
 , d_itp_A(0)
-, d_itp_new_B(true)
 , d_itp_B(0)
 , d_unsat_cores(opts.get_bool("mathsat5-unsat-cores"))
 {
@@ -242,6 +228,7 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
   d_cfg = msat_create_config();
   msat_set_option(d_cfg, "model_generation", "true");
   msat_set_option(d_cfg, "interpolation", "true");
+  msat_set_option(d_cfg, "theory.la.split_rat_eq", "false");
   if (opts.get_bool("mathsat5-unsat-cores")) {
     msat_set_option(d_cfg, "unsat_core_generation", "1");
   }
@@ -255,6 +242,8 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
   // Minus one
   d_msat_minus_one = msat_make_number(d_env, "-1");
 
+  d_itp_B = msat_create_itp_group(d_env);
+  d_itp_A = msat_create_itp_group(d_env);
 }
 
 mathsat5_internal::~mathsat5_internal() {
@@ -848,23 +837,7 @@ void mathsat5_internal::add(expr::term_ref ref, solver::formula_class f_class) {
   d_assertions.push_back(ref_strong);
 
   // Get the interpolation group
-  int itp_group;
-  if (f_class == solver::CLASS_B) {
-    if (d_itp_new_B) {
-      itp_group = d_itp_B = msat_create_itp_group(d_env);
-      d_itp_new_B = false;
-    } else {
-      itp_group = d_itp_B;
-    }
-  } else {
-    if (d_itp_new_A) {
-      itp_group = d_itp_A = msat_create_itp_group(d_env);
-      d_itp_new_A = false;
-    } else {
-      itp_group = d_itp_A;
-    }
-    d_assertion_classes_A.push_back(itp_group);
-  }
+  int itp_group = f_class == solver::CLASS_B ? d_itp_B : d_itp_A;
 
   // Set the interpolation group
   msat_set_itp_group(d_env, itp_group);
@@ -970,17 +943,12 @@ void mathsat5_internal::get_model(expr::model& m) {
 }
 
 void mathsat5_internal::interpolate(std::vector<expr::term_ref>& projection_out) {
-  assert(!d_assertion_classes_A.empty());
-  int *itp_classes = new int[d_assertion_classes_A.size()];
-  for (size_t i = 0; i < d_assertion_classes_A.size(); ++ i) {
-    itp_classes[i] = d_assertion_classes_A[i];
-  }
-  msat_term I = msat_get_interpolant(d_env, itp_classes, d_assertion_classes_A.size());
-  delete[] itp_classes;
+  int itp_classes[1] = { d_itp_A };
+  msat_term I = msat_get_interpolant(d_env, itp_classes, 1);
   if (MSAT_ERROR_TERM(I)) {
     std::cerr << "Error while interpolating:" << std::endl;
     for (size_t i = 0; i < d_assertions.size(); ++ i) {
-      std::cerr << "[" << i << "]: " << d_assertion_classes_A[i] << ":" << d_assertions[i] << std::endl;
+      std::cerr << "[" << i << "]: " << d_assertions[i] << std::endl;
     }
     throw exception("MathSAT interpolation error.");
   }
@@ -1028,9 +996,6 @@ void mathsat5_internal::push() {
     throw exception("MathSAT error (push).");
   }
   d_assertions_size.push_back(d_assertions.size());
-  d_assertion_classes_A_size.push_back(d_assertion_classes_A.size());
-  d_itp_new_A = true;
-  d_itp_new_B = true;
 }
 
 void mathsat5_internal::pop() {
@@ -1043,13 +1008,6 @@ void mathsat5_internal::pop() {
   while (d_assertions.size() > size) {
     d_assertions.pop_back();
   }
-  size = d_assertion_classes_A_size.back();
-  d_assertion_classes_A_size.pop_back();
-  while (d_assertion_classes_A.size() > size) {
-    d_assertion_classes_A.pop_back();
-  }
-  d_itp_new_A = true;
-  d_itp_new_B = true;
 }
 
 mathsat5::mathsat5(expr::term_manager& tm, const options& opts)
