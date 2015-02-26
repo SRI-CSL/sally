@@ -702,7 +702,10 @@ engine::result ic3_engine::search() {
         }
         return engine::VALID;
       } else {
-        return engine::UNKNOWN;
+        if (ctx().get_options().get_bool("ic3-enable-restarts")) {
+          // Restart solvers and reduce
+          return engine::UNKNOWN;
+        }
       }
       // Continue with the next frame
       has_failed_induction = false;
