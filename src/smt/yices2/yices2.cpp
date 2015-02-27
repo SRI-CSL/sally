@@ -288,8 +288,11 @@ term_t yices2_internal::mk_yices2_term(expr::term_op op, size_t n, term_t* child
     result = yices_bvadd(children[0], children[1]);
     break;
   case expr::TERM_BV_SUB:
-    assert(n == 2);
-    result = yices_bvsub(children[0], children[1]);
+    if (n == 1) {
+      result = yices_bvneg(children[0]);
+    } else {
+      result = yices_bvsub(children[0], children[1]);
+    }
     break;
   case expr::TERM_BV_MUL:
     assert(n == 2);

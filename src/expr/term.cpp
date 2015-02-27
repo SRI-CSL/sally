@@ -227,7 +227,6 @@ void term::to_stream_smt(std::ostream& out, const term_manager_internal& tm) con
   case TERM_GEQ:
   case TERM_GT:
   case TERM_BV_ADD:
-  case TERM_BV_SUB:
   case TERM_BV_MUL:
   case TERM_BV_XOR:
   case TERM_BV_SHL:
@@ -266,7 +265,18 @@ void term::to_stream_smt(std::ostream& out, const term_manager_internal& tm) con
     }
     break;
   }
-
+  case TERM_BV_SUB:
+  {
+    out << "(";
+    if (size() == 1) {
+      out << "bvneg" << " " << (*this)[0];
+    } else {
+      assert(size() == 2);
+      out << "bvsub" << " " << (*this)[0] << " " << (*this)[1];
+    }
+    out << ")";
+    break;
+  }
   case TERM_BV_EXTRACT: {
     const bitvector_extract& extract = tm.payload_of<bitvector_extract>(*this);
     out << "((_ extract " << extract.high << " " << extract.low << ") " << *begin() << ")";

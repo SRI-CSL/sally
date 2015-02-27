@@ -23,6 +23,8 @@ struct mathsat5_info {
     options.add_options()
         ("mathsat5-generate-api-log", "Generate API logs.")
         ("mathsat5-unsat-cores", "Enable generation of unsat cores")
+        ("mathsat5-generalize-trivial", "Trivial generalization by substitution")
+        ("mathsat5-generalize-qe", "Generalize through quantifier elimination")
         ;
   }
 

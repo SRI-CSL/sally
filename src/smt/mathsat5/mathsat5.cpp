@@ -9,6 +9,7 @@
 
 #include <gmp.h>
 #include <mathsat.h>
+#include <msatexistelim.h>
 #include <boost/unordered_map.hpp>
 
 #include <iostream>
@@ -48,11 +49,17 @@ class mathsat5_internal {
   /** The term manager */
   expr::term_manager& d_tm;
 
+  /** Options */
+  const options& d_opts;
+
   /** Number of mathsat5 instances */
   static int s_instances;
 
   /** All assertions we have in context (strong) */
   std::vector<expr::term_ref_strong> d_assertions;
+
+  /** Classes of the assertions */
+  std::vector<smt::solver::formula_class> d_assertion_classes;
 
   /** The assertions size per push/pop */
   std::vector<size_t> d_assertions_size;
@@ -177,7 +184,7 @@ public:
   void pop();
 
   /** Return the generalization */
-  void generalize(const std::set<expr::term_ref>& vars_to_keep, std::vector<expr::term_ref>& out);
+  void generalize(const std::set<expr::term_ref>& vars_to_keep, const std::set<expr::term_ref>& vars_to_elim, std::vector<expr::term_ref>& out);
 
   /** Return the interpolation */
   void interpolate(std::vector<expr::term_ref>& out);
@@ -188,15 +195,16 @@ public:
   /** Returns the instance id */
   size_t instance() const { return d_instance; }
 
-  /** Do we generate unsat cores */
-  bool d_unsat_cores;
-
+  /** Stuff we support */
   bool supports(solver::feature f) const {
      switch (f) {
      case solver::INTERPOLATION:
        return true;
      case solver::UNSAT_CORE:
-       return d_unsat_cores;
+       return d_opts.get_bool("mathsat5-unsat-cores");
+     case solver::GENERALIZATION:
+       return d_opts.get_bool("mathsat5-generalize-trivial") ||
+           d_opts.get_bool("mathsat5-generalize-qe");
      default:
        return false;
      }
@@ -207,11 +215,11 @@ int mathsat5_internal::s_instances = 0;
 
 mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts)
 : d_tm(tm)
+, d_opts(opts)
 , d_last_check_status(MSAT_UNKNOWN)
 , d_instance(s_instances)
 , d_itp_A(0)
 , d_itp_B(0)
-, d_unsat_cores(opts.get_bool("mathsat5-unsat-cores"))
 {
   // ID
   std::stringstream ss;
@@ -229,6 +237,7 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
   msat_set_option(d_cfg, "model_generation", "true");
   msat_set_option(d_cfg, "interpolation", "true");
   msat_set_option(d_cfg, "theory.la.split_rat_eq", "false");
+  msat_set_option(d_cfg, "theory.bv.eager", "false");
   if (opts.get_bool("mathsat5-unsat-cores")) {
     msat_set_option(d_cfg, "unsat_core_generation", "1");
   }
@@ -364,8 +373,12 @@ msat_term mathsat5_internal::mk_mathsat5_term(expr::term_op op, size_t n, msat_t
     }
     break;
   case expr::TERM_BV_SUB:
-    assert(n == 2);
-    result = msat_make_bv_minus(d_env, children[0], children[1]);
+    if (n == 1) {
+      result = msat_make_bv_neg(d_env, children[0]);
+    } else {
+      assert(n == 2);
+      result = msat_make_bv_minus(d_env, children[0], children[1]);
+    }
     break;
   case expr::TERM_BV_MUL:
     result = children[0];
@@ -642,8 +655,15 @@ expr::term_ref mathsat5_internal::to_term(msat_term t) {
     mpq_init(number);
     msat_term_to_number(d_env, t, number);
     expr::rational rational(number);
+
     if (rational.is_integer()) {
-      result = d_tm.mk_integer_constant(rational.get_numerator());
+      msat_type t_type = msat_term_get_type(t);
+      size_t bv_size;
+      if (msat_is_bv_type(d_env, t_type, &bv_size)) {
+        result = d_tm.mk_bitvector_constant(expr::bitvector(bv_size, rational.get_numerator()));
+      } else {
+        result = d_tm.mk_integer_constant(rational.get_numerator());
+      }
     } else {
       result = d_tm.mk_rational_constant(rational);
     }
@@ -835,6 +855,7 @@ void mathsat5_internal::add(expr::term_ref ref, solver::formula_class f_class) {
   // Remember the assertions
   expr::term_ref_strong ref_strong(d_tm, ref);
   d_assertions.push_back(ref_strong);
+  d_assertion_classes.push_back(f_class);
 
   // Get the interpolation group
   int itp_group = f_class == solver::CLASS_B ? d_itp_B : d_itp_A;
@@ -946,9 +967,11 @@ void mathsat5_internal::interpolate(std::vector<expr::term_ref>& projection_out)
   int itp_classes[1] = { d_itp_A };
   msat_term I = msat_get_interpolant(d_env, itp_classes, 1);
   if (MSAT_ERROR_TERM(I)) {
-    std::cerr << "Error while interpolating:" << std::endl;
-    for (size_t i = 0; i < d_assertions.size(); ++ i) {
-      std::cerr << "[" << i << "]: " << d_assertions[i] << std::endl;
+    if (output::trace_tag_is_enabled("mathsat5")) {
+      std::cerr << "Error while interpolating:" << std::endl;
+      for (size_t i = 0; i < d_assertions.size(); ++ i) {
+        std::cerr << "[" << i << "]: " << d_assertions[i] << std::endl;
+      }
     }
     throw exception("MathSAT interpolation error.");
   }
@@ -967,26 +990,64 @@ void mathsat5_internal::get_unsat_core(std::vector<expr::term_ref>& out) {
   msat_free(core);
 }
 
-void mathsat5_internal::generalize(const std::set<expr::term_ref>& vars_to_keep, std::vector<expr::term_ref>& out) {
+void mathsat5_internal::generalize(const std::set<expr::term_ref>& vars_to_keep, const std::set<expr::term_ref>& vars_to_elim, std::vector<expr::term_ref>& out) {
   expr::model m(d_tm, true);
   get_model(m);
 
-  std::set<expr::term_ref>::const_iterator it = vars_to_keep.begin(), it_end = vars_to_keep.end();
-  for (; it != it_end; ++ it) {
-    // var = value
-    expr::term_ref var = *it;
-    assert(m.has_value(var));
-    expr::term_ref value = m.get_term_value(var);
+  if (false && d_opts.get_bool("mathsat5-generalize-qe")) {
 
-    if (d_tm.type_of(var) == d_tm.boolean_type()) {
-      if (d_tm.get_boolean_constant(d_tm.term_of(value))) {
-        out.push_back(var);
+//    // Push all the A formula to out, make a conjunction of the T and B
+//    std::vector<expr::term_ref> assertions_for_qe;
+//    for (size_t i = 0; i < d_assertions.size(); ++ i) {
+//      if (d_assertion_classes[i] == solver::CLASS_A) {
+//        out.push_back(d_assertions[i]);
+//      } else {
+//        assertions_for_qe.push_back(d_assertions[i]);
+//      }
+//    }
+//
+//    // The formula to eliminate
+//    expr::term_ref f_to_eliminate = d_tm.mk_and(assertions_for_qe);
+//    msat_term f_msat = to_mathsat5_term(f_to_eliminate);
+//
+//    // Variables to eliminate
+//    msat_term vars_msat[vars_to_elim.size()];
+//    std::set<expr::term_ref>::const_iterator it = vars_to_elim.begin(), it_end = vars_to_elim.end();
+//    for (size_t i = 0; it != it_end; ++ it, ++ i) {
+//      vars_msat[i] = to_mathsat5_term(*it);
+//    }
+//
+//    // Eliminate
+//    msat_exist_elim_options opts;
+//    opts.boolean_simplifications = true;
+//    opts.remove_redundant_constraints = true;
+//    opts.toplevel_propagation = true;
+//    msat_term msat_result = msat_exist_elim(d_env, f_msat, vars_msat, vars_to_elim.size(), MSAT_EXIST_ELIM_ALLSMT_FM, opts);
+//
+//    // Add to result
+//    expr::term_ref result = to_term(msat_result);
+//    out.push_back(result);
+
+  } else if (d_opts.get_bool("mathsat5-generalize-trivial")) {
+    std::set<expr::term_ref>::const_iterator it = vars_to_keep.begin(), it_end = vars_to_keep.end();
+    for (; it != it_end; ++it) {
+      // var = value
+      expr::term_ref var = *it;
+      assert(m.has_value(var));
+      expr::term_ref value = m.get_term_value(var);
+
+      if (d_tm.type_of(var) == d_tm.boolean_type()) {
+        if (d_tm.get_boolean_constant(d_tm.term_of(value))) {
+          out.push_back(var);
+        } else {
+          out.push_back(d_tm.mk_term(expr::TERM_NOT, var));
+        }
       } else {
-        out.push_back(d_tm.mk_term(expr::TERM_NOT, var));
+        out.push_back(d_tm.mk_term(expr::TERM_EQ, var, value));
       }
-    } else {
-      out.push_back(d_tm.mk_term(expr::TERM_EQ, var, value));
     }
+  } else {
+    throw exception("Generalization not supported!");
   }
 }
 
@@ -1007,6 +1068,7 @@ void mathsat5_internal::pop() {
   d_assertions_size.pop_back();
   while (d_assertions.size() > size) {
     d_assertions.pop_back();
+    d_assertion_classes.pop_back();
   }
 }
 
@@ -1048,7 +1110,7 @@ void mathsat5::pop() {
 /** Interpolate the last sat result (trivial) */
 void mathsat5::generalize(std::vector<expr::term_ref>& out) {
   TRACE("mathsat5") << "mathsat5[" << d_internal->instance() << "]: interpolating" << std::endl;
-  d_internal->generalize(d_x_variables, out);
+  d_internal->generalize(d_x_variables, d_y_variables, out);
 }
 
 

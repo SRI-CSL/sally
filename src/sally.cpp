@@ -86,8 +86,8 @@ int main(int argc, char* argv[]) {
     }
 
     // Enable smt2 output if enabled
-    if (opts.get_bool("smt2-output")) {
-      smt::factory::enable_smt2_output("solver");
+    if (opts.has_option("smt2-output")) {
+      smt::factory::enable_smt2_output(opts.get_string("smt2-output"));
     }
 
     // Setup live stats if asked
@@ -187,7 +187,7 @@ void parse_options(int argc, char* argv[], variables_map& variables)
       ("arith-eq-to-ineq", "Rewrite equalities into inqualities.")
       ("lsal-extensions", "Use lsal extensions to the MCMT language")
       ("live-stats", value<string>(), "Output live statistic to the given file.")
-      ("smt2-output", "Generate smt2 logs of solver queries.")
+      ("smt2-output", value<string>(), "Generate smt2 logs of solver queries with given prefix.")
       ;
 
   // Get the individual engine options

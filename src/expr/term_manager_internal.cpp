@@ -220,8 +220,21 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
   case TERM_BV_NOT:
     ok = t.size() == 1 && is_bitvector_type(type_of(t[0]));
     break;
-  case TERM_BV_ADD:
   case TERM_BV_SUB:
+    if (t.size() == 1) {
+      ok = is_bitvector_type(type_of(t[0]));
+    } else if (t.size() == 2) {
+      term_ref type_ref = type_of(t[0]);
+      if (!is_bitvector_type(type_ref)) {
+        ok = false;
+      } else {
+        ok = type_ref == type_of(t[1]);
+      }
+    } else {
+      ok = false;
+    }
+    break;
+  case TERM_BV_ADD:
   case TERM_BV_MUL:
   case TERM_BV_XOR:
   case TERM_BV_AND:

@@ -95,7 +95,11 @@ void smt2_output_wrapper::add(expr::term_ref f, formula_class f_class) {
     d_output << " :named a" << a.index;
   }
   if (d_solver->supports(solver::INTERPOLATION)) {
-    d_output << " :interpolation-group g" << a.index;
+    if (a.f_class == CLASS_B) {
+      d_output << " :interpolation-group B";
+    } else {
+      d_output << " :interpolation-group A";
+    }
   }
   if (needs_annotation) {
     d_output << ")";
@@ -163,20 +167,7 @@ void smt2_output_wrapper::generalize(std::vector<expr::term_ref>& projection_out
 
 void smt2_output_wrapper::interpolate(std::vector<expr::term_ref>& out) {
   set_name_transformer nt(d_tm);
-
-  d_output << "(get-interpolant (";
-
-  bool space = false;
-  for (size_t i = 0; i < d_assertions.size(); ++ i) {
-    if (d_assertions[i].f_class != CLASS_B) {
-      if (space) { d_output << " "; }
-      d_output << "g" << d_assertions[i].index;
-      space = true;
-    }
-  }
-
-  d_output << "))" << std::endl;
-
+  d_output << "(get-interpolant (A))" << std::endl;
   d_solver->interpolate(out);
 }
 
