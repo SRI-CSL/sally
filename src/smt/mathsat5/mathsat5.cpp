@@ -994,39 +994,39 @@ void mathsat5_internal::generalize(const std::set<expr::term_ref>& vars_to_keep,
   expr::model m(d_tm, true);
   get_model(m);
 
-  if (false && d_opts.get_bool("mathsat5-generalize-qe")) {
+  if (d_opts.get_bool("mathsat5-generalize-qe")) {
 
-//    // Push all the A formula to out, make a conjunction of the T and B
-//    std::vector<expr::term_ref> assertions_for_qe;
-//    for (size_t i = 0; i < d_assertions.size(); ++ i) {
-//      if (d_assertion_classes[i] == solver::CLASS_A) {
-//        out.push_back(d_assertions[i]);
-//      } else {
-//        assertions_for_qe.push_back(d_assertions[i]);
-//      }
-//    }
-//
-//    // The formula to eliminate
-//    expr::term_ref f_to_eliminate = d_tm.mk_and(assertions_for_qe);
-//    msat_term f_msat = to_mathsat5_term(f_to_eliminate);
-//
-//    // Variables to eliminate
-//    msat_term vars_msat[vars_to_elim.size()];
-//    std::set<expr::term_ref>::const_iterator it = vars_to_elim.begin(), it_end = vars_to_elim.end();
-//    for (size_t i = 0; it != it_end; ++ it, ++ i) {
-//      vars_msat[i] = to_mathsat5_term(*it);
-//    }
-//
-//    // Eliminate
-//    msat_exist_elim_options opts;
-//    opts.boolean_simplifications = true;
-//    opts.remove_redundant_constraints = true;
-//    opts.toplevel_propagation = true;
-//    msat_term msat_result = msat_exist_elim(d_env, f_msat, vars_msat, vars_to_elim.size(), MSAT_EXIST_ELIM_ALLSMT_FM, opts);
-//
-//    // Add to result
-//    expr::term_ref result = to_term(msat_result);
-//    out.push_back(result);
+    // Push all the A formula to out, make a conjunction of the T and B
+    std::vector<expr::term_ref> assertions_for_qe;
+    for (size_t i = 0; i < d_assertions.size(); ++ i) {
+      if (d_assertion_classes[i] == solver::CLASS_A) {
+        out.push_back(d_assertions[i]);
+      } else {
+        assertions_for_qe.push_back(d_assertions[i]);
+      }
+    }
+
+    // The formula to eliminate
+    expr::term_ref f_to_eliminate = d_tm.mk_and(assertions_for_qe);
+    msat_term f_msat = to_mathsat5_term(f_to_eliminate);
+
+    // Variables to eliminate
+    msat_term vars_msat[vars_to_elim.size()];
+    std::set<expr::term_ref>::const_iterator it = vars_to_elim.begin(), it_end = vars_to_elim.end();
+    for (size_t i = 0; it != it_end; ++ it, ++ i) {
+      vars_msat[i] = to_mathsat5_term(*it);
+    }
+
+    // Eliminate
+    msat_exist_elim_options opts;
+    opts.boolean_simplifications = true;
+    opts.remove_redundant_constraints = true;
+    opts.toplevel_propagation = true;
+    msat_term msat_result = msat_exist_elim(d_env, f_msat, vars_msat, vars_to_elim.size(), MSAT_EXIST_ELIM_ALLSMT_FM, opts);
+
+    // Add to result
+    expr::term_ref result = to_term(msat_result);
+    out.push_back(result);
 
   } else if (d_opts.get_bool("mathsat5-generalize-trivial")) {
     std::set<expr::term_ref>::const_iterator it = vars_to_keep.begin(), it_end = vars_to_keep.end();
