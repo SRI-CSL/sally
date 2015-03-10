@@ -818,6 +818,7 @@ expr::bitvector bitvector_from_int32(size_t size, int32_t* value) {
 
 void yices2_internal::get_model(expr::model& m, const std::set<expr::term_ref>& x_variables, const std::set<expr::term_ref>& y_variables) {
   assert(d_last_check_status == STATUS_SAT);
+  assert(x_variables.size() > 0 || y_variables.size() > 0);
 
   // Clear any data already there
   m.clear();
@@ -908,7 +909,7 @@ void yices2_internal::get_model(expr::model& m, const std::set<expr::term_ref>& 
     }
 
     // Add the association
-    m.set_value(var, var_value);
+    m.set_variable_value(var, var_value);
   }
 
   // Free the yices model

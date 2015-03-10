@@ -42,6 +42,7 @@ ic3_engine::ic3_engine(const system::context& ctx)
 : engine(ctx)
 , d_transition_system(0)
 , d_property(0)
+, d_trace(0)
 {
   for (size_t i = 0; i < 10; ++ i) {
     std::stringstream ss;
@@ -61,6 +62,7 @@ ic3_engine::~ic3_engine() {
   for (size_t k = 0; k < d_solvers.size(); ++ k) {
     delete d_solvers[k];
   }
+  delete d_trace;
 }
 
 expr::term_ref ic3_engine::check_one_step_reachable(size_t k, expr::term_ref F) {
@@ -334,8 +336,8 @@ bool ic3_engine::check_reachable(size_t k, expr::term_ref f) {
   TRACE("ic3") << "ic3: checking reachability at " << k << std::endl;
 
   // Queue of reachability obligations
-  std::stack<obligation> reachability_obligations;
-  reachability_obligations.push(obligation(k, f, 0));
+  std::vector<obligation> reachability_obligations;
+  reachability_obligations.push_back(obligation(k, f, 0));
 
   // We're not reachable, if we hit 0 we set it to true
   bool reachable = false;
@@ -343,11 +345,17 @@ bool ic3_engine::check_reachable(size_t k, expr::term_ref f) {
   // The induction not valid, try to extend to full counter-example
   for (size_t check = 0; !reachability_obligations.empty(); ++ check) {
     // Get the next reachability obligations
-    obligation reach = reachability_obligations.top();
-    // If we're at 0 frame, we're reachable anything passed in is consistent
+    obligation reach = reachability_obligations.back();
+    // If we're at 0 frame, we're reachable: anything passed in is consistent
     // part of the abstraction
     if (reach.frame() == 0) {
+      // We're reachable, mark it
       reachable = true;
+      // Remember the counterexample
+      d_counterexample.clear();
+      for (size_t i = 0; i < reachability_obligations.size(); ++ i) {
+        d_counterexample.push_front(reachability_obligations[i].formula());
+      }
       break;
     }
 
@@ -355,7 +363,7 @@ bool ic3_engine::check_reachable(size_t k, expr::term_ref f) {
     expr::term_ref G = check_one_step_reachable(reach.frame(), reach.formula());
     if (G.is_null()) {
       // Proven, remove from obligations
-      reachability_obligations.pop();
+      reachability_obligations.pop_back();
       // Learn
       if (reach.frame() < k) {
         // Learn something at k that refutes the formula
@@ -365,7 +373,7 @@ bool ic3_engine::check_reachable(size_t k, expr::term_ref f) {
       }
     } else {
       // New obligation to reach the counterexample
-      reachability_obligations.push(obligation(reach.frame()-1, G, 0));
+      reachability_obligations.push_back(obligation(reach.frame()-1, G, 0));
     }
   }
 
@@ -630,6 +638,7 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, size_t depth) {
     // If reachable, we're not inductive
     if (reachable) {
       inductive = false;
+      d_counterexample.push_back(tm().mk_term(expr::TERM_NOT, f));
       break;
     }
 
@@ -721,6 +730,9 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 
   result r = UNKNOWN;
 
+  // Clear any counterexamples
+  d_counterexample.clear();
+
   // Remember the input
   d_transition_system = ts;
   d_property = sf;
@@ -738,6 +750,7 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   expr::term_ref P = d_property->get_formula();
   bool P_valid = check_valid(0, P);
   if (!P_valid) {
+    d_counterexample.push_back(tm().mk_term(expr::TERM_NOT, P));
     return engine::INVALID;
   } else {
     add_to_frame(0, P);
@@ -761,7 +774,68 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 }
 
 const system::state_trace* ic3_engine::get_trace() {
-  return 0;
+  if (d_trace) { delete d_trace; }
+  d_trace = new system::state_trace(d_transition_system->get_state_type());
+
+
+  // Model we'll be using (the last one we're trying to extend)
+  expr::model m(tm(), false);
+
+  // Get the state variables
+  const std::vector<expr::term_ref>& current_vars = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_CURRENT);
+  const std::vector<expr::term_ref>& next_vars = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_NEXT);
+
+  // Make the solver
+  smt::solver* solver = smt::factory::mk_default_solver(tm(), ctx().get_options());
+  solver->add_x_variables(current_vars.begin(), current_vars.end());
+  solver->add_y_variables(next_vars.begin(), next_vars.end());
+  solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_T);
+
+  // Get the first one
+  solver->push();
+  solver->add(d_transition_system->get_initial_states(), smt::solver::CLASS_A);
+  solver->add(d_counterexample[0], smt::solver::CLASS_A);
+  smt::solver::result result = solver->check();
+  assert(result == smt::solver::SAT);
+  solver->get_model(m);
+  d_trace->add_model(m, system::state_type::STATE_CURRENT, 0);
+  solver->pop();
+
+  if (d_counterexample.size() > 1) {
+    for (size_t k = 1; k < d_counterexample.size(); ++ k) {
+
+      solver->push();
+
+      // Add the model, i.e. where we're coming from
+      for (size_t i = 0; i < next_vars.size(); ++ i) {
+        expr::term_ref var = current_vars[i];
+        expr::term_ref value = k == 1 ? m.get_variable_value(current_vars[i]) : m.get_variable_value(next_vars[i]);
+        expr::term_ref eq = tm().mk_term(expr::TERM_EQ, var, value);
+        solver->add(eq, smt::solver::CLASS_A);
+      }
+
+      // Add what we are trying to reach
+      expr::term_ref to = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, d_counterexample[k]);
+      d_trace->get_state_formula(to, k);
+      solver->add(to, smt::solver::CLASS_B);
+
+      // Check and add the model to the trace
+      m.clear();
+      smt::solver::result r = solver->check();
+      assert(r == smt::solver::SAT);
+      unused_var(r);
+      solver->get_model(m);
+      d_trace->add_model(m, system::state_type::STATE_NEXT, k);
+
+      solver->pop();
+    }
+  }
+
+
+  // Remove the solver
+  delete solver;
+
+  return d_trace;
 }
 
 void ic3_engine::to_stream(std::ostream& out) const  {

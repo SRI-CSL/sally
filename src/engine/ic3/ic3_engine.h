@@ -80,6 +80,12 @@ class ic3_engine : public engine {
   /** A solver per frame with next info */
   std::vector<smt::solver*> d_solvers;
 
+  /** A counter-example, if any, with formulas in reverse order, i.e. last one is the 0 frame */
+  std::deque<expr::term_ref> d_counterexample;
+
+  /** The trace we're building for counterexamples */
+  system::state_trace* d_trace;
+
   /** Returns the solver for k-th frame */
   smt::solver* get_solver(size_t k);
 

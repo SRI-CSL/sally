@@ -30,7 +30,7 @@ void model::clear() {
   d_variables.clear();
 }
 
-void model::set_value(expr::term_ref var, expr::term_ref value) {
+void model::set_variable_value(expr::term_ref var, expr::term_ref value) {
   assert(d_term_manager.term_of(var).op() == expr::VARIABLE);
   iterator find = d_variable_to_value_map.find(var);
   if (find != d_variable_to_value_map.end()) {

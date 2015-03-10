@@ -34,7 +34,7 @@ public:
   void clear();
 
   /** Set the value of a variable */
-  void set_value(expr::term_ref var, expr::term_ref value);
+  void set_variable_value(expr::term_ref var, expr::term_ref value);
 
   /** Get the value of a term in the model (not just variables) */
   expr::term_ref get_variable_value(expr::term_ref var) const;

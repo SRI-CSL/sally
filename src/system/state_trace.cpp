@@ -79,7 +79,27 @@ expr::term_ref state_trace::get_transition_formula(expr::term_ref tf, size_t i, 
 void state_trace::add_model(const expr::model& m) {
   expr::model::const_iterator it = m.values_begin();
   for (; it != m.values_end(); ++ it) {
-    d_model.set_value(it->first, it->second);
+    d_model.set_variable_value(it->first, it->second);
+  }
+}
+
+void state_trace::add_model(const expr::model& m, state_type::var_class vc, size_t k) {
+
+  // Setup the substitution map
+  expr::term_manager::substitution_map subst;
+  std::vector<expr::term_ref> from_vars;
+  std::vector<expr::term_ref> to_vars;
+  get_state_variables(d_state_type->get_state_type_variable(vc), from_vars);
+  get_state_variables(get_state_type_variable(k), to_vars);
+  for (size_t i = 0; i < from_vars.size(); ++ i) {
+    subst[from_vars[i]] = to_vars[i];
+  }
+
+  expr::model::const_iterator it = m.values_begin();
+  for (; it != m.values_end(); ++ it) {
+    if (subst.find(it->first) != subst.end()) {
+      d_model.set_variable_value(subst[it->first], it->second);
+    }
   }
 }
 
@@ -99,8 +119,8 @@ void state_trace::to_stream(std::ostream& out) const {
     out << "  (frame" << std::endl;
 
     std::vector<expr::term_ref> state_vars_k;
-    tm().get_variables(d_state_variables[k], state_vars_k);
-    for (size_t i = 1; i < state_vars.size(); ++ i) {
+    get_state_variables(d_state_variables[k], state_vars_k);
+    for (size_t i = 0; i < state_vars.size(); ++ i) {
       expr::term_ref var = state_vars_k[i];
       out << "    (" << state_vars[i] << " ";
       out <<  d_model.get_variable_value(var);

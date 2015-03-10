@@ -58,9 +58,14 @@ public:
   expr::term_ref get_transition_formula(expr::term_ref tf, size_t i, size_t j);
 
   /**
-   * Add model to the trace.
+   * Add model to the trace (with variables already named appropriately.
    */
   void add_model(const expr::model& m);
+
+  /**
+   * Add model to trace, while remanimg the given state variables to frame k.
+   */
+  void add_model(const expr::model& m, state_type::var_class, size_t k);
 
   /**
    * Output the trace to the stream.

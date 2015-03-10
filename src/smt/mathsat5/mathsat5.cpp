@@ -959,7 +959,7 @@ void mathsat5_internal::get_model(expr::model& m) {
     }
 
     // Add the association
-    m.set_value(var, var_value);
+    m.set_variable_value(var, var_value);
   }
 }
 
