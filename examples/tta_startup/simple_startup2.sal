@@ -9,13 +9,13 @@ simple_startup2: CONTEXT =
 
 BEGIN
 
-  N: NATURAL = 10;
+  % min: 3, max tried with sal 10
+  N: NATURAL = 3;
 
   % Ugly type definition to work around ICS's limitations
   % (incompleteness when dealing with integers)
 
-  IDENTITY: TYPE = { x: [1 .. N] | x=1 OR x=2 OR x=3 OR x=4 OR x=5 OR 
-                                   x=6 OR x=7 OR x=8 OR x=9 OR x=10 };
+  IDENTITY: TYPE = [1 .. N];
 
   TIME: TYPE = REAL;
 
@@ -334,211 +334,15 @@ BEGIN
     
    tta: MODULE = clock [] nodes;
 
-
-
-
-   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-   %  ABSTRACTION AND MONITORS  %
-   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-   %---------------------------------------------------------
-   % Abstraction module: define the abstract state variables
-   %---------------------------------------------------------
-
-   abstractor: MODULE =
-     BEGIN
-       INPUT
-	 time: TIME,
-         cal: calendar,
-         time_out: TIMEOUT_ARRAY,
-         pc: ARRAY IDENTITY OF PC,
-         slot: ARRAY IDENTITY OF IDENTITY
-       OUTPUT 
-	 A1, A2, A3, A4, A5, A6: BOOLEAN
-     DEFINITION
-       A1 = empty?(cal) AND (FORALL (i: IDENTITY): pc[i] = init OR pc[i] = listen);
-
-       A2 = cs_frame?(cal) AND pc[cal.origin] = coldstart
-            AND (FORALL (i: IDENTITY):
-                    pc[i] = init OR pc[i] = listen OR pc[i] = coldstart)
-            AND (FORALL (i: IDENTITY): pc[i] = coldstart =>
-                    NOT event_pending?(cal, i) 
-                    AND time_out[i] - cal.send >= tau_coldstart(i)
-                    AND time_out[i] - time <= tau_coldstart(i))
-            AND (FORALL (i: IDENTITY): pc[i] = listen =>
-                    event_pending?(cal, i) 
-                    OR time_out[i] >= cal.send + tau_listen(i));
-
-       A3 = empty?(cal)
-            AND (EXISTS (i: IDENTITY): pc[i] = coldstart)
-            AND (FORALL (i: IDENTITY):
-                    pc[i] = init OR pc[i] = listen OR pc[i] = coldstart)
-	    AND (FORALL (i: IDENTITY):
-                    pc[i] = coldstart => time_out[i] - time <= tau_coldstart(i))
-            AND (FORALL (i, j: IDENTITY): pc[i] = coldstart AND pc[j] = coldstart 
-                    AND i < j => time_out[j] - time_out[i] > propagation)
-            AND (FORALL (i, j: IDENTITY): pc[i] = coldstart AND pc[j] = listen =>
-				  time_out[j] - time_out[i] > propagation);
-
-       A4 = cs_frame?(cal)
-            AND pc[cal.origin] = coldstart
-            AND time_out[cal.origin] = cal.send + tau_coldstart(cal.origin)   
-            AND NOT event_pending?(cal, cal.origin)
-            AND (FORALL (i: IDENTITY): pc[i] = coldstart AND i /= cal.origin =>
-                     (event_pending?(cal, i) AND event_time(cal, i) < time_out[i]) 
-                  OR (time_out[i] - cal.send >= tau_coldstart(i) AND 
-                             time_out[i] - time <= tau_coldstart(i)))
-            AND (FORALL (i: IDENTITY): pc[i] = listen =>
-                     (event_pending?(cal, i) AND event_time(cal, i) < time_out[i])
-                  OR time_out[i] >= cal.send + tau_listen(i))
-            AND (FORALL (i: IDENTITY): pc[i] = active =>
-                  slot[i] = cal.origin AND time_out[i] = cal.send + slot_time);
-
-       A5 = empty?(cal)
-            AND (EXISTS (i: IDENTITY): pc[i] = active)
-	    AND (FORALL (i: IDENTITY):
-                    pc[i] = active => time_out[i] <= time + slot_time)
-            AND (FORALL (i, j: IDENTITY): pc[i] = active AND pc[j] = active => 
-                  (time < time_out[i] AND time < time_out[j] =>
-                       slot[i] = slot[j] AND time_out[i] = time_out[j])
-              AND (time = time_out[i] AND time = time_out[j] => slot[i] = slot[j])
-              AND (time < time_out[i] AND time = time_out[j] =>
-                     slot[i] = inc(slot[j]) AND time_out[i] = time_out[j] + slot_time))
-            AND (FORALL (i, j: IDENTITY):
-                    pc[i] = active AND (pc[j] = listen OR pc[j] = coldstart) =>
-                         time_out[j] > time_out[i] + 
-                               slot_delay(slot[i], i) * slot_time + propagation);
-
-       A6 = i_frame?(cal) 
-            AND pc[cal.origin] = active AND slot[cal.origin] = cal.origin 
-            AND time_out[cal.origin] = cal.send + slot_time
-            AND (FORALL (i: IDENTITY): pc[i] = active AND time < time_out[i] => 
-	          slot[i] = cal.origin AND time_out[i] = time_out[cal.origin])
-	    AND (FORALL (i: IDENTITY): pc[i] = active AND time = time_out[i] =>
-                    inc(slot[i]) = cal.origin AND 
-                        time_out[cal.origin] = time_out[i] + slot_time)
-            AND (FORALL (i: IDENTITY): pc[i] = listen =>
-                     (event_pending?(cal, i) AND event_time(cal, i) < time_out[i])
-                  OR (time_out[i] >= cal.send + tau_listen(i)))
-            AND (FORALL (i: IDENTITY): pc[i] = coldstart =>
-                     event_pending?(cal, i) AND event_time(cal, i) < time_out[i]);
-
-     END;   
-  
-
-   %------------
-   %  Monitors
-   %------------
-
-   abstract_state: TYPE = {a1, a2, a3, a4, a5, a6, bad };
-
-   monitor: MODULE =
-     BEGIN
-       INPUT A1, A2, A3, A4, A5, A6: BOOLEAN
-       LOCAL state: abstract_state
-     INITIALIZATION
-       state = a1
-     TRANSITION
-        [ state = a1 --> 
-	    state' = IF A1' THEN a1 ELSIF A2' THEN a2 ELSE bad ENDIF
-
-       [] state = a2 -->
-            state' = IF A2' THEN a2 ELSIF A3' THEN a3 ELSE bad ENDIF
-
-       [] state = a3 -->
-	    state' = IF A3' THEN a3 ELSIF A4' THEN a4 ELSE bad ENDIF
-
-       [] state = a4 -->
-            state' = IF A4' THEN a4 ELSIF A3' THEN a3 ELSIF A5' THEN a5 ELSE bad ENDIF
-
-       [] state = a5 -->
-            state' = IF A5' THEN a5 ELSIF A6' THEN a6 ELSE bad ENDIF
-
-       [] state = a6 -->
-            state' = IF A6' THEN a6 ELSIF A5' THEN a5 ELSE bad ENDIF
-
-       [] ELSE --> state' = bad
-        ]
-     END;
-   
-
    %--------------
    %  Properties
    %--------------
 
-   system: MODULE = tta || abstractor || monitor;
-
-   %
-   % time_aux0 to time_aux2 are provable by induction at depth 1
-   % time_aux3 is provable by induction at depth 4, or by induction
-   %   at depth 1 using time_aux0 as a lemma
-   %
-
-   time_aux0: LEMMA
-     system |- G(time >= 0);
-
-   time_aux1: LEMMA
-     system |- G(FORALL (i: IDENTITY): time <= time_out[i]);
-
-   time_aux2: LEMMA
-     system |- G(empty?(cal) OR (cal.send <= time AND time <= first_event(cal)));
-
-   time_aux3: LEMMA
-     system |- G(FORALL (i: IDENTITY): time_out[i] > 0);
-
-
-   %
-   % delivery_delay: all by induction at depth 1
-   %
-
-   delivery_delay: LEMMA
-     system |- G(empty?(cal) OR first_event(cal) <= cal.send + propagation);
-
-   delivery_delay1: LEMMA
-     system |- 
-	G(FORALL (i: IDENTITY): event_pending?(cal, i) => event_time(cal, i) = cal.send + propagation);
-
-   delivery_delay2: LEMMA
-     system |- 
-	G(FORALL (i: IDENTITY): i_frame_pending?(cal, i) => event_time(cal, i) <= cal.send + propagation);
-
-   delivery_delay3: LEMMA
-     system |- 
-	G(FORALL (i: IDENTITY): cs_frame_pending?(cal, i) => event_time(cal, i) <= cal.send + propagation);
-
-
-   %
-   % a sender does not receive its own frame: by induction at depth 1
-   % 
-
-   calendar_aux1: LEMMA
-     system |- G(NOT event_pending?(cal, cal.origin));
-
-
-
-   %----------------------
-   %  Abstraction lemmas
-   %----------------------
-
-   abstract_init: LEMMA system |- A1;
-
-   abstract_a1: LEMMA system |- G(state = a1 => A1);
-   abstract_a2: LEMMA system |- G(state = a2 => A2);
-   abstract_a3: LEMMA system |- G(state = a3 => A3);
-   abstract_a4: LEMMA system |- G(state = a4 => A4);
-   abstract_a5: LEMMA system |- G(state = a5 => A5);
-   abstract_a6: LEMMA system |- G(state = a6 => A6);
-
-   abstract_invar: LEMMA system |- G(state /= bad);
-
-   %
-   %  Safety property
-   %
+   system: MODULE = tta;
 
    synchro: THEOREM
      tta |- G(FORALL (i, j: IDENTITY): pc[i] = active AND pc[j] = active AND
 		time < time_out[i] AND time < time_out[j] => time_out[i] = time_out[j] AND slot[i] = slot[j]);
-
 
  
 END
