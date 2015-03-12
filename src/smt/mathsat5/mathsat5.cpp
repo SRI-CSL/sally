@@ -13,6 +13,8 @@
 #include <boost/unordered_map.hpp>
 
 #include <iostream>
+#include <fstream>
+#include <iomanip>
 
 #include "expr/term.h"
 #include "expr/term_manager.h"
@@ -24,6 +26,13 @@
 
 namespace sally {
 namespace smt {
+
+class smt2_name_transformer : public utils::name_transformer {
+public:
+  std::string apply(std::string id) const {
+    return "|" + id + "|";
+  }
+};
 
 /** Yices term hash. */
 struct mathsat5_hasher {
@@ -103,6 +112,32 @@ class mathsat5_internal {
     }
     unused_var(added);
     assert(added);
+
+    // If enabled, check the term transformations by producing a series of
+    // smt queries
+    if (output::trace_tag_is_enabled("mathsat5::terms")) {
+      static size_t k = 0;
+      std::stringstream ss;
+      ss << "mathsat5_term_query_" << std::setfill('0') << std::setw(5) << k++ << ".smt2";
+      smt2_name_transformer name_transformer;
+      d_tm.set_name_transformer(&name_transformer);
+      std::ofstream query(ss.str().c_str());
+      output::set_term_manager(query, &d_tm);
+      output::set_output_language(query, output::MCMT);
+
+      // Prelude
+      for (size_t i = 0; i < d_variables.size(); ++ i) {
+        query << "(declare-fun " << d_variables[i] << " () " << d_tm.type_of(d_variables[i]) << ")" << std::endl;
+      }
+
+      // Check the representation
+      char* repr = msat_to_smtlib2_term(d_env, t_msat);
+      query << "(assert (not (= " << repr << " " << t << ")))" << std::endl;
+      msat_free(repr);
+
+      query << "(check-sat)" << std::endl;
+      d_tm.set_name_transformer(0);
+    }
   }
 
   /** Returns the mathsat5 term associated with t, or ERROR_TERM otherwise */
@@ -340,15 +375,18 @@ msat_term mathsat5_internal::mk_mathsat5_term(expr::term_op op, size_t n, msat_t
     break;
   case expr::TERM_LT:
     assert(n == 2);
+    // x < y = y > x = not (y <= x)
     result = msat_make_leq(d_env, children[1], children[0]);
     result = msat_make_not(d_env, result);
     break;
   case expr::TERM_GEQ:
     assert(n == 2);
+    // x >= y = y <= x
     result = msat_make_leq(d_env, children[1], children[0]);
     break;
   case expr::TERM_GT:
     assert(n == 2);
+    // x > y = not (x <= y)
     result = msat_make_leq(d_env, children[0], children[1]);
     result = msat_make_not(d_env, result);
     break;
@@ -366,7 +404,7 @@ msat_term mathsat5_internal::mk_mathsat5_term(expr::term_op op, size_t n, msat_t
     if (msat_is_bool_type(d_env, msat_term_get_type(children[1]))) {
       // ITE(c, t, f) = c*t + (!c)*f
       msat_term true_branch = msat_make_and(d_env, children[0], children[1]);
-      msat_term false_branch = msat_make_and(d_env, msat_make_not(d_env, children[0]), children[1]);
+      msat_term false_branch = msat_make_and(d_env, msat_make_not(d_env, children[0]), children[2]);
       result = msat_make_or(d_env, true_branch, false_branch);
     } else {
       result = msat_make_term_ite(d_env, children[0], children[1], children[2]);
@@ -921,33 +959,16 @@ void mathsat5_internal::check_model() {
     }
   }
 
-  std::cerr << "num_asserted: " << num_asserted << std::endl;
-  std::cerr << "assertions.size(): " << d_assertions.size() << std::endl;
-
   // Get the model
   expr::model m(d_tm, true);
   get_model(m);
 
   // Go through the assertions and evaluate
-  size_t wrong_assertion = d_assertions.size();
   for (size_t i = 0; i < d_assertions.size(); ++ i) {
     if (!m.is_true(d_assertions[i])) {
-      wrong_assertion = i;
-      break;
+      throw exception("Check error: an assertion is false in the obtained model!");
     }
   }
-
-  if (wrong_assertion < d_assertions.size()) {
-    // Print the model
-    std::cerr << "Model:" << std::endl << m << std::endl;
-    std::cerr << "Assertion:" << std::endl;
-    msat_to_smtlib2_file(d_env, assertions[wrong_assertion], stderr);
-    std::cerr << std::endl;
-
-    throw exception("Check error: an assertion is false in the obtained model!");
-  }
-
-  msat_free(assertions);
 }
 
 void mathsat5_internal::get_model(expr::model& m) {

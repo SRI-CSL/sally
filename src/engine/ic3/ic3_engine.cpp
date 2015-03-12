@@ -385,8 +385,6 @@ bool ic3_engine::check_reachable(size_t k, expr::term_ref f) {
 
 bool ic3_engine::check_valid(size_t k, expr::term_ref f) {
 
-  MSG(1) << "ic3: checking validity" << std::endl;
-
   ensure_frame(k);
 
   expr::term_ref f_not = tm().mk_term(expr::TERM_NOT, f);
@@ -613,6 +611,8 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, size_t depth) {
     // Check if inductive
     expr::term_ref G = check_inductive_at(k, f);
 
+    TRACE("ic3::generalization") << "ic3: generalization " << G << std::endl;
+
     // If inductive
     if (G.is_null()) {
       inductive = true;
@@ -649,6 +649,9 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, size_t depth) {
     // Add the learnt
     add_valid_up_to(k, learnt);
     induction_assumptions.push_back(learnt);
+
+    // Make sure that G has been eliminated
+    // assert(check_valid(k, tm().mk_term(expr::TERM_NOT, G)));
   }
 
   // If inductive, add the assumptions to induction obligations
@@ -796,6 +799,7 @@ const system::state_trace* ic3_engine::get_trace() {
   solver->add(d_transition_system->get_initial_states(), smt::solver::CLASS_A);
   solver->add(d_counterexample[0], smt::solver::CLASS_A);
   smt::solver::result result = solver->check();
+  unused_var(result);
   assert(result == smt::solver::SAT);
   solver->get_model(m);
   d_trace->add_model(m, system::state_type::STATE_CURRENT, 0);
