@@ -220,13 +220,14 @@ std::ostream& operator << (std::ostream& out, solver::result result);
  * Push/pop scope manager.
  */
 class solver_scope {
-  int d_pushes;
+  size_t d_pushes;
   solver* d_solver;
 public:
   solver_scope(solver* s): d_pushes(0), d_solver(s) {}
-  ~solver_scope() { while (d_pushes-- > 0) { d_solver->pop(); } }
+  ~solver_scope() { while (d_pushes > 0) { d_solver->pop(); d_pushes --; } }
   void push() { d_solver->push(); d_pushes ++; }
   void pop() { d_solver->pop(); d_pushes --; }
+  size_t get_scope() { return d_pushes; }
 };
 
 std::ostream& operator << (std::ostream& out, solver::formula_class fc);

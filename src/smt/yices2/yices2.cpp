@@ -919,7 +919,11 @@ void yices2_internal::get_model(expr::model& m, const std::set<expr::term_ref>& 
 void yices2_internal::push() {
   int ret = yices_push(d_ctx);
   if (ret < 0) {
-    throw exception("Yices error (push).");
+    std::stringstream ss;
+    char* error = yices_error_string();
+    ss << "Yices error (push): " << error;
+    yices_free_string(error);
+    throw exception(ss.str());
   }
   d_assertions_size.push_back(d_assertions.size());
 }

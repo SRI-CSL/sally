@@ -172,6 +172,9 @@ class ic3_engine : public engine {
   /** Given G unsat at 0, ..., k, return something at valid 0...k that refutes G. */
   expr::term_ref learn_forward(size_t k, expr::term_ref G);
 
+  /** Reduce the unreachable G at k (i.e. try to remove some conjuncts */
+  expr::term_ref reduce_unreachable(size_t k, expr::term_ref G);
+
   enum weakening_mode {
     // F => W(F), with F false and W(F) false
     WEAK_FORWARD,
@@ -190,6 +193,9 @@ class ic3_engine : public engine {
 
   /** Search */
   result search();
+
+  /** Check if all frames are satisfiable, throw otherwise */
+  void check_deadlock();
 
   typedef boost::unordered_map<expr::term_ref, size_t, expr::term_ref_hasher> formula_scores_map;
 
