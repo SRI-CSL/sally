@@ -58,6 +58,9 @@ class mathsat5_internal {
   /** All assertions we have in context (strong) */
   std::vector<expr::term_ref_strong> d_assertions;
 
+  /** Mathsat assertions, for debug purposes */
+  std::vector<msat_term> d_assertions_mathsat;
+
   /** Classes of the assertions */
   std::vector<smt::solver::formula_class> d_assertion_classes;
 
@@ -173,6 +176,9 @@ public:
 
   /** Check satisfiability */
   solver::result check();
+
+  /** Check the model when sat */
+  void check_model();
 
   /** Returns the model */
   void get_model(expr::model& m);
@@ -865,16 +871,20 @@ void mathsat5_internal::add(expr::term_ref ref, solver::formula_class f_class) {
 
   // Assert to mathsat5
   msat_term m_term = to_mathsat5_term(ref);
+  d_assertions_mathsat.push_back(m_term);
   if (output::trace_tag_is_enabled("mathsat5")) {
     char* str = msat_term_repr(m_term);
     TRACE("mathsat5") << "msat_term: " << str << std::endl;
     msat_free(str);
   }
 
+
   int ret = msat_assert_formula(d_env, m_term);
   if (ret != 0) {
     throw exception("MathSAT5 error (add).");
   }
+
+  d_last_check_status = MSAT_UNKNOWN;
 }
 
 solver::result mathsat5_internal::check() {
@@ -892,6 +902,52 @@ solver::result mathsat5_internal::check() {
   }
 
   return solver::UNKNOWN;
+}
+
+void mathsat5_internal::check_model() {
+  std::cerr << "Checking model" << std::endl;
+  assert(d_last_check_status == MSAT_SAT);
+
+  // Check the mathsat model
+  size_t num_asserted;
+  msat_term* assertions = msat_get_asserted_formulas(d_env, &num_asserted);
+  for (size_t i = 0; i < num_asserted; ++ i) {
+    if (msat_term_id(assertions[i]) != msat_term_id(d_assertions_mathsat[i])) {
+      throw exception("Mathsat internal assertions don't match external ones!");
+    }
+    msat_term value = msat_get_model_value(d_env, assertions[i]);
+    if (!msat_term_is_true(d_env, value)) {
+      throw exception("Check error: an assertion is false in the obtained mathsat model!");
+    }
+  }
+
+  std::cerr << "num_asserted: " << num_asserted << std::endl;
+  std::cerr << "assertions.size(): " << d_assertions.size() << std::endl;
+
+  // Get the model
+  expr::model m(d_tm, true);
+  get_model(m);
+
+  // Go through the assertions and evaluate
+  size_t wrong_assertion = d_assertions.size();
+  for (size_t i = 0; i < d_assertions.size(); ++ i) {
+    if (!m.is_true(d_assertions[i])) {
+      wrong_assertion = i;
+      break;
+    }
+  }
+
+  if (wrong_assertion < d_assertions.size()) {
+    // Print the model
+    std::cerr << "Model:" << std::endl << m << std::endl;
+    std::cerr << "Assertion:" << std::endl;
+    msat_to_smtlib2_file(d_env, assertions[wrong_assertion], stderr);
+    std::cerr << std::endl;
+
+    throw exception("Check error: an assertion is false in the obtained model!");
+  }
+
+  msat_free(assertions);
 }
 
 void mathsat5_internal::get_model(expr::model& m) {
@@ -1068,8 +1124,10 @@ void mathsat5_internal::pop() {
   d_assertions_size.pop_back();
   while (d_assertions.size() > size) {
     d_assertions.pop_back();
+    d_assertions_mathsat.pop_back();
     d_assertion_classes.pop_back();
   }
+  d_last_check_status = MSAT_UNKNOWN;
 }
 
 mathsat5::mathsat5(expr::term_manager& tm, const options& opts)
@@ -1090,6 +1148,11 @@ void mathsat5::add(expr::term_ref f, formula_class f_class) {
 solver::result mathsat5::check() {
   TRACE("mathsat5") << "mathsat5[" << d_internal->instance() << "]: check()" << std::endl;
   return d_internal->check();
+}
+
+void mathsat5::check_model() {
+  TRACE("mathsat5") << "mathsat5[" << d_internal->instance() << "]: check_model()" << std::endl;
+  d_internal->check_model();
 }
 
 void mathsat5::get_model(expr::model& m) const {

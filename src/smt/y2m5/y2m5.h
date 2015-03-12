@@ -26,8 +26,11 @@ class y2m5 : public solver {
 
   static size_t s_instance;
 
-  /** Last result */
+  /** Last result of mathsat */
   result d_last_mathsat5_result;
+
+  /* Last result of yices */
+  result d_last_yices2_result;
 
 public:
 

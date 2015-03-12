@@ -1,0 +1,369 @@
+;; Message enum 
+(define-constant cs_frame 0)
+(define-constant i_frame 1)
+
+;; PC enum 
+(define-constant init 0)
+(define-constant listen 1)
+(define-constant coldstart 2)
+(define-constant active 3)
+
+;; Times
+(define-constant slot_time 3)
+
+;; State type (all TCCs added to the assumptions)
+(define-state-type state_type (
+      (cal!content Real)
+      (cal!delivery Real)
+      (cal!flag!0 Bool)
+      (cal!flag!1 Bool)
+      (cal!origin Real)
+      (cal!send Real)
+      (pc!0 Real)
+      (pc!1 Real)
+      (slot!0 Real)
+      (slot!1 Real)
+      (time Real)
+      (time_out!0 Real)
+      (time_out!1 Real)
+      (propagation Real)
+))
+
+;; Initial states
+(define-states initial_states state_type 
+        (and
+          (= time 0)
+          (= pc!0 init)
+          (= pc!1 init)
+          (and (< time time_out!0) (< time_out!0 30))
+          (and (< time time_out!1) (< time_out!1 30))
+          (= cal!content i_frame)
+          (= cal!delivery 0)
+          (= cal!flag!0 false)
+          (= cal!flag!1 false)
+          (= cal!origin 1)
+          (= cal!send 0)
+          (< 0 propagation)
+          (< propagation (/ slot_time 2))
+  	)
+)
+
+;; Transition relation
+(define-transition transition state_type 
+   (and 
+        (= propagation' propagation)
+        (let ((cs!235 (+ time 3))
+              (cs!238 (+ time 9))
+              (cs!251 (+ time 6))
+              (cs!266 (= pc!1' coldstart))
+              (cs!272 (= pc!1' active))
+              (cs!276
+                    (and
+                      (= cal!content' cal!content)
+                      (= cal!delivery' cal!delivery)
+                      (= cal!flag!0' cal!flag!0)
+                      (= cal!flag!1' cal!flag!1)
+                      (= cal!origin' cal!origin)
+                      (= cal!send' cal!send)))
+              (cs!280 (+ time propagation))
+              (cs!294 (= pc!0' coldstart))
+              (cs!299 (= pc!0' active)))
+          (let ((cs!252 (- cs!235 propagation))
+                (cs!264 (= pc!1 init))
+                (cs!265 (<= time' time_out!0))
+                (cs!267 (<= time' time_out!1))
+                (cs!268 (= cal!content cs_frame))
+                (cs!269 (= time_out!1' cs!238))
+                (cs!270 (= pc!1 listen))
+                (cs!271 (= pc!1 coldstart))
+                (cs!274 (= slot!1' cal!origin))
+                (cs!275 (= time' time_out!0))
+                (cs!277 (= time time_out!1))
+                (cs!278 (= time_out!1' cs!235))
+                (cs!281 (= time' time_out!1))
+                (cs!282 (= pc!1 active))
+                (cs!283 (= cal!content i_frame))
+                (cs!284 (= time cal!delivery))
+                (cs!286 (= pc!1' pc!1))
+                (cs!287 (= slot!1' slot!1))
+                (cs!288 (= time_out!1' time_out!1))
+                (cs!289 (= pc!0' pc!0))
+                (cs!290 (= slot!0' slot!0))
+                (cs!291 (= time_out!0' time_out!0))
+                (cs!292 (= pc!0 init))
+                (cs!293 (< time time_out!0))
+                (cs!295 (< time time_out!1))
+                (cs!296 (= time_out!0' cs!251))
+                (cs!297 (= pc!0 listen))
+                (cs!298 (= pc!0 coldstart))
+                (cs!301 (= slot!0' cal!origin))
+                (cs!302 (= time time_out!0))
+                (cs!303 (= time_out!0' cs!235))
+                (cs!304 (= pc!0 active)))
+            (let ((cs!273 (= time_out!1' cs!252))
+                  (cs!279 (and (not cal!flag!0) (not cal!flag!1)))
+                  (cs!285
+                        (and
+                          (= cal!content' cal!content)
+                          (= cal!delivery' cal!delivery)
+                          (= cal!flag!0' cal!flag!0)
+                          (= cal!flag!1' false)
+                          (= cal!origin' cal!origin)
+                          (= cal!send' cal!send)))
+                  (cs!300 (= time_out!0' cs!252))
+                  (cs!305
+                        (and
+                          (= cal!content' cal!content)
+                          (= cal!delivery' cal!delivery)
+                          (= cal!flag!0' false)
+                          (= cal!flag!1' cal!flag!1)
+                          (= cal!origin' cal!origin)
+                          (= cal!send' cal!send))))
+              (or
+                (and
+                  (ite cs!279
+                    (and cs!293 cs!295)
+                    (and cs!293 cs!295 (< time cal!delivery)))
+                  (ite cs!279
+                    (and cs!265 cs!267 (or cs!275 cs!281))
+                    (and
+                      cs!265
+                      cs!267
+                      (<= time' cal!delivery)
+                      (or (= time' cal!delivery) cs!275 cs!281)))
+                  cs!289
+                  cs!286
+                  cs!290
+                  cs!287
+                  cs!291
+                  cs!288
+                  cs!276)
+                (and
+                  (or
+                    (and
+                      (or
+                        (and
+                          cs!292
+                          cs!302
+                          (= pc!0' listen)
+                          (= time_out!0' (+ time 12))
+                          cs!276
+                          cs!290)
+                        (and cs!292 cal!flag!0 cs!284 cs!305 cs!289 cs!290 cs!291)
+                        (and
+                          cs!297
+                          cs!302
+                          cs!294
+                          cs!296
+                          (= cal!content' (ite cs!279 cs_frame cal!content))
+                          (= cal!delivery' (ite cs!279 cs!280 cal!delivery))
+                          (= cal!flag!0' false)
+                          (= cal!flag!1' (or cs!279 cal!flag!1))
+                          (= cal!origin' (ite cs!279 1 cal!origin))
+                          (= cal!send' (ite cs!279 time cal!send))
+                          cs!290)
+                        (and
+                          cs!297
+                          cal!flag!0
+                          cs!268
+                          cs!284
+                          cs!294
+                          (= time_out!0' (- cs!251 propagation))
+                          cs!305
+                          cs!290)
+                        (and
+                          cs!298
+                          cal!flag!0
+                          cs!268
+                          cs!284
+                          cs!299
+                          cs!300
+                          cs!301
+                          cs!305)
+                        (and
+                          cs!298
+                          cs!302
+                          cs!296
+                          (= cal!content' (ite cs!279 cs_frame cal!content))
+                          (= cal!delivery' (ite cs!279 cs!280 cal!delivery))
+                          (= cal!flag!0' false)
+                          (= cal!flag!1' (or cs!279 cal!flag!1))
+                          (= cal!origin' (ite cs!279 1 cal!origin))
+                          (= cal!send' (ite cs!279 time cal!send))
+                          cs!289
+                          cs!290)
+                        (and
+                          (or cs!297 cs!298)
+                          cal!flag!0
+                          cs!283
+                          cs!284
+                          cs!299
+                          cs!300
+                          cs!301
+                          cs!305)
+                        (and
+                          cs!304
+                          cs!302
+                          (/= (ite (= slot!0 2) 1 (+ slot!0 1)) 1)
+                          cs!303
+                          (= slot!0' (ite (= slot!0 2) 1 (+ slot!0 1)))
+                          cs!276
+                          cs!289)
+                        (and
+                          cs!304
+                          cs!302
+                          (= (ite (= slot!0 2) 1 (+ slot!0 1)) 1)
+                          cs!303
+                          (= slot!0' (ite (= slot!0 2) 1 (+ slot!0 1)))
+                          (= cal!content' (ite cs!279 i_frame cal!content))
+                          (= cal!delivery' (ite cs!279 cs!280 cal!delivery))
+                          (= cal!flag!0' false)
+                          (= cal!flag!1' (or cs!279 cal!flag!1))
+                          (= cal!origin' (ite cs!279 1 cal!origin))
+                          (= cal!send' (ite cs!279 time cal!send))
+                          cs!289)
+                        (and
+                          cs!304
+                          cal!flag!0
+                          cs!283
+                          cs!284
+                          cs!305
+                          cs!289
+                          cs!290
+                          cs!291))
+                      cs!286
+                      cs!287
+                      cs!288)
+                    (and
+                      (or
+                        (and
+                          cs!264
+                          cs!277
+                          (= pc!1' listen)
+                          (= time_out!1' (+ time 15))
+                          cs!276
+                          cs!287)
+                        (and cs!264 cal!flag!1 cs!284 cs!285 cs!286 cs!287 cs!288)
+                        (and
+                          cs!270
+                          cs!277
+                          cs!266
+                          cs!269
+                          (= cal!content' (ite cs!279 cs_frame cal!content))
+                          (= cal!delivery' (ite cs!279 cs!280 cal!delivery))
+                          (= cal!flag!0' (or cs!279 cal!flag!0))
+                          (= cal!flag!1' false)
+                          (= cal!origin' (ite cs!279 2 cal!origin))
+                          (= cal!send' (ite cs!279 time cal!send))
+                          cs!287)
+                        (and
+                          cs!270
+                          cal!flag!1
+                          cs!268
+                          cs!284
+                          cs!266
+                          (= time_out!1' (- cs!238 propagation))
+                          cs!285
+                          cs!287)
+                        (and
+                          cs!271
+                          cal!flag!1
+                          cs!268
+                          cs!284
+                          cs!272
+                          cs!273
+                          cs!274
+                          cs!285)
+                        (and
+                          cs!271
+                          cs!277
+                          cs!269
+                          (= cal!content' (ite cs!279 cs_frame cal!content))
+                          (= cal!delivery' (ite cs!279 cs!280 cal!delivery))
+                          (= cal!flag!0' (or cs!279 cal!flag!0))
+                          (= cal!flag!1' false)
+                          (= cal!origin' (ite cs!279 2 cal!origin))
+                          (= cal!send' (ite cs!279 time cal!send))
+                          cs!286
+                          cs!287)
+                        (and
+                          (or cs!270 cs!271)
+                          cal!flag!1
+                          cs!283
+                          cs!284
+                          cs!272
+                          cs!273
+                          cs!274
+                          cs!285)
+                        (and
+                          cs!282
+                          cs!277
+                          (/= (ite (= slot!1 2) 1 (+ slot!1 1)) 2)
+                          cs!278
+                          (= slot!1' (ite (= slot!1 2) 1 (+ slot!1 1)))
+                          cs!276
+                          cs!286)
+                        (and
+                          cs!282
+                          cs!277
+                          (= (ite (= slot!1 2) 1 (+ slot!1 1)) 2)
+                          cs!278
+                          (= slot!1' (ite (= slot!1 2) 1 (+ slot!1 1)))
+                          (= cal!content' (ite cs!279 i_frame cal!content))
+                          (= cal!delivery' (ite cs!279 cs!280 cal!delivery))
+                          (= cal!flag!0' (or cs!279 cal!flag!0))
+                          (= cal!flag!1' false)
+                          (= cal!origin' (ite cs!279 2 cal!origin))
+                          (= cal!send' (ite cs!279 time cal!send))
+                          cs!286)
+                        (and
+                          cs!282
+                          cal!flag!1
+                          cs!283
+                          cs!284
+                          cs!285
+                          cs!286
+                          cs!287
+                          cs!288))
+                      cs!289
+                      cs!290
+                      cs!291))
+                  (= time' time)))))))
+)
+
+;; Transition system 
+(define-transition-system T state_type
+  initial_states
+  (transition)
+)
+
+;; TCCs
+;; message: (or (= _ cs_frame) (= _ i_frame))
+;; IDENTITY: (or (= _ 1) (= _ 2))
+;; PC: (or (= _ init) (= _ listen) (= _ coldstart) (= _ active))
+(assume T (and
+      (or (= cal!content cs_frame) (= cal!content i_frame))
+      (or (= cal!origin 1) (= cal!origin 2))
+      (or (= pc!0 init) (= pc!0 listen) (= pc!0 coldstart) (= pc!0 active))
+      (or (= pc!1 init) (= pc!1 listen) (= pc!1 coldstart) (= pc!1 active))
+      (or (= slot!0 1) (= slot!0 2))
+      (or (= slot!1 1) (= slot!1 2))
+  )
+)
+
+;; The property
+(query T
+      (and
+        (or
+          (/= pc!0 active)
+          (not (< time time_out!0))
+          (/= pc!1 active)
+          (not (< time time_out!1))
+          (and (= time_out!0 time_out!1) (= slot!0 slot!1)))
+        (or
+          (/= pc!1 active)
+          (not (< time time_out!1))
+          (/= pc!0 active)
+          (not (< time time_out!0))
+          (and (= time_out!1 time_out!0) (= slot!1 slot!0)))))
+          

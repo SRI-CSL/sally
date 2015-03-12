@@ -21,9 +21,6 @@
 #include "smt/delayed_wrapper.h"
 #include "smt/factory.h"
 
-
-#define unused_var(x) { (void) x; }
-
 namespace sally {
 namespace smt {
 
@@ -42,13 +39,14 @@ public:
 y2m5::y2m5(expr::term_manager& tm, const options& opts)
 : solver("y2m5", tm, opts)
 , d_last_mathsat5_result(UNKNOWN)
+, d_last_yices2_result(UNKNOWN)
 {
   d_yices2 = factory::mk_solver("yices2", tm, opts);
   if (opts.get_bool("y2m5-mathsat5-flatten")) {
     solver_constructor* constructor = new mathsat_constructor(tm, opts);
     d_mathsat5 = new incremental_wrapper("mathsat5_nonincremental", tm, opts, constructor);
   } else {
-    d_mathsat5 = new delayed_wrapper("mathsat_5_incremental", tm, opts, factory::mk_solver("mathsat5", tm, opts));
+    d_mathsat5 = new delayed_wrapper("mathsat5_incremental", tm, opts, factory::mk_solver("mathsat5", tm, opts));
   }
   s_instance ++;
 }
@@ -64,17 +62,19 @@ void y2m5::add(expr::term_ref f, formula_class f_class) {
   d_yices2->add(f, f_class);
   d_mathsat5->add(f, f_class);
   d_last_mathsat5_result = UNKNOWN;
+  d_last_yices2_result = UNKNOWN;
 }
 
 solver::result y2m5::check() {
   TRACE("y2m5") << "y2m5[" << s_instance << "]: check()" << std::endl;
-  result yices2_result = d_yices2->check();
-  return yices2_result;
+  d_last_yices2_result = d_yices2->check();
   d_last_mathsat5_result = UNKNOWN;
+  return d_last_yices2_result;
 }
 
 void y2m5::get_model(expr::model& m) const {
   TRACE("y2m5") << "y2m5[" << s_instance << "]: get_model()" << std::endl;
+  assert(d_last_yices2_result == SAT);
   d_yices2->get_model(m);
 }
 
@@ -83,6 +83,7 @@ void y2m5::push() {
   d_yices2->push();
   d_mathsat5->push();
   d_last_mathsat5_result = UNKNOWN;
+  d_last_yices2_result = UNKNOWN;
 }
 
 void y2m5::pop() {
@@ -90,31 +91,35 @@ void y2m5::pop() {
   d_yices2->pop();
   d_mathsat5->pop();
   d_last_mathsat5_result = UNKNOWN;
+  d_last_yices2_result = UNKNOWN;
 }
 
 
 void y2m5::generalize(std::vector<expr::term_ref>& out) {
   TRACE("y2m5") << "y2m5[" << s_instance << "]: generalizing" << std::endl;
+  assert(d_last_yices2_result == SAT);
   d_yices2->generalize(out);
 }
 
 void y2m5::interpolate(std::vector<expr::term_ref>& out) {
   TRACE("y2m5") << "y2m5[" << s_instance << "]: interpolating" << std::endl;
-  if (d_last_mathsat5_result != UNSAT) {
-    result mathsat5_result  = d_mathsat5->check();
-    unused_var(mathsat5_result);
-    assert(mathsat5_result == UNSAT);
+  if (d_last_mathsat5_result == UNKNOWN) {
+    d_last_mathsat5_result = d_mathsat5->check();
   }
+  if (d_last_mathsat5_result != UNSAT) {
+    // Check the model for correctness
+    d_mathsat5->check_model();
+  }
+  assert(d_last_mathsat5_result == UNSAT);
   d_mathsat5->interpolate(out);
 }
 
 void y2m5::get_unsat_core(std::vector<expr::term_ref>& out) {
   TRACE("y2m5") << "y2m5[" << s_instance << "]: unsat core" << std::endl;
-  if (d_last_mathsat5_result != UNSAT) {
-    result mathsat5_result  = d_mathsat5->check();
-    unused_var(mathsat5_result);
-    assert(mathsat5_result == UNSAT);
+  if (d_last_mathsat5_result == UNKNOWN) {
+    d_last_mathsat5_result = d_mathsat5->check();
   }
+  assert(d_last_mathsat5_result == UNSAT);
   d_mathsat5->get_unsat_core(out);
 }
 

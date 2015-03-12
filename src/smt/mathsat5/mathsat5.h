@@ -41,6 +41,9 @@ public:
   /** Check the assertions for satisfiability */
   result check();
 
+  /** Check the model (debug) */
+  void check_model();
+
   /** Get the model */
   void get_model(expr::model& m) const;
 

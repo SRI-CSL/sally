@@ -146,6 +146,12 @@ public:
   virtual
   result check() = 0;
 
+  /** Check the model if the formula is SAT (for debug purposes only) */
+  virtual
+  void check_model() {
+    throw exception("check_model() not supported by solver " + d_name);
+  }
+
   /** Get the model */
   virtual
   void get_model(expr::model& m) const {

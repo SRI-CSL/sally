@@ -43,6 +43,10 @@ solver::result delayed_wrapper::check() {
   return d_solver->check();
 }
 
+void delayed_wrapper::check_model() {
+  d_solver->check_model();
+}
+
 void delayed_wrapper::get_model(expr::model& m) const {
   d_solver->get_model(m);
 }
