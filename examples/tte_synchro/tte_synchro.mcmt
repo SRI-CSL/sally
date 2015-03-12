@@ -62,13 +62,6 @@
   (sm_valid!1!2 Bool)
   (sm_valid!1!3 Bool)
   (sm_valid!1!4 Bool)
-  (choice!1!0 Real)
-  (choice!1!1 Real)
-  (choice!1!2 Real)
-  (choice!1!3 Real)
-  (choice!1!4 Real)
-  (choice!2!0 Real)
-  (choice!2!1 Real)
 ))
 
 ;; Initial states
@@ -283,17 +276,14 @@
               (and
                 (or
                   (and
-                    (= choice!1!0 0)
                     (= sm_state!0 sm_send)
                     (= sm_state!0' sm_correct)
                     (= sm_clock!0' sm_clock!0))
                   (and
-                    (= choice!1!0 1)
                     (= sm_state!0 sm_correct)
                     (= sm_state!0' sm_drift)
                     (= sm_clock!0' cs!604))
                   (and
-                    (= choice!1!0 2)
                     (= sm_state!0 sm_drift)
                     (and
                       (<= (- sm_clock!0 max_drift) sm_clock!0')
@@ -301,17 +291,14 @@
                     (= sm_state!0' sm_send)))
                 (or
                   (and
-                    (= choice!1!1 0)
                     (= sm_state!1 sm_send)
                     (= sm_state!1' sm_correct)
                     (= sm_clock!1' sm_clock!1))
                   (and
-                    (= choice!1!1 1)
                     (= sm_state!1 sm_correct)
                     (= sm_state!1' sm_drift)
                     (= sm_clock!1' cs!604))
                   (and
-                    (= choice!1!1 2)
                     (= sm_state!1 sm_drift)
                     (and
                       (<= (- sm_clock!1 max_drift) sm_clock!1')
@@ -319,17 +306,14 @@
                     (= sm_state!1' sm_send)))
                 (or
                   (and
-                    (= choice!1!2 0)
                     (= sm_state!2 sm_send)
                     (= sm_state!2' sm_correct)
                     (= sm_clock!2' sm_clock!2))
                   (and
-                    (= choice!1!2 1)
                     (= sm_state!2 sm_correct)
                     (= sm_state!2' sm_drift)
                     (= sm_clock!2' cs!604))
                   (and
-                    (= choice!1!2 2)
                     (= sm_state!2 sm_drift)
                     (and
                       (<= (- sm_clock!2 max_drift) sm_clock!2')
@@ -337,17 +321,14 @@
                     (= sm_state!2' sm_send)))
                 (or
                   (and
-                    (= choice!1!3 0)
                     (= sm_state!3 sm_send)
                     (= sm_state!3' sm_correct)
                     (= sm_clock!3' sm_clock!3))
                   (and
-                    (= choice!1!3 1)
                     (= sm_state!3 sm_correct)
                     (= sm_state!3' sm_drift)
                     (= sm_clock!3' cs!604))
                   (and
-                    (= choice!1!3 2)
                     (= sm_state!3 sm_drift)
                     (and
                       (<= (- sm_clock!3 max_drift) sm_clock!3')
@@ -355,17 +336,14 @@
                     (= sm_state!3' sm_send)))
                 (or
                   (and
-                    (= choice!1!4 0)
                     (= sm_state!4 sm_send)
                     (= sm_state!4' sm_correct)
                     (= sm_clock!4' sm_clock!4))
                   (and
-                    (= choice!1!4 1)
                     (= sm_state!4 sm_correct)
                     (= sm_state!4' sm_drift)
                     (= sm_clock!4' cs!604))
                   (and
-                    (= choice!1!4 2)
                     (= sm_state!4 sm_drift)
                     (and
                       (<= (- sm_clock!4 max_drift) sm_clock!4')
@@ -373,7 +351,6 @@
                     (= sm_state!4' sm_send)))
                 (or
                   (and
-                    (= choice!2!0 0)
                     cs!530
                     cs!531
                     cs!532
@@ -406,7 +383,6 @@
                     (= compression!0' cs!513)
                     cs!559)
                   (and
-                    (= choice!2!0 1)
                     cs!530
                     cs!531
                     cs!532
@@ -440,7 +416,6 @@
                     (= compression!0' (/ (+ cs!513 cs!516) 2))
                     cs!559)
                   (and
-                    (= choice!2!0 2)
                     cs!530
                     cs!531
                     cs!532
@@ -482,13 +457,11 @@
                     (= compression!0' cs!516)
                     cs!559)
                   (and
-                    (= choice!2!0 3)
                     (= cm_state!0 cm_correct)
                     (= cm_clock!0' compression!0)
                     (= cm_state!0' cm_drift)
                     cs!561)
                   (and
-                    (= choice!2!0 4)
                     (= cm_state!0 cm_drift)
                     (and
                       (<= (- cm_clock!0 max_drift) cm_clock!0')
@@ -497,7 +470,6 @@
                     cs!561))
                 (or
                   (and
-                    (= choice!2!1 0)
                     cs!566
                     cs!567
                     cs!568
@@ -530,7 +502,6 @@
                     (= compression!1' cs!519)
                     cs!595)
                   (and
-                    (= choice!2!1 1)
                     cs!566
                     cs!567
                     cs!568
@@ -564,7 +535,6 @@
                     (= compression!1' (/ (+ cs!519 cs!523) 2))
                     cs!595)
                   (and
-                    (= choice!2!1 2)
                     cs!566
                     cs!567
                     cs!568
@@ -606,13 +576,11 @@
                     (= compression!1' cs!523)
                     cs!595)
                   (and
-                    (= choice!2!1 3)
                     (= cm_state!1 cm_correct)
                     (= cm_clock!1' compression!1)
                     (= cm_state!1' cm_drift)
                     cs!598)
                   (and
-                    (= choice!2!1 4)
                     (= cm_state!1 cm_drift)
                     (and
                       (<= (- cm_clock!1 max_drift) cm_clock!1')
@@ -676,12 +644,5 @@
   (or (= sm_state!2 sm_send) (= sm_state!2 sm_correct) (= sm_state!2 sm_drift))
   (or (= sm_state!3 sm_send) (= sm_state!3 sm_correct) (= sm_state!3 sm_drift))
   (or (= sm_state!4 sm_send) (= sm_state!4 sm_correct) (= sm_state!4 sm_drift))
-  (or (= choice!1!0 0) (= choice!1!0 1) (= choice!1!0 2))
-  (or (= choice!1!1 0) (= choice!1!1 1) (= choice!1!1 2))
-  (or (= choice!1!2 0) (= choice!1!2 1) (= choice!1!2 2))
-  (or (= choice!1!3 0) (= choice!1!3 1) (= choice!1!3 2))
-  (or (= choice!1!4 0) (= choice!1!4 1) (= choice!1!4 2))
-  (or (= choice!2!0 0) (= choice!2!0 1) (= choice!2!0 2) (= choice!2!0 3) (= choice!2!0 4))
-  (or (= choice!2!1 0) (= choice!2!1 1) (= choice!2!1 2) (= choice!2!1 3) (= choice!2!1 4))
 ))
 
