@@ -91,7 +91,7 @@ term_ref term_manager_internal::supertype_of(term_ref t1, term_ref t2) const {
 }
 
 bool term_manager_internal::types_comparable(term_ref t1, term_ref t2) const {
-  return (is_subtype_of(t1, t2) || is_subtype_of(t2, t2));
+  return (is_subtype_of(t1, t2) || is_subtype_of(t2, t1));
 }
 
 bool term_manager_internal::typecheck(term_ref t_ref) {

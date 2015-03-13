@@ -518,7 +518,10 @@ term_t yices2_internal::to_yices2_term(expr::term_ref ref) {
   }
 
   if (result < 0) {
-    throw exception("Yices error (term creation)");
+    std::stringstream ss;
+    char* error = yices_error_string();
+    ss << "Yices error (term creation): " << error;
+    throw exception(ss.str());
   }
 
   // Set the cache ref -> result
