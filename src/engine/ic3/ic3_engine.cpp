@@ -151,6 +151,13 @@ void ic3_engine::add_valid_up_to(size_t k, expr::term_ref F) {
     }
     add_to_frame(i, F);
     get_solver(i)->add(F, smt::solver::CLASS_A);
+    if (output::trace_tag_is_enabled("ic3::deadlock")) {
+      smt::solver::result r = get_solver(i)->check();
+      if (r != smt::solver::SAT) {
+        throw exception("Solver in inconsistent state");
+      }
+    }
+
   }
 }
 
@@ -512,94 +519,26 @@ expr::term_ref ic3_engine::weaken(expr::term_ref F, expr::model& m, weakening_mo
   return F_weak;
 }
 
-expr::term_ref ic3_engine::reduce_unreachable(size_t k, expr::term_ref G) {
+expr::term_ref ic3_engine::eq_to_ineq(expr::term_ref G) {
 
-  TRACE("ic3") << "reducing unreachable: " << G << std::endl;
-
-  assert(k > 0);
-
-  std::set<expr::term_ref> core;
-  std::set<expr::term_ref> non_core;
+  std::vector<expr::term_ref> G_new;
 
   // Get the conjuncts
   const expr::term& G_term = tm().term_of(G);
   if (G_term.op() != expr::TERM_AND) { return G; }
   for (size_t i = 0; i < G_term.size(); ++ i) {
-    non_core.insert(G_term[i]);
+    const expr::term& t = tm().term_of(G_term[i]);
+    expr::term_ref lhs = t[0];
+    expr::term_ref rhs = t[1];
+    if (t.op() == expr::TERM_EQ && tm().is_subtype_of(tm().type_of(lhs), tm().real_type())) {
+      G_new.push_back(tm().mk_term(expr::TERM_LEQ, lhs, rhs));
+      G_new.push_back(tm().mk_term(expr::TERM_GEQ, lhs, rhs));
+    } else {
+      G_new.push_back(G_term[i]);
+    }
   }
 
-  expr::model m(tm(), true);
-
-  smt::solver* solver = get_solver(k-1);
-
-  // Local checks, we revert when exiting
-  smt::solver_scope solver_scope(solver);
-  solver_scope.push();
-
-  while (!non_core.empty()) {
-
-    assert(solver_scope.get_scope() == core.size() + 1);
-
-    // Pick a new conjunct
-    std::set<expr::term_ref>::const_iterator it = non_core.begin();
-    expr::term_ref F = *it;
-    expr::term_ref F_next = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, F);
-
-    TRACE("ic3") << "checking unreachable: " << F << std::endl;
-
-    // See if reachable
-    solver_scope.push();
-    solver->add(F_next, smt::solver::CLASS_B);
-    smt::solver::result result = solver->check();
-    switch (result) {
-    case smt::solver::UNSAT:
-      // We're done
-      core.insert(F);
-      return tm().mk_and(core);
-    case smt::solver::SAT:
-      // Get the model
-      solver->get_model(m);
-      solver_scope.pop();
-      break;
-    default:
-      throw exception("SMT solver returned unknown result");
-    }
-
-    // The pick is reachable, so get another one
-    bool replacement_found = false;
-    for (++ it; it != non_core.end(); ++ it) {
-      F = *it;
-      F_next = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, F);
-      if (m.is_false(F_next)) {
-
-        TRACE("ic3") << "considering for unreachable: " << F << std::endl;
-
-        // Add to core, remove from non_core
-        core.insert(F);
-        non_core.erase(F);
-        // Check if unsat
-        solver_scope.push();
-        solver->add(F_next, smt::solver::CLASS_B);
-        result = solver->check();
-        switch (result) {
-        case smt::solver::UNSAT:
-          return tm().mk_and(core);
-        case smt::solver::SAT:
-          // We need more in the core. Don't pop, we keep it.
-          replacement_found = true;
-          break;
-        default:
-          assert(false);
-        }
-        // Continue with this core
-        break;
-      }
-    }
-    assert(replacement_found);
-  }
-
-  // Didn't make it smaller :(
-  return G;
+  return tm().mk_and(G_new);
 }
 
 expr::term_ref ic3_engine::learn_forward(size_t k, expr::term_ref G) {
@@ -650,11 +589,6 @@ expr::term_ref ic3_engine::learn_forward(size_t k, expr::term_ref G) {
     assert(G_model.is_false(I1));
   }
 
-  // If 1st frame, no need to go from initial state again
-  if (k == 1) {
-    return I1;
-  }
-
   // Get the interpolant I2 for I => I2, I2 and G unsat
   smt::solver* I2_solver = get_solver(0);
   I2_solver->push();
@@ -695,10 +629,6 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, size_t depth) {
   bool inductive = false;
   for (size_t check = 0; ; check ++) {
 
-    if (output::trace_tag_is_enabled("ic3::deadlock")) {
-      check_deadlock();
-    }
-
     // Check if inductive
     expr::term_ref G = check_inductive_at(k, f);
 
@@ -733,11 +663,8 @@ bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, size_t depth) {
       break;
     }
 
-    // Reduce unreachable
-    G = reduce_unreachable(k, G);
-    TRACE("ic3::generalization") << "ic3: reduced generalization: " << G << std::endl;
-    assert(check_one_step_reachable(k, G).is_null());
-
+    // Convert equalities to inequalities
+    G = eq_to_ineq(G);
 
     // Learn something to refute G
     expr::term_ref learnt = learn_forward(k, G);
@@ -792,10 +719,6 @@ engine::result ic3_engine::search() {
 
   // Search while we have something to do
   while (!d_induction_obligations.empty()) {
-
-    if (output::trace_tag_is_enabled("ic3::deadlock")) {
-      check_deadlock();
-    }
 
     // Pick a formula to try and prove inductive, i.e. that F_k & P & T => P'
     obligation ind = pop_induction_obligation();

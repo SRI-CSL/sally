@@ -11,6 +11,7 @@
 #include "expr/model.h"
 #include "utils/exception.h"
 #include "utils/options.h"
+#include "utils/name_transformer.h"
 
 namespace sally {
 namespace smt {
@@ -224,13 +225,22 @@ class solver_scope {
   solver* d_solver;
 public:
   solver_scope(solver* s): d_pushes(0), d_solver(s) {}
-  ~solver_scope() { while (d_pushes > 0) { d_solver->pop(); d_pushes --; } }
+  ~solver_scope() { clear(); }
+  void clear() { while (d_pushes > 0) { d_solver->pop(); d_pushes --; } }
   void push() { d_solver->push(); d_pushes ++; }
   void pop() { d_solver->pop(); d_pushes --; }
   size_t get_scope() { return d_pushes; }
 };
 
 std::ostream& operator << (std::ostream& out, solver::formula_class fc);
+
+/** Name transformer for any output to smt2 */
+class smt2_name_transformer : public utils::name_transformer {
+public:
+  std::string apply(std::string id) const {
+    return "|" + id + "|";
+  }
+};
 
 }
 }

@@ -172,8 +172,8 @@ class ic3_engine : public engine {
   /** Given G unsat at 0, ..., k, return something at valid 0...k that refutes G. */
   expr::term_ref learn_forward(size_t k, expr::term_ref G);
 
-  /** Reduce the unreachable G at k (i.e. try to remove some conjuncts */
-  expr::term_ref reduce_unreachable(size_t k, expr::term_ref G);
+  /** Replace any x = y in G with (x <= y) & (x >= y) */
+  expr::term_ref eq_to_ineq(expr::term_ref G);
 
   enum weakening_mode {
     // F => W(F), with F false and W(F) false

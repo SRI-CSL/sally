@@ -27,13 +27,6 @@
 namespace sally {
 namespace smt {
 
-class smt2_name_transformer : public utils::name_transformer {
-public:
-  std::string apply(std::string id) const {
-    return "|" + id + "|";
-  }
-};
-
 /** Yices term hash. */
 struct mathsat5_hasher {
   size_t operator()(msat_term value) const { return msat_term_id(value); }

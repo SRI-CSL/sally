@@ -12,6 +12,8 @@
 #include <boost/unordered_map.hpp>
 
 #include <iostream>
+#include <fstream>
+#include <iomanip>
 
 #include "expr/term.h"
 #include "expr/term_manager.h"
@@ -89,6 +91,34 @@ class yices2_internal {
     }
     unused_var(added);
     assert(added);
+
+    // If enabled, check the term transformations by producing a series of
+    // smt2 queries. To check run the contrib/smt2_to_yices.sh script and then
+    // run on yices.
+    if (output::trace_tag_is_enabled("yices2::terms")) {
+      static size_t k = 0;
+      std::stringstream ss;
+      ss << "yices2_term_query_" << std::setfill('0') << std::setw(5) << k++ << ".smt2";
+      std::ofstream query(ss.str().c_str());
+      output::set_term_manager(query, &d_tm);
+      output::set_output_language(query, output::MCMT);
+
+      // Prelude
+      // Get the term variables
+      std::vector<expr::term_ref> vars;
+      d_tm.get_variables(t, vars);
+      for (size_t i = 0; i < vars.size(); ++ i) {
+        query << "(declare-fun " << vars[i] << " () " << d_tm.type_of(vars[i]) << ")" << std::endl;
+      }
+
+      // Check the representation
+      char* repr = yices_term_to_string(t_yices, UINT32_MAX, UINT32_MAX, 0);
+      query << "(assert (not (= " << repr << " " << t << ")))" << std::endl;
+      yices_free_string(repr);
+
+      query << "(check-sat)" << std::endl;
+      d_tm.set_name_transformer(0);
+    }
   }
 
   /** Returns the yices term associated with t, or NULL_TERM otherwise */
@@ -198,7 +228,10 @@ yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
   // The context
   d_ctx = yices_new_context(NULL);
   if (d_ctx == 0) {
-    throw exception("Yices error (context creation).");
+    std::stringstream ss;
+    char* error = yices_error_string();
+    ss << "Yices error (context creation): " << error;
+    throw exception(ss.str());
   }
 }
 
@@ -764,7 +797,10 @@ expr::term_ref yices2_internal::to_term(term_t t) {
 
   // At this point we need to be non-null
   if (result.is_null()) {
-    throw exception("Yices error (term creation)");
+    std::stringstream ss;
+    char* error = yices_error_string();
+    ss << "Yices error (term creation): " << error;
+    throw exception(ss.str());
   }
 
   // Set the cache ref -> result
@@ -786,7 +822,10 @@ void yices2_internal::add(expr::term_ref ref, solver::formula_class f_class) {
   }
   int ret = yices_assert_formula(d_ctx, yices_term);
   if (ret < 0) {
-    throw exception("Yices error (add).");
+    std::stringstream ss;
+    char* error = yices_error_string();
+    ss << "Yices error (add): " << error;
+    throw exception(ss.str());
   }
 }
 
@@ -800,8 +839,12 @@ solver::result yices2_internal::check() {
     return solver::UNSAT;
   case STATUS_UNKNOWN:
     return solver::UNKNOWN;
-  default:
-    throw exception("Yices error (check).");
+  default: {
+    std::stringstream ss;
+    char* error = yices_error_string();
+    ss << "Yices error (check): " << error;
+    throw exception(ss.str());
+  }
   }
 
   return solver::UNKNOWN;
@@ -934,7 +977,10 @@ void yices2_internal::push() {
 void yices2_internal::pop() {
   int ret = yices_pop(d_ctx);
   if (ret < 0) {
-    throw exception("Yices error (pop).");
+    std::stringstream ss;
+    char* error = yices_error_string();
+    ss << "Yices error (pop): " << error;
+    throw exception(ss.str());
   }
   size_t size = d_assertions_size.back();
   d_assertions_size.pop_back();

@@ -617,6 +617,7 @@ void term_manager_internal::get_subterms(term_ref t, const matcher& m, collectio
   visited_set v;
   std::queue<term_ref> queue;
   queue.push(t);
+  v.insert(t);
 
   std::insert_iterator<collection> insert(out, out.end());
 
@@ -634,6 +635,7 @@ void term_manager_internal::get_subterms(term_ref t, const matcher& m, collectio
     for (size_t i = 0; i < current_term.size(); ++ i) {
       if (v.find(current_term[i]) == v.end()) {
         queue.push(current_term[i]);
+        v.insert(current_term[i]);
       }
     }
   }

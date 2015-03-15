@@ -11,22 +11,6 @@
 namespace sally {
 namespace smt {
 
-class smt2_name_transformer : public utils::name_transformer {
-public:
-  std::string apply(std::string id) const {
-    // *:: -> ""
-    std::string::size_type find = id.find_first_of("::");
-    if (find != std::string::npos) {
-      find += 2;
-      id = id.substr(find);
-    }
-    // Replace any bad characters
-    std::replace(id.begin(), id.end(), '!', '_');
-    std::replace(id.begin(), id.end(), '.', '_');
-    return id;
-  }
-};
-
 class set_name_transformer {
   expr::term_manager& d_tm;
   smt2_name_transformer d_transformer;
