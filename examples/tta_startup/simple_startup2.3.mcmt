@@ -558,4 +558,4 @@
             (or
               (/= pc!1 active)
               (not (< time time_out!1))
-              (and (= time_out!2 time_out!1) (= slot!2 slot!1))))))))
+              (and (= time_out!2 time_out!1) (= slot!2 slot!1)))))))
