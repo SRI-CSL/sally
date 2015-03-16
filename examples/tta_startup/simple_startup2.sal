@@ -10,7 +10,7 @@ simple_startup2: CONTEXT =
 BEGIN
 
   % min: 2, max tried with sal 10
-  N: NATURAL = 2;
+  N: NATURAL = 3;
 
   % Ugly type definition to work around ICS's limitations
   % (incompleteness when dealing with integers)
