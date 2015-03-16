@@ -1,0 +1,434 @@
+;;
+;; Conversion from approx.sal
+;;
+;; State type: v!i   = data owned by process i
+;;             c!i!j = data sent by process i to process j
+;;             p!i!j = index between 1 and 4
+;;            good!i = true if process i is non faulty
+;;
+;; Parameter: eps > 0 = precision
+;;
+(define-state-type state_type
+  ((v!0 Real)
+   (v!1 Real)
+   (v!2 Real)
+   (v!3 Real)
+   (c!0!0 Real)
+   (c!0!1 Real)
+   (c!0!2 Real)
+   (c!0!3 Real)
+   (c!1!0 Real)
+   (c!1!1 Real)
+   (c!1!2 Real)
+   (c!1!3 Real)
+   (c!2!0 Real)
+   (c!2!1 Real)
+   (c!2!2 Real)
+   (c!2!3 Real)
+   (c!3!0 Real)
+   (c!3!1 Real)
+   (c!3!2 Real)
+   (c!3!3 Real)
+   (p!0!0 Real)
+   (p!0!1 Real)
+   (p!0!2 Real)
+   (p!0!3 Real)
+   (p!1!0 Real)
+   (p!1!1 Real)
+   (p!1!2 Real)
+   (p!1!3 Real)
+   (p!2!0 Real)
+   (p!2!1 Real)
+   (p!2!2 Real)
+   (p!2!3 Real)
+   (p!3!0 Real)
+   (p!3!1 Real)
+   (p!3!2 Real)
+   (p!3!3 Real)
+   (good!0 Bool)
+   (good!1 Bool)
+   (good!2 Bool)
+   (good!3 Bool)
+   (eps Real)))
+
+;;
+;; Initial states
+;;
+(define-states initial_states state_type 
+  (let ((cs!381 (< (- v!1 v!0) eps))
+	(cs!382 (< (- v!0 v!1) eps))
+	(cs!383 (< (- v!2 v!0) eps))
+	(cs!384 (< (- v!0 v!2) eps))
+	(cs!385 (< (- v!2 v!1) eps))
+	(cs!386 (< (- v!1 v!2) eps))
+	(cs!387 (not good!0))
+	(cs!388 (< (- v!3 v!0) eps))
+	(cs!389 (< (- v!0 v!3) eps))
+	(cs!390 (not good!1))
+	(cs!391 (< (- v!3 v!1) eps))
+	(cs!392 (< (- v!1 v!3) eps))
+	(cs!393 (not good!2))
+	(cs!394 (< (- v!3 v!2) eps))
+	(cs!395 (< (- v!2 v!3) eps))
+	(cs!396 (not good!3)))
+    (and
+     (> eps 0)
+     (and
+      (or good!0 good!1)
+      (or good!0 good!2)
+      (or good!1 good!2)
+      (or good!0 good!3)
+      (or good!1 good!3)
+      (or good!2 good!3))
+     (and
+      (or
+       cs!387
+       (and
+	(or cs!387 (< (- v!0 v!0) eps))
+	(or cs!390 (and cs!382 cs!381))
+	(or cs!393 (and cs!384 cs!383))
+	(or cs!396 (and cs!389 cs!388))))
+      (or
+       cs!390
+       (and
+	(or cs!387 (and cs!381 cs!382))
+	(or cs!390 (< (- v!1 v!1) eps))
+	(or cs!393 (and cs!386 cs!385))
+	(or cs!396 (and cs!392 cs!391))))
+      (or
+       cs!393
+       (and
+	(or cs!387 (and cs!383 cs!384))
+	(or cs!390 (and cs!385 cs!386))
+	(or cs!393 (< (- v!2 v!2) eps))
+	(or cs!396 (and cs!395 cs!394))))
+      (or
+       cs!396
+       (and
+	(or cs!387 (and cs!388 cs!389))
+	(or cs!390 (and cs!391 cs!392))
+	(or cs!393 (and cs!394 cs!395))
+	(or cs!396 (< (- v!3 v!3) eps)))))
+     (= p!0!0 1)
+     (= p!0!1 2)
+     (= p!0!2 3)
+     (= p!0!3 4)
+     (= p!1!0 1)
+     (= p!1!1 2)
+     (= p!1!2 3)
+     (= p!1!3 4)
+     (= p!2!0 1)
+     (= p!2!1 2)
+     (= p!2!2 3)
+     (= p!2!3 4)
+     (= p!3!0 1)
+     (= p!3!1 2)
+     (= p!3!2 3)
+     (= p!3!3 4))))
+
+
+;; Transition relation
+;; - keeps good and eps constant
+(define-transition transition state_type
+  (let ((cs!337 (not good!0))
+	(cs!340 (not good!1))
+	(cs!343 (not good!2))
+	(cs!350 (not good!3)))
+    (let ((cs!338
+	   (cond
+	    ((= p!0!1' 4) c!3!0')
+	    ((= p!0!1' 3) c!2!0')
+	    ((= p!0!1' 2) c!1!0')
+	    (else c!0!0')))
+	  (cs!339
+	   (cond
+	    ((= p!0!2' 4) c!3!0')
+	    ((= p!0!2' 3) c!2!0')
+	    ((= p!0!2' 2) c!1!0')
+	    (else c!0!0')))
+	  (cs!341
+	   (cond
+	    ((= p!1!1' 4) c!3!1')
+	    ((= p!1!1' 3) c!2!1')
+	    ((= p!1!1' 2) c!1!1')
+	    (else c!0!1')))
+	  (cs!342
+	   (cond
+	    ((= p!1!2' 4) c!3!1')
+	    ((= p!1!2' 3) c!2!1')
+	    ((= p!1!2' 2) c!1!1')
+	    (else c!0!1')))
+	  (cs!344
+	   (cond
+	    ((= p!2!1' 4) c!3!2')
+	    ((= p!2!1' 3) c!2!2')
+	    ((= p!2!1' 2) c!1!2')
+	    (else c!0!2')))
+	  (cs!345
+	   (cond
+	    ((= p!2!2' 4) c!3!2')
+	    ((= p!2!2' 3) c!2!2')
+	    ((= p!2!2' 2) c!1!2')
+	    (else c!0!2')))
+	  (cs!351
+	   (cond
+	    ((= p!3!1' 4) c!3!3')
+	    ((= p!3!1' 3) c!2!3')
+	    ((= p!3!1' 2) c!1!3')
+	    (else c!0!3')))
+	  (cs!352
+	   (cond
+	    ((= p!3!2' 4) c!3!3')
+	    ((= p!3!2' 3) c!2!3')
+	    ((= p!3!2' 2) c!1!3')
+	    (else c!0!3'))))
+      (and
+       (= eps' eps)
+       (= good!0' good!0)
+       (= good!1' good!1)
+       (= good!2' good!2)
+       (= good!3' good!3)
+       (and
+	(or
+	 cs!337
+	 (and
+	  (= c!0!0' v!0)
+	  (= c!0!1' v!0)
+	  (= c!0!2' v!0)
+	  (= c!0!3' v!0)))
+	(or
+	 cs!340
+	 (and
+	  (= c!1!0' v!1)
+	  (= c!1!1' v!1)
+	  (= c!1!2' v!1)
+	  (= c!1!3' v!1)))
+	(or
+	 cs!343
+	 (and
+	  (= c!2!0' v!2)
+	  (= c!2!1' v!2)
+	  (= c!2!2' v!2)
+	  (= c!2!3' v!2)))
+	(or
+	 cs!350
+	 (and
+	  (= c!3!0' v!3)
+	  (= c!3!1' v!3)
+	  (= c!3!2' v!3)
+	  (= c!3!3' v!3))))
+       (and
+	(or
+	 cs!337
+	 (and
+	  (/= p!0!1' p!0!0')
+	  (/= p!0!2' p!0!0')
+	  (/= p!0!3' p!0!0')
+	  (/= p!0!0' p!0!1')
+	  (/= p!0!2' p!0!1')
+	  (/= p!0!3' p!0!1')
+	  (/= p!0!0' p!0!2')
+	  (/= p!0!1' p!0!2')
+	  (/= p!0!3' p!0!2')
+	  (/= p!0!0' p!0!3')
+	  (/= p!0!1' p!0!3')
+	  (/= p!0!2' p!0!3')
+	  (<=
+	   (cond
+	    ((= p!0!0' 4) c!3!0')
+	    ((= p!0!0' 3) c!2!0')
+	    ((= p!0!0' 2) c!1!0')
+	    (else c!0!0'))
+	   cs!338)
+	  (<= cs!338 cs!339)
+	  (<=
+	   cs!339
+	   (cond
+	    ((= p!0!3' 4) c!3!0')
+	    ((= p!0!3' 3) c!2!0')
+	    ((= p!0!3' 2) c!1!0')
+	    (else c!0!0')))))
+	(or
+	 cs!340
+	 (and
+	  (/= p!1!1' p!1!0')
+	  (/= p!1!2' p!1!0')
+	  (/= p!1!3' p!1!0')
+	  (/= p!1!0' p!1!1')
+	  (/= p!1!2' p!1!1')
+	  (/= p!1!3' p!1!1')
+	  (/= p!1!0' p!1!2')
+	  (/= p!1!1' p!1!2')
+	  (/= p!1!3' p!1!2')
+	  (/= p!1!0' p!1!3')
+	  (/= p!1!1' p!1!3')
+	  (/= p!1!2' p!1!3')
+	  (<=
+	   (cond
+	    ((= p!1!0' 4) c!3!1')
+	    ((= p!1!0' 3) c!2!1')
+	    ((= p!1!0' 2) c!1!1')
+	    (else c!0!1'))
+	   cs!341)
+	  (<= cs!341 cs!342)
+	  (<=
+	   cs!342
+	   (cond
+	    ((= p!1!3' 4) c!3!1')
+	    ((= p!1!3' 3) c!2!1')
+	    ((= p!1!3' 2) c!1!1')
+	    (else c!0!1')))))
+	(or
+	 cs!343
+	 (and
+	  (/= p!2!1' p!2!0')
+	  (/= p!2!2' p!2!0')
+	  (/= p!2!3' p!2!0')
+	  (/= p!2!0' p!2!1')
+	  (/= p!2!2' p!2!1')
+	  (/= p!2!3' p!2!1')
+	  (/= p!2!0' p!2!2')
+	  (/= p!2!1' p!2!2')
+	  (/= p!2!3' p!2!2')
+	  (/= p!2!0' p!2!3')
+	  (/= p!2!1' p!2!3')
+	  (/= p!2!2' p!2!3')
+	  (<=
+	   (cond
+	    ((= p!2!0' 4) c!3!2')
+	    ((= p!2!0' 3) c!2!2')
+	    ((= p!2!0' 2) c!1!2')
+	    (else c!0!2'))
+	   cs!344)
+	  (<= cs!344 cs!345)
+	  (<=
+	   cs!345
+	   (cond
+	    ((= p!2!3' 4) c!3!2')
+	    ((= p!2!3' 3) c!2!2')
+	    ((= p!2!3' 2) c!1!2')
+	    (else c!0!2')))))
+	(or
+	 cs!350
+	 (and
+	  (/= p!3!1' p!3!0')
+	  (/= p!3!2' p!3!0')
+	  (/= p!3!3' p!3!0')
+	  (/= p!3!0' p!3!1')
+	  (/= p!3!2' p!3!1')
+	  (/= p!3!3' p!3!1')
+	  (/= p!3!0' p!3!2')
+	  (/= p!3!1' p!3!2')
+	  (/= p!3!3' p!3!2')
+	  (/= p!3!0' p!3!3')
+	  (/= p!3!1' p!3!3')
+	  (/= p!3!2' p!3!3')
+	  (<=
+	   (cond
+	    ((= p!3!0' 4) c!3!3')
+	    ((= p!3!0' 3) c!2!3')
+	    ((= p!3!0' 2) c!1!3')
+	    (else c!0!3'))
+	   cs!351)
+	  (<= cs!351 cs!352)
+	  (<=
+	   cs!352
+	   (cond
+	    ((= p!3!3' 4) c!3!3')
+	    ((= p!3!3' 3) c!2!3')
+	    ((= p!3!3' 2) c!1!3')
+	    (else c!0!3'))))))
+       (and
+	(or cs!337 (= v!0' (/ (+ cs!338 cs!339) 2)))
+	(or cs!340 (= v!1' (/ (+ cs!341 cs!342) 2)))
+	(or cs!343 (= v!2' (/ (+ cs!344 cs!345) 2)))
+	(or cs!350 (= v!3' (/ (+ cs!351 cs!352) 2))))))))
+
+
+;; Transition system
+(define-transition-system T state_type
+  initial_states
+  (transition))
+
+
+;; Assumptions:
+;; every p!i!j is in { 1, 2, 3, 4}
+(assume T
+  (and 
+   (or (= p!0!0 1) (= p!0!0 2) (= p!0!0 3) (= p!0!0 4))
+   (or (= p!0!1 1) (= p!0!1 2) (= p!0!1 3) (= p!0!1 4))
+   (or (= p!0!2 1) (= p!0!2 2) (= p!0!2 3) (= p!0!2 4))
+   (or (= p!0!3 1) (= p!0!3 2) (= p!0!3 3) (= p!0!3 4))
+
+   (or (= p!1!0 1) (= p!1!0 2) (= p!1!0 3) (= p!1!0 4))
+   (or (= p!1!1 1) (= p!1!1 2) (= p!1!1 3) (= p!1!1 4))
+   (or (= p!1!2 1) (= p!1!2 2) (= p!1!2 3) (= p!1!2 4))
+   (or (= p!1!3 1) (= p!1!3 2) (= p!1!3 3) (= p!1!3 4))
+
+   (or (= p!2!0 1) (= p!2!0 2) (= p!2!0 3) (= p!2!0 4))
+   (or (= p!2!1 1) (= p!2!1 2) (= p!2!1 3) (= p!2!1 4))
+   (or (= p!2!2 1) (= p!2!2 2) (= p!2!2 3) (= p!2!2 4))
+   (or (= p!2!3 1) (= p!2!3 2) (= p!2!3 3) (= p!2!3 4))
+
+   (or (= p!3!0 1) (= p!3!0 2) (= p!3!0 3) (= p!3!0 4))
+   (or (= p!3!1 1) (= p!3!1 2) (= p!3!1 3) (= p!3!1 4))
+   (or (= p!3!2 1) (= p!3!2 2) (= p!3!2 3) (= p!3!2 4))
+   (or (= p!3!3 1) (= p!3!3 2) (= p!3!3 3) (= p!3!3 4))))
+
+
+;; Property:
+;; 
+(query T 
+       (and
+        (or
+	 (not good!0)
+	 (and
+	  (or (not good!0) (< (- v!0 v!0) eps))
+	  (or
+	   (not good!1)
+	   (and (< (- v!0 v!1) eps) (< (- v!1 v!0) eps)))
+	  (or
+	   (not good!2)
+	   (and (< (- v!0 v!2) eps) (< (- v!2 v!0) eps)))
+	  (or
+	   (not good!3)
+	   (and (< (- v!0 v!3) eps) (< (- v!3 v!0) eps)))))
+        (or
+	 (not good!1)
+	 (and
+	  (or
+	   (not good!0)
+	   (and (< (- v!1 v!0) eps) (< (- v!0 v!1) eps)))
+	  (or (not good!1) (< (- v!1 v!1) eps))
+	  (or
+	   (not good!2)
+	   (and (< (- v!1 v!2) eps) (< (- v!2 v!1) eps)))
+	  (or
+	   (not good!3)
+	   (and (< (- v!1 v!3) eps) (< (- v!3 v!1) eps)))))
+        (or
+	 (not good!2)
+	 (and
+	  (or
+	   (not good!0)
+	   (and (< (- v!2 v!0) eps) (< (- v!0 v!2) eps)))
+	  (or
+	   (not good!1)
+	   (and (< (- v!2 v!1) eps) (< (- v!1 v!2) eps)))
+	  (or (not good!2) (< (- v!2 v!2) eps))
+	  (or
+	   (not good!3)
+	   (and (< (- v!2 v!3) eps) (< (- v!3 v!2) eps)))))
+        (or
+	 (not good!3)
+	 (and
+	  (or
+	   (not good!0)
+	   (and (< (- v!3 v!0) eps) (< (- v!0 v!3) eps)))
+	  (or
+	   (not good!1)
+	   (and (< (- v!3 v!1) eps) (< (- v!1 v!3) eps)))
+	  (or
+	   (not good!2)
+	   (and (< (- v!3 v!2) eps) (< (- v!2 v!3) eps)))
+	  (or (not good!3) (< (- v!3 v!3) eps))))))
