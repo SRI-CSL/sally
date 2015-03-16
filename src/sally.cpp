@@ -79,15 +79,15 @@ int main(int argc, char* argv[]) {
     // Set the default solver for the solver factory
     smt::factory::set_default_solver(opts.get_string("solver"));
 
+    // Enable smt2 output if enabled
+    if (opts.has_option("smt2-output")) {
+      smt::factory::enable_smt2_output(opts.get_string("smt2-output"));
+    }
+
     // Create the engine
     engine* engine_to_use = 0;
     if (opts.has_option("engine") > 0) {
       engine_to_use = factory::mk_engine(boost_opts.at("engine").as<string>(), ctx);
-    }
-
-    // Enable smt2 output if enabled
-    if (opts.has_option("smt2-output")) {
-      smt::factory::enable_smt2_output(opts.get_string("smt2-output"));
     }
 
     // Setup live stats if asked
