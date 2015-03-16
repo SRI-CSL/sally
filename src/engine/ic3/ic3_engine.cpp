@@ -26,15 +26,15 @@ bool obligation_compare_induction::operator () (const obligation& o1, const obli
   if (o1.frame() != o2.frame()) {
     return o1.frame() > o2.frame();
   }
+  // Smaller score wins
+  if (o1.score() != o2.score()) {
+    return o1.score() > o2.score();
+  }
   // Smaller depth wins
   if (o1.depth() != o2.depth()) {
     return o1.depth() > o2.depth();
   }
-  // Large score wins
-  if (o1.score() != o2.score()) {
-    return o1.score() < o2.score();
-  }
-
+  // Break ties
   return o1.formula() > o2.formula();
 }
 
@@ -161,10 +161,10 @@ void ic3_engine::add_valid_up_to(size_t k, expr::term_ref F) {
   }
 }
 
-void ic3_engine::add_to_induction_obligations(size_t k, expr::term_ref f, size_t depth) {
-  ensure_frame(k);
-  d_induction_obligations.push(obligation(k, f, depth));
-  d_induction_obligations_count[k] ++;
+void ic3_engine::add_to_induction_obligations(const obligation& ind) {
+  ensure_frame(ind.frame());
+  d_induction_obligations.push(ind);
+  d_induction_obligations_count[ind.frame()] ++;
 }
 
 obligation ic3_engine::pop_induction_obligation() {
@@ -615,82 +615,62 @@ expr::term_ref ic3_engine::learn_forward(size_t k, expr::term_ref G) {
   return learnt;
 }
 
-bool ic3_engine::push_if_inductive(size_t k, expr::term_ref f, size_t depth) {
+ic3_engine::induction_result ic3_engine::push_if_inductive(const obligation& ind) {
+
+  size_t k = ind.frame();
+  size_t depth = ind.depth();
+  expr::term_ref f = ind.formula();
 
   ensure_frame(k);
   ensure_frame(k+1);
 
   assert(frame_contains(k, f));
 
-  std::vector<expr::term_ref> induction_assumptions;
-
   TRACE("ic3") << "ic3: pushing at " << k << ":" << f << std::endl;
 
-  bool inductive = false;
-  for (size_t check = 0; ; check ++) {
+  // Check if inductive
+  expr::term_ref G = check_inductive_at(k, f);
 
-    // Check if inductive
-    expr::term_ref G = check_inductive_at(k, f);
+  TRACE("ic3::generalization") << "ic3: generalization " << G << std::endl;
 
-    TRACE("ic3::generalization") << "ic3: generalization " << G << std::endl;
-
-    // If inductive
-    if (G.is_null()) {
-      inductive = true;
-      break;
-    }
-
-    // We have a counterexample, we only try to refute if induction depth is not
-    // exceeded
-    if (!ctx().get_options().get_bool("ic3-no-depth-bound") && depth > k) {
-      inductive = false;
-      break;
-    }
-
-    // If we're doing property directed, don't check for reachability
-    if (ctx().get_options().get_bool("ic3-pdr") && f != d_property->get_formula()) {
-      inductive = false;
-      break;
-    }
-
-    // Check if G is reachable
-    bool reachable = check_reachable(k, G);
-
-    // If reachable, we're not inductive
-    if (reachable) {
-      inductive = false;
-      d_counterexample.push_back(tm().mk_term(expr::TERM_NOT, f));
-      break;
-    }
-
-    // Convert equalities to inequalities
-    G = eq_to_ineq(G);
-
-    // Learn something to refute G
-    expr::term_ref learnt = learn_forward(k, G);
-    TRACE("ic3") << "ic3: learnt: " << learnt << std::endl;
-
-    // Add the learnt
-    add_valid_up_to(k, learnt);
-    induction_assumptions.push_back(learnt);
-
-    // Make sure that G has been eliminated
-    // assert(check_valid(k, tm().mk_term(expr::TERM_NOT, G)));
-  }
-
-  // If inductive, add the assumptions to induction obligations
-  if (inductive) {
-    TRACE("ic3") << "ic3: proved at " << k << " with " << induction_assumptions.size() << " assumptions" << std::endl;
-    // Add the thing we learnt
+  // If inductive
+  if (G.is_null()) {
     add_valid_up_to(k+1, f);
-    d_frame_inductive_content[k].insert(f);
-    add_to_induction_obligations(k+1, f, depth);
-    for (size_t i = 0; i < induction_assumptions.size(); ++ i) {
-      add_to_induction_obligations(k, induction_assumptions[i], depth+1);
-    }
+    add_to_induction_obligations(obligation(k+1, f, depth, ind.score()));
+    return INDUCTION_SUCCESS;
   }
 
-  return inductive;
+  // We have a counterexample, we only try to refute if induction depth is not
+  // exceeded
+  if (!ctx().get_options().get_bool("ic3-no-depth-bound") && depth > k) {
+    return INDUCTION_INCONCLUSIVE;
+  }
+
+  // If we're doing property directed, don't check for reachability
+  if (ctx().get_options().get_bool("ic3-pdr") && f != d_property->get_formula()) {
+    return INDUCTION_INCONCLUSIVE;
+  }
+
+  // Check if G is reachable
+  bool reachable = check_reachable(k, G);
+
+  // If reachable, we're not inductive
+  if (reachable) {
+    d_counterexample.push_back(tm().mk_term(expr::TERM_NOT, f));
+    return INDUCTION_FAIL;
+  }
+
+  // Learn something to refute G
+  expr::term_ref learnt = learn_forward(k, G);
+  TRACE("ic3") << "ic3: learnt: " << learnt << std::endl;
+
+  // Add the learnt
+  add_valid_up_to(k, learnt);
+
+  // Try to push assumptions next time
+  add_to_induction_obligations(obligation(k, learnt, depth+1, 0));
+
+  return INDUCTION_RETRY;
 }
 
 void ic3_engine::add_to_frame(size_t k, expr::term_ref f) {
@@ -722,23 +702,32 @@ engine::result ic3_engine::search() {
 
     // Pick a formula to try and prove inductive, i.e. that F_k & P & T => P'
     obligation ind = pop_induction_obligation();
+    assert(!frame_contains(ind.frame()+1, ind.formula()));
 
-    // The frame we're working at
-    size_t frame = ind.frame();
-    assert(!frame_contains(frame+1, ind.formula()));
+    // Push the formula forward if it's inductive at the frame
+    size_t old_total = total_facts();
+    induction_result ind_result = push_if_inductive(ind);
+    ind.add_score(total_facts() - old_total);
 
-    /** Push the formula forward if it's inductive at the frame */
-    bool is_inductive = push_if_inductive(frame, ind.formula(), ind.depth());
-
-    // If not inductive, we might have a counterexample
-    if (!is_inductive) {
+    // See what happened
+    switch (ind_result) {
+    case INDUCTION_RETRY:
+      // We'll retry the same formula
+      add_to_induction_obligations(ind);
+      break;
+    case INDUCTION_SUCCESS:
+      // Boss
+      break;
+    case INDUCTION_FAIL:
       // Not inductive, if P then we have a counterexample
       if (ind.formula() == d_property->get_formula()) {
         return engine::INVALID;
-      } else {
-        // Remember that we failed induction
-        has_failed_induction = true;
       }
+      has_failed_induction = true;
+      break;
+    case INDUCTION_INCONCLUSIVE:
+      has_failed_induction = true;
+      break;
     }
 
     // We're done with this frame
@@ -783,7 +772,7 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   expr::term_ref I = d_transition_system->get_initial_states();
   add_to_frame(0, I);
   get_solver(0)->add(I, smt::solver::CLASS_A);
-  add_to_induction_obligations(0, I, 0);
+  add_to_induction_obligations(obligation(0, I, 0));
 
   // Add the property we're trying to prove
   expr::term_ref P = d_property->get_formula();
@@ -793,7 +782,7 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
     return engine::INVALID;
   } else {
     add_to_frame(0, P);
-    add_to_induction_obligations(0, P, 0);
+    add_to_induction_obligations(obligation(0, P, 0));
   }
 
   while(r == UNKNOWN) {
@@ -915,7 +904,9 @@ expr::term_ref ic3_engine::generalize_sat_at(size_t k, smt::solver* solver) {
   }
   generalization_facts.reserve(to_keep);
 
-  return tm().mk_and(generalization_facts);
+  expr::term_ref G = tm().mk_and(generalization_facts);
+  G = eq_to_ineq(G);
+  return G;
 }
 
 void ic3_engine::bump_formula(expr::term_ref formula) {
@@ -926,6 +917,11 @@ void ic3_engine::bump_formulas(const std::vector<expr::term_ref>& formulas) {
   for (size_t i = 0; i < formulas.size(); ++ i) {
     bump_formula(formulas[i]);
   }
+}
+
+size_t ic3_engine::total_facts() const {
+  assert(d_frame_content.size() > 1);
+  return d_frame_content[0].size() + d_frame_content[1].size();
 }
 
 }

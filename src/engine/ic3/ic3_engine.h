@@ -32,13 +32,12 @@ class obligation {
   /** Assumption depth */
   size_t d_depth;
   /** Any score */
-  size_t d_score;
-
+  double d_score;
 
 public:
 
   /** Construct the obligation */
-  obligation(size_t k, expr::term_ref P, size_t depth, size_t score = 0)
+  obligation(size_t k, expr::term_ref P, size_t depth, double score = 0)
   : d_k(k), d_P(P), d_depth(depth), d_score(score) {}
 
   /** Get the frame */
@@ -51,7 +50,10 @@ public:
   size_t depth() const { return d_depth; }
 
   /** Get the score */
-  size_t score() const { return d_score; }
+  double score() const { return d_score; }
+
+  /** Add to score */
+  void add_score(double amount) { d_score += amount; }
 
   /** Compare for equality */
   bool operator == (const obligation& o) const {
@@ -104,8 +106,19 @@ class ic3_engine : public engine {
    */
   expr::term_ref check_inductive_at(size_t k, expr::term_ref f);
 
+  enum induction_result {
+    // Formula is inductive
+    INDUCTION_SUCCESS,
+    // Formula is not inductive with counter-example)
+    INDUCTION_FAIL,
+    // Formula is not directly inductive but the check decided to give up
+    INDUCTION_INCONCLUSIVE,
+    // Formula was not proven inductive, but new facts were added so we can try again
+    INDUCTION_RETRY
+  };
+
   /** Push the formula forward if its inductive. Returns true if inductive. */
-  bool push_if_inductive(size_t k, expr::term_ref f, size_t depth);
+  induction_result push_if_inductive(const obligation& o);
 
   /**
    * Add a formula that's inductive up to k-1 and holds at k. The formula will
@@ -121,13 +134,16 @@ class ic3_engine : public engine {
   std::vector<size_t> d_induction_obligations_count;
 
   /** Add formula to the induction obligation queue */
-  void add_to_induction_obligations(size_t k, expr::term_ref f, size_t depth);
+  void add_to_induction_obligations(const obligation& ind);
 
   /** Get the next induction obligations */
   obligation pop_induction_obligation();
 
   /** Set of facts valid per frame */
   std::vector<formula_set> d_frame_content;
+
+  /** Total number of facts in the database */
+  size_t total_facts() const;
 
   /** set of facts that are inductive at frame */
   std::vector<formula_set> d_frame_inductive_content;
@@ -199,7 +215,7 @@ class ic3_engine : public engine {
 
   typedef boost::unordered_map<expr::term_ref, size_t, expr::term_ref_hasher> formula_scores_map;
 
-  /** Map from formulas to their scores */
+  /** Map from formulas to their scores (how many times they were used as assumptions) */
   formula_scores_map d_formula_scores;
 
   /** Returns the score of the formula (or 0 if it doesn't have one) */
