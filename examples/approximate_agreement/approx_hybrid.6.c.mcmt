@@ -1,7 +1,8 @@
 ;;
 ;; Conversion from approx_hybrid.sal: 6 processes
 ;;
-;; Fault model: processes 1, 2, 3, 4 are good
+;; Fault model: processes 1, 2, 3 are good
+;;              process 4 is Byzantine
 ;;              process 5 is symmetric
 ;;              process 6 is benign
 ;;
@@ -155,7 +156,7 @@
       (= s!0 Good)
       (= s!1 Good)
       (= s!2 Good)
-      (= s!3 Good)
+      (= s!3 Byzantine)
       (= s!4 Symmetric)
       (= s!5 Benign))
      (and

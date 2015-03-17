@@ -2,8 +2,8 @@
 ;; Conversion from approx_hybrid.sal: 6 processes
 ;;
 ;; Fault model: processes 1, 2, 3, 4 are good
-;;              process 5 is symmetric
-;;              process 6 is benign
+;;              process 4 is symmetric
+;;              process 5 is benign
 ;;
 ;; State type: v!i   = data of process i
 ;;             c!i!j = data sent by process i to process j
@@ -151,13 +151,43 @@
 	(cs!1518  (/= s!5 Good)))
     (and
      (> eps 0)
-     (and
-      (= s!0 Good)
-      (= s!1 Good)
-      (= s!2 Good)
-      (= s!3 Good)
-      (= s!4 Symmetric)
-      (= s!5 Benign))
+     (or 
+      (and (= s!0 Good) (= s!1 Good) (= s!2 Good) (= s!3 Good) (= s!4 Symmetric) (= s!5 Benign))
+      (and (= s!0 Good) (= s!1 Good) (= s!2 Good) (= s!3 Symmetric) (= s!4 Good) (= s!5 Benign))
+      (and (= s!0 Good) (= s!1 Good) (= s!2 Symmetric) (= s!3 Good) (= s!4 Good) (= s!5 Benign))
+      (and (= s!0 Good) (= s!1 Symmetric) (= s!2 Good) (= s!3 Good) (= s!4 Good) (= s!5 Benign))
+      (and (= s!0 Symmetric) (= s!1 Good) (= s!2 Good) (= s!3 Good) (= s!4 Good) (= s!5 Benign))
+
+      (and (= s!0 Good) (= s!1 Good) (= s!2 Good) (= s!3 Good) (= s!4 Benign) (= s!5 Symmetric))
+      (and (= s!0 Good) (= s!1 Good) (= s!2 Good) (= s!3 Symmetric) (= s!4 Benign) (= s!5  Good))
+      (and (= s!0 Good) (= s!1 Good) (= s!2 Symmetric) (= s!3 Good) (= s!4 Benign) (= s!5  Good))
+      (and (= s!0 Good) (= s!1 Symmetric) (= s!2 Good) (= s!3 Good) (= s!4 Benign) (= s!5  Good))
+      (and (= s!0 Symmetric) (= s!1 Good) (= s!2 Good) (= s!3 Good) (= s!4 Benign) (= s!5  Good))
+
+      (and (= s!0 Good) (= s!1 Good) (= s!2 Good) (= s!3 Benign) (= s!4 Good) (= s!5 Symmetric))
+      (and (= s!0 Good) (= s!1 Good) (= s!2 Good) (= s!3 Benign) (= s!4 Symmetric) (= s!5  Good))
+      (and (= s!0 Good) (= s!1 Good) (= s!2 Symmetric) (= s!3 Benign) (= s!4 Good) (= s!5  Good))
+      (and (= s!0 Good) (= s!1 Symmetric) (= s!2 Good) (= s!3 Benign) (= s!4 Good) (= s!5  Good))
+      (and (= s!0 Symmetric) (= s!1 Good) (= s!2 Good) (= s!3 Benign) (= s!4 Good) (= s!5  Good))
+
+      (and (= s!0 Good) (= s!1 Good) (= s!2 Benign) (= s!3 Good) (= s!4 Good) (= s!5 Symmetric))
+      (and (= s!0 Good) (= s!1 Good) (= s!2 Benign) (= s!3 Good) (= s!4 Symmetric) (= s!5  Good))
+      (and (= s!0 Good) (= s!1 Good) (= s!2 Benign) (= s!3 Symmetric) (= s!4 Good) (= s!5  Good))
+      (and (= s!0 Good) (= s!1 Symmetric) (= s!2 Benign) (= s!3 Good) (= s!4 Good) (= s!5  Good))
+      (and (= s!0 Symmetric) (= s!1 Good) (= s!2 Benign) (= s!3 Good) (= s!4 Good) (= s!5  Good))
+
+      (and (= s!0 Good) (= s!1 Benign) (= s!2 Good) (= s!3 Good) (= s!4 Good) (= s!5 Symmetric))
+      (and (= s!0 Good) (= s!1 Benign) (= s!2 Good) (= s!3 Good) (= s!4 Symmetric) (= s!5  Good))
+      (and (= s!0 Good) (= s!1 Benign) (= s!2 Good) (= s!3 Symmetric) (= s!4 Good) (= s!5  Good))
+      (and (= s!0 Good) (= s!1 Benign) (= s!2 Symmetric) (= s!3 Good) (= s!4 Good) (= s!5  Good))
+      (and (= s!0 Symmetric) (= s!1 Benign) (= s!2 Good) (= s!3 Good) (= s!4 Good) (= s!5  Good))
+
+      (and (= s!0 Benign) (= s!1 Good) (= s!2 Good) (= s!3 Good) (= s!4 Good) (= s!5 Symmetric))
+      (and (= s!0 Benign) (= s!1 Good) (= s!2 Good) (= s!3 Good) (= s!4 Symmetric) (= s!5  Good))
+      (and (= s!0 Benign) (= s!1 Good) (= s!2 Good) (= s!3 Symmetric) (= s!4 Good) (= s!5  Good))
+      (and (= s!0 Benign) (= s!1 Good) (= s!2 Symmetric) (= s!3 Good) (= s!4 Good) (= s!5  Good))
+      (and (= s!0 Benign) (= s!1 Symmetric) (= s!2 Good) (= s!3 Good) (= s!4 Good) (= s!5  Good)))
+
      (and
       (or cs!1503 (not (<= v!0 0)))
       (or cs!1506 (not (<= v!1 0)))
