@@ -1013,4 +1013,4 @@
 	  (or
 	   (not good!4)
 	   (and (< (- v!5 v!4) eps) (< (- v!4 v!5) eps)))
-	  (or (not good!5) (< (- v!5 v!5) eps)))))))
+	  (or (not good!5) (< (- v!5 v!5) eps))))))
