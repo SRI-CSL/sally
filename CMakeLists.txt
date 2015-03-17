@@ -47,16 +47,15 @@ endif()
 
 # Find Yices
 SET(YICES2_HOME CACHE STRING "Yices2 installation directory")
-find_package(Yices2)
+find_package(Yices2 2.3.0)
 if (YICES2_FOUND)
-  message(STATUS "found yices")
   add_definitions(-DWITH_YICES2)
   include_directories(${YICES2_INCLUDE_DIR}) 
 endif()
 
 # Find MathSAT5
 SET(MATHSAT5_HOME CACHE STRING "MathSAT5 installation directory")
-find_package(MathSAT5)
+find_package(MathSAT5 5.3.3)
 if (MATHSAT5_FOUND)
   add_definitions(-DWITH_MATHSAT5)
   include_directories(${MATHSAT5_INCLUDE_DIR})
