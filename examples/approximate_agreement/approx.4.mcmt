@@ -1,5 +1,5 @@
 ;;
-;; Conversion from approx.sal
+;; Conversion from approx.sal: 4 processes
 ;;
 ;; State type: v!i   = data owned by process i
 ;;             c!i!j = data sent by process i to process j
