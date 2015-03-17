@@ -1,0 +1,149 @@
+%
+% Approximate agreement protocol
+% with hybrid fault model
+%
+
+approx_hybrid_validity: CONTEXT =
+
+BEGIN
+
+  N: NATURAL = 6;  %% number of processes
+
+  PID: TYPE = [1 .. N];
+
+  %
+  % Data = positive real values
+  % We use 0 as 'manifestly incorrect'
+  %
+  DATA: TYPE = { x: REAL | x > 0 };
+
+  bad_val: REAL = 0;
+
+
+  %
+  % Precision = positive real
+  %
+  eps: { x: REAL | x > 0 };
+
+  %
+  % Sort function
+  % - input = array v of N values
+  % - output = a permutation p of the N indices 
+  %   such that v[p[i]] <= v[p[i+1]] for i= 1 .. N-1
+  %
+  sort(v: ARRAY PID OF REAL, p: ARRAY PID OF PID): BOOLEAN =
+        (FORALL (i, j: PID): p[i] = p[j] => i = j)
+    AND (FORALL (i: PID): i<N => v[p[i]] <= v[p[i+1]]);
+  
+
+  %
+  % Process status
+  %
+  status: TYPE = { Good, Benign, Symmetric, Byzantine };
+
+  %
+  % Fault model:
+  % - s[i] = status of process i
+  % - assumption: no more than one faulty process
+  %
+  fault_model(s: ARRAY PID OF status): BOOLEAN =
+       s[1] = Good
+   AND s[2] = Good
+   AND s[3] = Good
+   AND s[4] = Good
+   AND s[5] = Symmetric
+   AND s[6] = Benign;
+ 
+
+  %
+  % To formalize the validity property, we use an auxiliary
+  % array val: val[i] = initial value for process i
+  %
+  val: { a: ARRAY PID OF REAL |
+             (FORALL (i: PID): a[i] > 0) AND 
+             (FORALL (i, j: PID): a[i] - a[j] < eps AND a[j] - a[i] < eps) };
+
+  %
+  % Approximate agreement: flat representation
+  %  v[i] = value of process i
+  %  c[i][j] = channel from process i to process j
+  %  p[i] = permutation used by process i
+  %  s[i] = status of process i
+  %
+  % To formalize validity, we make a copy of the initial value into array val
+  %
+  approx: MODULE =
+  BEGIN
+    OUTPUT
+      
+      v, val: ARRAY PID OF REAL,
+      c: ARRAY PID OF ARRAY PID OF REAL,
+      p: ARRAY PID OF ARRAY PID OF PID,
+      s: ARRAY PID OF status,
+      round: INTEGER
+
+  INITIALIZATION
+     s IN { g: ARRAY PID OF status | fault_model(g) };
+
+     v IN { a: ARRAY PID OF REAL |
+             (FORALL (i: PID): s[i] = Good => a[i] > 0) AND
+             (FORALL (i, j: PID): s[i] = Good AND s[j] = Good => a[i] - a[j] < eps AND a[j] - a[i] < eps) };
+
+     val = v;
+
+     p = [[i: PID] [[j: PID] j]];
+
+     round = 0;
+
+  TRANSITION
+     round' = round + 1;
+
+     s' = s;
+ 
+     val' = val;
+
+     %%
+     %% Communication:
+     %% good processes send their value
+     %% benign processes send the bad_value
+     %% symmetric processes send the same arbitrary value to all
+     %% byzantine processes have no constraints
+     %% 
+     c' IN { x: ARRAY PID OF ARRAY PID OF REAL |
+              (FORALL (i: PID): (s[i] = Good => (FORALL (j: PID): x[i][j] = v[i]))
+                            AND (s[i] = Benign => (FORALL (j: PID): x[i][j] = bad_val))
+                            AND (s[i] = Symmetric => (FORALL (j, k: PID): x[i][j] = x[i][k]))) };
+                            
+     %%
+     %% update rule:
+     %% - process i receives c'[1][i] ... c'[N][i]
+     %% - it sorts the value it receives in increasing order
+     %%   then it picks the median as its new value
+     %%
+     p' IN { x: ARRAY PID OF ARRAY PID OF PID |
+              (FORALL (i: PID): s[i] = Good => sort([[j: PID] c'[j][i]], x[i])) };
+
+     %% v'[i] = median of c'[1][i] ... c'[N][i].
+     %% for N=4, this is (c'[k_2][i] + c'[k_3][i])/2 where k_2 = p'[i][2] and k_3 = p'[i][3]
+     %% for N=5, this is c'[k_3][i] where k_3 is p'[i][3]
+     %% for N=6, this is (c'[k_3][i] + c'[k_4][i])/2 where k_3 = p'[i][3] and k_4 = p'[i][4]
+     v' IN { x: ARRAY PID OF REAL | 
+              (FORALL (i: PID): s[i] = Good => x[i] = (c'[p'[i][3]][i] + c'[p'[i][4]][i])/2 ) };
+  
+  END;
+
+  fault_invar: LEMMA
+    approx |- G(fault_model(s));
+
+  agreement: THEOREM
+    approx |- G((FORALL (i: PID): s[i] = Good => v[i] > 0) AND 
+	        (FORALL (i, j: PID): s[i] = Good AND s[j] = Good => v[i] - v[j] < eps AND v[j] - v[i] < eps));
+
+  validity: THEOREM
+    approx |- G((FORALL (i: PID): s[i] = Good =>
+                   (EXISTS (j: PID): s[j] = Good AND v[i] - val[j] < eps AND val[j] - v[i] < eps)));
+
+  liveness: THEOREM
+    approx |- G(round <= 10);
+
+END
