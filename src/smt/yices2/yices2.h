@@ -58,8 +58,7 @@ public:
   void pop();
 
   /**
-   * Generalize the last call to check assuming the result was SAT. The
-   * variables vars are eliminated from the assertions.
+   * Generalize the last call to check assuming the result was SAT.
    */
   void generalize(std::vector<expr::term_ref>& projection_out);
 };

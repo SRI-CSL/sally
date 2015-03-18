@@ -916,7 +916,7 @@ void yices2_internal::get_model(expr::model& m, const std::set<expr::term_ref>& 
   // See which variables we have to reason about
   for (size_t i = 0; i < variables.size(); ++ i) {
     expr::term_ref var = variables[i];
-    term_t yices_var = s_term_to_yices_cache[var];
+    term_t yices_var = to_yices2_term(var);
     expr::term_ref var_type = d_tm.type_of(var);
 
     expr::term_ref var_value;
