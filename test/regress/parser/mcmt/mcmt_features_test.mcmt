@@ -1,0 +1,11 @@
+;; State type
+(define-state-type st ((x Real) (y Real)))
+
+;; Some state formulas
+(define-states sf_01 st 
+  (= x 0)
+)
+
+(define-states sf_02 st 
+  (and (= x 0) sf_01)
+)
