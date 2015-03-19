@@ -65,16 +65,15 @@ define_states returns [parser::command* cmd = 0]
 @declarations {
   std::string id;
   std::string type_id;
+  system::state_type* state_type;
 }
   : '(' 'define-states'
         symbol[id, parser::MCMT_STATE_FORMULA, false]       
-        symbol[type_id, parser::MCMT_STATE_TYPE, true] { 
-            STATE->push_scope(); 
-            STATE->use_state_type(type_id, system::state_type::STATE_CURRENT, true); 
+        symbol[type_id, parser::MCMT_STATE_TYPE, true] {
+        	state_type = STATE->ctx().get_state_type(type_id); 
         }
-        f = state_formula { 
+        f = state_formula[state_type] { 
         	$cmd = new parser::define_states_command(id, STATE->mk_state_formula(id, type_id, f)); 
-            STATE->pop_scope(); 
         }
     ')'
   ; 
@@ -92,7 +91,7 @@ define_transition returns [parser::command* cmd = 0]
           STATE->use_state_type(type_id, system::state_type::STATE_CURRENT, STATE->lsal_extensions()); 
           STATE->use_state_type(type_id, system::state_type::STATE_NEXT, false); 
       }
-      f = state_transition_formula   { 
+      f = state_transition_formula[type_id]   { 
           $cmd = new parser::define_transition_command(id, STATE->mk_transition_formula(id, type_id, f)); 
           STATE->pop_scope(); 
       }
@@ -137,13 +136,10 @@ assume returns [parser::command* cmd = 0]
 }
   : '(' 'assume'
     symbol[id, parser::MCMT_TRANSITION_SYSTEM, true] { 
-        STATE->push_scope();
         state_type = STATE->ctx().get_transition_system(id)->get_state_type();
-        STATE->use_state_type(state_type, system::state_type::STATE_CURRENT, true); 
     }
-    f = state_formula { 
+    f = state_formula[state_type] { 
     	$cmd = new parser::assume_command(STATE->ctx(), id, new system::state_formula(STATE->tm(),  state_type, f));
-        STATE->pop_scope(); 
     }
     ')'
   ; 
@@ -156,13 +152,10 @@ query returns [parser::command* cmd = 0]
 }
   : '(' 'query'
     symbol[id, parser::MCMT_TRANSITION_SYSTEM, true] { 
-        STATE->push_scope();
         state_type = STATE->ctx().get_transition_system(id)->get_state_type();
-        STATE->use_state_type(state_type, system::state_type::STATE_CURRENT, true); 
     }
-    f = state_formula { 
+    f = state_formula[state_type] { 
     	$cmd = new parser::query_command(STATE->ctx(), id, new system::state_formula(STATE->tm(), state_type, f));
-        STATE->pop_scope(); 
     }
     ')'
   ; 
@@ -179,12 +172,22 @@ define_constant
   ; 
 
 /** A state formula */
-state_formula returns [expr::term_ref sf = expr::term_ref()]
-  : t = term { $sf = t; }
+state_formula[system::state_type* state_type] returns [expr::term_ref sf = expr::term_ref()]
+  : // Declare state variables 
+    { 
+  	  	STATE->push_scope(); 
+  	  	STATE->use_state_type(state_type, system::state_type::STATE_CURRENT, true); 
+  	}      
+    // Parse the actual formula
+    t = term { $sf = t; } 
+    // Undeclare the variables 
+    { 
+   		STATE->pop_scope(); 
+    }
   ;
 
 /** A state transition formula */
-state_transition_formula returns [expr::term_ref stf = expr::term_ref()]
+state_transition_formula[std::string type_id] returns [expr::term_ref stf = expr::term_ref()]
   : t = term { $stf = t; }
   ;
 

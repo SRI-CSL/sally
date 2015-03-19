@@ -62,12 +62,16 @@ system::state_type* mcmt_state::mk_state_type(std::string id, const std::vector<
 
 system::state_formula* mcmt_state::mk_state_formula(std::string id, std::string type_id, expr::term_ref sf) const {
   system::state_type* st = ctx().get_state_type(type_id);
-  return new system::state_formula(tm(), st, sf);
+  system::state_formula* result = new system::state_formula(tm(), st, sf);
+  result->set_id(id);
+  return result;
 }
 
 system::transition_formula* mcmt_state::mk_transition_formula(std::string id, std::string type_id, expr::term_ref tf) const {
   system::state_type* st = ctx().get_state_type(type_id);
-  return new system::transition_formula(tm(), st, tf);
+  system::transition_formula* result = new system::transition_formula(tm(), st, tf);
+  result->set_id(id);
+  return result;
 }
 
 system::transition_system* mcmt_state::mk_transition_system(std::string id, std::string type_id, std::string init_id, const std::vector<std::string>& transition_ids) {
@@ -105,8 +109,17 @@ void mcmt_state::use_state_type(system::state_type* st, system::state_type::var_
   system::state_type::formula_set::const_iterator it = st->state_formulas_begin();
   for (; it != st->state_formulas_end(); ++ it) {
     const system::state_formula* f = *it;
-    expr::term_ref f_term = st->change_formula_vars(system::state_type::STATE_CURRENT, var_class, f->get_formula());
-    d_variables.add_entry(f->get_id(), f_term);
+    // If the formula has an id, add it
+    if (!f->get_id().empty()) {
+      // Get the term of the formula and transform the variables if going to the next state
+      expr::term_ref f_term = f->get_formula();
+      if (var_class == system::state_type::STATE_NEXT) {
+        f_term = st->change_formula_vars(system::state_type::STATE_CURRENT, var_class, f_term);
+      }
+      // Get the id
+      std::string id = f->get_id();
+      d_variables.add_entry(id, f_term);
+    }
   }
 
   // Pop the namespace
