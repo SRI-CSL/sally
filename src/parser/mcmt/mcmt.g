@@ -133,7 +133,7 @@ transition_list[std::vector<std::string>& transitions]
 assume returns [parser::command* cmd = 0]
 @declarations {
   std::string id;
-  const system::state_type* state_type;
+  system::state_type* state_type;
 }
   : '(' 'assume'
     symbol[id, parser::MCMT_TRANSITION_SYSTEM, true] { 
@@ -142,7 +142,7 @@ assume returns [parser::command* cmd = 0]
         STATE->use_state_type(state_type, system::state_type::STATE_CURRENT, true); 
     }
     f = state_formula { 
-    	$cmd = new parser::assume_command(STATE->ctx(), id, new system::state_formula(STATE->tm(), state_type, f));
+    	$cmd = new parser::assume_command(STATE->ctx(), id, new system::state_formula(STATE->tm(),  state_type, f));
         STATE->pop_scope(); 
     }
     ')'
@@ -152,7 +152,7 @@ assume returns [parser::command* cmd = 0]
 query returns [parser::command* cmd = 0]
 @declarations {
   std::string id;
-  const system::state_type* state_type;
+  system::state_type* state_type;
 }
   : '(' 'query'
     symbol[id, parser::MCMT_TRANSITION_SYSTEM, true] { 

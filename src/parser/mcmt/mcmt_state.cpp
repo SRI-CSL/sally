@@ -61,17 +61,17 @@ system::state_type* mcmt_state::mk_state_type(std::string id, const std::vector<
 }
 
 system::state_formula* mcmt_state::mk_state_formula(std::string id, std::string type_id, expr::term_ref sf) const {
-  const system::state_type* st = ctx().get_state_type(type_id);
+  system::state_type* st = ctx().get_state_type(type_id);
   return new system::state_formula(tm(), st, sf);
 }
 
 system::transition_formula* mcmt_state::mk_transition_formula(std::string id, std::string type_id, expr::term_ref tf) const {
-  const system::state_type* st = ctx().get_state_type(type_id);
+  system::state_type* st = ctx().get_state_type(type_id);
   return new system::transition_formula(tm(), st, tf);
 }
 
 system::transition_system* mcmt_state::mk_transition_system(std::string id, std::string type_id, std::string init_id, const std::vector<std::string>& transition_ids) {
-  const system::state_type* st = ctx().get_state_type(type_id);
+  system::state_type* st = ctx().get_state_type(type_id);
   const system::state_formula* init = ctx().get_state_formula(init_id);
   std::vector<const system::transition_formula*> transitions;
   for (size_t i = 0; i < transition_ids.size(); ++ i) {
@@ -81,11 +81,11 @@ system::transition_system* mcmt_state::mk_transition_system(std::string id, std:
 }
 
 void mcmt_state::use_state_type(std::string id, system::state_type::var_class var_class, bool use_namespace) {
-  const system::state_type* st = d_context.get_state_type(id);
+  system::state_type* st = d_context.get_state_type(id);
   use_state_type(st, var_class, use_namespace);
 }
 
-void mcmt_state::use_state_type(const system::state_type* st, system::state_type::var_class var_class, bool use_namespace) {
+void mcmt_state::use_state_type(system::state_type* st, system::state_type::var_class var_class, bool use_namespace) {
 
   // Use the appropriate namespace
   st->use_namespace();
@@ -99,6 +99,14 @@ void mcmt_state::use_state_type(const system::state_type* st, system::state_type
     const term& var_term = tm().term_of(vars[i]);
     std::string var_name = tm().get_variable_name(var_term);
     d_variables.add_entry(var_name, vars[i]);
+  }
+
+  // Declare all the state formulas of this stype
+  system::state_type::formula_set::const_iterator it = st->state_formulas_begin();
+  for (; it != st->state_formulas_end(); ++ it) {
+    const system::state_formula* f = *it;
+    expr::term_ref f_term = st->change_formula_vars(system::state_type::STATE_CURRENT, var_class, f->get_formula());
+    d_variables.add_entry(f->get_id(), f_term);
   }
 
   // Pop the namespace

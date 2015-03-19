@@ -20,19 +20,35 @@ namespace system {
  */
 class state_formula {
 
+  /** Id of the formula */
+  std::string d_id;
+
   /** The state variables */
-  const state_type* d_state_type;
+  state_type* d_state_type;
 
   /** The formula itself */
   expr::term_ref_strong d_state_formula;
 
 public:
 
-  /** Construct a state formula over the state type with the explicit formula */
-  state_formula(expr::term_manager& tm, const state_type* st, expr::term_ref formula);
+  /**
+   * Construct a state formula over the state type with the explicit formula.
+   * It also registers itself with the state type.
+   */
+  state_formula(expr::term_manager& tm, state_type* st, expr::term_ref formula);
 
-  /** Construct a copy of the given formula */
-  state_formula(const state_formula& sf);
+  /** Destruct and unregister. */
+  ~state_formula();
+
+  /** Set the id of the formula */
+  void set_id(std::string id) {
+    d_id = id;
+  }
+
+  /** Get the id of the formula */
+  std::string get_id() const {
+    return d_id;
+  }
 
   /** Get the state formula */
   expr::term_ref get_formula() const {

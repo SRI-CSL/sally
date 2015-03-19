@@ -118,7 +118,9 @@ bool state_type::is_transition_formula(expr::term_ref f) const {
 }
 
 expr::term_ref state_type::change_formula_vars(var_class from, var_class to, expr::term_ref f) const {
-  assert(from != to);
+  if (from == to) {
+    return f;
+  }
   if (from == STATE_CURRENT && to == STATE_NEXT) {
     return tm().substitute(f, d_subst_current_next);
   }
@@ -127,6 +129,41 @@ expr::term_ref state_type::change_formula_vars(var_class from, var_class to, exp
   }
   // They are the same
   return f;
+}
+
+void state_type::register_state_formula(const state_formula* f) {
+  d_state_formulas.insert(f);
+}
+
+void state_type::unregister_state_formula(const state_formula* f) {
+  d_state_formulas.erase(f);
+}
+
+void state_type::register_transition_formula(const transition_formula* f) {
+  d_transition_formulas.erase(f);
+}
+
+void state_type::unregister_transition_formula(const transition_formula* f) {
+  d_transition_formulas.erase(f);
+}
+
+state_type::formula_set::const_iterator state_type::state_formulas_begin() const {
+  return d_state_formulas.begin();
+}
+
+/** Get the iterator to the end of formulas of this type */
+state_type::formula_set::const_iterator state_type::state_formulas_end() const {
+  return d_state_formulas.end();
+}
+
+/** Get the iterator to all transition formulas of this type */
+state_type::transition_formula_set::const_iterator state_type::transition_formulas_begin() const {
+  return d_transition_formulas.begin();
+}
+
+/** Get hte iterator to the end of transition formulas of this type */
+state_type::transition_formula_set::const_iterator state_type::transition_formulas_end() const {
+  return d_transition_formulas.end();
 }
 
 }

@@ -16,6 +16,9 @@
 namespace sally {
 namespace system {
 
+class state_formula;
+class transition_formula;
+
 /**
  * A state type identified by it's id (name) and it's type
  */
@@ -69,6 +72,34 @@ public:
   /** Transform the formula from class to another class */
   expr::term_ref change_formula_vars(var_class from, var_class to, expr::term_ref f) const;
 
+  /** Register the formula with the state */
+  void register_state_formula(const state_formula* f);
+
+  /** Unregister the formula with the state */
+  void unregister_state_formula(const state_formula* f);
+
+  /** Register the transition with the state */
+  void register_transition_formula(const transition_formula* f);
+
+  /** Unregister the transition with the state */
+  void unregister_transition_formula(const transition_formula* f);
+
+  typedef std::set<const state_formula*> formula_set;
+
+  /** Get the iterator to all formulas of this type */
+  formula_set::const_iterator state_formulas_begin() const;
+
+  /** Get the iterator to the end of formulas of this type */
+  formula_set::const_iterator state_formulas_end() const;
+
+  typedef std::set<const transition_formula*> transition_formula_set;
+
+  /** Get the iterator to all transition formulas of this type */
+  transition_formula_set::const_iterator transition_formulas_begin() const;
+
+  /** Get hte iterator to the end of transition formulas of this type */
+  transition_formula_set::const_iterator transition_formulas_end() const;
+
 private:
 
   /** The term manager */
@@ -97,6 +128,13 @@ private:
 
   /** Substitution map for NEXT -> CURRENT */
   expr::term_manager::substitution_map d_subst_next_current;
+
+  /** All state formulas of this type */
+  formula_set d_state_formulas;
+
+  /** ALl transition formulas of this type */
+  transition_formula_set d_transition_formulas;
+
 };
 
 std::ostream& operator << (std::ostream& out, const state_type& st);

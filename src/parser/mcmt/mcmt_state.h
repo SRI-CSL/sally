@@ -75,7 +75,7 @@ public:
    * Use the state type, i.e. declare the variables var_class.x, var_class.y, ...
    * If use_namespace is true, then "var_class." is not used in the name.
    */
-  void use_state_type(const system::state_type* state_type, system::state_type::var_class var_class, bool use_namespace);
+  void use_state_type(system::state_type* state_type, system::state_type::var_class var_class, bool use_namespace);
 
   /** Push a new scope for local declarations */
   void push_scope();

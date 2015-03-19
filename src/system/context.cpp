@@ -34,7 +34,7 @@ void context::add_state_type(std::string id, const std::vector<std::string>& var
   add_state_type(id, new state_type(tm(), id, type));
 }
 
-const state_type* context::get_state_type(std::string id) const {
+state_type* context::get_state_type(std::string id) const {
   if (!d_state_types.has_entry(id)) {
     throw exception(id + " not declared");
   }
@@ -50,12 +50,14 @@ void context::add_state_formula(std::string id, state_formula* sf) {
     delete sf; // Context owns it, so delete it
     throw exception(id + "already declared");
   }
-  return d_state_formulas.add_entry(id, sf);
+  d_state_formulas.add_entry(id, sf);
 }
 
 void context::add_state_formula(std::string id, std::string type_id, expr::term_ref f) {
-  const state_type* st = get_state_type(type_id);
-  add_state_formula(id, new state_formula(tm(), st, f));
+  state_type* st = get_state_type(type_id);
+  state_formula* sf = new state_formula(tm(), st, f);
+  sf->set_id(id);
+  add_state_formula(id, sf);
 }
 
 const state_formula* context::get_state_formula(std::string id) const {
@@ -69,16 +71,17 @@ bool context::has_state_formula(std::string id) const {
   return d_state_formulas.has_entry(id);
 }
 
-void context::add_transition_formula(std::string id, const transition_formula* tf) {
+void context::add_transition_formula(std::string id, transition_formula* tf) {
   if (d_transition_formulas.has_entry(id)) {
     delete tf;
     throw exception(id + " already declared");
   }
+  tf->set_id(id);
   d_transition_formulas.add_entry(id, tf);
 }
 
 void context::add_transition_formula(std::string id, std::string type_id, expr::term_ref f) {
-  const state_type* st = get_state_type(type_id);
+  state_type* st = get_state_type(type_id);
   add_transition_formula(id, new transition_formula(tm(), st, f));
 }
 
@@ -102,7 +105,7 @@ void context::add_transition_system(std::string id, transition_system* ts) {
 }
 
 void context::add_transition_system(std::string id, std::string type_id, std::string init_id, const std::vector<std::string>& transition_ids) {
-  const state_type* st = get_state_type(type_id);
+  state_type* st = get_state_type(type_id);
   const state_formula* init = get_state_formula(init_id);
   std::vector<const transition_formula*> transitions;
   for (size_t i = 0; i < transition_ids.size(); ++ i) {

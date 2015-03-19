@@ -43,7 +43,7 @@ public:
   void add_state_type(std::string id, state_type* st);
 
   /** Get the state type with the given id */
-  const state_type* get_state_type(std::string id) const;
+  state_type* get_state_type(std::string id) const;
 
   /** True if id exists */
   bool has_state_type(std::string id) const;
@@ -64,7 +64,7 @@ public:
   void add_transition_formula(std::string id, std::string type_id, expr::term_ref sf);
 
   /** Add a new state transition with the given id (to be managed by the context) */
-  void add_transition_formula(std::string id, const transition_formula* tf);
+  void add_transition_formula(std::string id, transition_formula* tf);
 
   /** Get the state transition formula with the given id */
   const transition_formula* get_transition_formula(std::string id) const;
@@ -99,7 +99,7 @@ private:
   expr::term_manager& d_term_manager;
 
   /** Symbol table for state types */
-  utils::symbol_table<const state_type*> d_state_types;
+  utils::symbol_table<state_type*> d_state_types;
 
   /** Symbol table for state formulas */
   utils::symbol_table<const state_formula*> d_state_formulas;

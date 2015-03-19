@@ -56,17 +56,17 @@ system::state_type* sal_state::mk_state_type(std::string id, const std::vector<s
 }
 
 system::state_formula* sal_state::mk_state_formula(std::string id, std::string type_id, expr::term_ref sf) const {
-  const system::state_type* st = ctx().get_state_type(type_id);
+  system::state_type* st = ctx().get_state_type(type_id);
   return new system::state_formula(tm(), st, sf);
 }
 
 system::transition_formula* sal_state::mk_transition_formula(std::string id, std::string type_id, expr::term_ref tf) const {
-  const system::state_type* st = ctx().get_state_type(type_id);
+  system::state_type* st = ctx().get_state_type(type_id);
   return new system::transition_formula(tm(), st, tf);
 }
 
 system::transition_system* sal_state::mk_transition_system(std::string id, std::string type_id, std::string init_id, const std::vector<std::string>& transition_ids) {
-  const system::state_type* st = ctx().get_state_type(type_id);
+  system::state_type* st = ctx().get_state_type(type_id);
   const system::state_formula* init = ctx().get_state_formula(init_id);
   std::vector<const system::transition_formula*> transitions;
   for (size_t i = 0; i < transition_ids.size(); ++ i) {
@@ -76,11 +76,11 @@ system::transition_system* sal_state::mk_transition_system(std::string id, std::
 }
 
 void sal_state::use_state_type(std::string id, system::state_type::var_class var_class, bool use_namespace) {
-  const system::state_type* st = d_context.get_state_type(id);
+  system::state_type* st = d_context.get_state_type(id);
   use_state_type(st, var_class, use_namespace);
 }
 
-void sal_state::use_state_type(const system::state_type* st, system::state_type::var_class var_class, bool use_namespace) {
+void sal_state::use_state_type(system::state_type* st, system::state_type::var_class var_class, bool use_namespace) {
 
   // Use the appropriate namespace
   st->use_namespace();
