@@ -7,5 +7,13 @@
 )
 
 (define-states sf_02 st 
-  (and (= x 0) sf_01)
+  (and (= x 1) sf_01)
+)
+
+(define-transition t_01 st
+  (implies state.sf_01 next.sf_02)
+)
+
+(define-transition t_02 st
+  (or (= next.x state.x) t_01)
 )

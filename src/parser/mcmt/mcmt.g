@@ -83,17 +83,15 @@ define_transition returns [parser::command* cmd = 0]
 @declarations {
   std::string id;
   std::string type_id;  
+  system::state_type* state_type;
 }
   : '(' 'define-transition'
       symbol[id, parser::MCMT_TRANSITION_FORMULA, false]
       symbol[type_id, parser::MCMT_STATE_TYPE, true] { 
-      	  STATE->push_scope();
-          STATE->use_state_type(type_id, system::state_type::STATE_CURRENT, STATE->lsal_extensions()); 
-          STATE->use_state_type(type_id, system::state_type::STATE_NEXT, false); 
+          state_type = STATE->ctx().get_state_type(type_id); 
       }
-      f = state_transition_formula[type_id]   { 
+      f = state_transition_formula[state_type]   { 
           $cmd = new parser::define_transition_command(id, STATE->mk_transition_formula(id, type_id, f)); 
-          STATE->pop_scope(); 
       }
     ')'
   ; 
@@ -187,8 +185,18 @@ state_formula[system::state_type* state_type] returns [expr::term_ref sf = expr:
   ;
 
 /** A state transition formula */
-state_transition_formula[std::string type_id] returns [expr::term_ref stf = expr::term_ref()]
-  : t = term { $stf = t; }
+state_transition_formula[system::state_type* state_type] returns [expr::term_ref stf = expr::term_ref()]
+  : // Use the state type 
+    { 
+        STATE->push_scope();
+        STATE->use_state_type_and_transitions(state_type);
+    } 
+    // Parse the term 
+    t = term { $stf = t; }
+    // Undeclare the variables 
+    {
+        STATE->pop_scope();
+    }
   ;
 
 /** SMT2 term */

@@ -140,7 +140,7 @@ void state_type::unregister_state_formula(const state_formula* f) {
 }
 
 void state_type::register_transition_formula(const transition_formula* f) {
-  d_transition_formulas.erase(f);
+  d_transition_formulas.insert(f);
 }
 
 void state_type::unregister_transition_formula(const transition_formula* f) {
@@ -164,6 +164,15 @@ state_type::transition_formula_set::const_iterator state_type::transition_formul
 /** Get hte iterator to the end of transition formulas of this type */
 state_type::transition_formula_set::const_iterator state_type::transition_formulas_end() const {
   return d_transition_formulas.end();
+}
+
+std::string state_type::get_canonical_name(std::string id, var_class vc) const {
+  // The name
+  std::string canonical = d_id + "::" + to_string(vc) + "." + id;
+  // Reduce using the term manager rules
+  canonical = d_tm.name_normalize(canonical);
+  // Return the name
+  return canonical;
 }
 
 }

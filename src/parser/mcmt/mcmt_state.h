@@ -77,6 +77,11 @@ public:
    */
   void use_state_type(system::state_type* state_type, system::state_type::var_class var_class, bool use_namespace);
 
+  /**
+   * Use the state type, both current, next, and the transitions.
+   */
+  void use_state_type_and_transitions(system::state_type* state_type);
+
   /** Push a new scope for local declarations */
   void push_scope();
 

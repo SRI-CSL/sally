@@ -116,8 +116,9 @@ void mcmt_state::use_state_type(system::state_type* st, system::state_type::var_
       if (var_class == system::state_type::STATE_NEXT) {
         f_term = st->change_formula_vars(system::state_type::STATE_CURRENT, var_class, f_term);
       }
-      // Get the id
-      std::string id = f->get_id();
+      // Get the id and turn it into a state type proper id
+      std::string id = st->get_canonical_name(f->get_id(), var_class);
+      // Add to variable table
       d_variables.add_entry(id, f_term);
     }
   }
@@ -126,6 +127,23 @@ void mcmt_state::use_state_type(system::state_type* st, system::state_type::var_
   tm().pop_namespace();
   if (use_namespace) {
     tm().pop_namespace();
+  }
+}
+
+void mcmt_state::use_state_type_and_transitions(system::state_type* st) {
+  // Use the current state
+  use_state_type(st, system::state_type::STATE_CURRENT, lsal_extensions());
+  // Use the next stat
+  use_state_type(st, system::state_type::STATE_NEXT, false);
+  // Use all the transition formulas
+  system::state_type::transition_formula_set::const_iterator it = st->transition_formulas_begin();
+  for (; it != st->transition_formulas_end(); ++ it) {
+    const system::transition_formula* f = *it;
+    // If the formula has an id, add it
+    if (!f->get_id().empty()) {
+      // Add to variable table
+      d_variables.add_entry(f->get_id(), f->get_formula());
+    }
   }
 }
 

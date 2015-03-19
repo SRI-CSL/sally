@@ -57,6 +57,9 @@ public:
   /** Use the namespace for the the var class (pop the namespace yourself)  */
   void use_namespace(var_class vc) const;
 
+  /** Given a variable name get the canonical name */
+  std::string get_canonical_name(std::string id, var_class vc) const;
+
   /** Get the variables of the type. */
   const std::vector<expr::term_ref>& get_variables(var_class vc) const;
 

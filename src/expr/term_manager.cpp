@@ -133,6 +133,10 @@ std::string term_manager::get_variable_name(const term& t) const {
   return d_tm->name_normalize(name);
 }
 
+std::string term_manager::name_normalize(std::string name) const {
+  return d_tm->name_normalize(name);
+}
+
 term_ref term_manager::mk_boolean_constant(bool value) {
   return d_tm->mk_term<CONST_BOOL>(value);
 }

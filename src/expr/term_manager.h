@@ -223,14 +223,17 @@ public:
   /** Pop the last added namespace */
   void pop_namespace();
 
+  /** Set a transformer for variable names (set 0 to unset) */
+  void set_name_transformer(const utils::name_transformer* transformer);
+
+  /** Given a name, reduce it using the namespaces and the name transformer */
+  std::string name_normalize(std::string name) const;
+
   /** The substitution map */
   typedef boost::unordered_map<term_ref, term_ref, term_ref_hasher> substitution_map;
 
   /** Replaces terms from t that appear in the map. */
   term_ref substitute(term_ref t, const substitution_map& subst);
-
-  /** Set a transformer for variable names (set 0 to unset) */
-  void set_name_transformer(const utils::name_transformer* transformer);
 
   /** Get the current name transformer */
   const utils::name_transformer* get_name_transformer() const;
