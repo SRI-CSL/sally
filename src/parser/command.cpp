@@ -53,7 +53,7 @@ void declare_state_type_command::to_stream(std::ostream& out) const {
 }
 
 void define_states_command::run(system::context* ctx, engine* e) {
-  ctx->add_state_formula(d_id, d_formula);
+  ctx->add_state_formula(d_formula);
   d_formula = 0;
 }
 
@@ -67,7 +67,7 @@ void define_states_command::to_stream(std::ostream& out) const  {
 }
 
 void define_transition_command::run(system::context* ctx, engine* e) {
-  ctx->add_transition_formula(d_id, d_formula);
+  ctx->add_transition_formula(d_formula);
   d_formula = 0;
 }
 

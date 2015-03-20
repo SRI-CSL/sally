@@ -67,17 +67,8 @@ system::state_formula* mcmt_state::mk_state_formula(std::string id, std::string 
   return result;
 }
 
-system::transition_formula* mcmt_state::mk_transition_formula(std::string id, std::string type_id, expr::term_ref tf) const {
-  system::state_type* st = ctx().get_state_type(type_id);
-  system::transition_formula* result = new system::transition_formula(tm(), st, tf);
-  result->set_id(id);
-  return result;
-}
-
-system::transition_system* mcmt_state::mk_transition_system(std::string id, std::string type_id, std::string init_id, std::string transition_id) {
-  system::state_type* st = ctx().get_state_type(type_id);
-  const system::state_formula* init = ctx().get_state_formula(init_id);
-  const system::transition_formula* transition = ctx().get_transition_formula(transition_id);
+system::transition_system* mcmt_state::mk_transition_system(std::string id, system::state_formula* init, system::transition_formula* transition) {
+  system::state_type* st = init->get_state_type();
   return new system::transition_system(st, init, transition);
 }
 

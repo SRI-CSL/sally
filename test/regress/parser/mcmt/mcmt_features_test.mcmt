@@ -1,7 +1,5 @@
-;; State type
 (define-state-type st ((x Real) (y Real)))
 
-;; Some state formulas
 (define-states sf_01 st 
   (= x 0)
 )
@@ -18,6 +16,7 @@
   (or (= next.x state.y) t_01)
 )
 
-(define-transition-system s_01 st t_01)
+(define-transition-system s_02 st sf_01 (or t_01 t_02))  
 
-(define-transition-system s_02 st (or t_01 t_02))  
+(define-transition-system s_01 st (or sf_01 (> x 1)) t_01)
+

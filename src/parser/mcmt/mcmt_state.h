@@ -59,11 +59,8 @@ public:
   /** Create a new state formula */
   system::state_formula* mk_state_formula(std::string id, std::string type_id, expr::term_ref sf) const;
 
-  /** Create a new transition formula */
-  system::transition_formula* mk_transition_formula(std::string id, std::string type_id, expr::term_ref tf) const;
-
   /** Create a new transition system */
-  system::transition_system* mk_transition_system(std::string id, std::string type_id, std::string init_id, std::string transition_id);
+  system::transition_system* mk_transition_system(std::string id, system::state_formula* init, system::transition_formula* transition);
 
   /**
    * Use the state type, i.e. declare the variables var_class.x, var_class.y, ...

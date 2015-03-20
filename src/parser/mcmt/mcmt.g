@@ -113,7 +113,7 @@ define_transition_system returns [parser::command* cmd = 0]
       initial_states = state_formula[state_type]
       transition_relation = state_transition_formula[state_type]    
       {  
-      	system::transition_system* T = STATE->mk_transition_system(id, type_id, initial_states->get_id(), transition_relation->get_id()); 
+      	system::transition_system* T = STATE->mk_transition_system(id, initial_states, transition_relation); 
         $cmd = new parser::define_transition_system_command(id, T);
       } 
     ')'

@@ -56,7 +56,7 @@ public:
   }
 
   /** Get the state type */
-  const state_type* get_state_type() const {
+  state_type* get_state_type() const {
     return d_state_type;
   }
 

@@ -45,19 +45,19 @@ bool context::has_state_type(std::string id) const {
   return d_state_types.has_entry(id);
 }
 
-void context::add_state_formula(std::string id, state_formula* sf) {
-  if (d_state_formulas.has_entry(id)) {
+void context::add_state_formula(state_formula* sf) {
+  if (d_state_formulas.has_entry(sf->get_id())) {
     delete sf; // Context owns it, so delete it
-    throw exception(id + "already declared");
+    throw exception(sf->get_id() + "already declared");
   }
-  d_state_formulas.add_entry(id, sf);
+  d_state_formulas.add_entry(sf->get_id(), sf);
 }
 
 void context::add_state_formula(std::string id, std::string type_id, expr::term_ref f) {
   state_type* st = get_state_type(type_id);
   state_formula* sf = new state_formula(tm(), st, f);
   sf->set_id(id);
-  add_state_formula(id, sf);
+  add_state_formula(sf);
 }
 
 state_formula* context::get_state_formula(std::string id) const {
@@ -71,18 +71,19 @@ bool context::has_state_formula(std::string id) const {
   return d_state_formulas.has_entry(id);
 }
 
-void context::add_transition_formula(std::string id, transition_formula* tf) {
-  if (d_transition_formulas.has_entry(id)) {
+void context::add_transition_formula(transition_formula* tf) {
+  if (d_transition_formulas.has_entry(tf->get_id())) {
     delete tf;
-    throw exception(id + " already declared");
+    throw exception(tf->get_id() + " already declared");
   }
-  tf->set_id(id);
-  d_transition_formulas.add_entry(id, tf);
+  d_transition_formulas.add_entry(tf->get_id(), tf);
 }
 
 void context::add_transition_formula(std::string id, std::string type_id, expr::term_ref f) {
   state_type* st = get_state_type(type_id);
-  add_transition_formula(id, new transition_formula(tm(), st, f));
+  transition_formula* tf = new transition_formula(tm(), st, f);
+  tf->set_id(id);
+  add_transition_formula(tf);
 }
 
 transition_formula* context::get_transition_formula(std::string id) const {

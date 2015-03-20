@@ -52,7 +52,7 @@ public:
   void add_state_formula(std::string id, std::string type_id, expr::term_ref sf);
 
   /** Add a new state formula with the given id (to be managed by the context) */
-  void add_state_formula(std::string id, state_formula* sf);
+  void add_state_formula(state_formula* sf);
 
   /** Get the state formula with the given id */
   state_formula* get_state_formula(std::string id) const;
@@ -64,7 +64,7 @@ public:
   void add_transition_formula(std::string id, std::string type_id, expr::term_ref sf);
 
   /** Add a new state transition with the given id (to be managed by the context) */
-  void add_transition_formula(std::string id, transition_formula* tf);
+  void add_transition_formula(transition_formula* tf);
 
   /** Get the state transition formula with the given id */
   transition_formula* get_transition_formula(std::string id) const;
