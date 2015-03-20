@@ -16,11 +16,8 @@ void transition_system::to_stream(std::ostream& out) const {
   out << "[" << std::endl;
   out << "type: " << *d_state_type << std::endl;
   out << "I: " << d_initial_states->get_formula() << std::endl;
-  out << "T: [" << std::endl;
-  for (size_t i = 0; i < d_transition_relation.size(); ++ i) {
-    out << "\t" << d_transition_relation[i]->get_formula() << std::endl;
-  }
-  out << "]]";
+  out << "T: " << d_transition_relation->get_formula() << std::endl;
+  out << "]";
 }
 
 std::ostream& operator << (std::ostream& out, const transition_system& T) {
@@ -30,9 +27,7 @@ std::ostream& operator << (std::ostream& out, const transition_system& T) {
 
 expr::term_ref transition_system::get_transition_relation() const {
   std::vector<expr::term_ref> transitions;
-  for (size_t i = 0; i < d_transition_relation.size(); ++ i) {
-    transitions.push_back(d_transition_relation[i]->get_formula());
-  }
+  transitions.push_back(d_transition_relation->get_formula());
   expr::term_ref transition = d_state_type->tm().mk_or(transitions);
   if (has_assumptions()) {
     expr::term_ref A = get_assumption();

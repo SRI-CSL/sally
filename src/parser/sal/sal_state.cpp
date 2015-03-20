@@ -65,14 +65,11 @@ system::transition_formula* sal_state::mk_transition_formula(std::string id, std
   return new system::transition_formula(tm(), st, tf);
 }
 
-system::transition_system* sal_state::mk_transition_system(std::string id, std::string type_id, std::string init_id, const std::vector<std::string>& transition_ids) {
+system::transition_system* sal_state::mk_transition_system(std::string id, std::string type_id, std::string init_id, std::string transition_id) {
   system::state_type* st = ctx().get_state_type(type_id);
   const system::state_formula* init = ctx().get_state_formula(init_id);
-  std::vector<const system::transition_formula*> transitions;
-  for (size_t i = 0; i < transition_ids.size(); ++ i) {
-    transitions.push_back(ctx().get_transition_formula(transition_ids[i]));
-  }
-  return new system::transition_system(st, init, transitions);
+  const system::transition_formula* transition = ctx().get_transition_formula(transition_id);
+  return new system::transition_system(st, init, transition);
 }
 
 void sal_state::use_state_type(std::string id, system::state_type::var_class var_class, bool use_namespace) {

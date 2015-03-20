@@ -236,9 +236,7 @@ command* btor_state::finalize() const {
   command* transition_define = new define_transition_command("transition", transition_formula);
 
   // Define the transition system
-  std::vector<const system::transition_formula*> transitions;
-  transitions.push_back(transition_formula);
-  system::transition_system* transition_system = new system::transition_system(state_type, init_formula, transitions);
+  system::transition_system* transition_system = new system::transition_system(state_type, init_formula, transition_formula);
   command* transition_system_define = new define_transition_system_command("T", transition_system);
 
   // Query

@@ -74,14 +74,11 @@ system::transition_formula* mcmt_state::mk_transition_formula(std::string id, st
   return result;
 }
 
-system::transition_system* mcmt_state::mk_transition_system(std::string id, std::string type_id, std::string init_id, const std::vector<std::string>& transition_ids) {
+system::transition_system* mcmt_state::mk_transition_system(std::string id, std::string type_id, std::string init_id, std::string transition_id) {
   system::state_type* st = ctx().get_state_type(type_id);
   const system::state_formula* init = ctx().get_state_formula(init_id);
-  std::vector<const system::transition_formula*> transitions;
-  for (size_t i = 0; i < transition_ids.size(); ++ i) {
-    transitions.push_back(ctx().get_transition_formula(transition_ids[i]));
-  }
-  return new system::transition_system(st, init, transitions);
+  const system::transition_formula* transition = ctx().get_transition_formula(transition_id);
+  return new system::transition_system(st, init, transition);
 }
 
 void mcmt_state::use_state_type(std::string id, system::state_type::var_class var_class, bool use_namespace) {
@@ -155,35 +152,38 @@ void mcmt_state::pop_scope() {
   d_variables.pop_scope();
 }
 
-void mcmt_state::ensure_declared(std::string id, mcmt_object type, bool declared) {
-  bool ok = declared;
+bool mcmt_state::is_declared(std::string id, mcmt_object type) const {
   switch (type) {
   case MCMT_VARIABLE:
-    ok = d_variables.has_entry(id);
+    return d_variables.has_entry(id);
     break;
   case MCMT_TYPE:
-    ok = d_types.has_entry(id);
+    return d_types.has_entry(id);
     break;
   case MCMT_STATE_TYPE:
-    ok = d_context.has_state_type(id);
+    return d_context.has_state_type(id);
     break;
   case MCMT_STATE_FORMULA:
-    ok = d_context.has_state_formula(id);
+    return d_context.has_state_formula(id);
     break;
   case MCMT_TRANSITION_FORMULA:
-    ok = d_context.has_transition_formula(id);
+    return d_context.has_transition_formula(id);
     break;
   case MCMT_TRANSITION_SYSTEM:
-    ok = d_context.has_transition_system(id);
+    return d_context.has_transition_system(id);
     break;
   case MCMT_OBJECT_LAST:
-    // Always noop
-    return;
+    // Always no op
+    return false;
   default:
     assert(false);
   }
 
-  if (ok != declared) {
+  return false;
+}
+
+void mcmt_state::ensure_declared(std::string id, mcmt_object type, bool declared) const {
+  if (declared != is_declared(id, type)) {
     if (declared) throw parser_exception(id + " not declared");
     else throw parser_exception(id + " already declared");
   }

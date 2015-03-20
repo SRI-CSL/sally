@@ -81,6 +81,14 @@ void define_transition_command::to_stream(std::ostream& out) const {
   out << "]";
 }
 
+define_transition_command::define_transition_command(std::string id, system::transition_formula* formula)
+: command(DEFINE_TRANSITION)
+, d_id(id)
+, d_formula(formula)
+{
+  assert(d_id == id);
+}
+
 void define_transition_system_command::run(system::context* ctx, engine* e) {
   ctx->add_transition_system(d_id, d_system);
   d_system = 0;

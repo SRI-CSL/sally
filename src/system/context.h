@@ -55,7 +55,7 @@ public:
   void add_state_formula(std::string id, state_formula* sf);
 
   /** Get the state formula with the given id */
-  const state_formula* get_state_formula(std::string id) const;
+  state_formula* get_state_formula(std::string id) const;
 
   /** True if id exists */
   bool has_state_formula(std::string id) const;
@@ -67,7 +67,7 @@ public:
   void add_transition_formula(std::string id, transition_formula* tf);
 
   /** Get the state transition formula with the given id */
-  const transition_formula* get_transition_formula(std::string id) const;
+  transition_formula* get_transition_formula(std::string id) const;
 
   /** True if id exists */
   bool has_transition_formula(std::string id) const;
@@ -76,7 +76,7 @@ public:
   void add_transition_system(std::string id, transition_system* ts);
 
   /** Add a new state transition system with the givwen id (to be managed by the context) */
-  void add_transition_system(std::string id, std::string type_id, std::string init_id, const std::vector<std::string>& transition_ids);
+  void add_transition_system(std::string id, std::string type_id, std::string init_id, std::string transition_id);
 
   /** Add an assumption to the given transition system (takes over sf). */
   void add_assumption_to(std::string id, state_formula* sf);
@@ -102,10 +102,10 @@ private:
   utils::symbol_table<state_type*> d_state_types;
 
   /** Symbol table for state formulas */
-  utils::symbol_table<const state_formula*> d_state_formulas;
+  utils::symbol_table<state_formula*> d_state_formulas;
 
   /** Symbol table for state transition formulas */
-  utils::symbol_table<const transition_formula*> d_transition_formulas;
+  utils::symbol_table<transition_formula*> d_transition_formulas;
 
   /** Symbol table for transition systems */
   utils::symbol_table<transition_system*> d_transition_systems;

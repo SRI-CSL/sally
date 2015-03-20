@@ -137,11 +137,7 @@ class define_transition_command : public command {
 public:
 
   /** Command to define a transition with given id */
-  define_transition_command(std::string id, system::transition_formula* formula)
-  : command(DEFINE_TRANSITION)
-  , d_id(id)
-  , d_formula(formula)
-  {}
+  define_transition_command(std::string id, system::transition_formula* formula);
 
   /** Deletes the transition if not used */
   ~define_transition_command();

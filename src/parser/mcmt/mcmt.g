@@ -72,8 +72,9 @@ define_states returns [parser::command* cmd = 0]
         symbol[type_id, parser::MCMT_STATE_TYPE, true] {
         	state_type = STATE->ctx().get_state_type(type_id); 
         }
-        f = state_formula[state_type] { 
-        	$cmd = new parser::define_states_command(id, STATE->mk_state_formula(id, type_id, f)); 
+        sf = state_formula[state_type] { 
+        	sf->set_id(id);
+        	$cmd = new parser::define_states_command(id, sf); 
         }
     ')'
   ; 
@@ -90,8 +91,9 @@ define_transition returns [parser::command* cmd = 0]
       symbol[type_id, parser::MCMT_STATE_TYPE, true] { 
           state_type = STATE->ctx().get_state_type(type_id); 
       }
-      f = state_transition_formula[state_type]   { 
-          $cmd = new parser::define_transition_command(id, STATE->mk_transition_formula(id, type_id, f)); 
+      f = state_transition_formula[state_type] {
+      	  f->set_id(id); 
+          $cmd = new parser::define_transition_command(id, f); 
       }
     ')'
   ; 
@@ -102,29 +104,20 @@ define_transition_system returns [parser::command* cmd = 0]
   std::string id;
   std::string type_id;  
   std::string initial_id;
-  std::vector<std::string> transitions;  
+  std::vector<std::string> transitions;
+  system::state_type* state_type;
 }
   : '(' 'define-transition-system'
       symbol[id, parser::MCMT_TRANSITION_SYSTEM, false]                    
-      symbol[type_id, parser::MCMT_STATE_TYPE, true]
-      symbol[initial_id, parser::MCMT_STATE_FORMULA, true]            
-      transition_list[transitions]  {  
-        $cmd = new parser::define_transition_system_command(id, STATE->mk_transition_system(id, type_id, initial_id, transitions));
+      symbol[type_id, parser::MCMT_STATE_TYPE, true] { state_type = STATE->ctx().get_state_type(type_id); }
+      initial_states = state_formula[state_type]
+      transition_relation = state_transition_formula[state_type]    
+      {  
+      	system::transition_system* T = STATE->mk_transition_system(id, type_id, initial_states->get_id(), transition_relation->get_id()); 
+        $cmd = new parser::define_transition_system_command(id, T);
       } 
     ')'
   ; 
-
-/** A list of transitions */
-transition_list[std::vector<std::string>& transitions] 
-@declarations {
-  std::string id;
-} 
-  : '(' (
-    symbol[id, parser::MCMT_TRANSITION_FORMULA, true] { 
-        transitions.push_back(id); 
-    }
-  	)+ ')'
-  ;
 
 /** Assumptions  */
 assume returns [parser::command* cmd = 0]
@@ -137,7 +130,7 @@ assume returns [parser::command* cmd = 0]
         state_type = STATE->ctx().get_transition_system(id)->get_state_type();
     }
     f = state_formula[state_type] { 
-    	$cmd = new parser::assume_command(STATE->ctx(), id, new system::state_formula(STATE->tm(),  state_type, f));
+    	$cmd = new parser::assume_command(STATE->ctx(), id, f);
     }
     ')'
   ; 
@@ -153,7 +146,7 @@ query returns [parser::command* cmd = 0]
         state_type = STATE->ctx().get_transition_system(id)->get_state_type();
     }
     f = state_formula[state_type] { 
-    	$cmd = new parser::query_command(STATE->ctx(), id, new system::state_formula(STATE->tm(), state_type, f));
+    	$cmd = new parser::query_command(STATE->ctx(), id, f);
     }
     ')'
   ; 
@@ -170,38 +163,53 @@ define_constant
   ; 
 
 /** A state formula */
-state_formula[system::state_type* state_type] returns [expr::term_ref sf = expr::term_ref()]
-  : // Declare state variables 
+state_formula[system::state_type* state_type] returns [system::state_formula* sf = 0]
+options { greedy = true; }
+@declarations {
+  std::string sf_id;
+}
+  : symbol[sf_id, parser::MCMT_OBJECT_LAST, false] { STATE->is_declared(sf_id, parser::MCMT_STATE_FORMULA) }?
+    { $sf = STATE->ctx().get_state_formula(sf_id); }  
+  |  // Declare state variables 
     { 
-  	  	STATE->push_scope(); 
-  	  	STATE->use_state_type(state_type, system::state_type::STATE_CURRENT, true); 
-  	}      
+        STATE->push_scope(); 
+        STATE->use_state_type(state_type, system::state_type::STATE_CURRENT, true); 
+    }      
     // Parse the actual formula
-    t = term { $sf = t; } 
-    // Undeclare the variables 
+    sf_term = term  
+    // Undeclare the variables and return the formula
     { 
    		STATE->pop_scope(); 
+   		$sf = new system::state_formula(STATE->tm(),  state_type, sf_term);
     }
   ;
 
+
 /** A state transition formula */
-state_transition_formula[system::state_type* state_type] returns [expr::term_ref stf = expr::term_ref()]
-  : // Use the state type 
+state_transition_formula[system::state_type* state_type] returns [system::transition_formula* tf = 0]
+options { greedy = true; }
+@declarations {
+  std::string tf_id;
+}
+  : symbol[tf_id, parser::MCMT_OBJECT_LAST, false] { STATE->is_declared(tf_id, parser::MCMT_TRANSITION_FORMULA) }?
+    { $tf = STATE->ctx().get_transition_formula(tf_id); }
+  | // Use the state type 
     { 
         STATE->push_scope();
         STATE->use_state_type_and_transitions(state_type);
     } 
     // Parse the term 
-    t = term { $stf = t; }
-    // Undeclare the variables 
+    tf_term = term 
+    // Undeclare the variables and make the transition
     {
         STATE->pop_scope();
+        $tf = new system::transition_formula(STATE->tm(), state_type, tf_term);
     }
   ;
 
 /** SMT2 term */
 term returns [expr::term_ref t = expr::term_ref()]
-@declarations{
+@declarations {
   std::string id;
   std::vector<expr::term_ref> children;
 } 

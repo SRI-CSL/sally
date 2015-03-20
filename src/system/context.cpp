@@ -60,7 +60,7 @@ void context::add_state_formula(std::string id, std::string type_id, expr::term_
   add_state_formula(id, sf);
 }
 
-const state_formula* context::get_state_formula(std::string id) const {
+state_formula* context::get_state_formula(std::string id) const {
   if (!d_state_formulas.has_entry(id)) {
     throw exception(id + " not declered");
   }
@@ -85,7 +85,7 @@ void context::add_transition_formula(std::string id, std::string type_id, expr::
   add_transition_formula(id, new transition_formula(tm(), st, f));
 }
 
-const transition_formula* context::get_transition_formula(std::string id) const {
+transition_formula* context::get_transition_formula(std::string id) const {
   if (!d_transition_formulas.has_entry(id)) {
     throw exception(id + " not declared");
   }
@@ -104,14 +104,11 @@ void context::add_transition_system(std::string id, transition_system* ts) {
   d_transition_systems.add_entry(id, ts);
 }
 
-void context::add_transition_system(std::string id, std::string type_id, std::string init_id, const std::vector<std::string>& transition_ids) {
+void context::add_transition_system(std::string id, std::string type_id, std::string init_id, std::string transition_id) {
   state_type* st = get_state_type(type_id);
   const state_formula* init = get_state_formula(init_id);
-  std::vector<const transition_formula*> transitions;
-  for (size_t i = 0; i < transition_ids.size(); ++ i) {
-    transitions.push_back(get_transition_formula(transition_ids[i]));
-  }
-  add_transition_system(id, new transition_system(st, init, transitions));
+  const transition_formula* transition = get_transition_formula(transition_id);
+  add_transition_system(id, new transition_system(st, init, transition));
 }
 
 const system::transition_system* context::get_transition_system(std::string id) const {

@@ -15,5 +15,9 @@
 )
 
 (define-transition t_02 st
-  (or (= next.x state.x) t_01)
+  (or (= next.x state.y) t_01)
 )
+
+(define-transition-system s_01 st t_01)
+
+(define-transition-system s_02 st (or t_01 t_02))  

@@ -63,7 +63,7 @@ public:
   system::transition_formula* mk_transition_formula(std::string id, std::string type_id, expr::term_ref tf) const;
 
   /** Create a new transition system */
-  system::transition_system* mk_transition_system(std::string id, std::string type_id, std::string init_id, const std::vector<std::string>& transition_ids);
+  system::transition_system* mk_transition_system(std::string id, std::string type_id, std::string init_id, std::string transition_id);
 
   /**
    * Use the state type, i.e. declare the variables var_class.x, var_class.y, ...
@@ -111,7 +111,10 @@ public:
   std::string token_text(pANTLR3_COMMON_TOKEN token);
 
   /** Ensure that the object is declared = true/false locally, throw exception otherwise */
-  void ensure_declared(std::string id, mcmt_object type, bool declared);
+  void ensure_declared(std::string id, mcmt_object type, bool declared) const;
+
+  /** Check if declared */
+  bool is_declared(std::string id, mcmt_object type) const;
 
   /** Are we using lsal extensions (a' for next.a, a for state.a, cond operator) */
   bool lsal_extensions() const;

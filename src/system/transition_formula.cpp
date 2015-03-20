@@ -8,6 +8,7 @@
 #include "system/transition_formula.h"
 
 #include <cassert>
+#include <sstream>
 #include <iostream>
 
 namespace sally {
@@ -28,6 +29,12 @@ transition_formula::transition_formula(expr::term_manager& tm, state_type* st, e
 , d_transition_formula(tm, tf)
 {
   assert(st->is_transition_formula(tf));
+
+  static size_t transition_formula_count = 0;
+  std::stringstream ss;
+  ss << "__anonymous_transition_formula_" << transition_formula_count ++;
+  d_id = ss.str();
+
   d_state_type->register_transition_formula(this);
 }
 
