@@ -8,6 +8,8 @@
   (and (= x 1) sf_01)
 )
 
+(define-states sf_03 st sf_02)
+
 (define-transition t_01 st
   (implies state.sf_01 next.sf_02)
 )

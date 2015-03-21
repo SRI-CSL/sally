@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <set>
 #include <list>
 #include <vector>
 #include <boost/unordered_map.hpp>
@@ -27,12 +28,13 @@ class symbol_table {
   struct symbol_table_entry {
     enum { is_pointer = false };
     static void free(T1& t) {}
+    static void free(const T1& t) {}
   };
 
   template<typename T1>
   struct symbol_table_entry<T1*> {
     enum { is_pointer = true };
-    static void free(T1*& t) { delete t; t = 0; }
+    static void free(T1* t) { delete t; }
   };
 
   /** Map from names to lists of entries */
@@ -62,10 +64,14 @@ public:
 
   ~symbol_table() {
     if (free_pointers && symbol_table_entry<T>::is_pointer) {
+      std::set<T> to_delete;
       for (iterator it = d_table.begin(); it != d_table.end(); ++ it) {
         for (T_list_iterator l_it = it->second.begin(); l_it != it->second.end(); ++ l_it) {
-          symbol_table_entry<T>::free(*l_it);
+          to_delete.insert(*l_it);
         }
+      }
+      for (typename std::set<T>::iterator it = to_delete.begin(); it != to_delete.end(); ++ it) {
+        symbol_table_entry<T>::free(*it);
       }
     }
   }
