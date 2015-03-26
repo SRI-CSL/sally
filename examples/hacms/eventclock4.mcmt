@@ -1,0 +1,268 @@
+ ;; CONTROL_SELECT : TYPE = {NONE, ON, OFF};
+(define-constant NONE 0)
+(define-constant ON 1)
+(define-constant OFF 2)
+
+;; STATE1 : TYPE = {INIT, WAIT, ENGAGED};
+(define-constant INIT 0)
+(define-constant WAIT 1)
+(define-constant ENGAGED 2)
+
+;; STATE2 : TYPE = {IDLE, ACTIVE};
+(define-constant IDLE 0)
+(define-constant ACTIVE 1)
+
+;; State type (all TCCs added to the assumptions)
+(define-state-type state_type (
+      (count Real)
+      (latch Bool)
+      (request Real)
+      (request_out Real)
+      (response Bool)
+      (response_out Bool)
+      (select Real)
+      (state!1 Real)
+      (state!2 Real)
+      (time Real)
+      (time_arr!0 Real)
+      (time_arr!1 Real)
+      (time_arr!2 Real)
+      (time_arr!3 Real)
+      (timer1 Real)
+      (timer2 Real)
+      (trigger Bool)
+      (value Real)
+ 
+))
+
+;; Initial states
+(define-states initial_states state_type 
+        (and
+          (= state!1 INIT)
+          (= request NONE)
+          (= count 0)
+          (and (not (< time_arr!0 0)) (< time_arr!0 20))
+          true
+          (= latch false)
+          (= timer1 (- 1))
+          (= state!2 IDLE)
+          (= value 0)
+          (= response false)
+          (and (not (< time_arr!1 0)) (< time_arr!1 20))
+          (= timer2 (- 1))
+          (= request_out NONE)
+          (and
+            (not (<= time_arr!2 time_arr!0))
+            (<= time_arr!2 (+ time_arr!0 10)))
+          (= response_out false)
+          (and
+            (not (<= time_arr!3 time_arr!1))
+            (<= time_arr!3 (+ time_arr!1 10)))
+          (= time 0)))
+          
+(define-transition transition state_type  
+        (let ((cs!186 (+ time 20))
+              (cs!187 (= count' count))
+              (cs!189 (= request' request))
+              (cs!191 (= latch' latch))
+              (cs!192 (= trigger' trigger))
+              (cs!193 (= timer1' timer1))
+              (cs!195 (= response' response))
+              (cs!196 (= value' value))
+              (cs!198 (= timer2' timer2))
+              (cs!199 (= request_out' request_out))
+              (cs!201 (= response_out' response_out))
+              (cs!203 (= state!1' WAIT))
+              (cs!204 (= request' ON))
+              (cs!205 (not response_out))
+              (cs!206 (< count 1))
+              (cs!208 (= select OFF))
+              (cs!209 (= state!1' INIT))
+              (cs!210 (= request' OFF))
+              (cs!211 (/= select OFF))
+              (cs!213 (= state!1' ENGAGED))
+              (cs!214 (= request' NONE))
+              (cs!215 (= count' 0))
+              (cs!216 (= select ON))
+              (cs!217 (/= select ON))
+              (cs!219 (= state!2' IDLE))
+              (cs!221 (= value' 0))
+              (cs!222 (= response' false))
+              (cs!224 (= state!2' ACTIVE))
+              (cs!225 (and (not (<= value' 0)) (< value' 5)))
+              (cs!226 (= response' true))
+              (cs!228 (<= value 0)))
+          (let ((cs!188 (= state!1' state!1))
+                (cs!190 (= time_arr!0' time_arr!0))
+                (cs!194 (= state!2' state!2))
+                (cs!197 (= time_arr!1' time_arr!1))
+                (cs!200 (= time_arr!2' time_arr!2))
+                (cs!202 (= time_arr!3' time_arr!3))
+                (cs!207 (= state!1 WAIT))
+                (cs!212 (= state!1 ENGAGED))
+                (cs!218 (= state!2 IDLE))
+                (cs!220 (= state!1 INIT))
+                (cs!223 (= state!2 ACTIVE))
+                (cs!227 (- cs!186 0)))
+            (or
+              (and
+                (or
+                  (and
+                    (or
+                      (and cs!216 cs!220 cs!203 cs!204 cs!215)
+                      (and cs!217 cs!220 cs!209 cs!214 cs!215)
+                      (and cs!208 cs!207 cs!209 cs!210 cs!215)
+                      (and
+                        cs!211
+                        cs!205
+                        cs!207
+                        cs!206
+                        cs!203
+                        cs!204
+                        (= count' (+ count 1)))
+                      (and cs!211 cs!205 cs!207 (not cs!206) cs!209 cs!210 cs!215)
+                      (and cs!211 response_out cs!207 cs!213 cs!214 cs!215)
+                      (and cs!208 cs!212 cs!209 cs!210 cs!215)
+                      (and cs!211 cs!212 cs!213 cs!214 cs!215))
+                    (= time time_arr!0)
+                    (and (not (< time_arr!0' cs!227)) (<= time_arr!0' cs!186))
+                    (or
+                      (and
+                        cs!216
+                        trigger
+                        (not latch)
+                        (= timer1 (- 1))
+                        (= timer1' time)
+                        (= latch' true)
+                        (= trigger' false))
+                      (and
+                        (or cs!217 (not trigger) latch (/= timer1 (- 1)))
+                        cs!193
+                        true
+                        cs!191))
+                    cs!194
+                    cs!195
+                    cs!196
+                    cs!197
+                    cs!198
+                    cs!199
+                    cs!200
+                    cs!201
+                    cs!202)
+                  (and
+                    (or
+                      (and (= request_out ON) cs!218 cs!224 cs!225 cs!226)
+                      (and (/= request_out ON) cs!218 cs!219 cs!221 cs!222)
+                      (and (= request_out OFF) cs!223 cs!219 cs!221 cs!222)
+                      (and (/= request_out OFF) cs!223 cs!224 cs!225 cs!226))
+                    (= time time_arr!1)
+                    (and (not (< time_arr!1' cs!227)) (<= time_arr!1' cs!186))
+                    (or
+                      (and (not cs!228) latch (= timer2 (- 1)) (= timer2' time))
+                      (and (or cs!228 (not latch) (/= timer2 (- 1))) cs!198))
+                    cs!187
+                    cs!188
+                    cs!189
+                    cs!190
+                    cs!191
+                    cs!192
+                    cs!193
+                    cs!199
+                    cs!200
+                    cs!201
+                    cs!202)
+                  (and
+                    (= time time_arr!2)
+                    (= request_out' request)
+                    (and
+                      (not (<= time_arr!2' time_arr!0))
+                      (<= time_arr!2' (+ time_arr!0 10)))
+                    cs!187
+                    cs!188
+                    cs!189
+                    cs!190
+                    cs!191
+                    cs!192
+                    cs!193
+                    cs!194
+                    cs!195
+                    cs!196
+                    cs!197
+                    cs!198
+                    cs!201
+                    cs!202)
+                  (and
+                    (= time time_arr!3)
+                    (= response_out' response)
+                    (and
+                      (not (<= time_arr!3' time_arr!1))
+                      (<= time_arr!3' (+ time_arr!1 10)))
+                    cs!187
+                    cs!188
+                    cs!189
+                    cs!190
+                    cs!191
+                    cs!192
+                    cs!193
+                    cs!194
+                    cs!195
+                    cs!196
+                    cs!197
+                    cs!198
+                    cs!199
+                    cs!200))
+                (= time' time))
+              (and
+                (< time time_arr!0)
+                (< time time_arr!1)
+                (< time time_arr!2)
+                (< time time_arr!3)
+                (and
+                  (<= time' time_arr!0)
+                  (<= time' time_arr!1)
+                  (<= time' time_arr!2)
+                  (<= time' time_arr!3)
+                  (or
+                    (= time' time_arr!0)
+                    (= time' time_arr!1)
+                    (= time' time_arr!2)
+                    (= time' time_arr!3)))
+                cs!187
+                cs!188
+                cs!189
+                cs!190
+                cs!191
+                cs!192
+                cs!193
+                cs!194
+                cs!195
+                cs!196
+                cs!197
+                cs!198
+                cs!199
+                cs!200
+                cs!201
+                cs!202)))))
+
+;; Transition system 
+(define-transition-system T state_type
+  initial_states
+  (transition)
+)
+
+;; TCCs
+;; CONTROL_SELECT : TYPE = {NONE, ON, OFF};
+;; STATE1 : TYPE = {INIT, WAIT, ENGAGED};
+;; STATE2 : TYPE = {IDLE, ACTIVE};
+(assume T (and
+      (or (= request NONE) (= request ON) (= request OFF))
+      (or (= request_out NONE) (= request_out ON) (= request_out OFF))
+      (or (= select NONE) (= select ON) (= select OFF))
+      (or (= state!1 INIT) (= state!1 WAIT) (= state!1 ENGAGED))
+      (or (= state!2 IDLE) (= state!2 ACTIVE))
+))
+
+;; Query
+;; The property
+
+(query T (< timer2 (+ timer1 200)))

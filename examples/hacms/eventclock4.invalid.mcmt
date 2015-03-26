@@ -62,7 +62,7 @@
                     
 ;; Transition relation
 (define-transition transition state_type 
-(let ((cs!175 (+ time 20))
+					(let ((cs!175 (+ time 20))
               (cs!177 (= count' count))
               (cs!179 (= request' request))
               (cs!181 (= latch' latch))
