@@ -1,0 +1,68 @@
+    ;; A definition of a state type called "my_state_type" with variables
+    ;; x and y of type Real. 
+    (define-state-type my_state_type 
+      ((x Real) (y Real))
+    )
+
+    ;; Definition of a set of states "x_is_zero" capturing all states 
+    ;; over the state type "my_state_type" where x is 0.
+    (define-states x_is_zero my_state_type
+      (= x 0)
+    )
+
+    ;; A definition of a set of states "initial_states" over 
+    ;; "my_state_type" by a state formula. These are all states where 
+    ;; both x and y are 0.
+    (define-states initial_states my_state_type
+      (and x_is_zero (= y 0))
+    )
+    
+    ;; Definition of a transition where the next value of x is the 
+    ;; current value + 1.
+    (define-transition inc_x my_state_type
+      (= next.x (+ state.x 1))
+    )   
+    
+    ;; Definition of a transition that increases both x and y
+    (define-transition inc_x_and_y my_state_type
+      (and inc_x (= next.y (+ state.y 1)))
+    )
+    
+    ;; Definition of a transition that increases x and y if not 
+    ;; exceeding 20, or goes back to the state with x = y = 0
+    (define-transition transition my_state_type
+      (or 
+        (and (< state.x 20) inc_x_and_y)
+        next.initial_states
+      ) 
+    )
+
+    ;; Directly define a simple counter system that increases x and y
+    (define-transition-system T1 my_state_type
+       ;; Initial states 
+       (and (= x 0) (= y 0))
+       ;; Transition 
+       (and (= next.x (+ state.x 1)) (= next.y (+ state.y 1)))
+    )
+    
+    ;; Define a counter system that can reset to 0 by reusing defined
+    ;; formulas 
+    (define-transition-system T2 my_state_type
+       ;; Initial states
+       initial_states
+       ;; Transitions 
+       transition
+    )
+    
+    ;; Check whether x = y in T1
+    (query T1 (= x y))
+
+    ;; Check whether x, y >= 0
+    (query T1 (and (>= x 0) (>= y 0)))
+    
+    ;; Check whether x, y <= 20
+    (query T2 (and (<= x 20) (<= y 20)))
+    
+    ;; Check whether x, y <= 19
+    (query T2 (and (<= x 19) (<= y 19)))
+    

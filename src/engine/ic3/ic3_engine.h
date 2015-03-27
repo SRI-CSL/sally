@@ -234,6 +234,9 @@ class ic3_engine : public engine {
   /** Bump the scores of the formulas */
   void bump_formulas(const std::vector<expr::term_ref>& formulas);
 
+  /** Reset the engine */
+  void reset();
+
 public:
 
   ic3_engine(const system::context& ctx);

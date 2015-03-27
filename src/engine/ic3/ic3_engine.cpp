@@ -754,12 +754,33 @@ engine::result ic3_engine::search() {
 }
 
 
+void ic3_engine::reset() {
+
+  d_transition_system = 0;
+  d_property = 0;
+  for (size_t i = 0; i < d_solvers.size(); ++ i) {
+    delete d_solvers[i];
+  }
+  d_solvers.clear();
+  d_counterexample.clear();
+  delete d_trace;
+  d_trace = 0;
+  d_induction_obligations.clear();
+  d_induction_obligations_count.clear();
+  d_frame_content.clear();
+  d_frame_inductive_content.clear();
+  for (size_t i = 0; i < d_stat_frame_size.size(); ++ i) {
+    d_stat_frame_size[i]->get_value() = 0;
+  }
+  d_formula_scores.clear();
+}
+
 engine::result ic3_engine::query(const system::transition_system* ts, const system::state_formula* sf) {
 
   result r = UNKNOWN;
 
-  // Clear any counterexamples
-  d_counterexample.clear();
+  // Reset the solver
+  reset();
 
   // Remember the input
   d_transition_system = ts;
