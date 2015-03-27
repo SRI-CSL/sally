@@ -330,7 +330,8 @@
 (define-transition-system OM
   state
   init
-  (trans))
+  trans
+)
 
 
 ;;

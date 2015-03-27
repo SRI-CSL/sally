@@ -1113,7 +1113,8 @@
 ;;
 (define-transition-system T state_type
   initial_states
-  (transition))
+  transition
+)
 
 ;; Assumptions: p!i!j is in { 1, 2, 3, 4, 5, 6}
 (assume T

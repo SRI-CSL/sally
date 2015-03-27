@@ -625,7 +625,7 @@
 ;; Transition system 
 (define-transition-system T state_type
   initial_states
-  (transition)
+  transition
 )
 
 ;; SAL definitions

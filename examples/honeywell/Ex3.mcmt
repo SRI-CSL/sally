@@ -69,7 +69,7 @@
 (define-transition-system T 
   state_type
   initial_state
-  (transition)
+  transition
 )
 
 (assume T 
