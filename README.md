@@ -69,43 +69,43 @@ the transitions from the current to the next state of the system.
 
 State type is just a list of variables that are pare of the state, together with
 their types.
-
+```lisp
     ;; A definition of a state type called "my_state_type" with variables
     ;; x and y of type Real. 
     (define-state-type my_state_type 
       ((x Real) (y Real))
     )
-
+```
 With a defined state type, we can define sets of states and transition over the
 state type and sate transitions over the state type.
 
 We can describe a set of states with a state formula over the state type. A 
 state formula is a first-order formula over the variables of the state type, 
 written in SMT2 format.
-
+```lisp
     ;; Definition of a set of states "x_is_zero" capturing all states 
     ;; over the state type "my_state_type" where x is 0.
     (define-states x_is_zero my_state_type
       (= x 0)
     )
-
+```
 Once a state formula has been defined it can be reused in other state formulas
 over the same state type.
-
+```lisp
     ;; A definition of a set of states "initial_states" over 
     ;; "my_state_type" by a state formula. These are all states where 
     ;; both x and y are 0.
     (define-states initial_states my_state_type
       (and x_is_zero (= y 0))
     )
-    
+```   
 We can describe allowed state transitions by a first-order formula over the 
 current (state) and next variables of the state type. We use the prefix
 ``state`` to denote current variables and the prefix ``next`` to denote the 
 variables in the next state. Previously defined state formulas over the same
 state type can be used as if they were variables (state or next). Similarly, 
 previously defined transitions over the same type can be used directly. 
-
+```lisp
     ;; Definition of a transition where the next value of x is the 
     ;; current value + 1.
     (define-transition inc_x my_state_type
@@ -125,10 +125,10 @@ previously defined transitions over the same type can be used directly.
         next.initial_states
       ) 
     )
-
+```
 We can define a state transition system by defining the state type, the initial
 states of the system and the transitions that the system can make.
-
+```lisp
     ;; Directly define a simple counter system that increases x and y
     (define-transition-system T1 my_state_type
        ;; Initial states 
@@ -145,7 +145,8 @@ states of the system and the transitions that the system can make.
        ;; Transitions 
        transition
     )
-    
+```
+
 #### Queries
 
 A query asks a question whether a state property is true in the given transition 
