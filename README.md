@@ -8,6 +8,7 @@ In order to compile Sally you will need the following
     ```
     sudo apt-get install g++
     ```
+    
 * The CMake build system 
     ```
     sudo apt-get install cmake
@@ -17,10 +18,12 @@ In order to compile Sally you will need the following
     ```
     sudo apt-get install libgmp-dev
     ```
+    
 * Some Boost libraries
     ```
     sudo apt-get install libboost-program-options-dev libboost-iostreams-dev libboost-test-dev
     ```
+    
 * A working Java runtime 
     ```
     sudo apt-get install default-jre
@@ -174,16 +177,17 @@ follows
 
 * Checking the properties with the bounded model-checking (bmc) engine
     ```
-    sally --engine bmc examples/example.mcmt
+    > sally --engine bmc examples/example.mcmt
     unknown
     unknown
     unknown
     unknown
     ```
+    
 * Checking the property with BMC with a bigger bound and showin any 
 counter-example traces
     ```
-    sally --engine bmc --bmc-max 20 --show-trace examples/example.mcmt
+    > sally --engine bmc --bmc-max 20 --show-trace examples/example.mcmt
     unknown
     unknown
     unknown
@@ -194,24 +198,26 @@ counter-example traces
       ...
       (frame (x 20) (y 20))
     )
-    ```  
+    ```
+    
 * Checking the properties with the k-induction (kind) engine
     ```
-    sally --engine kind examples/example.mcmt
+    > sally --engine kind examples/example.mcmt
     valid
     valid
     unknown
     unknown 
-    sally --engine kind --kind-max 20 examples/example.mcmt 
+    > sally --engine kind --kind-max 20 examples/example.mcmt 
     valid
     valid
     unknown
     invalid
     ```
+    
 * Checking the properties with the ic3 engine using the combination of yices2
   and MathSAT5 as the reasoning engine
     ```
-    sally --engine ic3 --solver y2m5 examples/example.mcmt 
+    > sally --engine ic3 --solver y2m5 examples/example.mcmt 
     valid
     valid
     valid
