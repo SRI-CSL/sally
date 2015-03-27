@@ -153,22 +153,24 @@ A query asks a question whether a state property is true in the given transition
 system. For example, in the system ``T1``, it is clear that we have that the 
 variables ``x`` and ``y`` will always be equal and non-negative. We can check 
 these with the following queries.
-
+```lisp
     ;; Check whether x = y in T1
     (query T1 (= x y))
 
     ;; Check whether x, y >= 0
     (query T1 (and (>= x 0) (>= y 0)))
-    
+```
+
 In the system ``T2``, it should hold that both ``x`` and ``y`` will never 
 exceed 20. 
-
+```lisp
     ;; Check whether x, y <= 20
     (query T2 (and (<= x 20) (<= y 20)))
     
     ;; Check whether x, y <= 19
     (query T2 (and (<= x 19) (<= y 19)))
-    
+```
+
 The example above is available in ``examples/example.mcmt``.
     
 ### Usage 
