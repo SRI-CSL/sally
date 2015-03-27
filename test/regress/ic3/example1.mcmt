@@ -16,7 +16,7 @@
 (define-transition-system T 
   state_type
   initial_states
-  (transition)
+  transition
 )
 
 ;; Assume that it's always positive
