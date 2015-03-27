@@ -52,32 +52,32 @@ term_ref sal_state::get_variable(std::string id) const {
 
 system::state_type* sal_state::mk_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types) const {
   expr::term_ref type = tm().mk_struct_type(vars, types);
-  return new system::state_type(tm(), id, type);
+  return new system::state_type(id, tm(), type);
 }
 
 system::state_formula* sal_state::mk_state_formula(std::string id, std::string type_id, expr::term_ref sf) const {
-  system::state_type* st = ctx().get_state_type(type_id);
+  const system::state_type* st = ctx().get_state_type(type_id);
   return new system::state_formula(tm(), st, sf);
 }
 
 system::transition_formula* sal_state::mk_transition_formula(std::string id, std::string type_id, expr::term_ref tf) const {
-  system::state_type* st = ctx().get_state_type(type_id);
+  const system::state_type* st = ctx().get_state_type(type_id);
   return new system::transition_formula(tm(), st, tf);
 }
 
 system::transition_system* sal_state::mk_transition_system(std::string id, std::string type_id, std::string init_id, std::string transition_id) {
-  system::state_type* st = ctx().get_state_type(type_id);
+  const system::state_type* st = ctx().get_state_type(type_id);
   const system::state_formula* init = ctx().get_state_formula(init_id);
   const system::transition_formula* transition = ctx().get_transition_formula(transition_id);
   return new system::transition_system(st, init, transition);
 }
 
 void sal_state::use_state_type(std::string id, system::state_type::var_class var_class, bool use_namespace) {
-  system::state_type* st = d_context.get_state_type(id);
+  const system::state_type* st = d_context.get_state_type(id);
   use_state_type(st, var_class, use_namespace);
 }
 
-void sal_state::use_state_type(system::state_type* st, system::state_type::var_class var_class, bool use_namespace) {
+void sal_state::use_state_type(const system::state_type* st, system::state_type::var_class var_class, bool use_namespace) {
 
   // Use the appropriate namespace
   st->use_namespace();

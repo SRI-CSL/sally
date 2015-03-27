@@ -189,7 +189,7 @@ command* btor_state::finalize() const {
     types.push_back(tm().type_of(var));
   }
   term_ref state_type_ref = tm().mk_struct_type(names, types);
-  system::state_type* state_type = new system::state_type(tm(), "state_type", state_type_ref);
+  system::state_type* state_type = new system::state_type("state_type", tm(), state_type_ref);
   command* state_type_declare = new declare_state_type_command("state_type", state_type);
 
   // Get the state variables

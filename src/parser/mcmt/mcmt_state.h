@@ -56,12 +56,6 @@ public:
   /** Create a new state type. */
   system::state_type* mk_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types) const;
 
-  /** Create a new state formula */
-  system::state_formula* mk_state_formula(std::string id, std::string type_id, expr::term_ref sf) const;
-
-  /** Create a new transition system */
-  system::transition_system* mk_transition_system(std::string id, system::state_formula* init, system::transition_formula* transition);
-
   /**
    * Use the state type, i.e. declare the variables var_class.x, var_class.y, ...
    * If use_namespace is true, then "var_class." is not used in the name.
@@ -72,12 +66,12 @@ public:
    * Use the state type, i.e. declare the variables var_class.x, var_class.y, ...
    * If use_namespace is true, then "var_class." is not used in the name.
    */
-  void use_state_type(system::state_type* state_type, system::state_type::var_class var_class, bool use_namespace);
+  void use_state_type(const system::state_type* state_type, system::state_type::var_class var_class, bool use_namespace);
 
   /**
    * Use the state type, both current, next, and the transitions.
    */
-  void use_state_type_and_transitions(system::state_type* state_type);
+  void use_state_type_and_transitions(const system::state_type* state_type);
 
   /** Push a new scope for local declarations */
   void push_scope();

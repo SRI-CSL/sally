@@ -19,7 +19,7 @@ namespace system {
 class transition_system {
 
   /** The state information */
-  state_type* d_state_type;
+  const state_type* d_state_type;
 
   /** The intial states */
   const state_formula* d_initial_states;
@@ -45,7 +45,7 @@ class transition_system {
 
 public:
 
-  transition_system(state_type* state_type, const state_formula* initial_states, const transition_formula* transition_relation)
+  transition_system(const state_type* state_type, const state_formula* initial_states, const transition_formula* transition_relation)
   : d_state_type(state_type)
   , d_initial_states(initial_states)
   , d_transition_relation(transition_relation)
@@ -60,7 +60,7 @@ public:
   ~transition_system();
 
   /** Get the state type */
-  state_type* get_state_type() const {
+  const state_type* get_state_type() const {
     return d_state_type;
   }
 

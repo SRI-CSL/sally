@@ -1015,9 +1015,7 @@ void yices2_internal::generalize(const std::set<expr::term_ref>& to_eliminate, s
   // Copy over A formulas and count the rest
   size_t to_generalize = 0;
   for (size_t i = 0; i < d_assertions.size(); ++ i) {
-    if (d_assertion_classes[i] == solver::CLASS_A) {
-      projection_out.push_back(d_assertions[i]);
-    } else {
+    if (d_assertion_classes[i] != solver::CLASS_A) {
       to_generalize ++;
     }
   }

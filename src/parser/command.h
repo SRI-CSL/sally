@@ -94,7 +94,7 @@ public:
 /** Command to declare a state set (formula) */
 class define_states_command : public command {
 
-  /** Id of the formula (if any) */
+  /** Id of the formula */
   std::string d_id;
 
   /** The state formula */
@@ -112,9 +112,6 @@ public:
   /** Deletes the formula if not used */
   ~define_states_command();
 
-  /** Get the id of the state set */
-  std::string get_id() const { return d_id; }
-
   /** Get the state formula */
   const system::state_formula* get_state_formula() const { return d_formula; }
 
@@ -131,7 +128,7 @@ class define_transition_command : public command {
   /** Id of the transition */
   std::string d_id;
 
-  /** The state thransistion formula */
+  /** The state transition formula */
   system::transition_formula* d_formula;
 
 public:

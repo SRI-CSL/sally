@@ -38,7 +38,7 @@ public:
   static std::string to_string(var_class vc);
 
   /** Create a new state type of the given type and name */
-  state_type(expr::term_manager& tm, std::string id, expr::term_ref type);
+  state_type(std::string id, expr::term_manager& tm, expr::term_ref type);
 
   /** Print the state type to stream */
   void to_stream(std::ostream& out) const;
@@ -75,41 +75,13 @@ public:
   /** Transform the formula from class to another class */
   expr::term_ref change_formula_vars(var_class from, var_class to, expr::term_ref f) const;
 
-  /** Register the formula with the state */
-  void register_state_formula(const state_formula* f);
-
-  /** Unregister the formula with the state */
-  void unregister_state_formula(const state_formula* f);
-
-  /** Register the transition with the state */
-  void register_transition_formula(const transition_formula* f);
-
-  /** Unregister the transition with the state */
-  void unregister_transition_formula(const transition_formula* f);
-
-  typedef std::set<const state_formula*> formula_set;
-
-  /** Get the iterator to all formulas of this type */
-  formula_set::const_iterator state_formulas_begin() const;
-
-  /** Get the iterator to the end of formulas of this type */
-  formula_set::const_iterator state_formulas_end() const;
-
-  typedef std::set<const transition_formula*> transition_formula_set;
-
-  /** Get the iterator to all transition formulas of this type */
-  transition_formula_set::const_iterator transition_formulas_begin() const;
-
-  /** Get hte iterator to the end of transition formulas of this type */
-  transition_formula_set::const_iterator transition_formulas_end() const;
-
 private:
+
+  /** Id of the type */
+  std::string d_id;
 
   /** The term manager */
   expr::term_manager& d_tm;
-
-  /** The name of the type */
-  std::string d_id;
 
   /** The actual type describing the state */
   expr::term_ref_strong d_type;
@@ -131,12 +103,6 @@ private:
 
   /** Substitution map for NEXT -> CURRENT */
   expr::term_manager::substitution_map d_subst_next_current;
-
-  /** All state formulas of this type */
-  formula_set d_state_formulas;
-
-  /** ALl transition formulas of this type */
-  transition_formula_set d_transition_formulas;
 
 };
 

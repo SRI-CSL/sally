@@ -57,27 +57,15 @@ void mcmt_state::set_variable(std::string id, expr::term_ref t) {
 
 system::state_type* mcmt_state::mk_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types) const {
   expr::term_ref type = tm().mk_struct_type(vars, types);
-  return new system::state_type(tm(), id, type);
-}
-
-system::state_formula* mcmt_state::mk_state_formula(std::string id, std::string type_id, expr::term_ref sf) const {
-  system::state_type* st = ctx().get_state_type(type_id);
-  system::state_formula* result = new system::state_formula(tm(), st, sf);
-  result->set_id(id);
-  return result;
-}
-
-system::transition_system* mcmt_state::mk_transition_system(std::string id, system::state_formula* init, system::transition_formula* transition) {
-  system::state_type* st = init->get_state_type();
-  return new system::transition_system(st, init, transition);
+  return new system::state_type(id, tm(), type);
 }
 
 void mcmt_state::use_state_type(std::string id, system::state_type::var_class var_class, bool use_namespace) {
-  system::state_type* st = d_context.get_state_type(id);
+  const system::state_type* st = d_context.get_state_type(id);
   use_state_type(st, var_class, use_namespace);
 }
 
-void mcmt_state::use_state_type(system::state_type* st, system::state_type::var_class var_class, bool use_namespace) {
+void mcmt_state::use_state_type(const system::state_type* st, system::state_type::var_class var_class, bool use_namespace) {
 
   // Use the appropriate namespace
   st->use_namespace();
@@ -94,21 +82,19 @@ void mcmt_state::use_state_type(system::state_type* st, system::state_type::var_
   }
 
   // Declare all the state formulas of this stype
-  system::state_type::formula_set::const_iterator it = st->state_formulas_begin();
-  for (; it != st->state_formulas_end(); ++ it) {
-    const system::state_formula* f = *it;
-    // If the formula has an id, add it
-    if (!f->get_id().empty()) {
-      // Get the term of the formula and transform the variables if going to the next state
-      expr::term_ref f_term = f->get_formula();
-      if (var_class == system::state_type::STATE_NEXT) {
-        f_term = st->change_formula_vars(system::state_type::STATE_CURRENT, var_class, f_term);
-      }
-      // Get the id and turn it into a state type proper id
-      std::string id = st->get_canonical_name(f->get_id(), var_class);
-      // Add to variable table
-      d_variables.add_entry(id, f_term);
+  system::context::id_set::const_iterator it = ctx().state_formulas_begin(st);
+  system::context::id_set::const_iterator it_end = ctx().state_formulas_end(st);
+  for (; it != it_end; ++ it) {
+    const system::state_formula* f = ctx().get_state_formula(*it);
+    // Get the term of the formula and transform the variables if going to the next state
+    expr::term_ref f_term = f->get_formula();
+    if (var_class == system::state_type::STATE_NEXT) {
+      f_term = st->change_formula_vars(system::state_type::STATE_CURRENT, var_class, f_term);
     }
+    // Get the id and turn it into a state type proper id
+    std::string id = st->get_canonical_name(*it, var_class);
+    // Add to variable table
+    d_variables.add_entry(id, f_term);
   }
 
   // Pop the namespace
@@ -118,20 +104,18 @@ void mcmt_state::use_state_type(system::state_type* st, system::state_type::var_
   }
 }
 
-void mcmt_state::use_state_type_and_transitions(system::state_type* st) {
+void mcmt_state::use_state_type_and_transitions(const system::state_type* st) {
   // Use the current state
   use_state_type(st, system::state_type::STATE_CURRENT, lsal_extensions());
   // Use the next stat
   use_state_type(st, system::state_type::STATE_NEXT, false);
   // Use all the transition formulas
-  system::state_type::transition_formula_set::const_iterator it = st->transition_formulas_begin();
-  for (; it != st->transition_formulas_end(); ++ it) {
-    const system::transition_formula* f = *it;
-    // If the formula has an id, add it
-    if (!f->get_id().empty()) {
-      // Add to variable table
-      d_variables.add_entry(f->get_id(), f->get_formula());
-    }
+  system::context::id_set::const_iterator it = ctx().transition_formulas_begin(st);
+  system::context::id_set::const_iterator it_end = ctx().transition_formulas_end(st);
+  for (; it != it_end; ++ it) {
+    const system::transition_formula* f = ctx().get_transition_formula(*it);
+    // Add to variable table
+    d_variables.add_entry(*it, f->get_formula());
   }
 }
 

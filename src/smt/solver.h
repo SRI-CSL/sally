@@ -173,11 +173,16 @@ public:
 
   /**
    * Generalize the last call to check assuming the result was SAT, i.e.
-   * return the a formula G satisfiable in the current model such that
+   * return the a formula G satisfiable in the current model M such that
    *
-   *   G(x) => \exists y . F(x, y).
+   *   G(x) => \exists y . (T(x, y) and B(y)).
    *
-   * Variables of class C are eliminated from the assertions.
+   * This is the dual of interpolation, i.e. we get a G such that
+   *
+   *   A and G are consistent (both satisfied by the model M)
+   *   G implies \exists y . (T(x, y) and B(y)).
+   *
+   * Variables of class B are eliminated from the assertions.
    */
   virtual
   void generalize(std::vector<expr::term_ref>& projection_out) {

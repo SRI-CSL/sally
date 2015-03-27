@@ -15,9 +15,9 @@
 namespace sally {
 namespace system {
 
-state_type::state_type(expr::term_manager& tm, std::string id, expr::term_ref type)
-: d_tm(tm)
-, d_id(id)
+state_type::state_type(std::string id, expr::term_manager& tm, expr::term_ref type)
+: d_id(id)
+, d_tm(tm)
 , d_type(tm, type)
 {
   // Create the state variables
@@ -129,41 +129,6 @@ expr::term_ref state_type::change_formula_vars(var_class from, var_class to, exp
   }
   // They are the same
   return f;
-}
-
-void state_type::register_state_formula(const state_formula* f) {
-  d_state_formulas.insert(f);
-}
-
-void state_type::unregister_state_formula(const state_formula* f) {
-  d_state_formulas.erase(f);
-}
-
-void state_type::register_transition_formula(const transition_formula* f) {
-  d_transition_formulas.insert(f);
-}
-
-void state_type::unregister_transition_formula(const transition_formula* f) {
-  d_transition_formulas.erase(f);
-}
-
-state_type::formula_set::const_iterator state_type::state_formulas_begin() const {
-  return d_state_formulas.begin();
-}
-
-/** Get the iterator to the end of formulas of this type */
-state_type::formula_set::const_iterator state_type::state_formulas_end() const {
-  return d_state_formulas.end();
-}
-
-/** Get the iterator to all transition formulas of this type */
-state_type::transition_formula_set::const_iterator state_type::transition_formulas_begin() const {
-  return d_transition_formulas.begin();
-}
-
-/** Get hte iterator to the end of transition formulas of this type */
-state_type::transition_formula_set::const_iterator state_type::transition_formulas_end() const {
-  return d_transition_formulas.end();
 }
 
 std::string state_type::get_canonical_name(std::string id, var_class vc) const {
