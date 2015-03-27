@@ -22,10 +22,10 @@ class transition_system {
   const state_type* d_state_type;
 
   /** The intial states */
-  const state_formula* d_initial_states;
+  state_formula* d_initial_states;
 
   /** The transition formula */
-  const transition_formula* d_transition_relation;
+  transition_formula* d_transition_relation;
 
   /** Any assumptions */
   std::vector<state_formula*> d_assumptions;
@@ -45,16 +45,10 @@ class transition_system {
 
 public:
 
-  transition_system(const state_type* state_type, const state_formula* initial_states, const transition_formula* transition_relation)
+  transition_system(const state_type* state_type, state_formula* initial_states, transition_formula* transition_relation)
   : d_state_type(state_type)
   , d_initial_states(initial_states)
   , d_transition_relation(transition_relation)
-  {}
-
-  transition_system(const transition_system& T)
-  : d_state_type(T.d_state_type)
-  , d_initial_states(T.d_initial_states)
-  , d_transition_relation(T.d_transition_relation)
   {}
 
   ~transition_system();

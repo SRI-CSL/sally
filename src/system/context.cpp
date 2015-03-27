@@ -118,13 +118,6 @@ void context::add_transition_system(std::string id, transition_system* ts) {
   d_state_types_to_transition_systems[ts->get_state_type()].insert(id);
 }
 
-void context::add_transition_system(std::string id, std::string type_id, std::string init_id, std::string transition_id) {
-  const state_type* st = get_state_type(type_id);
-  const state_formula* init = get_state_formula(init_id);
-  const transition_formula* transition = get_transition_formula(transition_id);
-  add_transition_system(id, new transition_system(st, init, transition));
-}
-
 const system::transition_system* context::get_transition_system(std::string id) const {
   if (!d_transition_systems.has_entry(id)) {
     throw exception(id + " not declared");

@@ -75,9 +75,6 @@ public:
   /** Add a new state transition system with the given id (to be managed by the context) */
   void add_transition_system(std::string id, transition_system* ts);
 
-  /** Add a new state transition system with the givwen id (to be managed by the context) */
-  void add_transition_system(std::string id, std::string type_id, std::string init_id, std::string transition_id);
-
   /** Add an assumption to the given transition system (takes over sf). */
   void add_assumption_to(std::string id, state_formula* sf);
 

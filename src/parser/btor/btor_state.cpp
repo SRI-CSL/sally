@@ -217,7 +217,6 @@ command* btor_state::finalize() const {
   }
   term_ref init = tm().mk_and(init_children);
   system::state_formula* init_formula = new system::state_formula(tm(), state_type, init);
-  command* init_define = new define_states_command("init", init_formula);
 
   // Define the transition relation
   std::vector<term_ref> transition_children;
@@ -233,7 +232,6 @@ command* btor_state::finalize() const {
   term_ref transition = tm().mk_and(transition_children);
   transition = tm().substitute(transition, btor_to_state_var);
   system::transition_formula* transition_formula = new system::transition_formula(tm(), state_type, transition);
-  command* transition_define = new define_transition_command("transition", transition_formula);
 
   // Define the transition system
   system::transition_system* transition_system = new system::transition_system(state_type, init_formula, transition_formula);
@@ -253,8 +251,6 @@ command* btor_state::finalize() const {
   // Make the final command
   sequence_command* full_command = new sequence_command();
   full_command->push_back(state_type_declare);
-  full_command->push_back(init_define);
-  full_command->push_back(transition_define);
   full_command->push_back(transition_system_define);
   full_command->push_back(query);
 

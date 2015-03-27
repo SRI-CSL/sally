@@ -20,7 +20,8 @@ class state_formula;
 class transition_formula;
 
 /**
- * A state type identified by it's id (name) and it's type
+ * A state type identified by it's id (name) and it's type. The types are
+ * managed in the context, and everyone else has const pointers to the types.
  */
 class state_type {
 

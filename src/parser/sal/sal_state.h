@@ -62,9 +62,6 @@ public:
   /** Create a new transition formula */
   system::transition_formula* mk_transition_formula(std::string id, std::string type_id, expr::term_ref tf) const;
 
-  /** Create a new transition system */
-  system::transition_system* mk_transition_system(std::string id, std::string type_id, std::string init_id, std::string transition_id);
-
   /**
    * Use the state type, i.e. declare the variables var_class.x, var_class.y, ...
    * If use_namespace is true, then "var_class." is not used in the name.

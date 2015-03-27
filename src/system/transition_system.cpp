@@ -62,6 +62,8 @@ transition_system::~transition_system() {
   for (size_t i = 0; i < d_assumptions.size(); ++ i) {
     delete d_assumptions[i];
   }
+  delete d_initial_states;
+  delete d_transition_relation;
 }
 
 
