@@ -1,0 +1,189 @@
+;; CONTROL_SELECT : TYPE = {NONE, ON, OFF};
+(define-constant NONE 0)
+(define-constant ON 1)
+(define-constant OFF 2)
+
+;; STATE1 : TYPE = {INIT, WAIT, ENGAGED};
+(define-constant INIT 0)
+(define-constant WAIT 1)
+(define-constant ENGAGED 2)
+
+;; STATE2 : TYPE = {IDLE, ACTIVE};
+(define-constant IDLE 0)
+(define-constant ACTIVE 1)
+
+;; State type (all TCCs added to the assumptions)
+(define-state-type state_type (
+      (count Real)      ;; INTEGER
+      (latch Bool)      
+      (request Real)    ;; CONTROL_SELECT
+      (response Bool)   
+      (select Real)     ;; CONTROL_SELECT
+      (state!1 Real)    ;; STATE1
+      (state!2 Real)    ;; STATE2
+      (time Real)       
+      (time_arr!0 Real)
+      (time_arr!1 Real)
+      (timer1 Real)
+      (timer2 Real)
+      (trigger Bool)
+      (value Real)
+))
+
+;; Initial states
+(define-states initial_states state_type 
+        (and
+          (= state!1 INIT)
+          (= request NONE)
+          (= count 0)
+          (and (not (< time_arr!0 0)) (< time_arr!0 20))
+          true
+          (= latch false)
+          (= timer1 (- 1))
+          (= state!2 IDLE)
+          (= value 0)
+          (= response false)
+          (and (not (< time_arr!1 0)) (< time_arr!1 20))
+          (= timer2 (- 1))
+          (= time 0)
+        )
+)
+
+
+;; Transition relation
+(define-transition transition state_type 
+        (let ((cs!110 (+ time 20))
+              (cs!111 (= state!1' WAIT))
+              (cs!112 (= request' ON))
+              (cs!113 (not response))
+              (cs!114 (< count 1))
+              (cs!116 (= state!1' INIT))
+              (cs!117 (= request' OFF))
+              (cs!119 (= state!1' ENGAGED))
+              (cs!120 (= request' NONE))
+              (cs!121 (= count' 0))
+              (cs!122 (= select ON))
+              (cs!123 (/= select ON))
+              (cs!125 (= state!2' IDLE))
+              (cs!126 (= value' 0))
+              (cs!127 (= response' false))
+              (cs!129 (= state!2' ACTIVE))
+              (cs!130 (and (not (<= value' 0)) (< value' 5)))
+              (cs!131 (= response' true))
+              (cs!133 (<= value 0))
+              (cs!135 (= count' count))
+              (cs!137 (= request' request))
+              (cs!139 (= latch' latch))
+              (cs!140 (= trigger' trigger))
+              (cs!141 (= timer1' timer1))
+              (cs!143 (= response' response))
+              (cs!144 (= value' value))
+              (cs!146 (= timer2' timer2)))
+          (let ((cs!115 (= state!1 WAIT))
+                (cs!118 (= state!1 ENGAGED))
+                (cs!124 (= state!2 IDLE))
+                (cs!128 (= state!2 ACTIVE))
+                (cs!132 (- cs!110 0))
+                (cs!134 (= state!1 INIT))
+                (cs!136 (= state!1' state!1))
+                (cs!138 (= time_arr!0' time_arr!0))
+                (cs!142 (= state!2' state!2))
+                (cs!145 (= time_arr!1' time_arr!1)))
+            (or
+              (and
+                (or
+                  (and
+                    (or
+                      (and cs!122 cs!134 cs!111 cs!112 cs!121)
+                      (and cs!123 cs!134 cs!116 cs!120 cs!121)
+                      (and
+                        cs!113
+                        cs!115
+                        cs!114
+                        cs!111
+                        cs!112
+                        (= count' (+ count 1)))
+                      (and cs!113 cs!115 (not cs!114) cs!116 cs!117 cs!121)
+                      (and response cs!115 cs!119 cs!120 cs!121)
+                      (and (= select OFF) cs!118 cs!116 cs!117 cs!121)
+                      (and (/= select OFF) cs!118 cs!119 cs!120 cs!121))
+                    (= time time_arr!0)
+                    (and (not (< time_arr!0' cs!132)) (<= time_arr!0' cs!110))
+                    (or
+                      (and
+                        cs!122
+                        trigger
+                        (not latch)
+                        (= timer1 (- 1))
+                        (= timer1' time)
+                        (= latch' true)
+                        (= trigger' false))
+                      (and
+                        (or cs!123 (not trigger) latch (/= timer1 (- 1)))
+                        cs!141
+                        true
+                        cs!139))
+                    cs!142
+                    cs!143
+                    cs!144
+                    cs!145
+                    cs!146)
+                  (and
+                    (or
+                      (and (= request ON) cs!124 cs!129 cs!130 cs!131)
+                      (and (/= request ON) cs!124 cs!125 cs!126 cs!127)
+                      (and (= request OFF) cs!128 cs!125 cs!126 cs!127)
+                      (and (/= request OFF) cs!128 cs!129 cs!130 cs!131))
+                    (= time time_arr!1)
+                    (and (not (< time_arr!1' cs!132)) (<= time_arr!1' cs!110))
+                    (or
+                      (and (not cs!133) latch (= timer2 (- 1)) (= timer2' time))
+                      (and (or cs!133 (not latch) (/= timer2 (- 1))) cs!146))
+                    cs!135
+                    cs!136
+                    cs!137
+                    cs!138
+                    cs!139
+                    cs!140
+                    cs!141))
+                (= time' time))
+              (and
+                (< time time_arr!0)
+                (< time time_arr!1)
+                (and
+                  (<= time' time_arr!0)
+                  (<= time' time_arr!1)
+                  (or (= time' time_arr!0) (= time' time_arr!1)))
+                cs!135
+                cs!136
+                cs!137
+                cs!138
+                cs!139
+                cs!140
+                cs!141
+                cs!142
+                cs!143
+                cs!144
+                cs!145
+                cs!146)))))
+
+;; Transition system 
+(define-transition-system T state_type
+  initial_states
+  (transition)
+)
+
+;; TCCs
+;; CONTROL_SELECT : TYPE = {NONE, ON, OFF};
+;; STATE1 : TYPE = {INIT, WAIT, ENGAGED};
+;; STATE2 : TYPE = {IDLE, ACTIVE};
+(assume T (and
+      (or (= request NONE) (= request ON) (= request OFF))
+      (or (= select NONE) (= select ON) (= select OFF))
+      (or (= state!1 INIT) (= state!1 WAIT) (= state!1 ENGAGED))
+      (or (= state!2 IDLE) (= state!2 ACTIVE))
+))
+
+;; Query
+;; The property
+(query T (< timer2 (+ timer1 41)))
