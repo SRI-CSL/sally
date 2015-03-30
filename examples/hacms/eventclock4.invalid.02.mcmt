@@ -263,6 +263,4 @@
 ))
 
 ;; Query
-;; The property
-
 (query T (< timer2 (+ timer1 200)))
