@@ -1,0 +1,243 @@
+%%% An example of a real-time system modeled with event clocks
+%%% The system has two periodic nodes -- a controller and an actuator interacting with each other
+%%% No channel latencies in this model.
+
+% NOTE: currently can set "select" to OFF when "module1.state" is in the WAIT state to transition back to the INIT state.
+
+eventclock6 : CONTEXT =
+BEGIN
+
+TIME : TYPE = REAL;
+
+N : NATURAL = 4;
+NODE_NUM : TYPE = [1 .. N];
+TIMEOUT_ARR : TYPE = ARRAY NODE_NUM OF TIME;
+is_min(x: TIMEOUT_ARR, t: TIME): bool =                                         
+  (FORALL (i: NODE_NUM): t <= x[i]) AND                                    
+  (EXISTS (i: NODE_NUM): t = x[i]);
+
+% periods
+PERIOD1 : TIME = 20;
+JITTER1 : TIME = 0.3;
+PERIOD2 : TIME = 20;
+JITTER2 : TIME = 0.3;
+
+% max channel delays
+CHANNEL1 : TIME = 9;
+CHANNEL2 : TIME = 9;
+
+% states
+STATE1 : TYPE = {INIT, WAIT, ENGAGED};
+STATE2 : TYPE = {IDLE, ACTIVE};
+
+% other parameters
+WAIT_MAX : INTEGER = 1;
+CONTROL_SELECT : TYPE = {NONE, ON, OFF};
+
+% module 1
+module1 : MODULE = 
+BEGIN
+  INPUT select : CONTROL_SELECT
+  INPUT response_out : BOOLEAN
+  OUTPUT request : CONTROL_SELECT
+  LOCAL state : STATE1
+  LOCAL count : INTEGER
+  INITIALIZATION
+  	state = INIT;
+  	request = NONE;
+  	count = 0;
+  TRANSITION
+    [
+    % INIT
+    select=ON AND state=INIT --> state' = WAIT; request' = ON; count' = 0;
+    []
+    select/=ON AND state=INIT --> state' = INIT; request' = NONE; count' = 0;
+    []
+    % WAIT 
+    NOT response_out AND state=WAIT AND count<WAIT_MAX --> state' = WAIT; request' = ON; count' = count + 1;
+    []
+    response_out AND state=WAIT AND count>=WAIT_MAX --> state' = INIT; request' = OFF; count' = 0;
+    []
+    response_out AND state=WAIT --> state' = ENGAGED; request' = NONE; count' = 0;
+    []
+    % ENGAGED
+    select=OFF AND state=ENGAGED --> state' = INIT; request' = OFF; count' = 0;
+    []
+    select/=OFF AND state=ENGAGED --> state' = ENGAGED; request' = NONE; count' = 0;
+    ]
+END;
+
+% clock 1
+clock1 : MODULE =
+BEGIN
+  INPUT time : TIME
+  OUTPUT clock1_timeout : TIME
+  INITIALIZATION
+    clock1_timeout IN {x : TIME | x >= 0 AND x < PERIOD1 + JITTER1};
+  TRANSITION
+    [
+    time = clock1_timeout --> clock1_timeout' IN {x : TIME | x >= time + PERIOD1 - JITTER1 AND x <= time + PERIOD1 + JITTER1};
+    ]
+END;
+
+% event1 timer
+t1_event1 : MODULE =
+BEGIN
+  INPUT select : CONTROL_SELECT
+  INPUT time: TIME
+  OUTPUT timer1 : TIME
+  LOCAL trigger : BOOLEAN
+  OUTPUT latch : BOOLEAN
+  INITIALIZATION
+    trigger IN {x : BOOLEAN | x = TRUE OR x = FALSE};
+    latch = FALSE;
+    timer1 = -1;
+  TRANSITION
+  	[
+  	select=ON AND trigger AND NOT latch AND timer1=-1 --> timer1' = time; latch' = TRUE; trigger' = FALSE;
+  	[]
+  	ELSE --> timer1' = timer1; trigger' IN {x : BOOLEAN | x = TRUE OR x = FALSE}; latch' = latch;
+  	]
+END;
+
+% node 1
+node1 : MODULE =
+  module1
+  ||
+  clock1
+  ||
+  t1_event1;
+
+% channel m1 to m2
+m1_to_m2_Channel : MODULE =
+BEGIN
+  INPUT request : CONTROL_SELECT
+  INPUT time : TIME
+  INPUT clock1_timeout : TIME
+  OUTPUT channel1_timeout : TIME
+  OUTPUT request_out : CONTROL_SELECT
+  INITIALIZATION
+    request_out = NONE;
+    channel1_timeout IN {x : TIME | x > clock1_timeout AND x <= clock1_timeout + CHANNEL1};
+  TRANSITION
+    [
+    time = channel1_timeout --> request_out' = request; channel1_timeout' IN {x : TIME | x > clock1_timeout AND x <= clock1_timeout + CHANNEL1}
+    ]
+END;
+
+% module 2
+module2 : MODULE =
+BEGIN
+  INPUT request_out : CONTROL_SELECT
+  OUTPUT value : REAL
+  OUTPUT response : BOOLEAN
+  LOCAL state : STATE2
+  INITIALIZATION
+    state = IDLE;
+    value = 0;
+    response = FALSE;
+  TRANSITION
+    [
+    request_out=ON AND state=IDLE --> state' = ACTIVE; value' IN {x : REAL | x > 0 AND x < 5}; response' = TRUE;
+    []
+    request_out/=ON AND state=IDLE --> state' = IDLE; value' = 0; response' = FALSE;
+    []
+    request_out=OFF AND state=ACTIVE --> state' = IDLE; value' = 0; response' = FALSE;
+    []
+    request_out/=OFF AND state=ACTIVE --> state' = ACTIVE; value' IN {x : REAL | x > 0 AND x < 5}; response' = TRUE;
+    ]
+END;
+
+% clock 2
+clock2 : MODULE =
+BEGIN
+  INPUT time : TIME
+  OUTPUT clock2_timeout : TIME
+  INITIALIZATION
+    clock2_timeout IN {x : TIME | x >= 0 AND x < PERIOD2 + JITTER2};
+  TRANSITION
+    [
+    time = clock2_timeout --> clock2_timeout' IN {x : TIME | x >= time + PERIOD2 - JITTER2 AND x <= time + PERIOD2 + JITTER2};
+    ]
+END;
+
+% event2 timer
+t1_event2 : MODULE =
+BEGIN
+  INPUT value : REAL
+  INPUT time: TIME
+  OUTPUT timer2 : TIME
+  INPUT latch : BOOLEAN
+  INITIALIZATION
+    timer2 = -1;
+  TRANSITION
+  	[
+  	value>0 AND latch AND timer2=-1 --> timer2' = time; 
+  	[]
+  	ELSE --> timer2' = timer2; 
+  	]
+END;  
+
+% node 2 
+node2 : MODULE =
+  module2 
+  ||
+  clock2
+  ||
+  t1_event2;
+
+% channel m2 to m1
+m2_to_m1_Channel : MODULE =
+BEGIN
+  INPUT response : BOOLEAN
+  INPUT time : TIME
+  INPUT clock2_timeout : TIME
+  OUTPUT channel2_timeout : TIME
+  OUTPUT response_out : BOOLEAN
+  INITIALIZATION
+    response_out = FALSE;
+    channel2_timeout IN {x : TIME | x > clock2_timeout AND x <= clock2_timeout + CHANNEL2};
+  TRANSITION
+    [
+    time = channel2_timeout --> response_out' = response; channel2_timeout' IN {x : TIME | x > clock2_timeout AND x <= clock2_timeout + CHANNEL2}
+    ]
+END;
+
+% composition
+comp : MODULE =
+  WITH OUTPUT time_arr: TIMEOUT_ARR
+  (RENAME clock1_timeout TO time_arr[1] IN node1)
+  []
+  (RENAME clock2_timeout TO time_arr[2] IN node2)
+  []
+  (RENAME clock1_timeout TO time_arr[1], channel1_timeout TO time_arr[3] IN m1_to_m2_Channel)
+  []
+  (RENAME clock2_timeout TO time_arr[2], channel2_timeout TO time_arr[4] IN m2_to_m1_Channel);
+
+% calendar
+scheduler : MODULE =
+BEGIN
+  INPUT time_arr : TIMEOUT_ARR
+  OUTPUT time : TIME
+  INITIALIZATION
+    time = 0;
+  TRANSITION
+    [
+    (FORALL (i: NODE_NUM): time < time_arr[i]) -->
+    time' IN {t: TIME | is_min(time_arr, t)}
+    ]
+END;
+
+% top module
+top : MODULE =
+  comp
+  []
+  scheduler;
+
+%%% properties
+% t1: timer1 registers the event select=ON, timer2 registers the event value>0.
+t1 : THEOREM top |- G ((timer1>=0) => F (timer2 >= 0 AND timer2 < timer1 + 100));
+% t2: safety part of t1.
+t2: THEOREM top |- G (timer2 < timer1 + 200); 
+
+END
