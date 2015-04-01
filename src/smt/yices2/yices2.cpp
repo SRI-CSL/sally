@@ -1022,8 +1022,16 @@ void yices2_internal::generalize(const std::set<expr::term_ref>& to_eliminate, s
 
   // Yices version of the assertions
   term_t* assertions = new term_t[to_generalize];
-  for (size_t i = 0, j = 0; i < d_assertions.size(); ++ i) {
-    if (d_assertion_classes[i] != solver::CLASS_A) {
+  size_t j = 0;
+  // Add class B first
+  for (size_t i = 0; i < d_assertions.size(); ++ i) {
+    if (d_assertion_classes[i] == solver::CLASS_B) {
+      assertions[j++] = to_yices2_term(d_assertions[i]);
+    }
+  }
+  // Add class T
+  for (size_t i = 0; i < d_assertions.size(); ++ i) {
+    if (d_assertion_classes[i] == solver::CLASS_T) {
       assertions[j++] = to_yices2_term(d_assertions[i]);
     }
   }

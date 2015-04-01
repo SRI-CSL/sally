@@ -148,6 +148,78 @@ BOOST_AUTO_TEST_CASE(yices2_generalization) {
 
 }
 
+BOOST_AUTO_TEST_CASE(yices2_generalization_experiment) {
+
+  yices2->push();
+
+  // Assert something to yices
+  term_ref x = tm.mk_variable("x", tm.real_type());
+  term_ref x_next = tm.mk_variable("x'", tm.real_type());
+  term_ref y = tm.mk_variable("y", tm.real_type());
+  term_ref y_next = tm.mk_variable("y'", tm.real_type());
+
+  term_ref one = tm.mk_rational_constant(rational(1, 1));
+
+  // Mark the variables
+  yices2->add_x_variable(x);
+  yices2->add_x_variable(y);
+  yices2->add_y_variable(x_next);
+  yices2->add_y_variable(y_next);
+
+  expr::term_ref G;
+
+  // A1: x' = x + 1
+  // A2: y' = y + 1
+  // A3: y' = 1
+  term_ref x_inc = tm.mk_term(TERM_ADD, x, one);
+  term_ref y_inc = tm.mk_term(TERM_ADD, y, one);
+  term_ref A1 = tm.mk_term(TERM_EQ, x_next, x_inc);
+  term_ref A2 = tm.mk_term(TERM_EQ, y_next, y_inc);
+  term_ref A3 = tm.mk_term(TERM_EQ, y_next, one);
+
+  // Add and check
+  yices2->add(A1, smt::solver::CLASS_T);
+  yices2->add(A2, smt::solver::CLASS_T);
+  yices2->add(A3, smt::solver::CLASS_B);
+
+  // Check and generalize
+  solver::result result = yices2->check();
+  cout << "Check result: " << result << endl;
+
+  // Generalize
+  G = yices2->generalize();
+  cout << "G: " << G << endl;
+
+  yices2->pop();
+
+  yices2->push();
+
+  // A5:
+  // it b then
+  //    A2: y' = y + 1
+  // else
+  //    A4: y' = y + 2
+  term_ref b = tm.mk_variable("b", tm.boolean_type());
+  term_ref y_inc2 = tm.mk_term(TERM_ADD, y_inc, one);
+  term_ref A4 = tm.mk_term(TERM_EQ, y_next, y_inc2);
+  term_ref A5 = tm.mk_term(TERM_ITE, b, A2, A4);
+  term_ref A6 = tm.mk_term(TERM_GEQ, y_next, one);
+
+  // Add and check
+  yices2->add(A5, smt::solver::CLASS_T);
+  yices2->add(A6, smt::solver::CLASS_B);
+
+  // Check and generalize
+  result = yices2->check();
+  cout << "Check result: " << result << endl;
+
+  // Generalize
+  G = yices2->generalize();
+  cout << "G: " << G << endl;
+
+  yices2->pop();
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
 
