@@ -153,6 +153,9 @@ class yices2_internal {
   /** Last check return */
   smt_status_t d_last_check_status;
 
+  /** The yices config */
+  ctx_config_t* d_config;
+
   /** The instance */
   size_t d_instance;
 
@@ -213,6 +216,7 @@ yices2_internal::yices_to_term_cache yices2_internal::s_yices_to_term_cache;
 yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
 : d_tm(tm)
 , d_last_check_status(STATUS_UNKNOWN)
+, d_config(NULL)
 , d_instance(s_instances)
 {
   // Initialize
@@ -235,7 +239,17 @@ yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
   d_bv1 = expr::term_ref_strong(d_tm, d_tm.mk_bitvector_constant(expr::bitvector(1, 1)));
 
   // The context
-  d_ctx = yices_new_context(NULL);
+  if (opts.has_option("solver-logic")) {
+    d_config = yices_new_config();
+    int32_t ret = yices_default_config_for_logic(d_config, opts.get_string("solver-logic").c_str());
+    if (ret < 0) {
+      std::stringstream ss;
+      char* error = yices_error_string();
+      ss << "Yices error (configuration creation): " << error;
+      throw exception(ss.str());
+    }
+  }
+  d_ctx = yices_new_context(d_config);
   if (d_ctx == 0) {
     std::stringstream ss;
     char* error = yices_error_string();
@@ -248,6 +262,11 @@ yices2_internal::~yices2_internal() {
 
   // The context
   yices_free_context(d_ctx);
+
+  // The config
+  if (d_config) {
+    yices_free_config(d_config);
+  }
 
   // Cleanup if the last one
   s_instances--;
