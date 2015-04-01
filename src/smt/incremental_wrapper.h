@@ -58,7 +58,7 @@ public:
   void get_model(expr::model& m) const;
   void push();
   void pop();
-  void generalize(std::vector<expr::term_ref>& projection_out);
+  void generalize(generalization_type type, std::vector<expr::term_ref>& projection_out);
   void interpolate(std::vector<expr::term_ref>& out);
   void get_unsat_core(std::vector<expr::term_ref>& out);
 };

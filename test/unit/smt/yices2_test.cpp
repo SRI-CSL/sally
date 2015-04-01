@@ -110,7 +110,7 @@ BOOST_AUTO_TEST_CASE(yices2_generalization) {
   cout << "Check result: " << result << endl;
 
   // Generalize
-  G = yices2->generalize();
+  G = yices2->generalize(smt::solver::GENERALIZE_BACKWARD);
   cout << "G: " << G << endl;
 
   // 0 <= x + y + z
@@ -122,7 +122,7 @@ BOOST_AUTO_TEST_CASE(yices2_generalization) {
   // Check and generalize
   result = yices2->check();
   cout << "Check result: " << result << endl;
-  G = yices2->generalize();
+  G = yices2->generalize(smt::solver::GENERALIZE_BACKWARD);
   cout << "G: " << G << endl;
 
   yices2->pop();
@@ -143,7 +143,7 @@ BOOST_AUTO_TEST_CASE(yices2_generalization) {
   result = yices2->check();
   cout << "Check result: " << result << endl;
 
-  G = yices2->generalize();
+  G = yices2->generalize(smt::solver::GENERALIZE_BACKWARD);
   cout << "G: " << G << endl;
 
 }
@@ -187,7 +187,7 @@ BOOST_AUTO_TEST_CASE(yices2_generalization_experiment) {
   cout << "Check result: " << result << endl;
 
   // Generalize
-  G = yices2->generalize();
+  G = yices2->generalize(smt::solver::GENERALIZE_BACKWARD);
   cout << "G: " << G << endl;
 
   yices2->pop();
@@ -214,7 +214,7 @@ BOOST_AUTO_TEST_CASE(yices2_generalization_experiment) {
   cout << "Check result: " << result << endl;
 
   // Generalize
-  G = yices2->generalize();
+  G = yices2->generalize(smt::solver::GENERALIZE_BACKWARD);
   cout << "G: " << G << endl;
 
   yices2->pop();

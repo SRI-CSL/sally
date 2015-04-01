@@ -62,7 +62,7 @@ public:
   void pop();
 
   /** Generalize the last call to check assuming the result was SAT. */
-  void generalize(std::vector<expr::term_ref>& out);
+  void generalize(generalization_type type, std::vector<expr::term_ref>& out);
 
   /** Interpolate the last UNSAT result */
   void interpolate(std::vector<expr::term_ref>& out);

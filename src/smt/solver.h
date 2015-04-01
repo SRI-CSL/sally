@@ -171,6 +171,11 @@ public:
     throw exception("pop() not supported by solver " + d_name);
   }
 
+  enum generalization_type {
+    GENERALIZE_FORWARD,
+    GENERALIZE_BACKWARD
+  };
+
   /**
    * Generalize the last call to check assuming the result was SAT, i.e.
    * return the a formula G satisfiable in the current model M such that
@@ -185,14 +190,14 @@ public:
    * Variables of class B are eliminated from the assertions.
    */
   virtual
-  void generalize(std::vector<expr::term_ref>& projection_out) {
+  void generalize(generalization_type type, std::vector<expr::term_ref>& projection_out) {
     throw exception("generalize() not supported by solver " + d_name);
   }
 
   /**
    * Same as above, but returns a single expressions.
    */
-  expr::term_ref generalize();
+  expr::term_ref generalize(generalization_type type);
 
   /**
    * Interpolate an unsatisfiable answer, i.e. return the formula such that

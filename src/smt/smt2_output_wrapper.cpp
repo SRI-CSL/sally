@@ -143,10 +143,10 @@ void smt2_output_wrapper::pop() {
   }
 }
 
-void smt2_output_wrapper::generalize(std::vector<expr::term_ref>& projection_out) {
+void smt2_output_wrapper::generalize(generalization_type type, std::vector<expr::term_ref>& projection_out) {
   set_name_transformer nt(d_tm);
 
-  d_solver->generalize(projection_out);
+  d_solver->generalize(type, projection_out);
 }
 
 void smt2_output_wrapper::interpolate(std::vector<expr::term_ref>& out) {

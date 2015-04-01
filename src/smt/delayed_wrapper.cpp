@@ -73,8 +73,8 @@ void delayed_wrapper::pop() {
   }
 }
 
-void delayed_wrapper::generalize(std::vector<expr::term_ref>& out) {
-  d_solver->generalize(out);
+void delayed_wrapper::generalize(generalization_type type, std::vector<expr::term_ref>& out) {
+  d_solver->generalize(type, out);
 }
 
 void delayed_wrapper::interpolate(std::vector<expr::term_ref>& out) {

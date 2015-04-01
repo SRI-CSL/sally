@@ -915,7 +915,7 @@ void ic3_engine::print_frame(size_t k, std::ostream& out) const {
 
 expr::term_ref ic3_engine::generalize_sat_at(size_t k, smt::solver* solver) {
   std::vector<expr::term_ref> generalization_facts;
-  solver->generalize(generalization_facts);
+  solver->generalize(smt::solver::GENERALIZE_BACKWARD, generalization_facts);
 
   // Remove anything already known at the frame
   size_t to_keep = 0;

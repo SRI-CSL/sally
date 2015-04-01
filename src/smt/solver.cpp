@@ -28,9 +28,9 @@ std::ostream& operator << (std::ostream& out, solver::result result) {
   return out;
 }
 
-expr::term_ref solver::generalize() {
+expr::term_ref solver::generalize(generalization_type type) {
   std::vector<expr::term_ref> projection_out;
-  generalize(projection_out);
+  generalize(type, projection_out);
   return d_tm.mk_and(projection_out);
 }
 

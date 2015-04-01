@@ -60,7 +60,7 @@ public:
   /**
    * Generalize the last call to check assuming the result was SAT.
    */
-  void generalize(std::vector<expr::term_ref>& projection_out);
+  void generalize(generalization_type type, std::vector<expr::term_ref>& projection_out);
 };
 
 }

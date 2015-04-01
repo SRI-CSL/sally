@@ -95,10 +95,10 @@ void y2m5::pop() {
 }
 
 
-void y2m5::generalize(std::vector<expr::term_ref>& out) {
+void y2m5::generalize(generalization_type type, std::vector<expr::term_ref>& out) {
   TRACE("y2m5") << "y2m5[" << s_instance << "]: generalizing" << std::endl;
   assert(d_last_yices2_result == SAT);
-  d_yices2->generalize(out);
+  d_yices2->generalize(type, out);
 }
 
 void y2m5::interpolate(std::vector<expr::term_ref>& out) {

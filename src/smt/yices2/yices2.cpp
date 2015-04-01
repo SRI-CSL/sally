@@ -198,7 +198,7 @@ public:
   void pop();
 
   /** Return the generalization */
-  void generalize(const std::set<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out);
+  void generalize(smt::solver::generalization_type type, const std::set<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out);
 
   /** Returns the instance id */
   size_t instance() const { return d_instance; }
@@ -1018,7 +1018,7 @@ void yices2_internal::pop() {
   }
 }
 
-void yices2_internal::generalize(const std::set<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out) {
+void yices2_internal::generalize(smt::solver::generalization_type type, const std::set<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out) {
 
   assert(!to_eliminate.empty());
   assert(!d_assertions.empty());
@@ -1043,11 +1043,25 @@ void yices2_internal::generalize(const std::set<expr::term_ref>& to_eliminate, s
   term_t* assertions = new term_t[to_generalize];
   size_t j = 0;
   // Add class B first
-  for (size_t i = 0; i < d_assertions.size(); ++ i) {
-    if (d_assertion_classes[i] == solver::CLASS_B) {
-      assertions[j++] = to_yices2_term(d_assertions[i]);
+  switch (type) {
+  case smt::solver::GENERALIZE_BACKWARD:
+    for (size_t i = 0; i < d_assertions.size(); ++ i) {
+      if (d_assertion_classes[i] == solver::CLASS_B) {
+        assertions[j++] = to_yices2_term(d_assertions[i]);
+      }
     }
+    break;
+  case smt::solver::GENERALIZE_FORWARD:
+    for (size_t i = 0; i < d_assertions.size(); ++ i) {
+      if (d_assertion_classes[i] == solver::CLASS_A) {
+        assertions[j++] = to_yices2_term(d_assertions[i]);
+      }
+    }
+    break;
+  default:
+    assert(false);
   }
+
   // Add class T
   for (size_t i = 0; i < d_assertions.size(); ++ i) {
     if (d_assertion_classes[i] == solver::CLASS_T) {
@@ -1136,10 +1150,18 @@ void yices2::pop() {
 }
 
 
-void yices2::generalize(std::vector<expr::term_ref>& projection_out) {
+void yices2::generalize(generalization_type type, std::vector<expr::term_ref>& projection_out) {
   TRACE("yices2") << "yices2[" << d_internal->instance() << "]: generalizing" << std::endl;
   assert(!d_y_variables.empty());
-  d_internal->generalize(d_y_variables, projection_out);
+  switch (type) {
+  case GENERALIZE_FORWARD:
+    d_internal->generalize(type, d_x_variables, projection_out);
+    break;
+  case GENERALIZE_BACKWARD:
+    d_internal->generalize(type, d_y_variables, projection_out);
+    break;
+  }
+
 }
 
 }

@@ -64,8 +64,8 @@ void incremental_wrapper::pop() {
   }
 }
 
-void incremental_wrapper::generalize(std::vector<expr::term_ref>& out) {
-  d_solver->generalize(out);
+void incremental_wrapper::generalize(generalization_type type, std::vector<expr::term_ref>& out) {
+  d_solver->generalize(type, out);
 }
 
 void incremental_wrapper::interpolate(std::vector<expr::term_ref>& out) {
