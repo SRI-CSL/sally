@@ -218,7 +218,7 @@ public:
   void pop();
 
   /** Return the generalization */
-  void generalize(const std::set<expr::term_ref>& vars_to_keep, const std::set<expr::term_ref>& vars_to_elim, std::vector<expr::term_ref>& out);
+  void generalize(solver::generalization_type type, const std::set<expr::term_ref>& vars_to_keep, const std::set<expr::term_ref>& vars_to_elim, std::vector<expr::term_ref>& out);
 
   /** Return the interpolation */
   void interpolate(std::vector<expr::term_ref>& out);
@@ -1060,19 +1060,30 @@ void mathsat5_internal::get_unsat_core(std::vector<expr::term_ref>& out) {
   msat_free(core);
 }
 
-void mathsat5_internal::generalize(const std::set<expr::term_ref>& vars_to_keep, const std::set<expr::term_ref>& vars_to_elim, std::vector<expr::term_ref>& out) {
+void mathsat5_internal::generalize(solver::generalization_type type, const std::set<expr::term_ref>& vars_to_keep, const std::set<expr::term_ref>& vars_to_elim, std::vector<expr::term_ref>& out) {
   expr::model m(d_tm, true);
   get_model(m);
 
   if (d_opts.get_bool("mathsat5-generalize-qe")) {
 
-    // Push all the A formula to out, make a conjunction of the T and B
+    // QE:
+    // A if forward,
+    // B if backward
+    // T always
     std::vector<expr::term_ref> assertions_for_qe;
     for (size_t i = 0; i < d_assertions.size(); ++ i) {
-      if (d_assertion_classes[i] == solver::CLASS_A) {
-        out.push_back(d_assertions[i]);
-      } else {
+      switch (d_assertion_classes[i]) {
+      case solver::CLASS_A:
+        if (type == solver::GENERALIZE_FORWARD) {
+          assertions_for_qe.push_back(d_assertions[i]);
+        }
+        break;
+      case solver::CLASS_T:
         assertions_for_qe.push_back(d_assertions[i]);
+        break;
+      case solver::CLASS_B:
+        assertions_for_qe.push_back(d_assertions[i]);
+        break;
       }
     }
 
@@ -1185,9 +1196,16 @@ void mathsat5::pop() {
 }
 
 /** Interpolate the last sat result (trivial) */
-void mathsat5::generalize(std::vector<expr::term_ref>& out) {
+void mathsat5::generalize(generalization_type type, std::vector<expr::term_ref>& out) {
   TRACE("mathsat5") << "mathsat5[" << d_internal->instance() << "]: interpolating" << std::endl;
-  d_internal->generalize(d_x_variables, d_y_variables, out);
+  switch (type) {
+  case GENERALIZE_FORWARD:
+    d_internal->generalize(type, d_y_variables, d_x_variables, out);
+    break;
+  case GENERALIZE_BACKWARD:
+    d_internal->generalize(type, d_x_variables, d_y_variables, out);
+  }
+
 }
 
 
