@@ -708,6 +708,7 @@ void ic3_engine::push_current_frame() {
       break;
     case INDUCTION_FAIL:
       // Not inductive, if P then we're done
+      d_frame_formula_info[ind.formula()].invalid = true;
       if (ind.formula() == d_property->get_formula()) {
         return;
       }
