@@ -23,11 +23,9 @@ namespace ic3 {
  * depend on the context. It could be that we're trying to reach P at
  * frame k. Or, we could be trying to prove P is inductive at frame k.
  */
-class obligation {
+class induction_obligation {
 
-  /** The frame of the obligation */
-  size_t d_k;
-  /** The forumula in question */
+  /** The formula in question */
   expr::term_ref d_P;
   /** Assumption depth */
   size_t d_depth;
@@ -37,11 +35,8 @@ class obligation {
 public:
 
   /** Construct the obligation */
-  obligation(size_t k, expr::term_ref P, size_t depth, double score = 0)
-  : d_k(k), d_P(P), d_depth(depth), d_score(score) {}
-
-  /** Get the frame */
-  size_t frame() const { return d_k; }
+  induction_obligation(expr::term_ref P, size_t depth, double score = 0)
+  : d_P(P), d_depth(depth), d_score(score) {}
 
   /** Get the formula */
   expr::term_ref formula() const { return d_P; }
@@ -56,18 +51,60 @@ public:
   void add_score(double amount) { d_score += amount; }
 
   /** Compare for equality */
-  bool operator == (const obligation& o) const {
-    return d_k == o.d_k && d_P == o.d_P;
+  bool operator == (const induction_obligation& o) const {
+    return d_P == o.d_P;
   }
-};
 
-/** Order on the induction obligations */
-struct obligation_compare_induction {
-  bool operator () (const obligation& o1, const obligation& o2) const;
+  bool operator < (const induction_obligation& o) const {
+    // Smaller depth wins
+    if (depth() != o.depth()) {
+      return depth() > o.depth();
+    }
+    // Smaller score wins
+    if (score() != o.score()) {
+      return score() > o.score();
+    }
+    // Break ties
+    return formula() > o.formula();
+  }
+
 };
 
 /** Priority queue for obligations */
-typedef boost::heap::priority_queue<obligation, boost::heap::compare<obligation_compare_induction> > induction_obligation_queue;
+typedef boost::heap::priority_queue<induction_obligation> induction_obligation_queue;
+
+/**
+ * Information on formulas. A formula is found in a frame because it refutes a
+ * counterexample to induction of another formula. For all formulas F in a frame
+ * we have that either
+ *
+ * * F has been there since the start, i.e. it is the property itself or
+ *   the initial condition.
+ * * We had a counter-example to induction G of some other F1 in the frame,
+ *   and this counterexample is not reachable. From unreachability of G we
+ *   learn another formula I, so we have that:
+ *     - G => \exists x' T(x, x') and F1'
+ *     - F => not G
+ *
+ * We keep the mapping from F to
+ *   * parent: meaning F1 above
+ *   * refutes: meaning G above
+ *
+ * THe parent links are non-circular and all end up in either F or some intial
+ * state formula.
+ */
+struct frame_formula_info {
+  /** We introduced this formula to help inductivity of parent */
+  expr::term_ref parent;
+  /** This formula was introduced to eliminate this counter-example generalization */
+  expr::term_ref refutes;
+  /** Has this formula been shown refuted by a real conuterexample */
+  bool invalid;
+
+  frame_formula_info(): invalid(false) {}
+  frame_formula_info(expr::term_ref parent, expr::term_ref refutes)
+  : parent(parent), refutes(refutes), invalid(false) {}
+};
 
 class ic3_engine : public engine {
 
@@ -118,7 +155,7 @@ class ic3_engine : public engine {
   };
 
   /** Push the formula forward if its inductive. Returns true if inductive. */
-  induction_result push_if_inductive(const obligation& o);
+  induction_result push_if_inductive(const induction_obligation& o);
 
   /**
    * Add a formula that's inductive up to k-1 and holds at k. The formula will
@@ -127,17 +164,23 @@ class ic3_engine : public engine {
    */
   void add_valid_up_to(size_t k, expr::term_ref f);
 
-  /** Queue of induction obligations */
+  /** The current frame we are trying to push */
+  size_t d_induction_frame;
+
+  /** Map from frame formulas to information about them */
+  std::map<expr::term_ref, frame_formula_info> d_frame_formula_info;
+
+  /** Queue of induction obligations at the current frame */
   induction_obligation_queue d_induction_obligations;
+
+  /** Set of obligations for the next frame */
+  std::set<induction_obligation> d_induction_obligations_next;
 
   /** Count of obligations per frame */
   std::vector<size_t> d_induction_obligations_count;
 
-  /** Add formula to the induction obligation queue */
-  void add_to_induction_obligations(const obligation& ind);
-
   /** Get the next induction obligations */
-  obligation pop_induction_obligation();
+  induction_obligation pop_induction_obligation();
 
   /** Set of facts valid per frame */
   std::vector<formula_set> d_frame_content;
@@ -206,6 +249,9 @@ class ic3_engine : public engine {
 
   /** Statistics per frame (some number of frames) */
   std::vector<utils::stat_int*> d_stat_frame_size;
+
+  /** Push the current frame */
+  void push_current_frame();
 
   /** Search */
   result search();
