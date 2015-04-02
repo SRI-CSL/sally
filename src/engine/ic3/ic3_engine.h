@@ -188,9 +188,6 @@ class ic3_engine : public engine {
   /** Total number of facts in the database */
   size_t total_facts() const;
 
-  /** set of facts that are inductive at frame */
-  std::vector<formula_set> d_frame_inductive_content;
-
   /** Add the formul to frame */
   void add_to_frame(size_t k, expr::term_ref f);
 

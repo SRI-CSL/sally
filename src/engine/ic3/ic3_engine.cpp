@@ -156,7 +156,6 @@ void ic3_engine::add_valid_up_to(size_t k, expr::term_ref F) {
       break;
     }
     add_to_frame(i, F);
-    get_solver(i)->add(F, smt::solver::CLASS_A);
     if (output::trace_tag_is_enabled("ic3::deadlock")) {
       smt::solver::result r = get_solver(i)->check();
       if (r != smt::solver::SAT) {
@@ -201,7 +200,6 @@ void ic3_engine::ensure_frame(size_t k) {
 
     // Add the empty frame content
     d_frame_content.push_back(formula_set());
-    d_frame_inductive_content.push_back(formula_set());
     // Number of obligations per frame
     d_induction_obligations_count.push_back(0);
   }
@@ -269,9 +267,6 @@ void ic3_engine::reduce_learnts() {
         d_frame_content[k].erase(f);
       }
     }
-
-    // Inductiveness is not valid any more
-    d_frame_inductive_content[k].clear();
 
     // Update the stats
     if (k < d_stat_frame_size.size()) {
@@ -661,6 +656,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(const induction_oblig
   d_induction_obligations.push(induction_obligation(learnt, depth+1, 0));
 
   // Add to frame info
+  assert(!d_frame_formula_info[learnt].invalid);
   d_frame_formula_info[learnt] = frame_formula_info(f, G);
 
   return INDUCTION_RETRY;
@@ -668,6 +664,8 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(const induction_oblig
 
 void ic3_engine::add_to_frame(size_t k, expr::term_ref f) {
   ensure_frame(k);
+  assert(d_frame_content[k].count(f) == 0);
+  get_solver(k)->add(f, smt::solver::CLASS_A);
   d_frame_content[k].insert(f);
   if (k < d_stat_frame_size.size()) {
     d_stat_frame_size[k]->get_value() ++;
@@ -735,21 +733,21 @@ engine::result ic3_engine::search() {
     }
 
     // If we pushed all of them, we're done
-    if (d_induction_obligations.size() == d_induction_obligations_next.size()) {
+    if (d_frame_content[d_induction_frame].size() == d_induction_obligations_next.size()) {
       if (ctx().get_options().get_bool("ic3-show-invariant")) {
         print_frame(d_induction_frame, std::cout);
       }
       return engine::VALID;
     }
 
-    // Update the frame
+    // Move to the next frame
     d_induction_frame ++;
     d_induction_obligations.clear();
     std::set<induction_obligation>::const_iterator it = d_induction_obligations_next.begin();
     for (; it != d_induction_obligations_next.end(); ++ it) {
       // Push if not shown invalid
       if (!d_frame_formula_info[it->formula()].invalid) {
-        get_solver(d_induction_frame)->add(it->formula(), smt::solver::CLASS_A);
+        add_to_frame(d_induction_frame, it->formula());
         d_induction_obligations.push(*it);
       }
     }
@@ -778,7 +776,6 @@ void ic3_engine::reset() {
   d_induction_obligations_next.clear();
   d_induction_obligations_count.clear();
   d_frame_content.clear();
-  d_frame_inductive_content.clear();
   for (size_t i = 0; i < d_stat_frame_size.size(); ++ i) {
     d_stat_frame_size[i]->get_value() = 0;
   }
@@ -787,6 +784,7 @@ void ic3_engine::reset() {
 
 engine::result ic3_engine::query(const system::transition_system* ts, const system::state_formula* sf) {
 
+  // Initialize
   result r = UNKNOWN;
   d_induction_frame = 0;
 
@@ -803,7 +801,6 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   // Add the initial state
   expr::term_ref I = d_transition_system->get_initial_states();
   add_to_frame(0, I);
-  get_solver(0)->add(I, smt::solver::CLASS_A);
   d_induction_obligations.push(induction_obligation(I, 0, 0));
 
   // Add the property we're trying to prove
@@ -953,8 +950,14 @@ void ic3_engine::bump_formulas(const std::vector<expr::term_ref>& formulas) {
 }
 
 size_t ic3_engine::total_facts() const {
-  assert(d_frame_content.size() > 1);
-  return d_frame_content[0].size() + d_frame_content[1].size();
+  // Frames are smaller and smaller, so we return the first one. But, since we
+  // never add to frame 0, we return frame 0 + frame 1
+  assert (d_frame_content.size() > 0);
+  if (d_frame_content.size() > 1) {
+    return d_frame_content[0].size() + d_frame_content[1].size();
+  } else {
+    return d_frame_content[0].size();
+  }
 }
 
 }
