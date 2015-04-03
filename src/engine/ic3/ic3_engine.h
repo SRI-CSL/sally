@@ -56,13 +56,13 @@ public:
   }
 
   bool operator < (const induction_obligation& o) const {
-    // Smaller depth wins
-    if (depth() != o.depth()) {
-      return depth() > o.depth();
-    }
     // Smaller score wins
     if (score() != o.score()) {
       return score() > o.score();
+    }
+    // Smaller depth wins
+    if (depth() != o.depth()) {
+      return depth() > o.depth();
     }
     // Break ties
     return formula() > o.formula();
@@ -142,6 +142,11 @@ class ic3_engine : public engine {
    * variables (k-th frame).
    */
   expr::term_ref check_inductive_at(size_t k, expr::term_ref f);
+
+  /**
+   * Check if the formula or any of its parents is marked as invalid.
+   */
+  bool formula_or_parent_is_invalid(expr::term_ref f);
 
   enum induction_result {
     // Formula is inductive

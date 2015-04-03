@@ -686,11 +686,18 @@ void ic3_engine::check_deadlock() {
 
 void ic3_engine::push_current_frame() {
 
+  expr::term_ref property = d_property->get_formula();
+
   // Search while we have something to do
-  while (!d_induction_obligations.empty()) {
+  while (!d_induction_obligations.empty() && !d_frame_formula_info[property].invalid ) {
 
     // Pick a formula to try and prove inductive, i.e. that F_k & P & T => P'
     induction_obligation ind = pop_induction_obligation();
+
+    // If formula or one of its parents is marked as invalid, skip it
+    if (d_frame_formula_info[ind.formula()].invalid) {
+      continue;
+    }
 
     // Push the formula forward if it's inductive at the frame
     size_t old_total = total_facts();
@@ -707,11 +714,8 @@ void ic3_engine::push_current_frame() {
       // Boss
       break;
     case INDUCTION_FAIL:
-      // Not inductive, if P then we're done
+      // Not inductive, mark it
       d_frame_formula_info[ind.formula()].invalid = true;
-      if (ind.formula() == d_property->get_formula()) {
-        return;
-      }
       break;
     case INDUCTION_INCONCLUSIVE:
       break;
