@@ -72,10 +72,8 @@ public:
    */
   void to_stream(std::ostream& out) const;
 
-  /**
-   * Clear any model information.
-   */
-  void clear();
+  /** Resize trace to 0 .. size -1 */
+  void resize_to(size_t size);
 
 };
 

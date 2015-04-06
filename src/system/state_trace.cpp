@@ -135,8 +135,10 @@ void state_trace::to_stream(std::ostream& out) const {
   d_state_type->tm().pop_namespace();
 }
 
-void state_trace::clear() {
-  d_model.clear();
+void state_trace::resize_to(size_t size) {
+  if (size < d_state_variables.size()) {
+    d_state_variables.resize(size);
+  }
 }
 
 std::ostream& operator << (std::ostream& out, const state_trace& trace) {

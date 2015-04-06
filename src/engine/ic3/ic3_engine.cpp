@@ -764,13 +764,13 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
     // We're sat (either by knowing, or by checking), so we extend further
     f = parent;
     d_frame_formula_info[f].invalid = true;
+    d_counterexample.push_back(G);
 
     // One more transition relation
     expr::term_ref T_k = d_trace->get_transition_formula(d_transition_system->get_transition_relation(), k, k + 1);
     d_counterexample_solver_depth ++;
     solver->add(T_k, smt::solver::CLASS_A);
   }
-
 }
 
 void ic3_engine::push_current_frame() {
@@ -806,9 +806,7 @@ void ic3_engine::push_current_frame() {
       // Not inductive, mark it
       d_frame_formula_info[ind.formula()].invalid = true;
       // Try to extend the counter-example further
-      if (ctx().get_options().get_bool("ic3-extend-failures")) {
-        extend_induction_failure(ind.formula());
-      }
+      extend_induction_failure(ind.formula());
       break;
     case INDUCTION_INCONCLUSIVE:
       break;
@@ -936,64 +934,44 @@ const system::state_trace* ic3_engine::get_trace() {
 
   // Add the property to the end of the counterexample
   d_counterexample.push_back(tm().mk_term(expr::TERM_NOT, d_property->get_formula()));
+  d_trace->resize_to(d_counterexample.size());
 
-  // Model we'll be using (the last one we're trying to extend)
-  expr::model m(tm(), false);
+  smt::solver* solver = get_counterexample_solver();
+  smt::solver_scope solver_scope(solver);
+  solver_scope.push();
 
-  // Get the state variables
-  const std::vector<expr::term_ref>& current_vars = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_CURRENT);
-  const std::vector<expr::term_ref>& next_vars = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_NEXT);
+  std::vector<expr::term_ref> all_variables;
 
-  // Make the solver
-  smt::solver* solver = smt::factory::mk_default_solver(tm(), ctx().get_options());
-  solver->add_x_variables(current_vars.begin(), current_vars.end());
-  solver->add_y_variables(next_vars.begin(), next_vars.end());
-  solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_T);
+  // The transition relation
+  expr::term_ref T = d_transition_system->get_transition_relation();
 
-  // Get the first one
-  solver->push();
-  solver->add(d_transition_system->get_initial_states(), smt::solver::CLASS_A);
-  solver->add(d_counterexample[0], smt::solver::CLASS_A);
-  smt::solver::result result = solver->check();
-  unused_var(result);
-  assert(result == smt::solver::SAT);
-  solver->get_model(m);
-  d_trace->add_model(m, system::state_type::STATE_CURRENT, 0);
-  solver->pop();
-
-  if (d_counterexample.size() > 1) {
-    for (size_t k = 1; k < d_counterexample.size(); ++ k) {
-
-      solver->push();
-
-      // Add the model, i.e. where we're coming from
-      for (size_t i = 0; i < next_vars.size(); ++ i) {
-        expr::term_ref var = current_vars[i];
-        expr::term_ref value = k == 1 ? m.get_variable_value(current_vars[i]) : m.get_variable_value(next_vars[i]);
-        expr::term_ref eq = tm().mk_term(expr::TERM_EQ, var, value);
-        solver->add(eq, smt::solver::CLASS_A);
-      }
-
-      // Add what we are trying to reach
-      expr::term_ref to = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, d_counterexample[k]);
-      d_trace->get_state_formula(to, k);
-      solver->add(to, smt::solver::CLASS_B);
-
-      // Check and add the model to the trace
-      m.clear();
-      smt::solver::result r = solver->check();
-      assert(r == smt::solver::SAT);
-      unused_var(r);
-      solver->get_model(m);
-      d_trace->add_model(m, system::state_type::STATE_NEXT, k);
-
-      solver->pop();
+  // Assert neede stuff
+  for (size_t k = 0; k < d_counterexample.size(); ++ k) {
+    // Get the variable to add to solver
+    d_trace->get_state_variables(k, all_variables);
+    // If not added already, add the transition relation
+    if (k >= d_counterexample_solver_depth && k + 1 < d_counterexample.size()) {
+      expr::term_ref T_k = d_trace->get_transition_formula(T, k, k + 1);
+      solver->add(T_k, smt::solver::CLASS_A);
     }
+    // Add the counter-example part
+    expr::term_ref G = d_counterexample[k];
+    expr::term_ref G_k = d_trace->get_state_formula(G, k);
+    solver->add(G_k, smt::solver::CLASS_A);
   }
 
+  // Check
+  solver->add_x_variables(all_variables.begin(), all_variables.end());
+  smt::solver::result r = solver->check();
+  unused_var(r);
+  assert(r == smt::solver::SAT);
 
-  // Remove the solver
-  delete solver;
+  // Get the model
+  expr::model m(tm(), true);
+  solver->get_model(m);
+
+  // Set the model to the trace
+  d_trace->add_model(m);
 
   return d_trace;
 }
