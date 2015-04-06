@@ -47,6 +47,8 @@ ic3_engine::ic3_engine(const system::context& ctx)
 : engine(ctx)
 , d_transition_system(0)
 , d_property(0)
+, d_counterexample_solver(0)
+, d_counterexample_solver_depth(0)
 , d_trace(0)
 , d_induction_frame(0)
 {
@@ -68,6 +70,7 @@ ic3_engine::~ic3_engine() {
   for (size_t k = 0; k < d_solvers.size(); ++ k) {
     delete d_solvers[k];
   }
+  delete d_counterexample_solver;
   delete d_trace;
 }
 
@@ -188,10 +191,12 @@ void ic3_engine::init_solver(size_t k) {
 }
 
 void ic3_engine::ensure_frame(size_t k) {
+
   if (d_solvers.size() <= k) {
     MSG(1) << "ic3: Extending trace to " << k << std::endl;
   }
 
+  // Upsize the solvers and frames if necessary
   while (d_solvers.size() <= k) {
     // Make the solver
     size_t i = d_solvers.size();
@@ -202,7 +207,13 @@ void ic3_engine::ensure_frame(size_t k) {
     d_frame_content.push_back(formula_set());
     // Number of obligations per frame
     d_induction_obligations_count.push_back(0);
+
+    // Add transition relation k -> k + 1 to the counter-example solver
+    expr::term_ref T = d_trace->get_transition_formula(d_transition_system->get_transition_relation(), k, k + 1);
+    get_counterexample_solver()->add(T, smt::solver::CLASS_A);
+    d_counterexample_solver_depth ++;
   }
+
 }
 
 size_t ic3_engine::get_score(expr::term_ref f) const {
@@ -641,7 +652,6 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(const induction_oblig
 
   // If reachable, we're not inductive
   if (reachable) {
-    d_counterexample.push_back(tm().mk_term(expr::TERM_NOT, f));
     return INDUCTION_FAIL;
   }
 
@@ -652,12 +662,12 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(const induction_oblig
   // Add the learnt
   add_valid_up_to(d_induction_frame, learnt);
 
-  // Try to push assumptions next time
-  d_induction_obligations.push(induction_obligation(learnt, depth+1, 0));
-
-  // Add to frame info
-  assert(!d_frame_formula_info[learnt].invalid);
-  d_frame_formula_info[learnt] = frame_formula_info(f, G);
+  // Add to obligations if not already shown invalid
+  if (!d_frame_formula_info[learnt].invalid) {
+    // Try to push assumptions next time
+    d_induction_obligations.push(induction_obligation(learnt, depth+1, 0));
+    d_frame_formula_info[learnt] = frame_formula_info(f, G);
+  }
 
   return INDUCTION_RETRY;
 }
@@ -682,6 +692,85 @@ void ic3_engine::check_deadlock() {
       throw exception(ss.str());
     }
   }
+}
+
+template<typename T>
+class scoped_value {
+  T& d_variable;
+  T d_old_value;
+public:
+  scoped_value(T& variable)
+  : d_variable(variable)
+  , d_old_value(variable) {}
+  ~scoped_value() {
+    d_variable = d_old_value;
+  }
+};
+
+void ic3_engine::extend_induction_failure(expr::term_ref f) {
+
+  assert(d_counterexample.size() > 0);
+
+  // We have a counter-example to inductiveness of f at at pushing frame
+  // and d_counterexample has its generalization at the back.
+  assert(d_counterexample.size() == d_induction_frame + 1);
+
+  // Solver for checking
+  smt::solver* solver = get_counterexample_solver();
+  smt::solver_scope solver_scope(solver);
+  solver_scope.push();
+  scoped_value<size_t> depth_scope(d_counterexample_solver_depth);
+
+  // Assert all the generalizations
+  size_t k = 0;
+  for (; k < d_counterexample.size(); ++ k) {
+    // Add the generalization to frame k
+    expr::term_ref G_k = d_trace->get_state_formula(d_counterexample[k], k);
+    solver->add(G_k, smt::solver::CLASS_A);
+  }
+
+  // Try to extend it
+  for (;; ++ k) {
+
+    // We know there is a counterexample to induction of f: 0, ..., k, with f
+    // being false a k + 1.
+    assert(d_frame_formula_info[f].invalid == true);
+    // We have enough transitions to reach k + 1
+    assert(k + 1 == d_counterexample_solver_depth);
+
+    expr::term_ref G = d_frame_formula_info[f].refutes;
+    expr::term_ref parent = d_frame_formula_info[f].parent;
+
+    // If no more parents, we're done
+    if (parent.is_null()) {
+      break;
+    }
+
+    // Add to next
+    expr::term_ref G_k = d_trace->get_state_formula(G, k);
+    solver->add(G_k, smt::solver::CLASS_A);
+
+    // If not a generalization, must check to see if we're reachable
+    if (f != tm().mk_term(expr::TERM_NOT, G)) {
+      // If not a generalization we need to check
+      smt::solver::result r = solver->check();
+
+      // If not sat, we can't extend any more
+      if (r != smt::solver::SAT) {
+        break;
+      }
+    }
+
+    // We're sat (either by knowing, or by checking), so we extend further
+    f = parent;
+    d_frame_formula_info[f].invalid = true;
+
+    // One more transition relation
+    expr::term_ref T_k = d_trace->get_transition_formula(d_transition_system->get_transition_relation(), k, k + 1);
+    d_counterexample_solver_depth ++;
+    solver->add(T_k, smt::solver::CLASS_A);
+  }
+
 }
 
 void ic3_engine::push_current_frame() {
@@ -716,6 +805,10 @@ void ic3_engine::push_current_frame() {
     case INDUCTION_FAIL:
       // Not inductive, mark it
       d_frame_formula_info[ind.formula()].invalid = true;
+      // Try to extend the counter-example further
+      if (ctx().get_options().get_bool("ic3-extend-failures")) {
+        extend_induction_failure(ind.formula());
+      }
       break;
     case INDUCTION_INCONCLUSIVE:
       break;
@@ -773,6 +866,8 @@ void ic3_engine::reset() {
     delete d_solvers[i];
   }
   d_solvers.clear();
+  delete d_counterexample_solver;
+  d_counterexample_solver_depth = 0;
   d_counterexample.clear();
   delete d_trace;
   d_trace = 0;
@@ -800,6 +895,9 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   d_transition_system = ts;
   d_property = sf;
 
+  // Make the trace
+  d_trace = new system::state_trace(sf->get_state_type());
+
   // Start with at least one frame
   ensure_frame(0);
 
@@ -812,7 +910,6 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   expr::term_ref P = d_property->get_formula();
   bool P_valid = check_valid(0, P);
   if (!P_valid) {
-    d_counterexample.push_back(tm().mk_term(expr::TERM_NOT, P));
     return engine::INVALID;
   } else {
     add_to_frame(0, P);
@@ -836,9 +933,9 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 }
 
 const system::state_trace* ic3_engine::get_trace() {
-  if (d_trace) { delete d_trace; }
-  d_trace = new system::state_trace(d_transition_system->get_state_type());
 
+  // Add the property to the end of the counterexample
+  d_counterexample.push_back(tm().mk_term(expr::TERM_NOT, d_property->get_formula()));
 
   // Model we'll be using (the last one we're trying to extend)
   expr::model m(tm(), false);
@@ -914,6 +1011,15 @@ void ic3_engine::to_stream(std::ostream& out) const  {
 smt::solver* ic3_engine::get_solver(size_t k) {
   ensure_frame(k);
   return d_solvers[k];
+}
+
+smt::solver* ic3_engine::get_counterexample_solver() {
+  if (d_counterexample_solver == 0) {
+    assert(d_induction_frame == 0);
+    d_counterexample_solver = smt::factory::mk_default_solver(tm(), ctx().get_options());
+    d_counterexample_solver_depth = 0;
+  }
+  return d_counterexample_solver;
 }
 
 void ic3_engine::print_frames(std::ostream& out) const {

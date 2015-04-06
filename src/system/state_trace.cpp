@@ -135,6 +135,10 @@ void state_trace::to_stream(std::ostream& out) const {
   d_state_type->tm().pop_namespace();
 }
 
+void state_trace::clear() {
+  d_model.clear();
+}
+
 std::ostream& operator << (std::ostream& out, const state_trace& trace) {
   trace.to_stream(out);
   return out;

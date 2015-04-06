@@ -119,7 +119,17 @@ class ic3_engine : public engine {
   /** A solver per frame with next info */
   std::vector<smt::solver*> d_solvers;
 
-  /** A counter-example, if any, with formulas in reverse order, i.e. last one is the 0 frame */
+  /** Counter-example solver */
+  smt::solver* d_counterexample_solver;
+
+  /** Number of transition releations asserted to counteredxample solver */
+  size_t d_counterexample_solver_depth;
+
+  /**
+   * A counter-example, if any, to the current induction check. The queue is
+   * stuffed with generalization, so the guarantee is that the every element
+   * can reach the next element.
+   */
   std::deque<expr::term_ref> d_counterexample;
 
   /** The trace we're building for counterexamples */
@@ -127,6 +137,9 @@ class ic3_engine : public engine {
 
   /** Returns the solver for k-th frame */
   smt::solver* get_solver(size_t k);
+
+  /** Returns the dedicated counterexample solver */
+  smt::solver* get_counterexample_solver();
 
   /**
    * Checks if the formula is reachable in one step at frame k > 0. F should be
@@ -245,12 +258,25 @@ class ic3_engine : public engine {
 
   /**
    * Weaken the given formula, i.e. find W such that F => W and and W is
-   * inconsistnet with the given model.
+   * inconsistent with the given model.
    */
   expr::term_ref weaken(expr::term_ref F, expr::model& m, weakening_mode mode);
 
   /** Statistics per frame (some number of frames) */
   std::vector<utils::stat_int*> d_stat_frame_size;
+
+  /**
+   * The formula f has been shown not induction by a concrete counterexample.
+   * The counterexample is recorded in C: d_counterexample. Try to extend it
+   * forward by checking
+   *
+   *  C and G0 -> to refute p(C) at k + 1
+   *  C and G0 and T and G1 -> to refute p(p(C)) at k + 2 ...
+   *
+   *  if G0 = p(C) by checking needed, since previous generalizations ensure
+   *  that the extension is sat.
+   */
+  void extend_induction_failure(expr::term_ref f);
 
   /** Push the current frame */
   void push_current_frame();

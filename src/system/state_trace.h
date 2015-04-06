@@ -71,6 +71,12 @@ public:
    * Output the trace to the stream.
    */
   void to_stream(std::ostream& out) const;
+
+  /**
+   * Clear any model information.
+   */
+  void clear();
+
 };
 
 std::ostream& operator << (std::ostream& out, const state_trace& trace);
