@@ -219,7 +219,7 @@ class ic3_engine : public engine {
   void ensure_frame(size_t k);
 
   /** Remove some learnt formulas */
-  void reduce_learnts();
+  void restart_solvers();
 
   /**
    * Check if f is holds at frame k. */
@@ -286,27 +286,6 @@ class ic3_engine : public engine {
 
   /** Check if all frames are satisfiable, throw otherwise */
   void check_deadlock();
-
-  typedef boost::unordered_map<expr::term_ref, size_t, expr::term_ref_hasher> formula_scores_map;
-
-  /** Map from formulas to their scores (how many times they were used as assumptions) */
-  formula_scores_map d_formula_scores;
-
-  /** Returns the score of the formula (or 0 if it doesn't have one) */
-  size_t get_score(expr::term_ref f) const;
-
-  /** Comparator for scores */
-  struct learnt_cmp {
-    const formula_scores_map& scores;
-    bool operator () (expr::term_ref f1, expr::term_ref f2) const;
-    learnt_cmp(const formula_scores_map& scores): scores(scores) {}
-  };
-
-  /** Bump the scores of the formula */
-  void bump_formula(expr::term_ref formulas);
-
-  /** Bump the scores of the formulas */
-  void bump_formulas(const std::vector<expr::term_ref>& formulas);
 
   /** Reset the engine */
   void reset();

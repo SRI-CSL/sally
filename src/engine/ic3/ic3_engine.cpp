@@ -216,75 +216,19 @@ void ic3_engine::ensure_frame(size_t k) {
 
 }
 
-size_t ic3_engine::get_score(expr::term_ref f) const {
-  formula_scores_map::const_iterator find = d_formula_scores.find(f);
-  if (find == d_formula_scores.end()) {
-    return 0;
-  } else {
-    return find->second;
-  }
-}
-
-void ic3_engine::reduce_learnts() {
+void ic3_engine::restart_solvers() {
 
   if (d_frame_content.size() < 2) {
     // Nothing to reduce
     return;
   }
 
-  bool agressive = ctx().get_options().get_bool("ic3-aggresive-reduce");
+  MSG(1) << "ic3: restarting solvers" << std::endl;
 
-  MSG(1) << "ic3: reducing learnts" << std::endl;
+  // Restart the solvers from frames 1..last
+  for (size_t k = 0; k <= d_induction_frame; ++ k) {
 
-  std::vector<expr::term_ref> to_remove;
-  std::copy(d_frame_content[1].begin(), d_frame_content[1].end(), std::back_inserter(to_remove));
-
-  // Frame with the content
-  size_t last_frame = d_frame_content.size() - 1;
-
-  // We don't remove the last frame
-  if (!agressive) {
-    size_t to_keep_in_remove = 0;
-    for (size_t i = 0; i < to_remove.size(); ++i) {
-      if (d_frame_content[last_frame].count(to_remove[i]) == 0) {
-        // We keep this one in to_remove
-        to_remove[to_keep_in_remove++] = to_remove[i];
-      }
-    }
-    to_remove.resize(to_keep_in_remove);
-  }
-
-  // Sort removables by increasing score
-  learnt_cmp cmp(d_formula_scores);
-  std::sort(to_remove.begin(), to_remove.end(), cmp);
-  assert(get_score(to_remove[0]) <= get_score(to_remove.back()));
-
-  // If no score, remove all, otherwise half
-  size_t median = get_score(to_remove[to_remove.size()/2]);
-
-  // Remove the first solver
-  delete d_solvers[0];
-  d_solvers[0] = 0;
-  init_solver(0);
-  d_solvers[0]->add(d_transition_system->get_initial_states(), smt::solver::CLASS_A);
-
-  // Remove the from frames 1..last
-  for (size_t k = 1; k < last_frame; ++ k) {
-
-    // Remove the frame content
-    for (size_t i = 0; i < to_remove.size(); ++ i) {
-      expr::term_ref f = to_remove[i];
-      if (get_score(f) <= median) {
-        d_frame_content[k].erase(f);
-      }
-    }
-
-    // Update the stats
-    if (k < d_stat_frame_size.size()) {
-      d_stat_frame_size[k]->get_value() = d_frame_content[k].size();
-    }
-
-    // Reboot the solver
+    // Restart the solver
     delete d_solvers[k];
     d_solvers[k] = 0;
     init_solver(k);
@@ -295,46 +239,6 @@ void ic3_engine::reduce_learnts() {
       d_solvers[k]->add(*it, smt::solver::CLASS_A);
     }
   }
-
-   // Keep obligations
-  induction_obligation_queue new_obligations;
-  induction_obligation_queue::iterator ind_it = d_induction_obligations.begin();
-  for (; ind_it != d_induction_obligations.end(); ++ind_it) {
-    // Keep the obligation if (a) if it's the property itself or (c) if it has a good score
-    if (ind_it->formula() == d_property->get_formula() || get_score(ind_it->formula()) > median) {
-      induction_obligation new_obligation(ind_it->formula(), 0, get_score(ind_it->formula()));
-      new_obligations.push(*ind_it);
-      assert(frame_contains(last_frame, ind_it->formula()));
-    }
-  }
-  d_induction_obligations.swap(new_obligations);
-
-  // Clear the scores
-  d_formula_scores.clear();
-}
-
-
-bool ic3_engine::learnt_cmp::operator () (expr::term_ref f1, expr::term_ref f2) const {
-  formula_scores_map::const_iterator f1_find = scores.find(f1);
-  formula_scores_map::const_iterator f2_find = scores.find(f2);
-  if (f1_find == f2_find) {
-    // Both out, or same
-    return f1 < f2;
-  }
-  if (f1_find == scores.end()) {
-    // Other has a score, 0 is smaler
-    return true;
-  }
-  if (f2_find == scores.end()) {
-    // First has a score, 0 is smaller
-    return false;
-  }
-  // Same score, break tie
-  if (f1_find->second == f2_find->second) {
-    return f1 < f2;
-  }
-  // Different scores, compare
-  return f1_find->second < f2_find->second;
 }
 
 bool ic3_engine::frame_contains(size_t k, expr::term_ref f) {
@@ -849,6 +753,10 @@ engine::result ic3_engine::search() {
     }
     d_induction_obligations_next.clear();
 
+    // Restart if asked
+    if (ctx().get_options().get_bool("ic3-enable-restarts")) {
+      return engine::UNKNOWN;
+    }
   }
 
   // Didn't prove or disprove, so unknown
@@ -877,7 +785,6 @@ void ic3_engine::reset() {
   for (size_t i = 0; i < d_stat_frame_size.size(); ++ i) {
     d_stat_frame_size[i]->get_value() = 0;
   }
-  d_formula_scores.clear();
 }
 
 engine::result ic3_engine::query(const system::transition_system* ts, const system::state_formula* sf) {
@@ -923,7 +830,7 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 
     // Reduce learnts
     if (r == UNKNOWN) {
-      reduce_learnts();
+      restart_solvers();
     }
   }
 
@@ -1028,16 +935,6 @@ expr::term_ref ic3_engine::generalize_sat_at(size_t k, smt::solver* solver) {
   expr::term_ref G = tm().mk_and(generalization_facts);
   G = eq_to_ineq(G);
   return G;
-}
-
-void ic3_engine::bump_formula(expr::term_ref formula) {
-  d_formula_scores[formula] ++;
-}
-
-void ic3_engine::bump_formulas(const std::vector<expr::term_ref>& formulas) {
-  for (size_t i = 0; i < formulas.size(); ++ i) {
-    bump_formula(formulas[i]);
-  }
 }
 
 size_t ic3_engine::total_facts() const {
