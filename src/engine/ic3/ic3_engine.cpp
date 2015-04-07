@@ -995,6 +995,8 @@ smt::solver* ic3_engine::get_counterexample_solver() {
   if (d_counterexample_solver == 0) {
     assert(d_induction_frame == 0);
     d_counterexample_solver = smt::factory::mk_default_solver(tm(), ctx().get_options());
+    expr::term_ref I0 = d_trace->get_state_formula(d_transition_system->get_initial_states(), 0);
+    d_counterexample_solver->add(I0, smt::solver::CLASS_A);
     d_counterexample_solver_depth = 0;
   }
   return d_counterexample_solver;
