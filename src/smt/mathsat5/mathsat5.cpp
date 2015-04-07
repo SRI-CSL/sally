@@ -82,10 +82,10 @@ class mathsat5_internal {
   msat_term d_msat_minus_one;
 
   /** The map from terms to mathsat terms */
-  term_to_msat_cache d_term_to_msat_cache;
+  static term_to_msat_cache s_term_to_msat_cache;
 
   /** The map from mathsat terms to SAL terms */
-  msat_to_term_cache d_msat_to_term_cache;
+  static msat_to_term_cache s_msat_to_term_cache;
 
   /**
    * Set the term cache t <-> t_msat.
@@ -95,12 +95,12 @@ class mathsat5_internal {
     // same term t_msat. We can't map t_msat to both t1 and t2, so we only keep
     // one
     bool added = false;
-    if (d_term_to_msat_cache.find(t) == d_term_to_msat_cache.end()) {
-      d_term_to_msat_cache[t] = t_msat;
+    if (s_term_to_msat_cache.find(t) == s_term_to_msat_cache.end()) {
+      s_term_to_msat_cache[t] = t_msat;
       added = true;
     }
-    if (d_msat_to_term_cache.find(t_msat) == d_msat_to_term_cache.end()) {
-      d_msat_to_term_cache[t_msat] = t;
+    if (s_msat_to_term_cache.find(t_msat) == s_msat_to_term_cache.end()) {
+      s_msat_to_term_cache[t_msat] = t;
       added = true;
     }
     unused_var(added);
@@ -135,8 +135,8 @@ class mathsat5_internal {
 
   /** Returns the mathsat5 term associated with t, or ERROR_TERM otherwise */
   msat_term get_term_cache(expr::term_ref t) const {
-    term_to_msat_cache::const_iterator find = d_term_to_msat_cache.find(t);
-    if (find != d_term_to_msat_cache.end()) {
+    term_to_msat_cache::const_iterator find = s_term_to_msat_cache.find(t);
+    if (find != s_term_to_msat_cache.end()) {
       return find->second;
     } else {
       msat_term error;
@@ -147,8 +147,8 @@ class mathsat5_internal {
 
   /** Returns our term representative for the mathsat5 term t or null otherwise */
   expr::term_ref get_term_cache(msat_term t) const {
-    msat_to_term_cache::const_iterator find = d_msat_to_term_cache.find(t);
-    if (find != d_msat_to_term_cache.end()) {
+    msat_to_term_cache::const_iterator find = s_msat_to_term_cache.find(t);
+    if (find != s_msat_to_term_cache.end()) {
       return find->second;
     } else {
       return expr::term_ref();
@@ -163,6 +163,12 @@ class mathsat5_internal {
 
   /** The instance */
   size_t d_instance;
+
+  /** The master config */
+  static msat_config s_cfg_master;
+
+  /** The master environment */
+  static msat_env s_env_master;
 
   /** MathSAT configuration */
   msat_config d_cfg;
@@ -246,6 +252,10 @@ public:
 };
 
 int mathsat5_internal::s_instances = 0;
+msat_config mathsat5_internal::s_cfg_master;
+msat_env mathsat5_internal::s_env_master;
+mathsat5_internal::term_to_msat_cache mathsat5_internal::s_term_to_msat_cache;
+mathsat5_internal::msat_to_term_cache mathsat5_internal::s_msat_to_term_cache;
 
 mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts)
 : d_tm(tm)
@@ -255,11 +265,18 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
 , d_itp_A(0)
 , d_itp_B(0)
 {
-  // ID
-  std::stringstream ss;
-  ss << "mathsat_" << s_instances << ".c";
 
-  // Initialize
+  // Create master if the first one
+  if (s_instances == 0) {
+    s_cfg_master = msat_create_config();
+    if (MSAT_ERROR_CONFIG(s_cfg_master)) {
+      throw exception("Error in Mathsat5 initialization");
+    }
+    s_env_master = msat_create_env(s_cfg_master);
+    if (MSAT_ERROR_ENV(s_env_master)) {
+      throw exception("Error in MathSAT5 initialization");
+    }
+  }
   s_instances ++;
 
   // Bitvector bits
@@ -278,21 +295,41 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
   if (opts.get_bool("mathsat5-generate-api-log")) {
    msat_set_option(d_cfg, "debug.api_call_trace", "2");
    msat_set_option(d_cfg, "debug.api_call_trace_dump_config", "true");
+   std::stringstream ss;
+   ss << "mathsat_" << s_instances << ".c";
    msat_set_option(d_cfg, "debug.api_call_trace_filename", ss.str().c_str());
   }
-  d_env = msat_create_env(d_cfg);
+
+  if (MSAT_ERROR_CONFIG(d_cfg)) {
+    throw exception("Error in Mathsat5 initialization");
+  }
+
+  // Create an environment sharing terms with the master
+  d_env = msat_create_shared_env(d_cfg, s_env_master);
+  if (MSAT_ERROR_ENV(d_env)) {
+    throw exception("Error in MathSAT5 initialization");
+  }
 
   // Minus one
   d_msat_minus_one = msat_make_number(d_env, "-1");
 
-  d_itp_B = msat_create_itp_group(d_env);
   d_itp_A = msat_create_itp_group(d_env);
+  d_itp_B = msat_create_itp_group(d_env);
 }
 
 mathsat5_internal::~mathsat5_internal() {
   msat_destroy_env(d_env);
   msat_destroy_config(d_cfg);
+
   s_instances--;
+  if (s_instances == 0) {
+    // Clear the caches
+    s_msat_to_term_cache.clear();
+    s_term_to_msat_cache.clear();
+    // Remove the master
+    msat_destroy_env(s_env_master);
+    msat_destroy_config(s_cfg_master);
+  }
 }
 
 msat_term mathsat5_internal::mk_mathsat5_term(expr::term_op op, size_t n, msat_term* children) {
