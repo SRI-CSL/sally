@@ -40,17 +40,17 @@ class yices2_term_cache {
 
   bool d_cache_is_clean;
 
-  /** Set of all yices instances */
-  std::set<const yices2_internal*> d_all_yices_instances;
+  /** Vector of all permanent terms (such as variables) to stay beyond gc */
+  std::vector<expr::term_ref> d_permanent_terms;
+
+  /** Vector of all permanent terms (such as variables) to stay beyond gc */
+  std::vector<term_t> d_permanent_terms_yices;
 
   typedef std::map<expr::term_manager*, yices2_term_cache*> tm_to_cache_map;
 
   /** Map from term managers to their term caches */
   static
   std::map<expr::term_manager*, yices2_term_cache*> s_tm_to_cache_map;
-
-  /** Clear the cache */
-  void clear();
 
 public:
 
@@ -69,14 +69,14 @@ public:
   /** Returns our term representative for the yices term t or null otherwise */
   expr::term_ref get_term_cache(term_t t) const;
 
-  /** Get a cache associated with tm and attach to it */
+  /** Get a cache associated with tm */
   static
-  yices2_term_cache* attach_to_cache(expr::term_manager& tm, const yices2_internal* instance);
+  yices2_term_cache* get_cache(expr::term_manager& tm);
 
-  /** Detach the instance from the cache */
-  void detach_from_cache(const yices2_internal* instance);
+  /** Clear the cache */
+  void clear();
 
-  /** Collect the cache */
+  /** Collect the cache, leaving only the variables */
   void gc();
 };
 

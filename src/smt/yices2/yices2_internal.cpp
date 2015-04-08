@@ -42,7 +42,7 @@ yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
     s_real_type = yices_real_type();
   }
   s_instances ++;
-  d_conversion_cache = yices2_term_cache::attach_to_cache(tm, this);
+  d_conversion_cache = yices2_term_cache::get_cache(tm);
 
   // Bitvector bits
   d_bv0 = expr::term_ref_strong(d_tm, d_tm.mk_bitvector_constant(expr::bitvector(1, 0)));
@@ -80,11 +80,12 @@ yices2_internal::~yices2_internal() {
 
   // Cleanup if the last one
   s_instances--;
-  d_conversion_cache->detach_from_cache(this);
   if (s_instances == 0) {
     TRACE("yices2") << "yices2: last instance removed." << std::endl;
     // Delete yices
     yices_exit();
+    // Clear the cache
+    d_conversion_cache->clear();
   }
 }
 
@@ -927,12 +928,6 @@ void yices2_internal::gc() {
 void yices2_internal::get_assertions(std::set<expr::term_ref>& out) const {
   for (size_t i = 0; i < d_assertions.size(); ++ i) {
     out.insert(d_assertions[i]);
-  }
-}
-
-void yices2_internal::get_variables(std::set<expr::term_ref>& out) const {
-  for (size_t i = 0; i < d_variables.size(); ++ i) {
-    out.insert(d_variables[i]);
   }
 }
 

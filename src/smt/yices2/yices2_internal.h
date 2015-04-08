@@ -108,9 +108,6 @@ public:
   /** Get the assertions into the set */
   void get_assertions(std::set<expr::term_ref>& out) const;
 
-  /** Get the variables */
-  void get_variables(std::set<expr::term_ref>& out) const;
-
   /** Check satisfiability */
   solver::result check();
 

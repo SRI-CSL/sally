@@ -6,6 +6,8 @@
 #include <iostream>
 #include <fstream>
 
+#define unused_var(x) { (void)x; }
+
 namespace sally {
 namespace smt {
 
@@ -27,10 +29,16 @@ void yices2_term_cache::set_term_cache(expr::term_ref t, term_t t_yices) {
     d_yices_to_term_cache[t_yices] = t;
     added = true;
   }
-  if (added) {
+  unused_var(added);
+  assert(added);
+  // If a variable, remember it
+  if (d_tm.term_of(t).op() == expr::VARIABLE) {
+    d_permanent_terms.push_back(t);
+    d_permanent_terms_yices.push_back(t_yices);
+  } else {
+    // Mark cache as dirty
     d_cache_is_clean = false;
   }
-  assert(added);
 
   // If enabled, check the term transformations by producing a series of
   // smt2 queries. To check run the contrib/smt2_to_yices.sh script and then
@@ -83,9 +91,11 @@ void yices2_term_cache::clear() {
   d_cache_is_clean = true;
   d_term_to_yices_cache.clear();
   d_term_to_yices_cache.clear();
+  d_permanent_terms.clear();
+  d_permanent_terms_yices.clear();
 }
 
-yices2_term_cache* yices2_term_cache::attach_to_cache(expr::term_manager& tm, const yices2_internal* instance) {
+yices2_term_cache* yices2_term_cache::get_cache(expr::term_manager& tm) {
 
   yices2_term_cache* cache = 0;
 
@@ -96,62 +106,28 @@ yices2_term_cache* yices2_term_cache::attach_to_cache(expr::term_manager& tm, co
   } else {
     cache = new yices2_term_cache(tm);
   }
-  cache->d_all_yices_instances.insert(instance);
 
   return cache;
 }
 
-void yices2_term_cache::detach_from_cache(const yices2_internal* instance) {
-  d_all_yices_instances.erase(instance);
-  if (d_all_yices_instances.size() == 0) {
-    clear();
-  }
-}
-
 void yices2_term_cache::gc() {
   if (!d_cache_is_clean) {
-    // Get assertions from all yices2 instances
-    std::set<expr::term_ref> all_terms;
-    std::set<expr::term_ref> all_variables;
-    std::set<const yices2_internal*>::const_iterator yices2_it = d_all_yices_instances.begin();
 
-    // Get the root terms of all instances
-    for (; yices2_it != d_all_yices_instances.end(); ++ yices2_it) {
-      (*yices2_it)->get_assertions(all_terms);
-      (*yices2_it)->get_variables(all_terms);
-      (*yices2_it)->get_variables(all_variables);
-    }
+    // Terms we'd like to keep (just variables)
+    term_t* terms_to_keep = new term_t[d_permanent_terms.size()];
 
-    // Get a list for yices2 terms to keep
-    term_t* terms_to_keep = new term_t[all_terms.size()];
-    std::set<expr::term_ref>::const_iterator it_y = all_terms.begin();
-    for (size_t i = 0; it_y != all_terms.end(); ++ it_y, ++ i) {
-      term_t to_keep = get_term_cache(*it_y);
-      if (to_keep != NULL_TERM) {
-        terms_to_keep[i] = to_keep;
-      }
+    // Create a new cache that contains just the variables
+    d_term_to_yices_cache.clear();
+    d_yices_to_term_cache.clear();
+    for (size_t i = 0; i < d_permanent_terms.size(); ++ i) {
+      d_term_to_yices_cache[d_permanent_terms[i]] = d_permanent_terms_yices[i];
+      d_yices_to_term_cache[d_permanent_terms_yices[i]] = d_permanent_terms[i];
+      terms_to_keep[i] = d_permanent_terms_yices[i];
     }
 
     // Collect the garbage
-    yices_garbage_collect(terms_to_keep, all_terms.size(), NULL, 0, true);
+    yices_garbage_collect(terms_to_keep, d_permanent_terms.size(), NULL, 0, true);
     delete terms_to_keep;
-
-    // Create a new cache that contains just the variables
-    term_to_yices_cache new_term_to_yices_cache;
-    yices_to_term_cache new_yices_to_term_cache;
-    std::set<expr::term_ref>::const_iterator vars_it = all_variables.begin();
-    for (; vars_it != all_variables.end(); ++ vars_it) {
-      expr::term_ref var = *vars_it;
-      term_t var_yices = get_term_cache(var);
-      if (var_yices != NULL_TERM) {
-        new_term_to_yices_cache[var] = var_yices;
-        new_yices_to_term_cache[var_yices] = var;
-      }
-    }
-
-    // Swap in the new cache
-    d_term_to_yices_cache.swap(new_term_to_yices_cache);
-    d_yices_to_term_cache.swap(new_yices_to_term_cache);
 
     // We're clean now
     d_cache_is_clean = true;
