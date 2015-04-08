@@ -126,7 +126,10 @@ void yices2_term_cache::gc() {
     term_t* terms_to_keep = new term_t[all_terms.size()];
     std::set<expr::term_ref>::const_iterator it_y = all_terms.begin();
     for (size_t i = 0; it_y != all_terms.end(); ++ it_y, ++ i) {
-      terms_to_keep[i] = get_term_cache(*it_y);
+      term_t to_keep = get_term_cache(*it_y);
+      if (to_keep != NULL_TERM) {
+        terms_to_keep[i] = to_keep;
+      }
     }
 
     // Collect the garbage
@@ -139,10 +142,11 @@ void yices2_term_cache::gc() {
     std::set<expr::term_ref>::const_iterator vars_it = all_variables.begin();
     for (; vars_it != all_variables.end(); ++ vars_it) {
       expr::term_ref var = *vars_it;
-      assert(d_term_to_yices_cache.find(var) != d_term_to_yices_cache.end());
-      term_t var_yices = d_term_to_yices_cache[var];
-      new_term_to_yices_cache[var] = var_yices;
-      new_yices_to_term_cache[var_yices] = var;
+      term_t var_yices = get_term_cache(var);
+      if (var_yices != NULL_TERM) {
+        new_term_to_yices_cache[var] = var_yices;
+        new_yices_to_term_cache[var_yices] = var;
+      }
     }
 
     // Swap in the new cache
