@@ -290,6 +290,9 @@ class ic3_engine : public engine {
   /** Reset the engine */
   void reset();
 
+  /** GC the solvers */
+  void gc_solvers();
+
 public:
 
   ic3_engine(const system::context& ctx);

@@ -45,6 +45,12 @@ public:
   /** Add an assertion f to the solver */
   void add(expr::term_ref f, formula_class f_class);
 
+  /** Add an x variable */
+  void add_x_variable(expr::term_ref x_var);
+
+  /** Add a y variable */
+  void add_y_variable(expr::term_ref y_var);
+
   /** Check the assertions for satisfiability */
   result check();
 
@@ -61,6 +67,9 @@ public:
    * Generalize the last call to check assuming the result was SAT.
    */
   void generalize(generalization_type type, std::vector<expr::term_ref>& projection_out);
+
+  /** Collect garbage */
+  void gc();
 };
 
 }

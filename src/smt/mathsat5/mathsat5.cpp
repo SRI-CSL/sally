@@ -87,6 +87,9 @@ class mathsat5_internal {
   /** The map from mathsat terms to SAL terms */
   static msat_to_term_cache s_msat_to_term_cache;
 
+  /** Has the cache been collected */
+  static bool s_cache_clean;
+
   /**
    * Set the term cache t <-> t_msat.
    */
@@ -103,7 +106,9 @@ class mathsat5_internal {
       s_msat_to_term_cache[t_msat] = t;
       added = true;
     }
-    unused_var(added);
+    if (added) {
+      s_cache_clean = false;
+    }
     assert(added);
 
     // If enabled, check the term transformations by producing a series of
@@ -243,17 +248,20 @@ public:
      case solver::UNSAT_CORE:
        return d_opts.get_bool("mathsat5-unsat-cores");
      case solver::GENERALIZATION:
-       return d_opts.get_bool("mathsat5-generalize-trivial") ||
-           d_opts.get_bool("mathsat5-generalize-qe");
+       return d_opts.get_bool("mathsat5-generalize-trivial") || d_opts.get_bool("mathsat5-generalize-qe");
      default:
        return false;
      }
    }
+
+  /** Collect garbage */
+  void gc();
 };
 
 int mathsat5_internal::s_instances = 0;
 msat_config mathsat5_internal::s_cfg_master;
 msat_env mathsat5_internal::s_env_master;
+bool mathsat5_internal::s_cache_clean = false;
 mathsat5_internal::term_to_msat_cache mathsat5_internal::s_term_to_msat_cache;
 mathsat5_internal::msat_to_term_cache mathsat5_internal::s_msat_to_term_cache;
 
@@ -276,6 +284,7 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
     if (MSAT_ERROR_ENV(s_env_master)) {
       throw exception("Error in MathSAT5 initialization");
     }
+    s_cache_clean = true;
   }
   s_instances ++;
 
@@ -311,7 +320,7 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
   }
 
   // Minus one
-  d_msat_minus_one = msat_make_number(d_env, "-1");
+  d_msat_minus_one = to_mathsat5_term(d_tm.mk_integer_constant(expr::integer(-1)));
 
   d_itp_A = msat_create_itp_group(d_env);
   d_itp_B = msat_create_itp_group(d_env);
@@ -1192,6 +1201,19 @@ void mathsat5_internal::pop() {
   d_last_check_status = MSAT_UNKNOWN;
 }
 
+void mathsat5_internal::gc() {
+  if (!s_cache_clean) {
+    msat_term* to_keep = new msat_term[s_msat_to_term_cache.size()];
+    msat_to_term_cache::const_iterator it1 = s_msat_to_term_cache.begin();
+    for (size_t i = 0; it1 != s_msat_to_term_cache.end(); ++ it1, ++ i) {
+      to_keep[i] = it1->first;
+    }
+    msat_gc_env(s_env_master, to_keep, s_msat_to_term_cache.size());
+    delete to_keep;
+    s_cache_clean = true;
+  }
+}
+
 mathsat5::mathsat5(expr::term_manager& tm, const options& opts)
 : solver("mathsat5", tm, opts)
 {
@@ -1258,6 +1280,10 @@ void mathsat5::get_unsat_core(std::vector<expr::term_ref>& out) {
 
 bool mathsat5::supports(solver::feature f) const {
   return d_internal->supports(f);
+}
+
+void mathsat5::gc() {
+  d_internal->gc();
 }
 
 }

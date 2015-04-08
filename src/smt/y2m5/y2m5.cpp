@@ -149,6 +149,11 @@ bool y2m5::supports(feature f) const {
   }
 }
 
+void y2m5::gc() {
+  d_yices2->gc();
+  d_mathsat5->gc();
+}
+
 }
 }
 

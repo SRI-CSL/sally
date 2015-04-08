@@ -753,6 +753,9 @@ engine::result ic3_engine::search() {
     }
     d_induction_obligations_next.clear();
 
+    // Do garbage collection
+    gc_solvers();
+
     // Restart if asked
     if (ctx().get_options().get_bool("ic3-enable-restarts")) {
       return engine::UNKNOWN;
@@ -946,6 +949,13 @@ size_t ic3_engine::total_facts() const {
   } else {
     return d_frame_content[0].size();
   }
+}
+
+void ic3_engine::gc_solvers() {
+  for (size_t i = 0; i < d_solvers.size(); ++ i) {
+    d_solvers[i]->gc();
+  }
+  d_counterexample_solver->gc();
 }
 
 }

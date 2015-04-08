@@ -222,6 +222,12 @@ public:
    * Same as above, but returns a single expressions.
    */
   expr::term_ref interpolate();
+
+  /**
+   * Collect any garbage.
+   */
+  virtual
+  void gc() {}
 };
 
 
