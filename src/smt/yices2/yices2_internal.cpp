@@ -11,6 +11,8 @@
 #include "smt/yices2/yices2_term_cache.h"
 #include "utils/trace.h"
 
+#include <iostream>
+
 namespace sally {
 namespace smt {
 
