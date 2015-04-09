@@ -77,6 +77,9 @@ public:
   /** Transform the formula from class to another class */
   expr::term_ref change_formula_vars(var_class from, var_class to, expr::term_ref f) const;
 
+  /** GC */
+  void gc_collect(const expr::gc_info& gc_reloc);
+
 private:
 
   /** Id of the type */

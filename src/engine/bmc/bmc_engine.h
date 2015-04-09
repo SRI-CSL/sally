@@ -38,6 +38,8 @@ public:
   /** Trace */
   const system::state_trace* get_trace();
 
+  /** Nothing to collect */
+  void gc_collect(const expr::gc_info& gc_reloc) {}
 };
 
 }

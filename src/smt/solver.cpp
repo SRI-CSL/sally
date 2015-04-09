@@ -6,6 +6,7 @@
  */
 
 #include "smt/solver.h"
+#include "expr/gc_relocator.h"
 
 #include <cassert>
 #include <iostream>
@@ -50,6 +51,14 @@ void solver::add_y_variable(expr::term_ref y_var) {
   assert(d_x_variables.find(y_var) == d_x_variables.end());
   assert(d_y_variables.find(y_var) == d_y_variables.end());
   d_y_variables.insert(y_var);
+}
+
+void solver::gc_collect(const expr::gc_info& gc_reloc) {
+  size_t res;
+  res = gc_reloc.collect(d_x_variables.begin(), d_x_variables.end());
+  assert(res == 0);
+  res = gc_reloc.collect(d_y_variables.begin(), d_y_variables.end());
+  assert(res == 0);
 }
 
 std::ostream& operator << (std::ostream& out, solver::formula_class fc) {

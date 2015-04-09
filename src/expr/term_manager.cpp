@@ -362,6 +362,8 @@ std::ostream& operator << (std::ostream& out, const set_output_language& stm) {
 void term_manager::gc() {
   TRACE("gc") << "term_manager::gc(): start" << std::endl;
 
+
+
   std::set<gc_participant*>::iterator it = d_gc_participants.begin();
   for (; it != d_gc_participants.end(); ++ it) {
 

@@ -36,16 +36,16 @@ class btor_state {
   var_to_var_map d_variables_next;
 
   // List of root nodes
-  std::vector<expr::term_ref> d_roots;
+  std::vector<expr::term_ref_strong> d_roots;
 
   /** Set the term */
   void set_term(size_t index, expr::term_ref term, size_t size);
 
   /** Bitvector 1 */
-  expr::term_ref d_one;
+  expr::term_ref_strong d_one;
 
   /** Bitvector 0 */
-  expr::term_ref d_zero;
+  expr::term_ref_strong d_zero;
 
   /** Check if there is a next, or is this an input */
   bool is_register(size_t index) const;
@@ -102,6 +102,9 @@ public:
 
   /** Returns the final parse command */
   command* finalize() const;
+
+  /** Collect terms */
+  void gc_collect(const expr::gc_info& gc_reloc);
 };
 
 }

@@ -6,6 +6,7 @@
  */
 
 #include "system/transition_formula.h"
+#include "expr/gc_relocator.h"
 
 #include <cassert>
 #include <sstream>
@@ -30,6 +31,10 @@ transition_formula::transition_formula(expr::term_manager& tm, const state_type*
 , d_transition_formula(tm, tf)
 {
   assert(st->is_transition_formula(tf));
+}
+
+void transition_formula::gc_collect(const expr::gc_info& gc_reloc) {
+  gc_reloc.collect(d_transition_formula);
 }
 
 }

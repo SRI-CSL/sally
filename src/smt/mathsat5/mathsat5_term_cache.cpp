@@ -14,13 +14,16 @@
 #include "smt/solver.h"
 #include "smt/mathsat5/mathsat5_term_cache.h"
 
+#include "expr/gc_relocator.h"
+
 #define unused_var(x) { (void)x; }
 
 namespace sally {
 namespace smt {
 
 mathsat5_term_cache::mathsat5_term_cache(expr::term_manager& tm)
-: d_tm(tm)
+: gc_participant(tm)
+, d_tm(tm)
 , d_cache_is_clean(true)
 {
   d_msat_cfg = msat_create_config();
@@ -162,6 +165,12 @@ void mathsat5_term_cache::gc() {
     // We're clean now
     d_cache_is_clean = true;
   }
+}
+
+void mathsat5_term_cache::gc_collect(const expr::gc_info& gc_reloc) {
+  gc_reloc.collect(d_term_to_msat_cache);
+  gc_reloc.collect(d_msat_to_term_cache);
+  gc_reloc.collect(d_permanent_terms);
 }
 
 }

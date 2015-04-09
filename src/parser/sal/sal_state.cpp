@@ -83,7 +83,7 @@ void sal_state::use_state_type(const system::state_type* st, system::state_type:
   for (size_t i = 0; i < vars.size(); ++ i) {
     const term& var_term = tm().term_of(vars[i]);
     std::string var_name = tm().get_variable_name(var_term);
-    d_variables.add_entry(var_name, vars[i]);
+    d_variables.add_entry(var_name, expr::term_ref_strong(tm(), vars[i]));
   }
 
   // Pop the namespace
@@ -133,4 +133,9 @@ void sal_state::ensure_declared(std::string id, sal_object type, bool declared) 
     if (declared) throw parser_exception(id + " not declared");
     else throw parser_exception(id + " already declared");
   }
+}
+
+void sal_state::gc_collect(const expr::gc_info& gc_reloc) {
+  gc_reloc(d_variables);
+  gc_reloc(d_types);
 }

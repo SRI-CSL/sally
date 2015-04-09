@@ -37,7 +37,7 @@ class sal_state {
   const system::context& d_context;
 
   /** Symbol table for variables */
-  utils::symbol_table<expr::term_ref> d_variables;
+  utils::symbol_table<expr::term_ref_strong> d_variables;
 
   /** Symbol table for types */
   utils::symbol_table<expr::term_ref_strong> d_types;
@@ -92,6 +92,9 @@ public:
 
   /** Ensure that the object is declared = true/false locally, throw exception otherwise */
   void ensure_declared(std::string id, sal_object type, bool declared);
+
+  /** Collect terms */
+  void gc_collect(const expr::gc_info& gc_reloc);
 };
 
 }

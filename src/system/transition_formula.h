@@ -44,6 +44,10 @@ public:
 
   /** Print it to the stream */
   void to_stream(std::ostream& out) const;
+
+  /** GC */
+  void gc_collect(const expr::gc_info& gc_reloc);
+
 };
 
 std::ostream& operator << (std::ostream& out, const transition_formula& sf);

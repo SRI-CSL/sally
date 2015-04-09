@@ -10,6 +10,7 @@
 #include "smt/yices2/yices2_internal.h"
 #include "smt/yices2/yices2_term_cache.h"
 #include "utils/trace.h"
+#include "expr/gc_relocator.h"
 
 #include <iostream>
 
@@ -938,6 +939,17 @@ void yices2_internal::add_x_variable(expr::term_ref x_var) {
 void yices2_internal::add_y_variable(expr::term_ref y_var) {
   d_variables.push_back(y_var);
 }
+
+void yices2_internal::gc_collect(const expr::gc_info& gc_reloc) {
+  size_t ret = 0;
+  ret = gc_reloc.collect(d_assertions.begin(), d_assertions.end());
+  assert(ret == 0);
+  ret = gc_reloc.collect(d_variables.begin(), d_variables.end());
+  assert(ret == 0);
+  gc_reloc.collect(d_bv1);
+  gc_reloc.collect(d_bv0);
+}
+
 
 }
 }

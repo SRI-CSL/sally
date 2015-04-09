@@ -27,6 +27,7 @@
 #include <boost/unordered_map.hpp>
 
 #include "expr/term_manager.h"
+#include "expr/gc_participant.h"
 #include "smt/yices2/yices2_internal.h"
 
 namespace sally {
@@ -37,7 +38,7 @@ struct yices_hasher {
   size_t operator()(term_t value) const { return value; }
 };
 
-class yices2_term_cache {
+class yices2_term_cache : public expr::gc_participant {
 
   /** The term manager this cache is using */
   expr::term_manager& d_tm;
@@ -88,6 +89,9 @@ public:
 
   /** Clear the cache */
   void clear();
+
+  /** Term collection */
+  void gc_collect(const expr::gc_info& gc_reloc);
 
   /** Collect the cache, leaving only the variables */
   void gc();

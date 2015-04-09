@@ -9,6 +9,7 @@
 #include "parser/parser.h"
 
 #include "expr/term_manager.h"
+#include "expr/gc_relocator.h"
 
 #include <cassert>
 
@@ -51,7 +52,7 @@ term_ref mcmt_state::get_variable(std::string id) const {
 }
 
 void mcmt_state::set_variable(std::string id, expr::term_ref t) {
-  d_variables.add_entry(id, t);
+  d_variables.add_entry(id, expr::term_ref_strong(tm(), t));
 }
 
 
@@ -78,7 +79,7 @@ void mcmt_state::use_state_type(const system::state_type* st, system::state_type
   for (size_t i = 0; i < vars.size(); ++ i) {
     const term& var_term = tm().term_of(vars[i]);
     std::string var_name = tm().get_variable_name(var_term);
-    d_variables.add_entry(var_name, vars[i]);
+    d_variables.add_entry(var_name, expr::term_ref_strong(tm(), vars[i]));
   }
 
   // Declare all the state formulas of this stype
@@ -94,7 +95,7 @@ void mcmt_state::use_state_type(const system::state_type* st, system::state_type
     // Get the id and turn it into a state type proper id
     std::string id = st->get_canonical_name(*it, var_class);
     // Add to variable table
-    d_variables.add_entry(id, f_term);
+    d_variables.add_entry(id, expr::term_ref_strong(tm(), f_term));
   }
 
   // Pop the namespace
@@ -115,7 +116,7 @@ void mcmt_state::use_state_type_and_transitions(const system::state_type* st) {
   for (; it != it_end; ++ it) {
     const system::transition_formula* f = ctx().get_transition_formula(*it);
     // Add to variable table
-    d_variables.add_entry(*it, f->get_formula());
+    d_variables.add_entry(*it, expr::term_ref_strong(tm(), f->get_formula()));
   }
 }
 
@@ -186,3 +187,7 @@ bool mcmt_state::lsal_extensions() const {
   return ctx().get_options().get_bool("lsal-extensions");
 }
 
+void mcmt_state::gc_collect(const expr::gc_info& gc_reloc) {
+  gc_reloc.collect(d_variables);
+  gc_reloc.collect(d_types);
+}

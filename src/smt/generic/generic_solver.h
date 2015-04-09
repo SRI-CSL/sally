@@ -43,6 +43,10 @@ public:
 
   /** Pop the solving context */
   void pop();
+
+  /** Collect terms */
+  void gc_collect(const expr::gc_info& gc_reloc);
+
 };
 
 }

@@ -170,6 +170,9 @@ public:
     return (antlr_parser*) l->super;
   }
 
+  /** Collect terms */
+  void gc_collect(const expr::gc_info& gc_reloc);
+
 };
 
 
@@ -209,6 +212,11 @@ void antlr_parser<lang>::sally_parser_reportError(pANTLR3_BASE_RECOGNIZER recogn
   int line = parser->get_current_parser_line();
   int pos = parser->get_current_parser_position();
   throw parser_exception("Parse error.", filename, line, pos);
+}
+
+template <input_language lang>
+void antlr_parser<lang>::gc_collect(const expr::gc_info& gc_reloc) {
+  d_state.gc_collect(gc_reloc);
 }
 
 }

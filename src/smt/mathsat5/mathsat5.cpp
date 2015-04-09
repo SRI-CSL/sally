@@ -18,6 +18,8 @@
 
 #include "expr/term.h"
 #include "expr/term_manager.h"
+#include "expr/gc_relocator.h"
+
 #include "expr/rational.h"
 #include "smt/mathsat5/mathsat5.h"
 #include "smt/mathsat5/mathsat5_term_cache.h"
@@ -143,20 +145,24 @@ public:
 
   /** Stuff we support */
   bool supports(solver::feature f) const {
-     switch (f) {
-     case solver::INTERPOLATION:
-       return true;
-     case solver::UNSAT_CORE:
-       return d_opts.get_bool("mathsat5-unsat-cores");
-     case solver::GENERALIZATION:
-       return d_opts.get_bool("mathsat5-generalize-trivial") || d_opts.get_bool("mathsat5-generalize-qe");
-     default:
-       return false;
-     }
-   }
+    switch (f) {
+    case solver::INTERPOLATION:
+      return true;
+    case solver::UNSAT_CORE:
+      return d_opts.get_bool("mathsat5-unsat-cores");
+    case solver::GENERALIZATION:
+      return d_opts.get_bool("mathsat5-generalize-trivial") || d_opts.get_bool("mathsat5-generalize-qe");
+    default:
+      return false;
+    }
+  }
+
+  /* Collect terms */
+  void gc_collect(const expr::gc_info& gc_reloc);
 
   /** Collect garbage */
   void gc();
+
 };
 
 int mathsat5_internal::s_instances = 0;
@@ -1081,6 +1087,13 @@ void mathsat5_internal::gc() {
   d_term_cache->gc();
 }
 
+void mathsat5_internal::gc_collect(const expr::gc_info& gc_reloc) {
+  gc_reloc.collect(d_assertions);
+  gc_reloc.collect(d_bv1);
+  gc_reloc.collect(d_bv0);
+  gc_reloc.collect(d_variables);
+}
+
 mathsat5::mathsat5(expr::term_manager& tm, const options& opts)
 : solver("mathsat5", tm, opts)
 {
@@ -1151,6 +1164,11 @@ bool mathsat5::supports(solver::feature f) const {
 
 void mathsat5::gc() {
   d_internal->gc();
+}
+
+void mathsat5::gc_collect(const expr::gc_info& gc_reloc) {
+  solver::gc_collect(gc_reloc);
+  d_internal->gc_collect(gc_reloc);
 }
 
 }

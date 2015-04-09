@@ -9,6 +9,7 @@
 #include "parser/parser.h"
 
 #include "expr/term_manager.h"
+#include "expr/gc_relocator.h"
 
 #include <cassert>
 #include <sstream>
@@ -22,8 +23,8 @@ using namespace std;
 btor_state::btor_state(const system::context& context)
 : d_context(context)
 {
-  d_one = tm().mk_bitvector_constant(bitvector(1, 1));
-  d_zero = tm().mk_bitvector_constant(bitvector(1, 0));
+  d_one = expr::term_ref_strong(tm(), tm().mk_bitvector_constant(bitvector(1, 1)));
+  d_zero = expr::term_ref_strong(tm(), tm().mk_bitvector_constant(bitvector(1, 0)));
 }
 
 string btor_state::token_text(pANTLR3_COMMON_TOKEN token) {
@@ -169,7 +170,7 @@ void btor_state::add_root(size_t id, size_t size, term_ref term) {
   if (size != 1) {
     throw parser_exception("Roots can only be of size 1.");
   }
-  d_roots.push_back(term);
+  d_roots.push_back(expr::term_ref_strong(tm(), term));
   set_term(id, term, size);
 }
 
@@ -255,4 +256,15 @@ command* btor_state::finalize() const {
   full_command->push_back(query);
 
   return full_command;
+}
+
+
+void btor_state::gc_collect(const expr::gc_info& gc_reloc) {
+  size_t ret;
+  ret = gc_reloc.collect(d_terms.begin(), d_terms.end());
+  assert(ret == 0);
+  ret = gc_reloc.collect(d_roots.begin(), d_roots.end());
+  assert(ret == 0);
+  gc_reloc.collect(d_one);
+  gc_reloc.collect(d_zero);
 }

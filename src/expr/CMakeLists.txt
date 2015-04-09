@@ -8,4 +8,5 @@ add_library(expr
   term_manager.cpp 
   model.cpp
   gc_participant.cpp
+  gc_relocator.cpp
 )

@@ -61,6 +61,8 @@ public:
 
   void add_x_variable(expr::term_ref x_var);
   void add_y_variable(expr::term_ref y_var);
+
+  void gc_collect(const expr::gc_info& gc_reloc);
 };
 
 }

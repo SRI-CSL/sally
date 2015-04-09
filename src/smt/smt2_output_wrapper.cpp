@@ -7,6 +7,7 @@
 
 #include "smt/smt2_output_wrapper.h"
 #include "utils/name_transformer.h"
+#include "expr/gc_relocator.h"
 
 namespace sally {
 namespace smt {
@@ -176,6 +177,15 @@ void smt2_output_wrapper::add_y_variable(expr::term_ref y_var) {
   d_output << "(declare-fun " << y_var << " () " << d_tm.type_of(y_var) << ")" << std::endl;
   solver::add_y_variable(y_var);
   d_solver->add_y_variable(y_var);
+}
+
+void smt2_output_wrapper::gc_collect(const expr::gc_info& gc_reloc) {
+  // Collect the solver
+  solver::gc_collect(gc_reloc);
+  // Collect the assertions
+  for (size_t i = 0; i < d_assertions.size(); ++ i) {
+    gc_reloc.collect(d_assertions[i].f);
+  }
 }
 
 }

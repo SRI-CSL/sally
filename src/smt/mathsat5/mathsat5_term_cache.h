@@ -15,6 +15,7 @@
 #include <mathsat.h>
 
 #include "expr/term_manager.h"
+#include "expr/gc_participant.h"
 
 namespace sally {
 namespace smt {
@@ -31,7 +32,7 @@ struct mathsat5_eq {
   }
 };
 
-class mathsat5_term_cache {
+class mathsat5_term_cache : public expr::gc_participant {
 
   /** The term manager this cache is using */
   expr::term_manager& d_tm;
@@ -91,6 +92,9 @@ public:
 
   /** Clear the cache */
   void clear();
+
+  /** Collect terms */
+  void gc_collect(const expr::gc_info& gc_reloc);
 
   /** Collect the cache, leaving only the variables */
   void gc();

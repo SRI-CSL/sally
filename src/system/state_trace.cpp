@@ -6,6 +6,7 @@
  */
 
 #include "system/state_trace.h"
+#include "expr/gc_relocator.h"
 
 #include <sstream>
 
@@ -13,7 +14,8 @@ namespace sally {
 namespace system {
 
 state_trace::state_trace(const state_type* st)
-: d_state_type(st)
+: gc_participant(st->tm())
+, d_state_type(st)
 , d_model(st->tm(), true)
 {}
 
@@ -146,6 +148,11 @@ std::ostream& operator << (std::ostream& out, const state_trace& trace) {
   return out;
 }
 
+void state_trace::gc_collect(const expr::gc_info& gc_reloc) {
+  size_t ret;
+  ret = gc_reloc.collect(d_state_variables.begin(), d_state_variables.end());
+  assert(ret == 0);
+}
 
 }
 }

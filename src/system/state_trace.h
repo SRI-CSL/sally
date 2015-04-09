@@ -8,6 +8,7 @@
 #pragma once
 
 #include "expr/model.h"
+#include "expr/gc_participant.h"
 #include "system/state_type.h"
 
 #include <vector>
@@ -16,7 +17,7 @@
 namespace sally {
 namespace system {
 
-class state_trace {
+class state_trace : public expr::gc_participant {
 
   /** The state type */
   const state_type* d_state_type;
@@ -74,6 +75,9 @@ public:
 
   /** Resize trace to 0 .. size -1 */
   void resize_to(size_t size);
+
+  /** Collect the terms */
+  void gc_collect(const expr::gc_info& gc_reloc);
 
 };
 

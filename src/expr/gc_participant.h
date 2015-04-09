@@ -12,6 +12,8 @@
 namespace sally {
 namespace expr {
 
+class gc_info;
+
 /**
  * An interface class for anyone wanting to participate in term garbage
  * collection.
@@ -27,6 +29,9 @@ public:
 
   /** Destruct a GC participant */
   virtual ~gc_participant();
+
+  /** Called for the participant to collect unused terms and reallocate used terms */
+  virtual void gc_collect(const gc_info& gc_reloc) = 0;
 
 };
 

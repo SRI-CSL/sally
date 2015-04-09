@@ -68,6 +68,9 @@ public:
    */
   void generalize(generalization_type type, std::vector<expr::term_ref>& projection_out);
 
+  /** Term collection */
+  void gc_collect(const expr::gc_info& gc_reloc);
+
   /** Collect garbage */
   void gc();
 };

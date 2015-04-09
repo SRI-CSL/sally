@@ -307,6 +307,9 @@ public:
   /** Output the state of the system to the stream */
   void to_stream(std::ostream& out) const;
 
+  /** Colelct terms */
+  void gc_collect(const expr::gc_info& gc_reloc) {}
+
 };
 
 }

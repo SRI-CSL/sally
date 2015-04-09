@@ -126,6 +126,9 @@ public:
   /** Returns the instance id */
   size_t instance() const { return d_instance; }
 
+  /** Term collection */
+  void gc_collect(const expr::gc_info& gc_reloc);
+
   /** Collect garbage */
   void gc();
 };

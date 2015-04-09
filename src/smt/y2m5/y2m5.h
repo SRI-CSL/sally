@@ -70,6 +70,9 @@ public:
   /** Unsat core of the last UNSAT result */
   void get_unsat_core(std::vector<expr::term_ref>& out);
 
+  /** Term collection (nothing to do) */
+  void gc_collect(const expr::gc_info& gc_reloc);
+
   /** Collect garbage */
   void gc();
 };

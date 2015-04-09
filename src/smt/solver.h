@@ -231,6 +231,9 @@ public:
    */
   virtual
   void gc() {}
+
+  /** Collect base terms */
+  void gc_collect(const expr::gc_info& gc_reloc);
 };
 
 

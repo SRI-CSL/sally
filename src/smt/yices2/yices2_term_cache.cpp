@@ -1,6 +1,7 @@
 #ifdef WITH_YICES2
 
 #include "smt/yices2/yices2_term_cache.h"
+#include "expr/gc_relocator.h"
 
 #include <iomanip>
 #include <iostream>
@@ -12,7 +13,8 @@ namespace sally {
 namespace smt {
 
 yices2_term_cache::yices2_term_cache(expr::term_manager& tm)
-: d_tm(tm)
+: gc_participant(tm)
+, d_tm(tm)
 , d_cache_is_clean(true)
 {
 }
@@ -132,6 +134,12 @@ void yices2_term_cache::gc() {
     // We're clean now
     d_cache_is_clean = true;
   }
+}
+
+void yices2_term_cache::gc_collect(const expr::gc_info& gc_reloc) {
+  gc_reloc.collect(d_term_to_yices_cache);
+  gc_reloc.collect(d_yices_to_term_cache);
+  gc_reloc.collect(d_permanent_terms);
 }
 
 }

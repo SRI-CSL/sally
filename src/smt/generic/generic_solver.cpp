@@ -255,6 +255,12 @@ public:
       d_vars_set.erase(var);
     }
   }
+
+  void gc_collect(const expr::gc_info& gc_reloc) {
+    gc_reloc.collect(d_vars_list);
+    gc_reloc.collect(d_vars_set);
+  }
+
 };
 
 unsigned generic_solver_internal::s_instances = 0;
@@ -283,6 +289,10 @@ void generic_solver::push() {
 
 void generic_solver::pop() {
   d_internal->pop();
+}
+
+void generic_solver::gc_collect(const expr::gc_info& gc_reloc) {
+  d_internal->gc_collect(gc_reloc);
 }
 
 }

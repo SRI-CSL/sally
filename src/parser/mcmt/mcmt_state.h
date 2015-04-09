@@ -37,7 +37,7 @@ class mcmt_state {
   const system::context& d_context;
 
   /** Symbol table for variables */
-  utils::symbol_table<expr::term_ref> d_variables;
+  utils::symbol_table<expr::term_ref_strong> d_variables;
 
   /** Symbol table for types */
   utils::symbol_table<expr::term_ref_strong> d_types;
@@ -109,6 +109,10 @@ public:
 
   /** Are we using lsal extensions (a' for next.a, a for state.a, cond operator) */
   bool lsal_extensions() const;
+
+  /** Collect terms */
+  void gc_collect(const expr::gc_info& gc_reloc);
+
 };
 
 }
