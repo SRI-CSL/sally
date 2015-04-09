@@ -9,6 +9,19 @@
 
 #ifdef WITH_YICES2
 
+/*
+ * BD: fixed a compilation problem.
+ *
+ * The __STDC_LIMIT_MACROS must be defined before 
+ *
+ *   #include <boost/unordered_map.hpp>
+ *
+ * otherwise it has no effect (because the boost file indirectly
+ * includes <stdint.h>).
+ */
+#define __STDC_LIMIT_MACROS 1
+
+
 #include <map>
 #include <vector>
 #include <boost/unordered_map.hpp>
