@@ -19,6 +19,7 @@
 namespace sally {
 namespace expr {
 
+class gc_participant;
 class term_manager_internal;
 
 class term_manager {
@@ -30,6 +31,9 @@ class term_manager {
 
   /** Whether to rewrite equalities to inequalities */
   bool d_eq_rewrite;
+
+  /** Participants in garbage collection */
+  std::set<gc_participant*> d_gc_participants;
 
 public:
 
@@ -240,6 +244,15 @@ public:
 
   /** Mark whether to rewrite all equlities to inequalities at construction */
   void set_eq_rewrite(bool flag);
+
+  /** Perform garbage collection */
+  void gc();
+
+  /** Register for garbage collection */
+  void gc_register(gc_participant* o);
+
+  /** Unregister from garbage collection */
+  void gc_deregister(gc_participant* o);
 };
 
 inline

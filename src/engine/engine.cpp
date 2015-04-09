@@ -12,7 +12,8 @@
 namespace sally {
 
 engine::engine(const system::context& ctx)
-: d_ctx(ctx)
+: gc_participant(ctx.tm())
+, d_ctx(ctx)
 {}
 
 const system::context& engine::ctx() const {

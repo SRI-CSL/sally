@@ -9,6 +9,7 @@
 
 #include "expr/term.h"
 #include "expr/model.h"
+#include "expr/gc_participant.h"
 #include "utils/exception.h"
 #include "utils/options.h"
 #include "utils/name_transformer.h"
@@ -33,7 +34,7 @@ struct solver_context {
  * generalizing we eliminate the variables y. When intepolating we eliminate
  * the variables x.
  */
-class solver {
+class solver : public expr::gc_participant {
 
 protected:
 
@@ -113,14 +114,16 @@ public:
 
   /** Construct with the given term manager */
   solver(std::string name, expr::term_manager& tm, const options& opts)
-  : d_name(name)
+  : gc_participant(tm)
+  , d_name(name)
   , d_tm(tm)
   , d_opts(opts)
   {}
 
   /** Construct with the given context */
   solver(std::string name, const solver_context& ctx)
-  : d_name(name)
+  : gc_participant(ctx.tm)
+  , d_name(name)
   , d_tm(ctx.tm)
   , d_opts(ctx.opts)
   {}

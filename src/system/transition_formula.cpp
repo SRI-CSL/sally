@@ -24,18 +24,12 @@ std::ostream& operator << (std::ostream& out, const transition_formula& sf) {
 }
 
 transition_formula::transition_formula(expr::term_manager& tm, const state_type* st, expr::term_ref tf)
-: d_tm(tm)
+: gc_participant(tm)
+, d_tm(tm)
 , d_state_type(st)
 , d_transition_formula(tm, tf)
 {
   assert(st->is_transition_formula(tf));
-}
-
-transition_formula::transition_formula(const transition_formula& tf)
-: d_tm(tf.d_tm)
-, d_state_type(tf.d_state_type)
-, d_transition_formula(tf.d_transition_formula)
-{
 }
 
 }

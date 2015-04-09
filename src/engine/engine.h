@@ -8,6 +8,7 @@
 #pragma once
 
 #include "expr/term_manager.h"
+#include "expr/gc_participant.h"
 #include "system/context.h"
 #include "system/state_trace.h"
 
@@ -18,7 +19,7 @@ namespace sally {
 /**
  * Abstract engine class, and an entrypoint for creating new engines.
  */
-class engine  {
+class engine : public expr::gc_participant {
 
   /** The context */
   const system::context& d_ctx;

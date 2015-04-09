@@ -7,4 +7,5 @@ add_library(expr
   term_manager_internal.cpp 
   term_manager.cpp 
   model.cpp
+  gc_participant.cpp
 )

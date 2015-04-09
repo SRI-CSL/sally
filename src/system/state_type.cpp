@@ -16,7 +16,8 @@ namespace sally {
 namespace system {
 
 state_type::state_type(std::string id, expr::term_manager& tm, expr::term_ref type)
-: d_id(id)
+: gc_participant(tm)
+, d_id(id)
 , d_tm(tm)
 , d_type(tm, type)
 {

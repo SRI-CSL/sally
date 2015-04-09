@@ -7,7 +7,10 @@
 
 #include "expr/term_manager.h"
 #include "expr/term_manager_internal.h"
+#include "utils/trace.h"
+#include "expr/gc_participant.h"
 
+#include <iostream>
 #include <sstream>
 
 namespace sally {
@@ -356,6 +359,27 @@ std::ostream& operator << (std::ostream& out, const set_output_language& stm) {
   return out;
 }
 
+void term_manager::gc() {
+  TRACE("gc") << "term_manager::gc(): start" << std::endl;
+
+  std::set<gc_participant*>::iterator it = d_gc_participants.begin();
+  for (; it != d_gc_participants.end(); ++ it) {
+
+  }
+
+
+  TRACE("gc") << "term_manager::gc(): done" << std::endl;
+}
+
+void term_manager::gc_register(gc_participant* o) {
+  assert(d_gc_participants.find(o) == d_gc_participants.end());
+  d_gc_participants.insert(o);
+}
+
+void term_manager::gc_deregister(gc_participant* o) {
+  assert(d_gc_participants.find(o) != d_gc_participants.end());
+  d_gc_participants.erase(o);
+}
 
 }
 }

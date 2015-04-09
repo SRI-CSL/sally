@@ -12,6 +12,7 @@
 #include <cassert>
 
 #include "expr/term_manager.h"
+#include "expr/gc_participant.h"
 
 namespace sally {
 namespace system {
@@ -23,7 +24,7 @@ class transition_formula;
  * A state type identified by it's id (name) and it's type. The types are
  * managed in the context, and everyone else has const pointers to the types.
  */
-class state_type {
+class state_type : public expr::gc_participant {
 
 public:
 

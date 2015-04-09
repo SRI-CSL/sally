@@ -8,6 +8,7 @@
 #pragma once
 
 #include "expr/term_manager.h"
+#include "expr/gc_participant.h"
 #include "system/state_type.h"
 
 #include <iosfwd>
@@ -18,7 +19,7 @@ namespace system {
 /**
  * A formula where over a state type.
  */
-class state_formula {
+class state_formula : expr::gc_participant {
 
   /** The state variables */
   const state_type* d_state_type;

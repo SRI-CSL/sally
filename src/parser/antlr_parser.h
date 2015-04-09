@@ -8,6 +8,7 @@
 #pragma once
 
 #include "parser/parser.h"
+#include "expr/gc_participant.h"
 
 #include <iostream>
 #include <antlr3.h>
@@ -28,7 +29,7 @@ public:
 };
 
 template <input_language lang>
-class antlr_parser : public antlr_parser_interface {
+class antlr_parser : public antlr_parser_interface, public expr::gc_participant {
 
   /** The input */
   pANTLR3_INPUT_STREAM d_input;
@@ -54,7 +55,8 @@ class antlr_parser : public antlr_parser_interface {
 public:
 
   antlr_parser(const system::context& ctx, const char* file_to_parse)
-  : d_state(ctx)
+  : gc_participant(ctx.tm())
+  , d_state(ctx)
   {
     // Create the input stream for the file
     d_input = antlr3FileStreamNew((pANTLR3_UINT8) file_to_parse, ANTLR3_ENC_8BIT);
