@@ -18,9 +18,6 @@ namespace system {
 
 class transition_formula : public expr::gc_participant {
 
-  /** The term manager */
-  expr::term_manager& d_tm;
-
   /** The state information */
   const state_type* d_state_type;
 
@@ -38,7 +35,7 @@ public:
   }
 
   /** Get the state type */
-  const state_type*  get_state_type() const {
+  const state_type* get_state_type() const {
     return d_state_type;
   }
 

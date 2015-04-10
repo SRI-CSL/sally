@@ -168,9 +168,10 @@ void mathsat5_term_cache::gc() {
 }
 
 void mathsat5_term_cache::gc_collect(const expr::gc_info& gc_reloc) {
-  gc_reloc.collect(d_term_to_msat_cache);
-  gc_reloc.collect(d_msat_to_term_cache);
-  gc_reloc.collect(d_permanent_terms);
+  assert(false);
+  //  gc_reloc.collect(d_term_to_msat_cache);
+//  gc_reloc.collect(d_msat_to_term_cache);
+//  gc_reloc.collect(d_permanent_terms);
 }
 
 }

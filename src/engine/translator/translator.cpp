@@ -19,6 +19,7 @@ namespace output {
 
 translator::translator(const system::context& ctx)
 : engine(ctx)
+, gc_participant(ctx.tm())
 , d_ts(0)
 , d_sf(0)
 {

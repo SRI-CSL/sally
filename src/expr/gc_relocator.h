@@ -58,6 +58,16 @@ private:
 
 };
 
+template<typename iterator>
+size_t gc_info::collect(iterator begin, iterator end) const {
+  size_t removed = 0;
+  for (; begin != end; ++ begin) {
+    *begin = collect(*begin);
+    if ((*begin).is_null()) {
+      removed ++;
+    }
+  }
+  return removed;
 }
 
 }

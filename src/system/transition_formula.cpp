@@ -26,7 +26,6 @@ std::ostream& operator << (std::ostream& out, const transition_formula& sf) {
 
 transition_formula::transition_formula(expr::term_manager& tm, const state_type* st, expr::term_ref tf)
 : gc_participant(tm)
-, d_tm(tm)
 , d_state_type(st)
 , d_transition_formula(tm, tf)
 {
