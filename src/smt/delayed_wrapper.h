@@ -58,10 +58,7 @@ public:
   void generalize(generalization_type type, std::vector<expr::term_ref>& projection_out);
   void interpolate(std::vector<expr::term_ref>& out);
   void get_unsat_core(std::vector<expr::term_ref>& out);
-
-  void add_x_variable(expr::term_ref x_var);
-  void add_y_variable(expr::term_ref y_var);
-
+  void add_variable(expr::term_ref var, variable_class f_class);
   void gc_collect(const expr::gc_relocator& gc_reloc);
 };
 

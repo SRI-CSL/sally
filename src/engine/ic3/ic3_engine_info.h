@@ -18,10 +18,10 @@ struct ic3_engine_info {
 
   static void setup_options(boost::program_options::options_description& options) {
     options.add_options()
-        ("ic3-use-weakening", "Use weakening in forward reasoning.")
         ("ic3-show-invariant", "Show the invariant if a property is proved true.")
         ("ic3-enable-restarts", "Restart solvers when extending to new frame and reduce learnts.")
         ("ic3-no-depth-bound", "Don't bound the reasoning depth for induction checks.")
+        ("ic3-single-solver", "One solver for reachability, one for induction, one for bmc.")
         ;
   }
 

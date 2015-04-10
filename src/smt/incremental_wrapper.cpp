@@ -38,8 +38,9 @@ solver::result incremental_wrapper::check() {
   d_solver = d_constructor->mk_solver();
 
   // Initialize solver
-  d_solver->add_x_variables(d_x_variables.begin(), d_x_variables.end());
-  d_solver->add_y_variables(d_y_variables.begin(), d_y_variables.end());
+  d_solver->add_variables(d_A_variables.begin(), d_A_variables.end(), CLASS_A);
+  d_solver->add_variables(d_B_variables.begin(), d_B_variables.end(), CLASS_B);
+  d_solver->add_variables(d_T_variables.begin(), d_T_variables.end(), CLASS_T);
 
   // Assert the formulas
   for (size_t i = 0; i < d_assertions.size(); ++ i) {
@@ -81,7 +82,7 @@ void incremental_wrapper::get_unsat_core(std::vector<expr::term_ref>& out) {
 void incremental_wrapper::gc_collect(const expr::gc_relocator& gc_reloc) {
   solver::gc_collect(gc_reloc);
   for (size_t i = 0; i < d_assertions.size(); ++ i) {
-    gc_reloc.collect(d_assertions[i].f);
+    gc_reloc.reloc(d_assertions[i].f);
   }
 }
 

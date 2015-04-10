@@ -33,7 +33,7 @@ transition_formula::transition_formula(expr::term_manager& tm, const state_type*
 }
 
 void transition_formula::gc_collect(const expr::gc_relocator& gc_reloc) {
-  gc_reloc.collect(d_transition_formula);
+  gc_reloc.reloc(d_transition_formula);
 }
 
 }

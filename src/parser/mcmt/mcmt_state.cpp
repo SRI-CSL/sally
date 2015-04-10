@@ -188,6 +188,6 @@ bool mcmt_state::lsal_extensions() const {
 }
 
 void mcmt_state::gc_collect(const expr::gc_relocator& gc_reloc) {
-  gc_reloc.collect(d_variables);
-  gc_reloc.collect(d_types);
+  d_variables.gc_relocate(gc_reloc);
+  d_types.gc_relocate(gc_reloc);
 }

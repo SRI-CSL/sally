@@ -25,7 +25,6 @@ struct term_manager_with_mathsat5_test_fixture {
 
 public:
   term_manager_with_mathsat5_test_fixture()
-  : tm(true)
   {
     mathsat5 = factory::mk_solver("mathsat5", tm, opts);
     cout << set_tm(tm);
@@ -86,8 +85,8 @@ BOOST_AUTO_TEST_CASE(mathsat5_interpolation) {
   // Variables
   term_ref x = tm.mk_variable("x", tm.real_type());
   term_ref x_next = tm.mk_variable("x_next", tm.real_type());
-  mathsat5->add_x_variable(x);
-  mathsat5->add_y_variable(x_next);
+  mathsat5->add_variable(x, smt::solver::CLASS_A);
+  mathsat5->add_variable(x_next, smt::solver::CLASS_B);
 
   term_ref zero = tm.mk_rational_constant(rational(0, 1));
   term_ref one = tm.mk_rational_constant(rational(1, 1));

@@ -123,18 +123,11 @@ void y2m5::get_unsat_core(std::vector<expr::term_ref>& out) {
   d_mathsat5->get_unsat_core(out);
 }
 
-void y2m5::add_x_variable(expr::term_ref x_var) {
-  solver::add_x_variable(x_var);
-  d_yices2->add_x_variable(x_var);
-  d_mathsat5->add_x_variable(x_var);
+void y2m5::add_variable(expr::term_ref var, variable_class f_class) {
+  solver::add_variable(var, f_class);
+  d_yices2->add_variable(var, f_class);
+  d_mathsat5->add_variable(var, f_class);
 }
-
-void y2m5::add_y_variable(expr::term_ref y_var) {
-  solver::add_y_variable(y_var);
-  d_yices2->add_y_variable(y_var);
-  d_mathsat5->add_y_variable(y_var);
-}
-
 
 bool y2m5::supports(feature f) const {
   switch (f) {

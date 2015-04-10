@@ -30,9 +30,9 @@ struct solver_context {
 /**
  * SMT solver interface for solving queries.
  *
- * Formulas being solved are of the form (A(x) and T(x, y) and B(y)). When
- * generalizing we eliminate the variables y. When intepolating we eliminate
- * the variables x.
+ * Formulas being solved are of the form (A(a, t) and T(a, b, t) and B(b, t)). When
+ * generalizing we eliminate the variables b, t. When intepolating we eliminate
+ * the variables a, t.
  */
 class solver : public expr::gc_participant {
 
@@ -53,10 +53,13 @@ protected:
   }
 
   /** All x variables */
-  std::set<expr::term_ref> d_x_variables;
+  std::set<expr::term_ref> d_A_variables;
 
   /** All y variables */
-  std::set<expr::term_ref> d_y_variables;
+  std::set<expr::term_ref> d_B_variables;
+
+  /** All T variables */
+  std::set<expr::term_ref> d_T_variables;
 
 public:
 
@@ -77,6 +80,9 @@ public:
     CLASS_B
   };
 
+  /** Class of the variable */
+  typedef formula_class variable_class;
+
   /** Solver features */
   enum feature {
     GENERALIZATION,
@@ -85,30 +91,17 @@ public:
   };
 
   /**
-   * Mark a variable as belonging to x (class A). This is permanent, i.e it
-   * the variable will still belong to x after a pop.
+   * Add a variable and mark it as belongint to a particular class. This is
+   * context-independent so it stays after a pop. If you overload this to keep
+   * track of variable additions, call solver::add_variable manually.
    */
   virtual
-  void add_x_variable(expr::term_ref x_var);
+  void add_variable(expr::term_ref var, variable_class f_class);
 
   template<typename iterator>
-  void add_x_variables(iterator begin, iterator end) {
+  void add_variables(iterator begin, iterator end, variable_class f_class) {
     for(; begin != end; ++ begin) {
-      add_x_variable(*begin);
-    }
-  }
-
-  /**
-   * Mark a variable as belonging to y (class B).This is permanent, i.e it
-   * the variable will still belong to x after a pop.
-   */
-  virtual
-  void add_y_variable(expr::term_ref y_var);
-
-  template<typename iterator>
-  void add_y_variables(iterator begin, iterator end) {
-    for(; begin != end; ++ begin) {
-      add_y_variable(*begin);
+      add_variable(*begin, f_class);
     }
   }
 

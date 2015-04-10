@@ -41,21 +41,31 @@ expr::term_ref solver::interpolate() {
   return d_tm.mk_and(interpolation_out);
 }
 
-void solver::add_x_variable(expr::term_ref x_var) {
-  assert(d_x_variables.find(x_var) == d_x_variables.end());
-  assert(d_y_variables.find(x_var) == d_y_variables.end());
-  d_x_variables.insert(x_var);
-}
+void solver::add_variable(expr::term_ref var, variable_class f_class) {
 
-void solver::add_y_variable(expr::term_ref y_var) {
-  assert(d_x_variables.find(y_var) == d_x_variables.end());
-  assert(d_y_variables.find(y_var) == d_y_variables.end());
-  d_y_variables.insert(y_var);
+  assert(d_A_variables.find(var) == d_A_variables.end());
+  assert(d_B_variables.find(var) == d_B_variables.end());
+  assert(d_T_variables.find(var) == d_T_variables.end());
+
+  switch (f_class) {
+  case CLASS_A:
+    d_A_variables.insert(var);
+    break;
+  case CLASS_B:
+    d_B_variables.insert(var);
+    break;
+  case CLASS_T:
+    d_T_variables.insert(var);
+    break;
+  default:
+    assert(false);
+  }
 }
 
 void solver::gc_collect(const expr::gc_relocator& gc_reloc) {
-  gc_reloc.collect(d_x_variables);
-  gc_reloc.collect(d_y_variables);
+  gc_reloc.reloc(d_A_variables);
+  gc_reloc.reloc(d_B_variables);
+  gc_reloc.reloc(d_T_variables);
 }
 
 std::ostream& operator << (std::ostream& out, solver::formula_class fc) {

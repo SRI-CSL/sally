@@ -25,7 +25,6 @@ struct term_manager_with_yices_test_fixture {
 
 public:
   term_manager_with_yices_test_fixture()
-  : tm(true)
   {
     yices2 = factory::mk_solver("yices2", tm, opts);
     cout << set_tm(tm);
@@ -87,9 +86,9 @@ BOOST_AUTO_TEST_CASE(yices2_generalization) {
   term_ref zero = tm.mk_rational_constant(rational());
 
   // Mark the variables
-  yices2->add_x_variable(x);
-  yices2->add_x_variable(y);
-  yices2->add_y_variable(z);
+  yices2->add_variable(x, smt::solver::CLASS_A);
+  yices2->add_variable(y, smt::solver::CLASS_A);
+  yices2->add_variable(z, smt::solver::CLASS_B);
 
   expr::term_ref G;
 
@@ -130,8 +129,8 @@ BOOST_AUTO_TEST_CASE(yices2_generalization) {
   term_ref b1 = tm.mk_variable("b1", tm.boolean_type());
   term_ref b2 = tm.mk_variable("b2", tm.boolean_type());
 
-  yices2->add_x_variable(b2);
-  yices2->add_y_variable(b1);
+  yices2->add_variable(b2, smt::solver::CLASS_A);
+  yices2->add_variable(b1, smt::solver::CLASS_B);
 
 
   term_ref imp1 = tm.mk_term(expr::TERM_IMPLIES, b1, geq_x_y_z);
@@ -161,10 +160,10 @@ BOOST_AUTO_TEST_CASE(yices2_generalization_experiment) {
   term_ref one = tm.mk_rational_constant(rational(1, 1));
 
   // Mark the variables
-  yices2->add_x_variable(x);
-  yices2->add_x_variable(y);
-  yices2->add_y_variable(x_next);
-  yices2->add_y_variable(y_next);
+  yices2->add_variable(x, smt::solver::CLASS_A);
+  yices2->add_variable(y, smt::solver::CLASS_A);
+  yices2->add_variable(x_next, smt::solver::CLASS_B);
+  yices2->add_variable(y_next, smt::solver::CLASS_B);
 
   expr::term_ref G;
 

@@ -9,16 +9,17 @@
 #include "expr/term_manager.h"
 
 #include "utils/exception.h"
+#include "utils/trace.h"
 
 #include <stack>
 #include <sstream>
+#include <iostream>
 
 using namespace sally;
 using namespace expr;
 
-term_manager_internal::term_manager_internal(bool typecheck)
-: d_typecheck(typecheck)
-, d_name_transformer(0)
+term_manager_internal::term_manager_internal()
+: d_name_transformer(0)
 {
   // The null id
   new_term_id();
@@ -619,3 +620,57 @@ void term_manager_internal::set_name_transformer(const utils::name_transformer* 
 const utils::name_transformer* term_manager_internal::get_name_transformer() const {
   return d_name_transformer;
 }
+
+void term_manager_internal::gc(std::map<expr::term_ref, expr::term_ref>& reloc_map) {
+  assert(reloc_map.empty());
+
+  TRACE("gc") << "term_manager_internal::gc(): begin" << std::endl;
+
+  typedef boost::unordered_set<term_ref, term_ref_hasher> visited_set;
+
+  // Queue of terms to visit
+  std::queue<term_ref> queue;
+
+  // Terms we've visited already
+  visited_set visited_terms;
+
+  // Payloads that we've visited one set per term_op
+  visited_set visited_payloads[OP_LAST];
+
+  // Go though all ids and get the terms with refcount > 0
+  tref_id_map::const_iterator terms_it = d_term_ids.begin(), terms_it_end = d_term_ids.end();
+  for (; terms_it != terms_it_end; ++ terms_it) {
+    assert(terms_it->second < d_term_refcount.size());
+    if (d_term_refcount[terms_it->second] > 0) {
+      term_ref t = terms_it->first;
+      queue.push(t);
+      visited_terms.insert(t);
+    }
+  }
+
+  // Traverse the terms and collect all subterms and payloads
+  while (!queue.empty()) {
+
+    // Process current
+    term_ref current = queue.front();
+    queue.pop();
+
+    // Add any unvisited children
+    const term& current_term = term_of(current);
+    for (size_t i = 0; i < current_term.size(); ++ i) {
+      if (visited_terms.find(current_term[i]) == visited_terms.end()) {
+        queue.push(current_term[i]);
+        visited_terms.insert(current_term[i]);
+      }
+    }
+
+    // Add payload if any
+    term_op op = current_term.op();
+    if (d_payload_memory[op]) {
+      visited_payloads[op].insert(*current_term.end());
+    }
+  }
+
+  TRACE("gc") << "term_manager_internal::gc(): end" << std::endl;
+}
+

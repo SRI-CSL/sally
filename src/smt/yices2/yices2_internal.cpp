@@ -826,9 +826,8 @@ void yices2_internal::pop() {
   }
 }
 
-void yices2_internal::generalize(smt::solver::generalization_type type, const std::set<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out) {
+void yices2_internal::generalize(smt::solver::generalization_type type, std::vector<expr::term_ref>& projection_out) {
 
-  assert(!to_eliminate.empty());
   assert(!d_assertions.empty());
 
   // Get the model
@@ -840,17 +839,16 @@ void yices2_internal::generalize(smt::solver::generalization_type type, const st
   }
 
   // Copy over A formulas and count the rest
-  size_t to_generalize = 0;
+  size_t assertions_size = 0;
   for (size_t i = 0; i < d_assertions.size(); ++ i) {
     if (d_assertion_classes[i] != solver::CLASS_A) {
-      to_generalize ++;
+      assertions_size ++;
     }
   }
 
   // Yices version of the assertions
-  term_t* assertions = new term_t[to_generalize];
+  term_t* assertions = new term_t[assertions_size];
   size_t j = 0;
-  // Add class B first
   switch (type) {
   case smt::solver::GENERALIZE_BACKWARD:
     for (size_t i = 0; i < d_assertions.size(); ++ i) {
@@ -877,21 +875,37 @@ void yices2_internal::generalize(smt::solver::generalization_type type, const st
     }
   }
 
-  // Yices version of the variables
-  term_t* variables = new term_t[to_eliminate.size()];
-  std::set<expr::term_ref>::const_iterator it = to_eliminate.begin(), it_end = to_eliminate.end();
-  for (size_t i = 0; it != it_end; ++ i, ++ it) {
-    variables[i] = to_yices2_term(*it);
+  // Yices version of the variables to eliminate
+  size_t variables_size = type == smt::solver::GENERALIZE_BACKWARD ?
+      d_B_variables.size() + d_T_variables.size() :
+      d_A_variables.size() + d_T_variables.size() ;
+  term_t* variables = new term_t[variables_size];
+
+  j = 0;
+  for (size_t i = 0; i < d_T_variables.size(); ++ i) {
+    variables[j++] = to_yices2_term(d_T_variables[i]);
+  }
+  switch (type) {
+  case smt::solver::GENERALIZE_BACKWARD:
+    for (size_t i = 0; i < d_B_variables.size(); ++ i) {
+      variables[j++] = to_yices2_term(d_B_variables[i]);
+    }
+    break;
+  case smt::solver::GENERALIZE_FORWARD:
+    for (size_t i = 0; i < d_A_variables.size(); ++ i) {
+      variables[j++] = to_yices2_term(d_A_variables[i]);
+    }
+    break;
   }
 
   if (output::trace_tag_is_enabled("yices2")) {
     std::cerr << "assertions:" << std::endl;
-    for (size_t i = 0; i < to_generalize; ++ i) {
+    for (size_t i = 0; i < assertions_size; ++ i) {
       std::cerr << i << ": ";
       yices_pp_term(stderr, assertions[i], 80, 100, 0);
     }
     std::cerr << "variables:" << std::endl;
-    for (size_t i = 0; i < to_eliminate.size(); ++ i) {
+    for (size_t i = 0; i < variables_size; ++ i) {
       std::cerr << i << ": ";
       yices_pp_term(stdout, variables[i], 80, 100, 0);
     }
@@ -900,7 +914,7 @@ void yices2_internal::generalize(smt::solver::generalization_type type, const st
   // Generalize
   term_vector_t G_y;
   yices_init_term_vector(&G_y);
-  int32_t ret = yices_generalize_model_array(m, to_generalize, assertions, to_eliminate.size(), variables, YICES_GEN_DEFAULT, &G_y);
+  int32_t ret = yices_generalize_model_array(m, assertions_size, assertions, variables_size, variables, YICES_GEN_DEFAULT, &G_y);
   if (ret < 0) {
     throw exception("Generalization failed in Yices.");
   }
@@ -932,19 +946,29 @@ void yices2_internal::get_assertions(std::set<expr::term_ref>& out) const {
   }
 }
 
-void yices2_internal::add_x_variable(expr::term_ref x_var) {
-  d_variables.push_back(x_var);
-}
-
-void yices2_internal::add_y_variable(expr::term_ref y_var) {
-  d_variables.push_back(y_var);
+void yices2_internal::add_variable(expr::term_ref var, smt::solver::variable_class f_class) {
+  switch (f_class) {
+  case smt::solver::CLASS_A:
+    d_A_variables.push_back(var);
+    break;
+  case smt::solver::CLASS_B:
+    d_B_variables.push_back(var);
+    break;
+  case smt::solver::CLASS_T:
+    d_T_variables.push_back(var);
+    break;
+  default:
+    assert(false);
+  }
 }
 
 void yices2_internal::gc_collect(const expr::gc_relocator& gc_reloc) {
-  gc_reloc.collect(d_assertions);
-  gc_reloc.collect(d_variables);
-  gc_reloc.collect(d_bv1);
-  gc_reloc.collect(d_bv0);
+  gc_reloc.reloc(d_assertions);
+  gc_reloc.reloc(d_A_variables);
+  gc_reloc.reloc(d_B_variables);
+  gc_reloc.reloc(d_T_variables);
+  gc_reloc.reloc(d_bv1);
+  gc_reloc.reloc(d_bv0);
 }
 
 

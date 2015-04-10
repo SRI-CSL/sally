@@ -120,6 +120,12 @@ class ic3_engine : public engine {
   /** A solver per frame with next info */
   std::vector<smt::solver*> d_solvers;
 
+  /** Solver for reachability queries when in single-solver mode */
+  smt::solver* d_reachability_solver;
+
+  /** Solver for induction queries when in single-solver mode */
+  smt::solver* d_induction_solver;
+
   /** Counter-example solver */
   smt::solver* d_counterexample_solver;
 
@@ -204,6 +210,12 @@ class ic3_engine : public engine {
   /** Set of facts valid per frame */
   std::vector<formula_set> d_frame_content;
 
+  /** Boolean variable (enabling the frame) */
+  std::vector<expr::term_ref> d_frame_variables;
+
+  /** Returns the frame variable */
+  expr::term_ref get_frame_variable(size_t i);
+
   /** Total number of facts in the database */
   size_t total_facts() const;
 
@@ -250,19 +262,6 @@ class ic3_engine : public engine {
   /** Replace any x = y in G with (x <= y) & (x >= y) */
   expr::term_ref eq_to_ineq(expr::term_ref G);
 
-  enum weakening_mode {
-    // F => W(F), with F false and W(F) false
-    WEAK_FORWARD,
-    // W(F) => F, with F true, and W(F) true
-    WEAK_BACKWARD
-  };
-
-  /**
-   * Weaken the given formula, i.e. find W such that F => W and and W is
-   * inconsistent with the given model.
-   */
-  expr::term_ref weaken(expr::term_ref F, expr::model& m, weakening_mode mode);
-
   /** Statistics per frame (some number of frames) */
   std::vector<utils::stat_int*> d_stat_frame_size;
 
@@ -293,6 +292,9 @@ class ic3_engine : public engine {
 
   /** GC the solvers */
   void gc_solvers();
+
+  /** Query at frame k and return generalization. */
+  expr::term_ref query_at(size_t k, expr::term_ref f, smt::solver::formula_class);
 
 public:
 

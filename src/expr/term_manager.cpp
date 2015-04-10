@@ -9,6 +9,7 @@
 #include "expr/term_manager_internal.h"
 #include "utils/trace.h"
 #include "expr/gc_participant.h"
+#include "expr/gc_relocator.h"
 
 #include <iostream>
 #include <sstream>
@@ -16,8 +17,8 @@
 namespace sally {
 namespace expr {
 
-term_manager::term_manager(bool typecheck)
-: d_tm(new term_manager_internal(typecheck))
+term_manager::term_manager()
+: d_tm(new term_manager_internal())
 , d_eq_rewrite(false)
 {
 }
@@ -362,13 +363,18 @@ std::ostream& operator << (std::ostream& out, const set_output_language& stm) {
 void term_manager::gc() {
   TRACE("gc") << "term_manager::gc(): start" << std::endl;
 
+  // Create the relocation map
+  gc_relocator::relocation_map relocation_map;
+  d_tm->gc(relocation_map);
 
+  // Create the relocator to pass around
+  gc_relocator gc_reloc(*this, relocation_map);
 
+  // Collect with all participants
   std::set<gc_participant*>::iterator it = d_gc_participants.begin();
   for (; it != d_gc_participants.end(); ++ it) {
-
+    (*it)->gc_collect(gc_reloc);
   }
-
 
   TRACE("gc") << "term_manager::gc(): done" << std::endl;
 }

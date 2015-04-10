@@ -258,8 +258,8 @@ public:
   }
 
   void gc_collect(const expr::gc_relocator& gc_reloc) {
-    gc_reloc.collect(d_vars_list);
-    gc_reloc.collect(d_vars_set);
+    gc_reloc.reloc(d_vars_list);
+    gc_reloc.reloc(d_vars_set);
   }
 
 };

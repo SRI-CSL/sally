@@ -137,9 +137,9 @@ void yices2_term_cache::gc() {
 }
 
 void yices2_term_cache::gc_collect(const expr::gc_relocator& gc_reloc) {
-  gc_reloc.collect(d_term_to_yices_cache);
-  gc_reloc.collect(d_yices_to_term_cache);
-  gc_reloc.collect(d_permanent_terms);
+  d_term_to_yices_cache.reloc(gc_reloc);
+  d_yices_to_term_cache.reloc(gc_reloc);
+  gc_reloc.reloc(d_permanent_terms);
 }
 
 }

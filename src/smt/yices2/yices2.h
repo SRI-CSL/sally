@@ -45,11 +45,8 @@ public:
   /** Add an assertion f to the solver */
   void add(expr::term_ref f, formula_class f_class);
 
-  /** Add an x variable */
-  void add_x_variable(expr::term_ref x_var);
-
-  /** Add a y variable */
-  void add_y_variable(expr::term_ref y_var);
+  /** Add an variable */
+  void add_variable(expr::term_ref var, variable_class f_class);
 
   /** Check the assertions for satisfiability */
   result check();

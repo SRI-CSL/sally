@@ -109,11 +109,11 @@ void smt2_output_wrapper::get_model(expr::model& m) const {
   out_nonconst << "(get-value (";
   std::set<expr::term_ref>::const_iterator it;
   bool space = false;
-  for (it = d_x_variables.begin(); it != d_x_variables.end(); ++ it, space = true) {
+  for (it = d_A_variables.begin(); it != d_A_variables.end(); ++ it, space = true) {
     if (space) { out_nonconst << " "; }
     out_nonconst << *it << std::endl;
   }
-  for (it = d_y_variables.begin(); it != d_y_variables.end(); ++ it, space = true) {
+  for (it = d_B_variables.begin(); it != d_B_variables.end(); ++ it, space = true) {
     if (space) { out_nonconst << " "; }
     out_nonconst << *it << std::endl;
   }
@@ -163,20 +163,12 @@ void smt2_output_wrapper::get_unsat_core(std::vector<expr::term_ref>& out) {
   d_solver->get_unsat_core(out);
 }
 
-void smt2_output_wrapper::add_x_variable(expr::term_ref x_var) {
+void smt2_output_wrapper::add_variable(expr::term_ref var, variable_class f_class) {
   set_name_transformer nt(d_tm);
 
-  d_output << "(declare-fun " << x_var << " () " << d_tm.type_of(x_var) << ")" << std::endl;
-  solver::add_x_variable(x_var);
-  d_solver->add_x_variable(x_var);
-}
-
-void smt2_output_wrapper::add_y_variable(expr::term_ref y_var) {
-  set_name_transformer nt(d_tm);
-
-  d_output << "(declare-fun " << y_var << " () " << d_tm.type_of(y_var) << ")" << std::endl;
-  solver::add_y_variable(y_var);
-  d_solver->add_y_variable(y_var);
+  d_output << "(declare-fun " << var << " () " << d_tm.type_of(var) << ")" << std::endl;
+  solver::add_variable(var, f_class);
+  d_solver->add_variable(var, f_class);
 }
 
 void smt2_output_wrapper::gc_collect(const expr::gc_relocator& gc_reloc) {
@@ -184,7 +176,7 @@ void smt2_output_wrapper::gc_collect(const expr::gc_relocator& gc_reloc) {
   solver::gc_collect(gc_reloc);
   // Collect the assertions
   for (size_t i = 0; i < d_assertions.size(); ++ i) {
-    gc_reloc.collect(d_assertions[i].f);
+    gc_reloc.reloc(d_assertions[i].f);
   }
 }
 

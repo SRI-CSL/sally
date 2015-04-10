@@ -129,6 +129,20 @@ public:
     out << "]";
   }
 
+  template<typename gc_relocator>
+  void gc_relocate(const gc_relocator& gc_reloc)  {
+    for (iterator it = d_table.begin(); it != d_table.end(); ++ it) {
+      typename T_list::iterator t_it = it->second.begin();
+      typename T_list::const_iterator t_it_end = it->second.end();
+      for (; t_it != t_it_end; ++ t_it) {
+        T t = *t_it;
+        bool relocated = gc_reloc.reloc(t);
+        assert(relocated);
+        *t_it = t;
+      }
+    }
+  }
+
 };
 
 template<typename T>

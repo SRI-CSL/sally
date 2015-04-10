@@ -58,7 +58,7 @@ solver::result yices2::check() {
 
 void yices2::get_model(expr::model& m) const {
   TRACE("yices2") << "yices2[" << d_internal->instance() << "]: get_model()" << std::endl;
-  d_internal->get_model(m, d_x_variables, d_y_variables);
+  d_internal->get_model(m, d_A_variables, d_B_variables);
 }
 
 void yices2::push() {
@@ -74,26 +74,21 @@ void yices2::pop() {
 
 void yices2::generalize(generalization_type type, std::vector<expr::term_ref>& projection_out) {
   TRACE("yices2") << "yices2[" << d_internal->instance() << "]: generalizing" << std::endl;
-  assert(!d_y_variables.empty());
+  assert(!d_B_variables.empty());
   switch (type) {
   case GENERALIZE_FORWARD:
-    d_internal->generalize(type, d_x_variables, projection_out);
+    d_internal->generalize(type, projection_out);
     break;
   case GENERALIZE_BACKWARD:
-    d_internal->generalize(type, d_y_variables, projection_out);
+    d_internal->generalize(type, projection_out);
     break;
   }
 
 }
 
-void yices2::add_x_variable(expr::term_ref x_var) {
-  solver::add_x_variable(x_var);
-  d_internal->add_x_variable(x_var);
-}
-
-void yices2::add_y_variable(expr::term_ref y_var) {
-  solver::add_y_variable(y_var);
-  d_internal->add_y_variable(y_var);
+void yices2::add_variable(expr::term_ref var, variable_class f_class) {
+  solver::add_variable(var, f_class);
+  d_internal->add_variable(var, f_class);
 }
 
 void yices2::gc() {

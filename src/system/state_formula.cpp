@@ -36,7 +36,7 @@ state_formula::~state_formula() {
 }
 
 void state_formula::gc_collect(const expr::gc_relocator& gc_reloc) {
-  gc_reloc.collect(d_state_formula);
+  gc_reloc.reloc(d_state_formula);
 }
 
 

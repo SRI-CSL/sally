@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Create the term manager
-    expr::term_manager tm(true);
+    expr::term_manager tm;
     cout << expr::set_tm(tm);
     cerr << expr::set_tm(tm);
 

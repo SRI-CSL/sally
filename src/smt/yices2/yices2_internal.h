@@ -52,8 +52,14 @@ class yices2_internal {
   /** The assertions size per push/pop */
   std::vector<size_t> d_assertions_size;
 
-  /** All variables */
-  std::vector<expr::term_ref> d_variables;
+  /** A variables */
+  std::vector<expr::term_ref> d_A_variables;
+
+  /** B variables */
+  std::vector<expr::term_ref> d_B_variables;
+
+  /** T variables */
+  std::vector<expr::term_ref> d_T_variables;
 
   /** Term conversion cache */
   yices2_term_cache* d_conversion_cache;
@@ -99,11 +105,8 @@ public:
   /** Add an assertion to yices */
   void add(expr::term_ref ref, solver::formula_class f_class);
 
-  /** Add an x variable */
-  void add_x_variable(expr::term_ref x_var);
-
-  /** Add a y variable */
-  void add_y_variable(expr::term_ref y_var);
+  /** Add a variable */
+  void add_variable(expr::term_ref var, solver::variable_class f_class);
 
   /** Get the assertions into the set */
   void get_assertions(std::set<expr::term_ref>& out) const;
@@ -121,7 +124,7 @@ public:
   void pop();
 
   /** Return the generalization */
-  void generalize(smt::solver::generalization_type type, const std::set<expr::term_ref>& to_eliminate, std::vector<expr::term_ref>& projection_out);
+  void generalize(smt::solver::generalization_type type, std::vector<expr::term_ref>& projection_out);
 
   /** Returns the instance id */
   size_t instance() const { return d_instance; }

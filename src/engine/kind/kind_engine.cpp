@@ -102,7 +102,7 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
       for (size_t i = 0; i <= k; ++ i) {
         d_trace->get_state_variables(i, vars);
       }
-      d_solver_1->add_x_variables(vars.begin(), vars.end());
+      d_solver_1->add_variables(vars.begin(), vars.end(), smt::solver::CLASS_A);
       // Get the model
       expr::model m(tm(), false);
       d_solver_1->get_model(m);

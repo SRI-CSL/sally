@@ -48,6 +48,8 @@ ic3_engine::ic3_engine(const system::context& ctx)
 : engine(ctx)
 , d_transition_system(0)
 , d_property(0)
+, d_reachability_solver(0)
+, d_induction_solver(0)
 , d_counterexample_solver(0)
 , d_counterexample_solver_depth(0)
 , d_trace(0)
@@ -71,6 +73,8 @@ ic3_engine::~ic3_engine() {
   for (size_t k = 0; k < d_solvers.size(); ++ k) {
     delete d_solvers[k];
   }
+  delete d_reachability_solver;
+  delete d_induction_solver;
   delete d_counterexample_solver;
   delete d_trace;
 }
@@ -81,29 +85,11 @@ expr::term_ref ic3_engine::check_one_step_reachable(size_t k, expr::term_ref F) 
   // The state type
   const system::state_type* state_type = d_transition_system->get_state_type();
 
-  // Get the solver of the previous frame
-  smt::solver* solver = get_solver(k-1);
-  smt::solver_scope scope(solver);
-
-  // Add the formula (moving current -> next)
-  scope.push();
+  // Move the formula variables current -> next
   expr::term_ref F_next = state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, F);
-  solver->add(F_next, smt::solver::CLASS_B);
 
-  // Figure out the result
-  smt::solver::result r = solver->check();
-  switch (r) {
-  case smt::solver::SAT: {
-    return generalize_sat_at(k, solver);
-  }
-  case smt::solver::UNSAT:
-    // Unsat, we return NULL
-    return expr::term_ref();
-  default:
-    throw exception("SMT unknown result.");
-  }
-
-  return expr::term_ref();
+  // Query
+  return query_at(k-1, F_next, smt::solver::CLASS_B);
 }
 
 expr::term_ref ic3_engine::check_inductive_at(size_t k, expr::term_ref F) {
@@ -154,19 +140,12 @@ void ic3_engine::add_valid_up_to(size_t k, expr::term_ref F) {
 
   // Ensure frame is setup
   ensure_frame(k);
-  // Add to all frames from 1..k (not adding to 0, intiial states need no refinement)
+  // Add to all frames from 1..k (not adding to 0, initial states need no refinement)
   for(int i = k; i >= 1; -- i) {
     if (frame_contains(i, F)) {
       break;
     }
     add_to_frame(i, F);
-    if (output::trace_tag_is_enabled("ic3::deadlock")) {
-      smt::solver::result r = get_solver(i)->check();
-      if (r != smt::solver::SAT) {
-        throw exception("Solver in inconsistent state");
-      }
-    }
-
   }
 }
 
@@ -178,17 +157,44 @@ induction_obligation ic3_engine::pop_induction_obligation() {
 }
 
 void ic3_engine::init_solver(size_t k) {
-  assert(k < d_solvers.size());
-  assert(d_solvers[k] == 0);
-  smt::solver* solver = smt::factory::mk_default_solver(tm(), ctx().get_options());
-  d_solvers[k] = solver;
-  // Add the variable classes
-  const std::vector<expr::term_ref>& x = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_CURRENT);
-  solver->add_x_variables(x.begin(), x.end());
-  const std::vector<expr::term_ref>& x_next = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_NEXT);
-  solver->add_y_variables(x_next.begin(), x_next.end());
-  // Add the transition relation
-  solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_T);
+
+  if (ctx().get_options().get_bool("ic3-single-solver")) {
+
+    // The variables from the state type
+    const std::vector<expr::term_ref>& x = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_CURRENT);
+    const std::vector<expr::term_ref>& x_next = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_NEXT);
+
+    // Add the reachability solver
+    if (d_reachability_solver == 0) {
+      d_reachability_solver = smt::factory::mk_default_solver(tm(), ctx().get_options());
+      d_reachability_solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_T);
+      d_reachability_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
+      d_reachability_solver->add_variables(x_next.begin(), x_next.end(), smt::solver::CLASS_B);
+    }
+
+    // Add the induction solver
+    if (d_induction_solver == 0) {
+      d_induction_solver = smt::factory::mk_default_solver(tm(), ctx().get_options());
+      d_induction_solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_T);
+      d_induction_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
+      d_induction_solver->add_variables(x_next.begin(), x_next.end(), smt::solver::CLASS_B);
+    }
+  } else {
+    if (d_solvers.size() <= k) {
+      d_solvers.resize(k+1, 0);
+    }
+    assert(d_solvers[k] == 0);
+    smt::solver* solver = smt::factory::mk_default_solver(tm(), ctx().get_options());
+    d_solvers[k] = solver;
+    // Add the variable classes
+    const std::vector<expr::term_ref>& x = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_CURRENT);
+    solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
+    const std::vector<expr::term_ref>& x_next = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_NEXT);
+    solver->add_variables(x_next.begin(), x_next.end(), smt::solver::CLASS_B);
+    // Add the transition relation
+    solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_T);
+  }
+
 }
 
 void ic3_engine::ensure_frame(size_t k) {
@@ -198,11 +204,10 @@ void ic3_engine::ensure_frame(size_t k) {
   }
 
   // Upsize the solvers and frames if necessary
-  while (d_solvers.size() <= k) {
+  while (d_frame_content.size() <= k) {
+
     // Make the solver
-    size_t i = d_solvers.size();
-    d_solvers.push_back(0);
-    init_solver(i);
+    init_solver(d_frame_content.size());
 
     // Add the empty frame content
     d_frame_content.push_back(formula_set());
@@ -320,114 +325,6 @@ bool ic3_engine::check_valid(size_t k, expr::term_ref f) {
   }
 }
 
-expr::term_ref ic3_engine::weaken(expr::term_ref F, expr::model& m, weakening_mode mode) {
-
-  // WEAK_FORWARD => F_is false
-  assert(mode != WEAK_FORWARD || m.is_false(F));
-  // WEAK_BACKWARD => F is true
-  assert(mode != WEAK_BACKWARD || m.is_true(F));
-
-  size_t F_size = tm().term_of(F).size();
-  expr::term_op F_op = tm().term_of(F).op();
-
-  expr::term_ref F_weak;
-
-  expr::term_ref t_false = tm().mk_boolean_constant(false);
-  expr::term_ref t_true = tm().mk_boolean_constant(true);
-
-  switch (F_op) {
-  case expr::TERM_AND: {
-    if (mode == WEAK_FORWARD) {
-      // Get the first false one
-      for (size_t i = 0; i < F_size; ++i) {
-        expr::term_ref child = tm().term_of(F)[i];
-        if (m.get_term_value(child) == t_false) {
-          // Just kee this one
-          F_weak = weaken(child, m, WEAK_FORWARD);
-          break;
-        }
-      }
-    } else {
-      // Weaken the conjunction
-      std::vector<expr::term_ref> children;
-      for (size_t i = 0; i < F_size; ++ i) {
-        expr::term_ref child = tm().term_of(F)[i];
-        children.push_back(weaken(child, m, WEAK_BACKWARD));
-      }
-      F_weak = tm().mk_and(children);
-    }
-    break;
-  }
-  case expr::TERM_OR: {
-    if (mode == WEAK_FORWARD) {
-      // Weaken the disjunction
-      std::vector<expr::term_ref> children;
-      for (size_t i = 0; i < F_size; ++ i) {
-        expr::term_ref child = tm().term_of(F)[i];
-        children.push_back(weaken(child, m, WEAK_FORWARD));
-      }
-      F_weak = tm().mk_or(children);
-    } else {
-      // Get the first true one
-      for (size_t i = 0; i < F_size; ++i) {
-        expr::term_ref child = tm().term_of(F)[i];
-        if (m.get_term_value(child) == t_true) {
-          // Just keep this one
-          F_weak = weaken(child, m, WEAK_BACKWARD);
-          break;
-        }
-      }
-    }
-    break;
-  }
-  case expr::TERM_NOT: {
-    expr::term_ref child = tm().term_of(F)[0];
-    if (mode == WEAK_FORWARD) {
-      // (not F) => W(F)
-      // (not W(F)) => F
-      F_weak = tm().mk_term(expr::TERM_NOT, weaken(child, m, WEAK_BACKWARD));
-    } else {
-      // WEAK_BACKWARD
-      // (not W(F) => (not F)
-      // F => W(F)
-      F_weak = tm().mk_term(expr::TERM_NOT, weaken(child, m, WEAK_FORWARD));
-    }
-    break;
-  }
-  case expr::TERM_EQ: {
-    F_weak = F;
-    if (mode == WEAK_FORWARD) {
-      expr::term_ref c1 = tm().term_of(F)[0];
-      expr::term_ref c1_type = tm().type_of(c1);
-      if (tm().is_subtype_of(c1_type, tm().real_type())) {
-        // (x = y) => x >= y and x <= y, so we pick the one that is false
-        expr::term_ref c2 = tm().term_of(F)[1];
-        expr::rational c1_value(tm(), m.get_term_value(c1));
-        expr::rational c2_value(tm(), m.get_term_value(c2));
-        if (c1_value < c2_value) {
-          F_weak = tm().mk_term(expr::TERM_GEQ, c1, c2);
-        } else {
-          assert(c1_value > c2_value);
-          F_weak = tm().mk_term(expr::TERM_LEQ, c1, c2);
-        }
-      }
-    }
-  }
-  break;
-  default:
-    F_weak = F;
-  }
-
-  assert(!F_weak.is_null());
-
-  // WEAK_FORWARD => F_weak is false
-  assert(mode != WEAK_FORWARD || m.is_false(F_weak));
-  // WEAK_BACKWARD => F_weak is true
-  assert(mode != WEAK_BACKWARD || m.is_true(F_weak));
-
-  return F_weak;
-}
-
 expr::term_ref ic3_engine::eq_to_ineq(expr::term_ref G) {
 
   std::vector<expr::term_ref> G_new;
@@ -462,20 +359,6 @@ expr::term_ref ic3_engine::learn_forward(size_t k, expr::term_ref G) {
     return tm().mk_term(expr::TERM_NOT, G);
   }
 
-  // Get a model for G in R_k (only if weakening). Default values for undefined.
-  expr::model G_model(tm(), true);
-  if (ctx().get_options().get_bool("ic3-use-weakening")) {
-    smt::solver* solver_k = get_solver(k);
-    solver_k->push();
-    solver_k->add(G, smt::solver::CLASS_A);
-    smt::solver::result result_k = solver_k->check();
-    unused_var(result_k);
-    assert(result_k == smt::solver::SAT);
-    solver_k->get_model(G_model);
-    solver_k->pop();
-    TRACE("ic3") << "model: " << G_model << std::endl;
-  }
-
   // Get the interpolant I1 for: (R_{k-1} and T => I1, I1 and G unsat
   smt::solver* I1_solver = get_solver(k-1);
   I1_solver->push();
@@ -490,14 +373,6 @@ expr::term_ref ic3_engine::learn_forward(size_t k, expr::term_ref G) {
 
   TRACE("ic3") << "I1: " << I1 << std::endl;
 
-  if (ctx().get_options().get_bool("ic3-use-weakening")) {
-    assert(G_model.is_false(I1));
-    // Try to waken I1
-    I1 = weaken(I1, G_model, WEAK_FORWARD);
-    TRACE("ic3") << "weakened I1: " << I1 << std::endl;
-    assert(G_model.is_false(I1));
-  }
-
   // Get the interpolant I2 for I => I2, I2 and G unsat
   smt::solver* I2_solver = get_solver(0);
   I2_solver->push();
@@ -509,14 +384,6 @@ expr::term_ref ic3_engine::learn_forward(size_t k, expr::term_ref G) {
   I2_solver->pop();
 
   TRACE("ic3") << "I2: " << I2 << std::endl;
-
-  if (ctx().get_options().get_bool("ic3-use-weakening")) {
-    assert(G_model.is_false(I2));
-    // Try to weaken I2
-    I2 = weaken(I2, G_model, WEAK_FORWARD);
-    TRACE("ic3") << "weakened I2: " << I2 << std::endl;
-    assert(G_model.is_false(I2));
-  }
 
   // Result is the disjunction of the two
   expr::term_ref learnt = tm().mk_term(expr::TERM_OR, I1, I2);
@@ -580,7 +447,23 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(const induction_oblig
 void ic3_engine::add_to_frame(size_t k, expr::term_ref f) {
   ensure_frame(k);
   assert(d_frame_content[k].count(f) == 0);
-  get_solver(k)->add(f, smt::solver::CLASS_A);
+
+  // Add appropriately
+  if (ctx().get_options().get_bool("ic3-single-solver")) {
+    // Add te enabling variable and the implication to enable the assertion
+    expr::term_ref assertion = tm().mk_term(expr::TERM_IMPLIES, get_frame_variable(k), f);
+    d_reachability_solver->add(assertion, smt::solver::CLASS_A);
+    // If at induction frame, add to induction solver
+    if (k == d_induction_frame) {
+      d_induction_solver->add(assertion, smt::solver::CLASS_A);
+    }
+  } else {
+    // Add directly
+    get_solver(k)->add(f, smt::solver::CLASS_A);
+  }
+
+
+  // Remember
   d_frame_content[k].insert(f);
   if (k < d_stat_frame_size.size()) {
     d_stat_frame_size[k]->get_value() ++;
@@ -744,6 +627,12 @@ engine::result ic3_engine::search() {
     // Move to the next frame
     d_induction_frame ++;
     d_induction_obligations.clear();
+    if (ctx().get_options().get_bool("ic3-single-solver")) {
+      // Reset the induction solver
+      delete d_induction_solver;
+      init_solver(d_induction_frame);
+    }
+
     std::set<induction_obligation>::const_iterator it = d_induction_obligations_next.begin();
     for (; it != d_induction_obligations_next.end(); ++ it) {
       // Push if not shown invalid
@@ -872,7 +761,7 @@ const system::state_trace* ic3_engine::get_trace() {
   }
 
   // Check
-  solver->add_x_variables(all_variables.begin(), all_variables.end());
+  solver->add_variables(all_variables.begin(), all_variables.end(), smt::solver::CLASS_A);
   smt::solver::result r = solver->check();
   unused_var(r);
   assert(r == smt::solver::SAT);
@@ -899,6 +788,7 @@ void ic3_engine::to_stream(std::ostream& out) const  {
 
 smt::solver* ic3_engine::get_solver(size_t k) {
   ensure_frame(k);
+  assert(!ctx().get_options().get_bool("ic3-single-solver"));
   return d_solvers[k];
 }
 
@@ -960,13 +850,54 @@ void ic3_engine::gc_solvers() {
 }
 
 void ic3_engine::gc_collect(const expr::gc_relocator& gc_reloc) {
-  gc_reloc.collect(d_counterexample);
-  gc_reloc.collect(d_frame_formula_info);
+  gc_reloc.reloc(d_counterexample);
+  d_frame_formula_info.reloc(gc_reloc);
   assert(d_induction_obligations_next.size() == 0);
   for (size_t i = 0; i < d_frame_content.size(); ++ i) {
-    gc_reloc.collect(d_frame_content[i]);
+    gc_reloc.reloc(d_frame_content[i]);
   }
- }
+  gc_reloc.reloc(d_frame_variables);
+}
+
+expr::term_ref ic3_engine::query_at(size_t k, expr::term_ref f, smt::solver::formula_class f_class) {
+
+  smt::solver* solver = 0;
+  if (ctx().get_options().get_bool("ic3-single-solver")) {
+    solver = d_reachability_solver;
+  } else {
+    solver = get_solver(k);
+  }
+  smt::solver_scope scope(solver);
+
+  // Add the formula (moving current -> next)
+  scope.push();
+  solver->add(f, f_class);
+
+  // Figure out the result
+  smt::solver::result r = solver->check();
+  switch (r) {
+  case smt::solver::SAT: {
+    return generalize_sat_at(k, solver);
+  }
+  case smt::solver::UNSAT:
+    // Unsat, we return NULL
+    return expr::term_ref();
+  default:
+    throw exception("SMT unknown result.");
+  }
+
+  return expr::term_ref();
+}
+
+expr::term_ref ic3_engine::get_frame_variable(size_t i) {
+  while (d_frame_variables.size() <= i) {
+    std::stringstream ss;
+    ss << "frame_" << i;
+    expr::term_ref var = tm().mk_variable(ss.str(), tm().boolean_type());
+    d_frame_variables.push_back(var);
+  }
+  return d_frame_variables[i];
+}
 
 }
 }

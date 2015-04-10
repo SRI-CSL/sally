@@ -135,9 +135,6 @@ public:
 
 private:
 
-  /** Whether to typecheck or not */
-  bool d_typecheck;
-
   /** Memory where the terms are kept */
   alloc::allocator<term, term_ref> d_memory;
 
@@ -227,7 +224,7 @@ private:
 public:
 
   /** Construct them manager */
-  term_manager_internal(bool typecheck);
+  term_manager_internal();
 
   /** Destruct the manager, and destruct all payloads that the manager owns */
   ~term_manager_internal();
@@ -410,6 +407,12 @@ public:
 
   /** Returns the supertype of the two types */
   term_ref supertype_of(term_ref t1, term_ref t2) const;
+
+  /**
+   * Collect the non-used terms, and compact the term database. The relocation
+   * map is added to the given map.
+   */
+  void gc(std::map<expr::term_ref, expr::term_ref>& reloc_map);
 };
 
 inline
@@ -476,10 +479,8 @@ term_ref_fat term_manager_internal::mk_term_internal(const typename term_op_trai
   }
 
   // Type-check the term
-  if (d_typecheck) {
-    if (!typecheck(t_ref)) {
-      return term_ref_fat();
-    }
+  if (!typecheck(t_ref)) {
+    return term_ref_fat();
   }
 
   // Set the id of the term and add to terms

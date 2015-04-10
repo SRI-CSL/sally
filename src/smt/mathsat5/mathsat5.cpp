@@ -1088,10 +1088,10 @@ void mathsat5_internal::gc() {
 }
 
 void mathsat5_internal::gc_collect(const expr::gc_relocator& gc_reloc) {
-  gc_reloc.collect(d_assertions);
-  gc_reloc.collect(d_bv1);
-  gc_reloc.collect(d_bv0);
-  gc_reloc.collect(d_variables);
+  gc_reloc.reloc(d_assertions);
+  gc_reloc.reloc(d_bv1);
+  gc_reloc.reloc(d_bv0);
+  gc_reloc.reloc(d_variables);
 }
 
 mathsat5::mathsat5(expr::term_manager& tm, const options& opts)
@@ -1139,10 +1139,10 @@ void mathsat5::generalize(generalization_type type, std::vector<expr::term_ref>&
   TRACE("mathsat5") << "mathsat5[" << d_internal->instance() << "]: interpolating" << std::endl;
   switch (type) {
   case GENERALIZE_FORWARD:
-    d_internal->generalize(type, d_y_variables, d_x_variables, out);
+    d_internal->generalize(type, d_B_variables, d_A_variables, out);
     break;
   case GENERALIZE_BACKWARD:
-    d_internal->generalize(type, d_x_variables, d_y_variables, out);
+    d_internal->generalize(type, d_A_variables, d_B_variables, out);
   }
 
 }

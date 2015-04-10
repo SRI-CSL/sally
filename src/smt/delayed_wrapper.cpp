@@ -85,12 +85,8 @@ void delayed_wrapper::get_unsat_core(std::vector<expr::term_ref>& out) {
   d_solver->get_unsat_core(out);
 }
 
-void delayed_wrapper::add_x_variable(expr::term_ref x_var) {
-  d_solver->add_x_variable(x_var);
-}
-
-void delayed_wrapper::add_y_variable(expr::term_ref y_var) {
-  d_solver->add_y_variable(y_var);
+void delayed_wrapper::add_variable(expr::term_ref var, variable_class f_class) {
+  d_solver->add_variable(var, f_class);
 }
 
 void delayed_wrapper::gc_collect(const expr::gc_relocator& gc_reloc) {

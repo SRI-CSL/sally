@@ -38,7 +38,7 @@ class term_manager {
 public:
 
   /** Construct them manager */
-  term_manager(bool typecheck);
+  term_manager();
 
   /** Destruct the manager, and destruct all payloads that the manager owns */
   ~term_manager();

@@ -137,6 +137,6 @@ void sal_state::ensure_declared(std::string id, sal_object type, bool declared) 
 }
 
 void sal_state::gc_collect(const expr::gc_relocator& gc_reloc) {
-  gc_reloc.collect(d_variables);
-  gc_reloc.collect(d_types);
+  d_variables.gc_relocate(gc_reloc);
+  d_types.gc_relocate(gc_reloc);
 }

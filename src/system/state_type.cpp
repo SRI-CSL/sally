@@ -143,13 +143,13 @@ std::string state_type::get_canonical_name(std::string id, var_class vc) const {
 }
 
 void state_type::gc_collect(const expr::gc_relocator& gc_reloc) {
-  gc_reloc.collect(d_type);
-  gc_reloc.collect(d_current_state);
-  gc_reloc.collect(d_next_state);
-  gc_reloc.collect(d_current_vars);
-  gc_reloc.collect(d_next_vars);
-  gc_reloc.collect(d_subst_current_next);
-  gc_reloc.collect(d_subst_next_current);
+  gc_reloc.reloc(d_type);
+  gc_reloc.reloc(d_current_state);
+  gc_reloc.reloc(d_next_state);
+  gc_reloc.reloc(d_current_vars);
+  gc_reloc.reloc(d_next_vars);
+  gc_reloc.reloc(d_subst_current_next);
+  gc_reloc.reloc(d_subst_next_current);
 }
 
 }

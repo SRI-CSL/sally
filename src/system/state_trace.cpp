@@ -149,7 +149,7 @@ std::ostream& operator << (std::ostream& out, const state_trace& trace) {
 }
 
 void state_trace::gc_collect(const expr::gc_relocator& gc_reloc) {
-  gc_reloc.collect(d_state_variables);
+  gc_reloc.reloc(d_state_variables);
 }
 
 }
