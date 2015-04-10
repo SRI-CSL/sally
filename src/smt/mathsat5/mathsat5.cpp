@@ -1088,13 +1088,10 @@ void mathsat5_internal::gc() {
 }
 
 void mathsat5_internal::gc_collect(const expr::gc_info& gc_reloc) {
-  size_t ret;
-  ret = gc_reloc.collect(d_assertions.begin(), d_assertions.end());
-  assert(ret == 0);
+  gc_reloc.collect(d_assertions);
   gc_reloc.collect(d_bv1);
   gc_reloc.collect(d_bv0);
-  ret = gc_reloc.collect(d_variables.begin(), d_variables.end());
-  assert(ret == 0);
+  gc_reloc.collect(d_variables);
 }
 
 mathsat5::mathsat5(expr::term_manager& tm, const options& opts)

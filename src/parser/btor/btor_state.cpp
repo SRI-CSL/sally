@@ -260,11 +260,8 @@ command* btor_state::finalize() const {
 
 
 void btor_state::gc_collect(const expr::gc_info& gc_reloc) {
-  size_t ret;
-  ret = gc_reloc.collect(d_terms.begin(), d_terms.end());
-  assert(ret == 0);
-  ret = gc_reloc.collect(d_roots.begin(), d_roots.end());
-  assert(ret == 0);
+  gc_reloc.collect(d_terms);
+  gc_reloc.collect(d_roots);
   gc_reloc.collect(d_one);
   gc_reloc.collect(d_zero);
 }

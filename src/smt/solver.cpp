@@ -54,11 +54,8 @@ void solver::add_y_variable(expr::term_ref y_var) {
 }
 
 void solver::gc_collect(const expr::gc_info& gc_reloc) {
-  size_t res;
-  res = gc_reloc.collect(d_x_variables.begin(), d_x_variables.end());
-  assert(res == 0);
-  res = gc_reloc.collect(d_y_variables.begin(), d_y_variables.end());
-  assert(res == 0);
+  gc_reloc.collect(d_x_variables);
+  gc_reloc.collect(d_y_variables);
 }
 
 std::ostream& operator << (std::ostream& out, solver::formula_class fc) {

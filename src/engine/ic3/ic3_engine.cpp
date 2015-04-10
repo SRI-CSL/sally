@@ -10,6 +10,7 @@
 #include "smt/factory.h"
 #include "system/state_trace.h"
 #include "utils/trace.h"
+#include "expr/gc_relocator.h"
 
 #include <stack>
 #include <cassert>

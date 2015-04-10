@@ -9,6 +9,7 @@
 #include "system/context.h"
 #include "engine/engine.h"
 #include "expr/term.h"
+#include "expr/term_map.h"
 
 #include <vector>
 #include <boost/heap/priority_queue.hpp>
@@ -186,7 +187,7 @@ class ic3_engine : public engine {
   size_t d_induction_frame;
 
   /** Map from frame formulas to information about them */
-  std::map<expr::term_ref, frame_formula_info> d_frame_formula_info;
+  expr::term_ref_map<frame_formula_info> d_frame_formula_info;
 
   /** Queue of induction obligations at the current frame */
   induction_obligation_queue d_induction_obligations;
@@ -307,8 +308,8 @@ public:
   /** Output the state of the system to the stream */
   void to_stream(std::ostream& out) const;
 
-  /** Colelct terms */
-  void gc_collect(const expr::gc_info& gc_reloc) {}
+  /** Collect terms */
+  void gc_collect(const expr::gc_info& gc_reloc);
 
 };
 

@@ -9,6 +9,7 @@
 #include "parser/parser.h"
 
 #include "expr/term_manager.h"
+#include "expr/gc_relocator.h"
 
 #include <cassert>
 
@@ -136,6 +137,6 @@ void sal_state::ensure_declared(std::string id, sal_object type, bool declared) 
 }
 
 void sal_state::gc_collect(const expr::gc_info& gc_reloc) {
-  gc_reloc(d_variables);
-  gc_reloc(d_types);
+  gc_reloc.collect(d_variables);
+  gc_reloc.collect(d_types);
 }

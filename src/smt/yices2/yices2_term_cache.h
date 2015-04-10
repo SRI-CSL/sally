@@ -24,10 +24,10 @@
 
 #include <map>
 #include <vector>
-#include <boost/unordered_map.hpp>
 
 #include "expr/term_manager.h"
 #include "expr/gc_participant.h"
+#include "expr/term_map.h"
 #include "smt/yices2/yices2_internal.h"
 
 namespace sally {
@@ -43,8 +43,8 @@ class yices2_term_cache : public expr::gc_participant {
   /** The term manager this cache is using */
   expr::term_manager& d_tm;
 
-  typedef boost::unordered_map<expr::term_ref, term_t, expr::term_ref_hasher> term_to_yices_cache;
-  typedef boost::unordered_map<term_t, expr::term_ref, yices_hasher> yices_to_term_cache;
+  typedef expr::term_ref_map<term_t> term_to_yices_cache;
+  typedef expr::hash_map_to_term_ref<term_t, yices_hasher> yices_to_term_cache;
 
   /** The map from terms to yices terms */
   term_to_yices_cache d_term_to_yices_cache;

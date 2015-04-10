@@ -7,12 +7,15 @@
 
 #pragma once
 
+#include <set>
+#include <map>
+#include <deque>
+#include <vector>
 #include <boost/unordered_map.hpp>
 
 #include "expr/term_manager.h"
+#include "expr/term_map.h"
 #include "utils/symbol_table.h"
-
-#include <map>
 
 namespace sally {
 namespace expr {
@@ -31,19 +34,23 @@ public:
   void collect(expr::term_ref& t) const;
   void collect(expr::term_ref_strong& t) const;
 
-  /** Removes from linear collections, returns number of removed elements */
-  template<typename iterator>
-  size_t collect(iterator begin, iterator end) const;
+  void collect(std::vector<term_ref>& t_vec) const;
+  void collect(std::vector<term_ref_strong>& t_vec) const;
+  void collect(std::deque<expr::term_ref>& t_deq) const;
 
-  // MAPS
+  void collect(std::set<term_ref>& t_set) const;
+  void collect(std::set<term_ref_strong>& t_set) const;
 
-  size_t collect(expr::term_manager::substitution_map& t_map) const;
-
-  // SYMBOL TABLES (never erase anything), jusr rename
+  void collect(expr::term_manager::substitution_map& t_map) const;
 
   void collect(utils::symbol_table<expr::term_ref_strong>& t) const;
   void collect(utils::symbol_table<expr::term_ref>& t) const;
 
+  template<typename value>
+  void collect(expr::term_ref_map<value>& t_map) const;
+
+  template<typename key, typename key_hasher, typename key_eq>
+  void collect(expr::hash_map_to_term_ref<key, key_hasher, key_eq>& to_t_map) const;
 
 private:
 
@@ -58,16 +65,14 @@ private:
 
 };
 
-template<typename iterator>
-size_t gc_info::collect(iterator begin, iterator end) const {
-  size_t removed = 0;
-  for (; begin != end; ++ begin) {
-    *begin = collect(*begin);
-    if ((*begin).is_null()) {
-      removed ++;
-    }
-  }
-  return removed;
+template<typename value>
+void gc_info::collect(expr::term_ref_map<value>& t_map) const {
+
+}
+
+template<typename key, typename key_hasher, typename key_eq>
+void gc_info::collect(expr::hash_map_to_term_ref<key, key_hasher, key_eq>& to_t_map) const {
+
 }
 
 }

@@ -11,8 +11,8 @@
 
 #include <map>
 #include <vector>
-#include <boost/unordered_map.hpp>
 #include <mathsat.h>
+#include "expr/term_map.h"
 
 #include "expr/term_manager.h"
 #include "expr/gc_participant.h"
@@ -43,8 +43,8 @@ class mathsat5_term_cache : public expr::gc_participant {
   /** Mathsat evnironment */
   msat_env d_msat_env;
 
-  typedef boost::unordered_map<expr::term_ref, msat_term, expr::term_ref_hasher> term_to_msat_cache;
-  typedef boost::unordered_map<msat_term, expr::term_ref, mathsat5_hasher, mathsat5_eq> msat_to_term_cache;
+  typedef expr::term_ref_map<msat_term> term_to_msat_cache;
+  typedef expr::hash_map_to_term_ref<msat_term, mathsat5_hasher, mathsat5_eq> msat_to_term_cache;
 
   /** The map from terms to yices terms */
   term_to_msat_cache d_term_to_msat_cache;

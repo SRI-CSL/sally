@@ -258,11 +258,8 @@ public:
   }
 
   void gc_collect(const expr::gc_info& gc_reloc) {
-    size_t ret;
-    ret = gc_reloc.collect(d_vars_list.begin(), d_vars_list.end());
-    assert(ret == 0);
-    assert(false);
-    // gc_reloc.collect(d_vars_set);
+    gc_reloc.collect(d_vars_list);
+    gc_reloc.collect(d_vars_set);
   }
 
 };
