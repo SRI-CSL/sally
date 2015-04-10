@@ -93,7 +93,7 @@ void delayed_wrapper::add_y_variable(expr::term_ref y_var) {
   d_solver->add_y_variable(y_var);
 }
 
-void delayed_wrapper::gc_collect(const expr::gc_info& gc_reloc) {
+void delayed_wrapper::gc_collect(const expr::gc_relocator& gc_reloc) {
   solver::gc_collect(gc_reloc);
 }
 

@@ -171,7 +171,7 @@ public:
   }
 
   /** Collect terms */
-  void gc_collect(const expr::gc_info& gc_reloc);
+  void gc_collect(const expr::gc_relocator& gc_reloc);
 
 };
 
@@ -215,7 +215,7 @@ void antlr_parser<lang>::sally_parser_reportError(pANTLR3_BASE_RECOGNIZER recogn
 }
 
 template <input_language lang>
-void antlr_parser<lang>::gc_collect(const expr::gc_info& gc_reloc) {
+void antlr_parser<lang>::gc_collect(const expr::gc_relocator& gc_reloc) {
   d_state.gc_collect(gc_reloc);
 }
 

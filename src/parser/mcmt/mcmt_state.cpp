@@ -187,7 +187,7 @@ bool mcmt_state::lsal_extensions() const {
   return ctx().get_options().get_bool("lsal-extensions");
 }
 
-void mcmt_state::gc_collect(const expr::gc_info& gc_reloc) {
+void mcmt_state::gc_collect(const expr::gc_relocator& gc_reloc) {
   gc_reloc.collect(d_variables);
   gc_reloc.collect(d_types);
 }

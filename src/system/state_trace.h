@@ -77,7 +77,7 @@ public:
   void resize_to(size_t size);
 
   /** Collect the terms */
-  void gc_collect(const expr::gc_info& gc_reloc);
+  void gc_collect(const expr::gc_relocator& gc_reloc);
 
 };
 

@@ -148,7 +148,7 @@ std::ostream& operator << (std::ostream& out, const state_trace& trace) {
   return out;
 }
 
-void state_trace::gc_collect(const expr::gc_info& gc_reloc) {
+void state_trace::gc_collect(const expr::gc_relocator& gc_reloc) {
   gc_reloc.collect(d_state_variables);
 }
 

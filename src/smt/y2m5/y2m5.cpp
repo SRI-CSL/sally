@@ -154,7 +154,7 @@ void y2m5::gc() {
   d_mathsat5->gc();
 }
 
-void y2m5::gc_collect(const expr::gc_info& gc_reloc) {
+void y2m5::gc_collect(const expr::gc_relocator& gc_reloc) {
   solver::gc_collect(gc_reloc);
 }
 

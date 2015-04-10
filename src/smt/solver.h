@@ -233,7 +233,7 @@ public:
   void gc() {}
 
   /** Collect base terms */
-  void gc_collect(const expr::gc_info& gc_reloc);
+  void gc_collect(const expr::gc_relocator& gc_reloc);
 };
 
 

@@ -142,7 +142,7 @@ std::string state_type::get_canonical_name(std::string id, var_class vc) const {
   return canonical;
 }
 
-void state_type::gc_collect(const expr::gc_info& gc_reloc) {
+void state_type::gc_collect(const expr::gc_relocator& gc_reloc) {
   gc_reloc.collect(d_type);
   gc_reloc.collect(d_current_state);
   gc_reloc.collect(d_next_state);

@@ -100,7 +100,7 @@ void yices2::gc() {
   d_internal->gc();
 }
 
-void yices2::gc_collect(const expr::gc_info& gc_reloc) {
+void yices2::gc_collect(const expr::gc_relocator& gc_reloc) {
   solver::gc_collect(gc_reloc);
   d_internal->gc_collect(gc_reloc);
 }

@@ -257,7 +257,7 @@ public:
     }
   }
 
-  void gc_collect(const expr::gc_info& gc_reloc) {
+  void gc_collect(const expr::gc_relocator& gc_reloc) {
     gc_reloc.collect(d_vars_list);
     gc_reloc.collect(d_vars_set);
   }
@@ -292,7 +292,7 @@ void generic_solver::pop() {
   d_internal->pop();
 }
 
-void generic_solver::gc_collect(const expr::gc_info& gc_reloc) {
+void generic_solver::gc_collect(const expr::gc_relocator& gc_reloc) {
   d_internal->gc_collect(gc_reloc);
 }
 

@@ -71,7 +71,7 @@ public:
   void get_unsat_core(std::vector<expr::term_ref>& out);
 
   /** Term collection (nothing to do) */
-  void gc_collect(const expr::gc_info& gc_reloc);
+  void gc_collect(const expr::gc_relocator& gc_reloc);
 
   /** Collect garbage */
   void gc();

@@ -78,7 +78,7 @@ void incremental_wrapper::get_unsat_core(std::vector<expr::term_ref>& out) {
   d_solver->get_unsat_core(out);
 }
 
-void incremental_wrapper::gc_collect(const expr::gc_info& gc_reloc) {
+void incremental_wrapper::gc_collect(const expr::gc_relocator& gc_reloc) {
   solver::gc_collect(gc_reloc);
   for (size_t i = 0; i < d_assertions.size(); ++ i) {
     gc_reloc.collect(d_assertions[i].f);

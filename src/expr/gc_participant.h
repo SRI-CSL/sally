@@ -12,7 +12,7 @@
 namespace sally {
 namespace expr {
 
-class gc_info;
+class gc_relocator;
 
 /**
  * An interface class for anyone wanting to participate in term garbage
@@ -31,7 +31,7 @@ public:
   virtual ~gc_participant();
 
   /** Called for the participant to collect unused terms and reallocate used terms */
-  virtual void gc_collect(const gc_info& gc_reloc) = 0;
+  virtual void gc_collect(const gc_relocator& gc_reloc) = 0;
 
 };
 

@@ -158,7 +158,7 @@ public:
   }
 
   /* Collect terms */
-  void gc_collect(const expr::gc_info& gc_reloc);
+  void gc_collect(const expr::gc_relocator& gc_reloc);
 
   /** Collect garbage */
   void gc();
@@ -1087,7 +1087,7 @@ void mathsat5_internal::gc() {
   d_term_cache->gc();
 }
 
-void mathsat5_internal::gc_collect(const expr::gc_info& gc_reloc) {
+void mathsat5_internal::gc_collect(const expr::gc_relocator& gc_reloc) {
   gc_reloc.collect(d_assertions);
   gc_reloc.collect(d_bv1);
   gc_reloc.collect(d_bv0);
@@ -1166,7 +1166,7 @@ void mathsat5::gc() {
   d_internal->gc();
 }
 
-void mathsat5::gc_collect(const expr::gc_info& gc_reloc) {
+void mathsat5::gc_collect(const expr::gc_relocator& gc_reloc) {
   solver::gc_collect(gc_reloc);
   d_internal->gc_collect(gc_reloc);
 }

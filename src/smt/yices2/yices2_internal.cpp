@@ -940,7 +940,7 @@ void yices2_internal::add_y_variable(expr::term_ref y_var) {
   d_variables.push_back(y_var);
 }
 
-void yices2_internal::gc_collect(const expr::gc_info& gc_reloc) {
+void yices2_internal::gc_collect(const expr::gc_relocator& gc_reloc) {
   gc_reloc.collect(d_assertions);
   gc_reloc.collect(d_variables);
   gc_reloc.collect(d_bv1);

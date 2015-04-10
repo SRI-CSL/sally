@@ -259,7 +259,7 @@ command* btor_state::finalize() const {
 }
 
 
-void btor_state::gc_collect(const expr::gc_info& gc_reloc) {
+void btor_state::gc_collect(const expr::gc_relocator& gc_reloc) {
   gc_reloc.collect(d_terms);
   gc_reloc.collect(d_roots);
   gc_reloc.collect(d_one);

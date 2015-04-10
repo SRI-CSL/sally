@@ -53,7 +53,7 @@ void solver::add_y_variable(expr::term_ref y_var) {
   d_y_variables.insert(y_var);
 }
 
-void solver::gc_collect(const expr::gc_info& gc_reloc) {
+void solver::gc_collect(const expr::gc_relocator& gc_reloc) {
   gc_reloc.collect(d_x_variables);
   gc_reloc.collect(d_y_variables);
 }

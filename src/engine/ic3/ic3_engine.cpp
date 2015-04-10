@@ -959,7 +959,7 @@ void ic3_engine::gc_solvers() {
   d_counterexample_solver->gc();
 }
 
-void ic3_engine::gc_collect(const expr::gc_info& gc_reloc) {
+void ic3_engine::gc_collect(const expr::gc_relocator& gc_reloc) {
   gc_reloc.collect(d_counterexample);
   gc_reloc.collect(d_frame_formula_info);
   assert(d_induction_obligations_next.size() == 0);
