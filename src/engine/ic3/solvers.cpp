@@ -102,7 +102,7 @@ void solvers::ensure_counterexample_solver_depth(size_t k) {
   for (; d_counterexample_solver_depth < k; ++ d_counterexample_solver_depth) {
     // Add transition relation k -> k + 1 to the counter-example solver
     expr::term_ref T = d_trace->get_transition_formula(d_transition_system->get_transition_relation(), d_counterexample_solver_depth, d_counterexample_solver_depth + 1);
-    get_counterexample_solver()->add(T, smt::solver::CLASS_A);
+    get_counterexample_solver()->add(T, smt::solver::CLASS_T);
   }
 }
 
@@ -266,11 +266,6 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
     return d_tm.mk_term(expr::TERM_NOT, G);
   }
 
-  smt::solver_scope I1_scope(I1_solver);
-  smt::solver_scope I2_scope(I2_solver);
-  I1_scope.push();
-  I2_scope.push();
-
   // Select the frame if in single solver mode
   if (d_ctx.get_options().get_bool("ic3-single-solver")) {
     I1_solver->add(get_frame_variable(k-1), smt::solver::CLASS_T);
@@ -278,6 +273,7 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
   }
 
   // Get the interpolant I1 for: (R_{k-1} and T => I1, I1 and G unsat
+  I1_solver->push();
   expr::term_ref G_next = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, G);
   I1_solver->add(G_next, smt::solver::CLASS_B);
   smt::solver::result I1_result = I1_solver->check();
@@ -285,15 +281,18 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
   assert(I1_result == smt::solver::UNSAT);
   expr::term_ref I1 = I1_solver->interpolate();
   I1 = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_NEXT, system::state_type::STATE_CURRENT, I1);
+  I1_solver->pop();
 
   TRACE("ic3") << "I1: " << I1 << std::endl;
 
   // Get the interpolant I2 for I => I2, I2 and G unsat
+  I2_solver->push();
   I2_solver->add(G, smt::solver::CLASS_B);
   smt::solver::result I2_result = I2_solver->check();
   unused_var(I2_result);
   assert(I2_result == smt::solver::UNSAT);
   expr::term_ref I2 = I2_solver->interpolate();
+  I2_solver->pop();
 
   TRACE("ic3") << "I2: " << I2 << std::endl;
 
@@ -366,8 +365,11 @@ void solvers::add(size_t k, expr::term_ref f)  {
 }
 
 void solvers::new_frame() {
+  // Make sure we have counter-examples space for 0, ..., size-1
+  ensure_counterexample_solver_depth(d_size);
+  // Increase the size
   d_size ++;
-  ensure_counterexample_solver_depth(d_size-1);
+  // Reset the induction solver
   delete d_induction_solver;
   d_induction_solver = 0;
 }

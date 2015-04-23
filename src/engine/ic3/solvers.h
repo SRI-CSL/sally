@@ -21,7 +21,16 @@ namespace sally {
 namespace ic3 {
 
 /**
- * Class to manage solvers in IC3
+ * Class to manage solvers in IC3.
+ *
+ * There are three dedicated solver available:
+ *   [Reachability] Solver(s) to check one-step reachability from frame to
+ *                  next frame. These can be a single solver that uses boolean
+ *                  variables to select the frame in question. Checks here should
+ *                  only be done through query_at method.
+ *   [Induction]    Solver to check induction from last frame. Checks here should
+ *                  only be done through the check_inductive method.
+ *   [Counterexample] Solver for BMC checks.
  */
 class solvers {
 
@@ -116,7 +125,7 @@ public:
   /** Returns the counterexample solver */
   smt::solver* get_counterexample_solver();
 
-  /** Make sure that the counter-example solver has depth k */
+  /** Make sure that the counter-example solver has frames 0, ..., k */
   void ensure_counterexample_solver_depth(size_t k);
 
   /** Make sure that the counter-example knows about variables in frames 0, .., k-1 */

@@ -108,9 +108,7 @@ induction_obligation ic3_engine::pop_induction_obligation() {
 
 void ic3_engine::ensure_frame(size_t k) {
 
-  if (d_frame_content.size() <= k) {
-    MSG(1) << "ic3: Extending trace to " << k << std::endl;
-  }
+  MSG(1) << "ic3: Extending trace to " << k << std::endl;
 
   // Upsize the frames if necessary
   while (d_frame_content.size() <= k) {
@@ -272,10 +270,13 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
   for (;; ++ k) {
 
     // We know there is a counterexample to induction of f: 0, ..., k, with f
-    // being false a k + 1.
+    // being false a k + 1. We try to extend it to falsify the reason we
+    // introduced f. We introduced f to refute the counterexample to induction
+    // of parent(f), which is witnesset by generalization refutes(f). We are
+    // therefore looking to satisfy refutes(f) at k + 1.
     assert(d_frame_formula_info[f].invalid == true);
 
-    // Make sure We have enough transitions to reach k + 1
+    // Make sure we have enough transitions to reach k
     d_smt->ensure_counterexample_solver_depth(k+1);
 
     expr::term_ref G = d_frame_formula_info[f].refutes;
@@ -286,8 +287,8 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
       break;
     }
 
-    // Add to next
-    expr::term_ref G_k = d_trace->get_state_formula(G, k);
+    // Check at frame k
+    expr::term_ref G_k = d_trace->get_state_formula(G, k+1);
     solver->add(G_k, smt::solver::CLASS_A);
 
     // If not a generalization, must check to see if we're reachable
