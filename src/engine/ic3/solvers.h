@@ -34,7 +34,7 @@ class solvers {
   expr::term_manager& d_tm;
 
   /** Transition system for these solvers */
-  system::transition_system* d_transition_system;
+  const system::transition_system* d_transition_system;
 
   /** Number of frames */
   size_t d_size;
@@ -54,13 +54,11 @@ class solvers {
   /** Counter-example solver */
   smt::solver* d_counterexample_solver;
 
-
   /** Number of transition releations asserted to counterexample solver */
   size_t d_counterexample_solver_depth;
 
   /** Boolean variable (enabling the frame) */
   std::vector<expr::term_ref> d_frame_variables;
-
 
   /** Initialize the reachability solver for frame k */
   void init_reachability_solver(size_t k);
@@ -86,7 +84,7 @@ class solvers {
 public:
 
   /** Create solvers for the given transition system */
-  solvers(const system::context& ctx, system::transition_system* transition_system, system::state_trace* trace);
+  solvers(const system::context& ctx, const system::transition_system* transition_system, system::state_trace* trace);
 
   /** Delete the solvers */
   ~solvers();

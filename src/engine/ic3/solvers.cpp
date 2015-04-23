@@ -18,7 +18,7 @@
 namespace sally {
 namespace ic3 {
 
-solvers::solvers(const system::context& ctx, system::transition_system* transition_system, system::state_trace* trace)
+solvers::solvers(const system::context& ctx, const system::transition_system* transition_system, system::state_trace* trace)
 : d_ctx(ctx)
 , d_tm(ctx.tm())
 , d_transition_system(transition_system)
@@ -73,12 +73,14 @@ void solvers::reset(const std::vector<solvers::formula_set>& frames) {
 
   // Reset the counterexample solver
   delete d_counterexample_solver;
+  d_counterexample_solver = 0;
   ensure_counterexample_solver_depth(d_size);
 }
 
 void solvers::init_reachability_solver(size_t k) {
 
   assert(!d_ctx.get_options().get_bool("ic3-single-solver"));
+  assert(k < d_size);
 
   // The variables from the state types
   const std::vector<expr::term_ref>& x = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_CURRENT);
@@ -119,7 +121,7 @@ smt::solver* solvers::get_induction_solver() {
 
 smt::solver* solvers::get_reachability_solver() {
   assert(d_ctx.get_options().get_bool("ic3-single-solver"));
-  if (d_induction_solver == 0) {
+  if (d_reachability_solver == 0) {
     // The variables from the state types
     const std::vector<expr::term_ref>& x = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_CURRENT);
     const std::vector<expr::term_ref>& x_next = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_NEXT);
@@ -133,7 +135,7 @@ smt::solver* solvers::get_reachability_solver() {
 }
 
 smt::solver* solvers::get_reachability_solver(size_t k) {
-  assert(d_ctx.get_options().get_bool("ic3-single-solver"));
+  assert(!d_ctx.get_options().get_bool("ic3-single-solver"));
   init_reachability_solver(k);
   return d_reachability_solvers[k];
 }
@@ -357,7 +359,9 @@ void solvers::add(size_t k, expr::term_ref f)  {
 
 void solvers::new_frame() {
   d_size ++;
-  ensure_counterexample_solver_depth(d_size);
+  ensure_counterexample_solver_depth(d_size-1);
+  delete d_induction_solver;
+  d_induction_solver = 0;
 }
 
 size_t solvers::size() {

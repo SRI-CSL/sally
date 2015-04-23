@@ -88,9 +88,8 @@ expr::term_ref ic3_engine::check_one_step_reachable(size_t k, expr::term_ref F) 
 void ic3_engine::add_valid_up_to(size_t k, expr::term_ref F) {
   TRACE("ic3") << "ic3: adding at " << k << ": " << F << std::endl;
   assert(k > 0);
+  assert(k < d_frame_content.size());
 
-  // Ensure frame is setup
-  ensure_frame(k);
   // Add to all frames from 1..k (not adding to 0, initial states need no refinement)
   for(int i = k; i >= 1; -- i) {
     if (frame_contains(i, F)) {
@@ -119,11 +118,13 @@ void ic3_engine::ensure_frame(size_t k) {
     d_frame_content.push_back(formula_set());
     // Number of obligations per frame
     d_induction_obligations_count.push_back(0);
+    // Solvers new frame
+    d_smt->new_frame();
   }
 }
 
 bool ic3_engine::frame_contains(size_t k, expr::term_ref f) {
-  ensure_frame(k);
+  assert(k < d_frame_content.size());
   return d_frame_content[k].find(f) != d_frame_content[k].end();
 }
 
@@ -184,10 +185,10 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(const induction_oblig
   size_t depth = ind.depth();
   expr::term_ref f = ind.formula();
 
-  ensure_frame(d_induction_frame);
+  assert(d_induction_frame < d_frame_content.size());
   assert(frame_contains(d_induction_frame, f));
 
-  TRACE("ic3") << "ic3: pushing at " << d_induction_frame << ":" << f << std::endl;
+  TRACE("ic3") << "ic3: pushing at " << d_induction_frame << ": " << f << std::endl;
 
   // Check if inductive
   expr::term_ref G = d_smt->check_inductive(f);
@@ -233,7 +234,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(const induction_oblig
 }
 
 void ic3_engine::add_to_frame(size_t k, expr::term_ref f) {
-  ensure_frame(k);
+  assert(k < d_frame_content.size());
   assert(d_frame_content[k].count(f) == 0);
 
   // Add to solvers
@@ -245,19 +246,6 @@ void ic3_engine::add_to_frame(size_t k, expr::term_ref f) {
     d_stat_frame_size[k]->get_value() ++;
   }
 }
-
-template<typename T>
-class scoped_value {
-  T& d_variable;
-  T d_old_value;
-public:
-  scoped_value(T& variable)
-  : d_variable(variable)
-  , d_old_value(variable) {}
-  ~scoped_value() {
-    d_variable = d_old_value;
-  }
-};
 
 void ic3_engine::extend_induction_failure(expr::term_ref f) {
 
@@ -383,9 +371,10 @@ engine::result ic3_engine::search() {
       return engine::VALID;
     }
 
-    // Move to the next frame
+    // Move to the next frame (will also clear induction solver)
     d_induction_frame ++;
     d_induction_obligations.clear();
+    ensure_frame(d_induction_frame);
 
     // Reset the induction solver
     std::set<induction_obligation>::const_iterator it = d_induction_obligations_next.begin();
@@ -424,7 +413,8 @@ void ic3_engine::reset() {
   d_induction_obligations_next.clear();
   d_induction_obligations_count.clear();
   d_frame_content.clear();
-  d_smt->reset(d_frame_content);
+  delete d_smt;
+  d_smt = 0;
   for (size_t i = 0; i < d_stat_frame_size.size(); ++ i) {
     d_stat_frame_size[i]->get_value() = 0;
   }
@@ -444,7 +434,12 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   d_property = sf;
 
   // Make the trace
+  if (d_trace) { delete d_trace; }
   d_trace = new system::state_trace(sf->get_state_type());
+
+  // Initialize the solvers
+  if (d_smt) { delete d_smt; }
+  d_smt = new solvers(ctx(), ts, d_trace);
 
   // Start with at least one frame
   ensure_frame(0);
