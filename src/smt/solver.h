@@ -236,15 +236,26 @@ std::ostream& operator << (std::ostream& out, solver::result result);
  * Push/pop scope manager.
  */
 class solver_scope {
+public:
+  class destructor_notify {
+  public:
+    virtual ~destructor_notify() {};
+  };
+private:
   size_t d_pushes;
   solver* d_solver;
+  destructor_notify* d_destructor_notify;
 public:
-  solver_scope(solver* s): d_pushes(0), d_solver(s) {}
-  ~solver_scope() { clear(); }
+  solver_scope(solver* s, size_t data = 0): d_pushes(0), d_solver(s), d_destructor_notify(0) {}
+  solver_scope(): d_pushes(0), d_solver(0), d_destructor_notify(0) {}
+  ~solver_scope() { clear(); delete d_destructor_notify; }
   void clear() { while (d_pushes > 0) { d_solver->pop(); d_pushes --; } }
   void push() { d_solver->push(); d_pushes ++; }
   void pop() { d_solver->pop(); d_pushes --; }
   size_t get_scope() { return d_pushes; }
+  void set_solver(solver* solver) { if (d_solver) clear(); d_solver = solver;  }
+  solver* get_solver() { return d_solver; }
+  void set_destructor_notify(destructor_notify* notify) { d_destructor_notify = notify; }
 };
 
 std::ostream& operator << (std::ostream& out, solver::formula_class fc);

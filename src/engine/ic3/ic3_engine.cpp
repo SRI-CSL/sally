@@ -62,15 +62,31 @@ ic3_engine::ic3_engine(const system::context& ctx)
   }
 }
 
-std::ostream& operator << (std::ostream& out, const ic3_engine& ic3) {
-  ic3.to_stream(out);
-  return out;
-}
-
 ic3_engine::~ic3_engine() {
   delete d_trace;
   delete d_smt;
 }
+
+
+void ic3_engine::reset() {
+
+  d_transition_system = 0;
+  d_property = 0;
+  d_counterexample.clear();
+  delete d_trace;
+  d_trace = 0;
+  d_induction_frame = 0;
+  d_induction_obligations.clear();
+  d_induction_obligations_next.clear();
+  d_induction_obligations_count.clear();
+  d_frame_content.clear();
+  delete d_smt;
+  d_smt = 0;
+  for (size_t i = 0; i < d_stat_frame_size.size(); ++ i) {
+    d_stat_frame_size[i]->get_value() = 0;
+  }
+}
+
 
 expr::term_ref ic3_engine::check_one_step_reachable(size_t k, expr::term_ref F) {
   assert(k > 0);
@@ -254,9 +270,12 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
   assert(d_counterexample.size() == d_induction_frame + 1);
 
   // Solver for checking
-  smt::solver* solver = d_smt->get_counterexample_solver();
-  smt::solver_scope solver_scope(solver);
+  smt::solver_scope solver_scope;
+  d_smt->get_counterexample_solver(solver_scope);
   solver_scope.push();
+  smt::solver* solver = solver_scope.get_solver();
+
+  assert(d_smt->get_counterexample_solver_depth() == d_induction_frame);
 
   // Assert all the generalizations
   size_t k = 0;
@@ -398,26 +417,6 @@ engine::result ic3_engine::search() {
   return engine::UNKNOWN;
 }
 
-
-void ic3_engine::reset() {
-
-  d_transition_system = 0;
-  d_property = 0;
-  d_counterexample.clear();
-  delete d_trace;
-  d_trace = 0;
-  d_induction_frame = 0;
-  d_induction_obligations.clear();
-  d_induction_obligations_next.clear();
-  d_induction_obligations_count.clear();
-  d_frame_content.clear();
-  delete d_smt;
-  d_smt = 0;
-  for (size_t i = 0; i < d_stat_frame_size.size(); ++ i) {
-    d_stat_frame_size[i]->get_value() = 0;
-  }
-}
-
 engine::result ic3_engine::query(const system::transition_system* ts, const system::state_formula* sf) {
 
   // Initialize
@@ -475,10 +474,9 @@ const system::state_trace* ic3_engine::get_trace() {
   d_trace->resize_to(d_counterexample.size());
 
   // Get the counterexample solver
-  smt::solver* solver = d_smt->get_counterexample_solver();
-
-  // We assert, so push it
-  smt::solver_scope solver_scope(solver);
+  smt::solver_scope solver_scope;
+  d_smt->get_counterexample_solver(solver_scope);
+  smt::solver* solver = solver_scope.get_solver();
   solver_scope.push();
 
   // Assert needed stuff
@@ -506,6 +504,16 @@ const system::state_trace* ic3_engine::get_trace() {
   d_trace->add_model(m);
 
   return d_trace;
+}
+
+void ic3_engine::gc_collect(const expr::gc_relocator& gc_reloc) {
+  gc_reloc.reloc(d_counterexample);
+  d_frame_formula_info.reloc(gc_reloc);
+  assert(d_induction_obligations_next.size() == 0);
+  for (size_t i = 0; i < d_frame_content.size(); ++ i) {
+    gc_reloc.reloc(d_frame_content[i]);
+  }
+  d_smt->gc_collect(gc_reloc);
 }
 
 void ic3_engine::to_stream(std::ostream& out) const  {
@@ -539,14 +547,9 @@ size_t ic3_engine::total_facts() const {
   }
 }
 
-void ic3_engine::gc_collect(const expr::gc_relocator& gc_reloc) {
-  gc_reloc.reloc(d_counterexample);
-  d_frame_formula_info.reloc(gc_reloc);
-  assert(d_induction_obligations_next.size() == 0);
-  for (size_t i = 0; i < d_frame_content.size(); ++ i) {
-    gc_reloc.reloc(d_frame_content[i]);
-  }
-  d_smt->gc_collect(gc_reloc);
+std::ostream& operator << (std::ostream& out, const ic3_engine& ic3) {
+  ic3.to_stream(out);
+  return out;
 }
 
 }

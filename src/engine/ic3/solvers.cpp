@@ -165,6 +165,16 @@ smt::solver* solvers::get_counterexample_solver() {
   return d_counterexample_solver;
 }
 
+void solvers::get_counterexample_solver(smt::solver_scope& solver) {
+  solver.set_solver(get_counterexample_solver());
+  solver.set_destructor_notify(new cex_destruct_notify(this));
+}
+
+size_t solvers::get_counterexample_solver_depth() const {
+  return d_counterexample_solver_depth;
+
+}
+
 void solvers::gc() {
   for (size_t i = 0; i < d_reachability_solvers.size(); ++ i) {
     if (d_reachability_solvers[i]) {

@@ -93,6 +93,23 @@ class solvers {
   /** Returns the k-th reachability solver */
   smt::solver* get_reachability_solver(size_t k);
 
+  /** Notify class to reset the cex solver to its previous depth */
+  class cex_destruct_notify : public smt::solver_scope::destructor_notify {
+    solvers* d_solvers;
+    size_t d_depth;
+  public:
+    cex_destruct_notify(solvers* s)
+    : d_solvers(s)
+    , d_depth(s->get_counterexample_solver_depth())
+    {}
+    ~cex_destruct_notify() {
+      d_solvers->d_counterexample_solver_depth = d_depth;
+    }
+  };
+
+  /** Returns the counterexample solver */
+  smt::solver* get_counterexample_solver();
+
 public:
 
   /** Create solvers for the given transition system */
@@ -123,7 +140,10 @@ public:
   expr::term_ref learn_forward(size_t k, expr::term_ref G);
 
   /** Returns the counterexample solver */
-  smt::solver* get_counterexample_solver();
+  void get_counterexample_solver(smt::solver_scope& solver);
+
+  /** Returns the depth of the counterexample solver */
+  size_t get_counterexample_solver_depth() const;
 
   /** Make sure that the counter-example solver has frames 0, ..., k */
   void ensure_counterexample_solver_depth(size_t k);
