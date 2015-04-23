@@ -142,7 +142,7 @@ smt::solver* solvers::get_reachability_solver() {
     d_reachability_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
     d_reachability_solver->add_variables(x_next.begin(), x_next.end(), smt::solver::CLASS_B);
   }
-  return d_induction_solver;
+  return d_reachability_solver;
 }
 
 smt::solver* solvers::get_reachability_solver(size_t k) {
@@ -192,12 +192,26 @@ void solvers::gc() {
   }
 }
 
+void solvers::assert_frame_selection(size_t k, smt::solver* solver) {
+  bool frame_selected = false;
+  for (size_t i = 0; i < d_size; ++ i) {
+    expr::term_ref frame_variable = get_frame_variable(i);
+    if (i == k) {
+      solver->add(frame_variable, smt::solver::CLASS_T);
+      frame_selected = true;
+    } else {
+      solver->add(d_tm.mk_term(expr::TERM_NOT, frame_variable), smt::solver::CLASS_T);
+    }
+  }
+  assert(frame_selected);
+}
+
 expr::term_ref solvers::query_at(size_t k, expr::term_ref f, smt::solver::formula_class f_class) {
 
   smt::solver* solver = 0;
 
   if (d_ctx.get_options().get_bool("ic3-single-solver")) {
-    solver = d_reachability_solver;
+    solver = get_reachability_solver();
   } else {
     solver = get_reachability_solver(k);
   }
@@ -206,6 +220,11 @@ expr::term_ref solvers::query_at(size_t k, expr::term_ref f, smt::solver::formul
   // Add the formula (moving current -> next)
   scope.push();
   solver->add(f, f_class);
+
+  // Add frame selection if needed
+  if (d_ctx.get_options().get_bool("ic3-single-solver")) {
+    assert_frame_selection(k, solver);
+  }
 
   // Figure out the result
   smt::solver::result r = solver->check();
@@ -276,14 +295,11 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
     return d_tm.mk_term(expr::TERM_NOT, G);
   }
 
-  // Select the frame if in single solver mode
-  if (d_ctx.get_options().get_bool("ic3-single-solver")) {
-    I1_solver->add(get_frame_variable(k-1), smt::solver::CLASS_T);
-    I2_solver->add(get_frame_variable(0), smt::solver::CLASS_T);
-  }
-
   // Get the interpolant I1 for: (R_{k-1} and T => I1, I1 and G unsat
   I1_solver->push();
+  if (d_ctx.get_options().get_bool("ic3-single-solver")) {
+    assert_frame_selection(k-1, I1_solver);
+  }
   expr::term_ref G_next = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, G);
   I1_solver->add(G_next, smt::solver::CLASS_B);
   smt::solver::result I1_result = I1_solver->check();
@@ -297,6 +313,9 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
 
   // Get the interpolant I2 for I => I2, I2 and G unsat
   I2_solver->push();
+  if (d_ctx.get_options().get_bool("ic3-single-solver")) {
+    assert_frame_selection(0, I2_solver);
+  }
   I2_solver->add(G, smt::solver::CLASS_B);
   smt::solver::result I2_result = I2_solver->check();
   unused_var(I2_result);
@@ -358,6 +377,8 @@ void solvers::gc_collect(const expr::gc_relocator& gc_reloc) {
 
 void solvers::add(size_t k, expr::term_ref f)  {
 
+  assert(k < d_size);
+
   // Add appropriately
   if (d_ctx.get_options().get_bool("ic3-single-solver")) {
     // Add te enabling variable and the implication to enable the assertion
@@ -377,6 +398,11 @@ void solvers::add(size_t k, expr::term_ref f)  {
 void solvers::new_frame() {
   // Make sure we have counter-examples space for 0, ..., size
   ensure_counterexample_solver_depth(d_size);
+  // Add the frame selection variable if needed
+  if (d_ctx.get_options().get_bool("ic3-single-solver")) {
+    expr::term_ref frame_var = get_frame_variable(d_size);
+    get_reachability_solver()->add_variable(frame_var, smt::solver::CLASS_T);
+  }
   // Increase the size
   d_size ++;
   // Reset the induction solver

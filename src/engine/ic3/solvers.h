@@ -110,6 +110,9 @@ class solvers {
   /** Returns the counterexample solver */
   smt::solver* get_counterexample_solver();
 
+  /** Assert frame selection variables */
+  void assert_frame_selection(size_t k, smt::solver* solver);
+
 public:
 
   /** Create solvers for the given transition system */
