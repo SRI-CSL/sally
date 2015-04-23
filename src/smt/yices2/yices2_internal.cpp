@@ -859,15 +859,26 @@ void yices2_internal::generalize(smt::solver::generalization_type type, std::vec
     yices_pp_model(stderr, m, 80, 100, 0);
   }
 
-  // Copy over A formulas and count the rest
+  // When we generalize backward we eliminate from T and B
+  // When we generalize forward we eliminate from A and T
+
+  // Counte the A/B formulas
   size_t assertions_size = 0;
   for (size_t i = 0; i < d_assertions.size(); ++ i) {
-    if (d_assertion_classes[i] != solver::CLASS_A) {
-      assertions_size ++;
+    switch (type) {
+    case smt::solver::GENERALIZE_BACKWARD:
+      if (d_assertion_classes[i] != solver::CLASS_A) {
+        assertions_size++;
+      }
+      break;
+    case smt::solver::GENERALIZE_FORWARD:
+      if (d_assertion_classes[i] != solver::CLASS_B) {
+        assertions_size++;
+      }
     }
   }
 
-  // Yices version of the assertions
+  // Yices version of the assertions for A/B
   term_t* assertions = new term_t[assertions_size];
   size_t j = 0;
   switch (type) {
@@ -889,7 +900,7 @@ void yices2_internal::generalize(smt::solver::generalization_type type, std::vec
     assert(false);
   }
 
-  // Add class T
+  // Add T formulas
   for (size_t i = 0; i < d_assertions.size(); ++ i) {
     if (d_assertion_classes[i] == solver::CLASS_T) {
       assertions[j++] = to_yices2_term(d_assertions[i]);
@@ -968,6 +979,10 @@ void yices2_internal::get_assertions(std::set<expr::term_ref>& out) const {
 }
 
 void yices2_internal::add_variable(expr::term_ref var, smt::solver::variable_class f_class) {
+
+  // Convert to yices2 early
+  to_yices2_term(var);
+
   switch (f_class) {
   case smt::solver::CLASS_A:
     d_A_variables.push_back(var);

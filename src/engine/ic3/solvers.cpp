@@ -197,10 +197,10 @@ void solvers::assert_frame_selection(size_t k, smt::solver* solver) {
   for (size_t i = 0; i < d_size; ++ i) {
     expr::term_ref frame_variable = get_frame_variable(i);
     if (i == k) {
-      solver->add(frame_variable, smt::solver::CLASS_T);
+      solver->add(frame_variable, smt::solver::CLASS_A);
       frame_selected = true;
     } else {
-      solver->add(d_tm.mk_term(expr::TERM_NOT, frame_variable), smt::solver::CLASS_T);
+      solver->add(d_tm.mk_term(expr::TERM_NOT, frame_variable), smt::solver::CLASS_A);
     }
   }
   assert(frame_selected);
@@ -401,7 +401,7 @@ void solvers::new_frame() {
   // Add the frame selection variable if needed
   if (d_ctx.get_options().get_bool("ic3-single-solver")) {
     expr::term_ref frame_var = get_frame_variable(d_size);
-    get_reachability_solver()->add_variable(frame_var, smt::solver::CLASS_T);
+    get_reachability_solver()->add_variable(frame_var, smt::solver::CLASS_A);
   }
   // Increase the size
   d_size ++;
