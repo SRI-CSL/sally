@@ -193,17 +193,24 @@ void solvers::gc() {
 }
 
 void solvers::assert_frame_selection(size_t k, smt::solver* solver) {
-  bool frame_selected = false;
-  for (size_t i = 0; i < d_size; ++ i) {
-    expr::term_ref frame_variable = get_frame_variable(i);
-    if (i == k) {
-      solver->add(frame_variable, smt::solver::CLASS_A);
-      frame_selected = true;
-    } else {
-      solver->add(d_tm.mk_term(expr::TERM_NOT, frame_variable), smt::solver::CLASS_A);
+  bool multiple = false;
+
+  if (multiple) {
+    bool frame_selected = false;
+    for (size_t i = 0; i < d_size; ++ i) {
+      expr::term_ref frame_variable = get_frame_variable(i);
+      if (i == k) {
+        solver->add(frame_variable, smt::solver::CLASS_A);
+        frame_selected = true;
+      } else {
+        solver->add(d_tm.mk_term(expr::TERM_NOT, frame_variable), smt::solver::CLASS_A);
+      }
     }
+    assert(frame_selected);
+  } else {
+    expr::term_ref frame_variable = get_frame_variable(k);
+    solver->add(frame_variable, smt::solver::CLASS_A);
   }
-  assert(frame_selected);
 }
 
 expr::term_ref solvers::query_at(size_t k, expr::term_ref f, smt::solver::formula_class f_class) {

@@ -875,6 +875,9 @@ void yices2_internal::generalize(smt::solver::generalization_type type, std::vec
       if (d_assertion_classes[i] != solver::CLASS_B) {
         assertions_size++;
       }
+      break;
+    default:
+      assert(false);
     }
   }
 

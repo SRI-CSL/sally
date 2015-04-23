@@ -393,7 +393,7 @@ engine::result ic3_engine::search() {
     d_induction_obligations.clear();
     ensure_frame(d_induction_frame);
 
-    // Reset the induction solver
+    // Add formulas to the new frame
     std::set<induction_obligation>::const_iterator it = d_induction_obligations_next.begin();
     for (; it != d_induction_obligations_next.end(); ++ it) {
       // Push if not shown invalid
