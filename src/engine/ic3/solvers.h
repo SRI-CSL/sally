@@ -128,7 +128,7 @@ public:
   /** Make sure that the counter-example solver has frames 0, ..., k */
   void ensure_counterexample_solver_depth(size_t k);
 
-  /** Make sure that the counter-example knows about variables in frames 0, .., k-1 */
+  /** Make sure that the counter-example knows about variables in frames 0, .., k */
   void ensure_counterexample_solver_variables(size_t k);
 
   /** Collect solver garbage */

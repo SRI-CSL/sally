@@ -269,15 +269,12 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
   // Try to extend it
   for (;; ++ k) {
 
-    // We know there is a counterexample to induction of f: 0, ..., k, with f
-    // being false a k + 1. We try to extend it to falsify the reason we
+    // We know there is a counterexample to induction of f: 0, ..., k-1, with f
+    // being false at k. We try to extend it to falsify the reason we
     // introduced f. We introduced f to refute the counterexample to induction
-    // of parent(f), which is witnesset by generalization refutes(f). We are
-    // therefore looking to satisfy refutes(f) at k + 1.
+    // of parent(f), which is witnessed by generalization refutes(f). We are
+    // therefore looking to satisfy refutes(f) at k.
     assert(d_frame_formula_info[f].invalid == true);
-
-    // Make sure we have enough transitions to reach k
-    d_smt->ensure_counterexample_solver_depth(k+1);
 
     expr::term_ref G = d_frame_formula_info[f].refutes;
     expr::term_ref parent = d_frame_formula_info[f].parent;
@@ -288,8 +285,8 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
     }
 
     // Check at frame k
-    expr::term_ref G_k = d_trace->get_state_formula(G, k+1);
-    solver->add(G_k, smt::solver::CLASS_A);
+    d_smt->ensure_counterexample_solver_depth(k);
+    solver->add(d_trace->get_state_formula(G, k), smt::solver::CLASS_A);
 
     // If not a generalization, must check to see if we're reachable
     if (f != tm().mk_term(expr::TERM_NOT, G)) {
@@ -493,8 +490,8 @@ const system::state_trace* ic3_engine::get_trace() {
   }
 
   // Add the unrolling
-  d_smt->ensure_counterexample_solver_depth(d_counterexample.size());
-  d_smt->ensure_counterexample_solver_variables(d_counterexample.size());
+  d_smt->ensure_counterexample_solver_depth(d_counterexample.size()-1);
+  d_smt->ensure_counterexample_solver_variables(d_counterexample.size()-1);
 
   // Check
   smt::solver::result r = solver->check();

@@ -108,7 +108,7 @@ void solvers::ensure_counterexample_solver_depth(size_t k) {
 
 void solvers::ensure_counterexample_solver_variables(size_t k) {
   // Make sure we unrolled the solver up to k
-  for (; d_counterexample_solver_variables_depth < k; ++ d_counterexample_solver_variables_depth) {
+  for (; d_counterexample_solver_variables_depth <= k; ++ d_counterexample_solver_variables_depth) {
     // Add variables
     std::vector<expr::term_ref> variables;
     d_trace->get_state_variables(d_counterexample_solver_variables_depth, variables);
@@ -365,7 +365,7 @@ void solvers::add(size_t k, expr::term_ref f)  {
 }
 
 void solvers::new_frame() {
-  // Make sure we have counter-examples space for 0, ..., size-1
+  // Make sure we have counter-examples space for 0, ..., size
   ensure_counterexample_solver_depth(d_size);
   // Increase the size
   d_size ++;
