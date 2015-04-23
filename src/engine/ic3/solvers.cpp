@@ -28,6 +28,7 @@ solvers::solvers(const system::context& ctx, const system::transition_system* tr
 , d_induction_solver(0)
 , d_counterexample_solver(0)
 , d_counterexample_solver_depth(0)
+, d_counterexample_solver_variables_depth(0)
 {
 }
 
@@ -105,6 +106,16 @@ void solvers::ensure_counterexample_solver_depth(size_t k) {
   }
 }
 
+void solvers::ensure_counterexample_solver_variables(size_t k) {
+  // Make sure we unrolled the solver up to k
+  for (; d_counterexample_solver_variables_depth < k; ++ d_counterexample_solver_variables_depth) {
+    // Add variables
+    std::vector<expr::term_ref> variables;
+    d_trace->get_state_variables(d_counterexample_solver_variables_depth, variables);
+    get_counterexample_solver()->add_variables(variables.begin(), variables.end(), smt::solver::CLASS_A);
+  }
+}
+
 smt::solver* solvers::get_induction_solver() {
   if (d_induction_solver == 0) {
     // The variables from the state types
@@ -147,12 +158,9 @@ smt::solver* solvers::get_counterexample_solver() {
     // Add the initial state
     expr::term_ref I0 = d_trace->get_state_formula(d_transition_system->get_initial_states(), 0);
     d_counterexample_solver->add(I0, smt::solver::CLASS_A);
-    // Add the initial state variables
-    std::vector<expr::term_ref> variables;
-    d_trace->get_state_variables(0, variables);
-    d_counterexample_solver->add_variables(variables.begin(), variables.end(), smt::solver::CLASS_A);
     // Set the depth
     d_counterexample_solver_depth = 0;
+    d_counterexample_solver_variables_depth = 0;
   }
   return d_counterexample_solver;
 }

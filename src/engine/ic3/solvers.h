@@ -57,6 +57,9 @@ class solvers {
   /** Number of transition releations asserted to counterexample solver */
   size_t d_counterexample_solver_depth;
 
+  /** One past the frame number where variables are known to the solver */
+  size_t d_counterexample_solver_variables_depth;
+
   /** Boolean variable (enabling the frame) */
   std::vector<expr::term_ref> d_frame_variables;
 
@@ -113,8 +116,11 @@ public:
   /** Returns the counterexample solver */
   smt::solver* get_counterexample_solver();
 
-  /** Make sure that the reachability solver has depth k */
+  /** Make sure that the counter-example solver has depth k */
   void ensure_counterexample_solver_depth(size_t k);
+
+  /** Make sure that the counter-example knows about variables in frames 0, .., k-1 */
+  void ensure_counterexample_solver_variables(size_t k);
 
   /** Collect solver garbage */
   void gc();

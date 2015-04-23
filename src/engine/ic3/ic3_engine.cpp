@@ -493,6 +493,7 @@ const system::state_trace* ic3_engine::get_trace() {
 
   // Add the unrolling
   d_smt->ensure_counterexample_solver_depth(d_counterexample.size());
+  d_smt->ensure_counterexample_solver_variables(d_counterexample.size());
 
   // Check
   smt::solver::result r = solver->check();
