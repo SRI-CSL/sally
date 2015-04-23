@@ -263,6 +263,20 @@ term_t yices2_internal::mk_yices2_term(expr::term_op op, size_t n, term_t* child
     assert(false);
   }
 
+  if (result < 0) {
+    std::stringstream ss;
+    char* error = yices_error_string();
+    ss << "Yices error (term creation): " << error << " for op " << op << " and terms";
+    for (size_t i = 0; i < n; ++ i) {
+      char* str = yices_term_to_string(children[i], UINT32_MAX, UINT32_MAX, 0);
+      if (i) { ss << ", "; }
+      else {ss << " "; }
+      ss << str;
+      yices_free_string(str);
+    }
+    throw exception(ss.str());
+  }
+
   return result;
 }
 
@@ -287,6 +301,13 @@ type_t yices2_internal::to_yices2_type(expr::term_ref ref) {
   }
   default:
     assert(false);
+  }
+
+  if (result < 0) {
+    std::stringstream ss;
+    char* error = yices_error_string();
+    ss << "Yices error (term creation): " << error;
+    throw exception(ss.str());
   }
 
   return result;

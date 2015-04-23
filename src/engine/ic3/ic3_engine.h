@@ -19,6 +19,8 @@
 namespace sally {
 namespace ic3 {
 
+class solvers;
+
 /**
  * An obligation to do at frame k. This is just a carrier, the semantics
  * depend on the context. It could be that we're trying to reach P at
@@ -117,21 +119,6 @@ class ic3_engine : public engine {
   /** The property we're trying to prove */
   const system::state_formula* d_property;
 
-  /** A solver per frame with next info */
-  std::vector<smt::solver*> d_solvers;
-
-  /** Solver for reachability queries when in single-solver mode */
-  smt::solver* d_reachability_solver;
-
-  /** Solver for induction queries when in single-solver mode */
-  smt::solver* d_induction_solver;
-
-  /** Counter-example solver */
-  smt::solver* d_counterexample_solver;
-
-  /** Number of transition releations asserted to counteredxample solver */
-  size_t d_counterexample_solver_depth;
-
   /**
    * A counter-example, if any, to the current induction check. The queue is
    * stuffed with generalization, so the guarantee is that the every element
@@ -142,11 +129,8 @@ class ic3_engine : public engine {
   /** The trace we're building for counterexamples */
   system::state_trace* d_trace;
 
-  /** Returns the solver for k-th frame */
-  smt::solver* get_solver(size_t k);
-
-  /** Returns the dedicated counterexample solver */
-  smt::solver* get_counterexample_solver();
+  /** The solvers */
+  solvers* d_smt;
 
   /**
    * Checks if the formula is reachable in one step at frame k > 0. F should be
@@ -154,14 +138,6 @@ class ic3_engine : public engine {
    * of the state variables (k-1)-th frame.
    */
   expr::term_ref check_one_step_reachable(size_t k, expr::term_ref f);
-
-  /**
-   * Checks if the formula is inductive in k-th frame, returns counterexample
-   * generalization in k-th frame if not. F should be a formula in terms of state
-   * variables (k-th frame). The generalization will be in terms of current
-   * variables (k-th frame).
-   */
-  expr::term_ref check_inductive_at(size_t k, expr::term_ref f);
 
   /**
    * Check if the formula or any of its parents is marked as invalid.
@@ -210,9 +186,6 @@ class ic3_engine : public engine {
   /** Set of facts valid per frame */
   std::vector<formula_set> d_frame_content;
 
-  /** Boolean variable (enabling the frame) */
-  std::vector<expr::term_ref> d_frame_variables;
-
   /** Returns the frame variable */
   expr::term_ref get_frame_variable(size_t i);
 
@@ -225,18 +198,8 @@ class ic3_engine : public engine {
   /** Check if the frame contains the fiven formula */
   bool frame_contains(size_t k, expr::term_ref f);
 
-  /** Create and initialize the solver k */
-  void init_solver(size_t k);
-
   /** Make sure all frame content is ready */
   void ensure_frame(size_t k);
-
-  /** Remove some learnt formulas */
-  void restart_solvers();
-
-  /**
-   * Check if f is holds at frame k. */
-  bool check_valid(size_t k, expr::term_ref f);
 
   /**
    * Assuming f is satisfiable at k, check if f is reachable at k. During
@@ -252,15 +215,6 @@ class ic3_engine : public engine {
 
   /** Print all frames */
   void print_frames(std::ostream& out) const;
-
-  /** Generalize a SAT answer, but don't keep the known facts in the generalization */
-  expr::term_ref generalize_sat_at(size_t k, smt::solver* solver);
-
-  /** Given G unsat at 0, ..., k, return something at valid 0...k that refutes G. */
-  expr::term_ref learn_forward(size_t k, expr::term_ref G);
-
-  /** Replace any x = y in G with (x <= y) & (x >= y) */
-  expr::term_ref eq_to_ineq(expr::term_ref G);
 
   /** Statistics per frame (some number of frames) */
   std::vector<utils::stat_int*> d_stat_frame_size;
@@ -284,17 +238,11 @@ class ic3_engine : public engine {
   /** Search */
   result search();
 
-  /** Check if all frames are satisfiable, throw otherwise */
-  void check_deadlock();
-
   /** Reset the engine */
   void reset();
 
   /** GC the solvers */
   void gc_solvers();
-
-  /** Query at frame k and return generalization. */
-  expr::term_ref query_at(size_t k, expr::term_ref f, smt::solver::formula_class);
 
 public:
 

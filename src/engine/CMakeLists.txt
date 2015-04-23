@@ -4,6 +4,7 @@ add_library(engine
   bmc/bmc_engine.cpp
   kind/kind_engine.cpp  
   ic3/ic3_engine.cpp  
+  ic3/solvers.cpp
   translator/translator.cpp
 )
 

@@ -12,6 +12,7 @@
 #include <deque>
 #include <vector>
 
+#include "expr/term.h"
 #include "expr/term_manager.h"
 #include "utils/symbol_table.h"
 
