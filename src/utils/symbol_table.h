@@ -137,6 +137,7 @@ public:
       for (; t_it != t_it_end; ++ t_it) {
         T t = *t_it;
         bool relocated = gc_reloc.reloc(t);
+        (void)(relocated); // unused var
         assert(relocated);
         *t_it = t;
       }
