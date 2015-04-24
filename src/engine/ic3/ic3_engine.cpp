@@ -212,7 +212,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(const induction_oblig
   // If inductive
   if (G.is_null()) {
     // Add to the next frame
-    d_induction_obligations_next.insert(induction_obligation(f, depth, ind.score()));
+    d_induction_obligations_next.push_back(induction_obligation(f, depth, ind.score()));
     return INDUCTION_SUCCESS;
   }
 
@@ -394,7 +394,7 @@ engine::result ic3_engine::search() {
     ensure_frame(d_induction_frame);
 
     // Add formulas to the new frame
-    std::set<induction_obligation>::const_iterator it = d_induction_obligations_next.begin();
+    std::vector<induction_obligation>::const_iterator it = d_induction_obligations_next.begin();
     for (; it != d_induction_obligations_next.end(); ++ it) {
       // Push if not shown invalid
       if (!d_frame_formula_info[it->formula()].invalid) {
@@ -405,7 +405,6 @@ engine::result ic3_engine::search() {
     d_induction_obligations_next.clear();
 
     // Do garbage collection
-    d_smt->reset(d_frame_content);
     d_smt->gc();
 
     // Restart if asked

@@ -175,7 +175,7 @@ class ic3_engine : public engine {
   induction_obligation_queue d_induction_obligations;
 
   /** Set of obligations for the next frame */
-  std::set<induction_obligation> d_induction_obligations_next;
+  std::vector<induction_obligation> d_induction_obligations_next;
 
   /** Count of obligations per frame */
   std::vector<size_t> d_induction_obligations_count;

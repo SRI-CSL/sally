@@ -198,7 +198,7 @@ void solvers::gc() {
 }
 
 void solvers::assert_frame_selection(size_t k, smt::solver* solver) {
-  bool multiple = false;
+  bool multiple = true;
 
   if (multiple) {
     bool frame_selected = false;
