@@ -405,6 +405,7 @@ engine::result ic3_engine::search() {
     d_induction_obligations_next.clear();
 
     // Do garbage collection
+    d_smt->reset(d_frame_content);
     d_smt->gc();
 
     // Restart if asked

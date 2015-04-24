@@ -45,7 +45,11 @@ void solvers::reset(const std::vector<solvers::formula_set>& frames) {
 
   MSG(1) << "ic3: restarting solvers" << std::endl;
 
-  if (!d_ctx.get_options().get_bool("ic3-single-solver")) {
+  if (d_ctx.get_options().get_bool("ic3-single-solver")) {
+    // Restart the reachability solver
+    delete d_reachability_solver;
+    d_reachability_solver = 0;
+  } else {
     // Restart the solver
     assert(d_size == d_reachability_solvers.size());
     assert(d_size == frames.size());
@@ -53,10 +57,6 @@ void solvers::reset(const std::vector<solvers::formula_set>& frames) {
       delete d_reachability_solvers[k];
       d_reachability_solvers[k] = 0;
     }
-  } else {
-    // Restart the reachability solver
-    delete d_reachability_solver;
-    d_reachability_solver = 0;
   }
 
   // Add the frame content
@@ -75,6 +75,8 @@ void solvers::reset(const std::vector<solvers::formula_set>& frames) {
   // Reset the counterexample solver
   delete d_counterexample_solver;
   d_counterexample_solver = 0;
+
+  assert(d_size == frames.size());
   ensure_counterexample_solver_depth(d_size);
 }
 
