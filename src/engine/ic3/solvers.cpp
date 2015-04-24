@@ -57,15 +57,7 @@ void solvers::reset(const std::vector<solvers::formula_set>& frames) {
       delete d_reachability_solvers[k];
       d_reachability_solvers[k] = 0;
     }
-  }
-
-  // Add the frame content
-  for (size_t k = 0; k < frames.size(); ++ k) {
-    // Add the content again
-    formula_set::const_iterator it = frames[k].begin();
-    for (; it != frames[k].end(); ++ it) {
-      add(k, *it);
-    }
+    d_reachability_solvers.clear();
   }
 
   // Clear the induction solver
@@ -75,9 +67,20 @@ void solvers::reset(const std::vector<solvers::formula_set>& frames) {
   // Reset the counterexample solver
   delete d_counterexample_solver;
   d_counterexample_solver = 0;
+  d_counterexample_solver_depth = 0;
+  d_counterexample_solver_variables_depth = 0;
 
   assert(d_size == frames.size());
-  ensure_counterexample_solver_depth(d_size);
+  ensure_counterexample_solver_depth(d_size-1);
+
+  // Add the frame content
+  for (size_t k = 0; k < frames.size(); ++ k) {
+    // Add the content again
+    formula_set::const_iterator it = frames[k].begin();
+    for (; it != frames[k].end(); ++ it) {
+      add(k, *it);
+    }
+  }
 }
 
 void solvers::init_reachability_solver(size_t k) {
@@ -392,10 +395,12 @@ void solvers::add(size_t k, expr::term_ref f)  {
   if (d_ctx.get_options().get_bool("ic3-single-solver")) {
     // Add te enabling variable and the implication to enable the assertion
     expr::term_ref assertion = d_tm.mk_term(expr::TERM_IMPLIES, get_frame_variable(k), f);
-    get_reachability_solver()->add(assertion, smt::solver::CLASS_A);
+    smt::solver* solver = get_reachability_solver();
+    solver->add(assertion, smt::solver::CLASS_A);
   } else {
     // Add directly
-    get_reachability_solver(k)->add(f, smt::solver::CLASS_A);
+    smt::solver* solver = get_reachability_solver(k);
+    solver->add(f, smt::solver::CLASS_A);
   }
 
   // If at induction frame, add to induction solver
