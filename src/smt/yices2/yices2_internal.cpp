@@ -862,8 +862,9 @@ void yices2_internal::generalize(smt::solver::generalization_type type, std::vec
   // When we generalize backward we eliminate from T and B
   // When we generalize forward we eliminate from A and T
 
-  // Assertions not used to generalize
-  std::set<term_t> unused;
+  // Assertions not used to generalize, so we ignore them if they come back
+  std::set<term_t> ignore_yices;
+  std::set<expr::term_ref> ignore_terms;
 
   // Counte the A/B formulas
   size_t assertions_size = 0;
@@ -873,14 +874,16 @@ void yices2_internal::generalize(smt::solver::generalization_type type, std::vec
       if (d_assertion_classes[i] != solver::CLASS_A) {
         assertions_size++;
       } else {
-        unused.insert(to_yices2_term(d_assertions[i]));
+        ignore_terms.insert(d_assertions[i]);
+        ignore_yices.insert(to_yices2_term(d_assertions[i]));
       }
       break;
     case smt::solver::GENERALIZE_FORWARD:
       if (d_assertion_classes[i] != solver::CLASS_B) {
         assertions_size++;
       } else {
-        unused.insert(to_yices2_term(d_assertions[i]));
+        ignore_terms.insert(d_assertions[i]);
+        ignore_yices.insert(to_yices2_term(d_assertions[i]));
       }
       break;
     default:
@@ -961,8 +964,13 @@ void yices2_internal::generalize(smt::solver::generalization_type type, std::vec
     throw exception("Generalization failed in Yices.");
   }
   for (size_t i = 0; i < G_y.size; ++ i) {
-    if (unused.find(G_y.data[i]) == unused.end()) {
-      projection_out.push_back(to_term(G_y.data[i]));
+    if (ignore_yices.find(G_y.data[i]) == ignore_yices.end()) {
+      expr::term_ref t_i = to_term(G_y.data[i]);
+      if (ignore_terms.find(t_i) == ignore_terms.end()) {
+        projection_out.push_back(t_i);
+        ignore_yices.insert(G_y.data[i]);
+        ignore_terms.insert(t_i);
+      }
     }
   }
   yices_delete_term_vector(&G_y);

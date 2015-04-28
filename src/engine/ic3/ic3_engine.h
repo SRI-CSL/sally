@@ -59,13 +59,13 @@ public:
   }
 
   bool operator < (const induction_obligation& o) const {
+    // Bigger depth wins
+    if (depth() != o.depth()) {
+      return depth() < o.depth();
+    }
     // Smaller score wins
     if (score() != o.score()) {
       return score() > o.score();
-    }
-    // Smaller depth wins
-    if (depth() != o.depth()) {
-      return depth() > o.depth();
     }
     // Break ties
     return formula() > o.formula();

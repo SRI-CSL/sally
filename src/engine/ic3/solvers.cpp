@@ -201,18 +201,16 @@ void solvers::assert_frame_selection(size_t k, smt::solver* solver) {
   bool multiple = true;
 
   if (multiple) {
-    bool frame_selected = false;
+    // Add the frame
+    expr::term_ref frame_variable = get_frame_variable(k);
+    solver->add(frame_variable, smt::solver::CLASS_A);
+    // Add the rest
     for (size_t i = 0; i < d_size; ++ i) {
-      expr::term_ref frame_variable = get_frame_variable(i);
-      if (i == k) {
-        solver->add(frame_variable, smt::solver::CLASS_A);
-        frame_selected = true;
-      } else {
+      frame_variable = get_frame_variable(i);
+      if (i != k) {
         solver->add(d_tm.mk_term(expr::TERM_NOT, frame_variable), smt::solver::CLASS_A);
       }
     }
-    unused_var(frame_selected);
-    assert(frame_selected);
   } else {
     expr::term_ref frame_variable = get_frame_variable(k);
     solver->add(frame_variable, smt::solver::CLASS_A);

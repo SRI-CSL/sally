@@ -184,7 +184,13 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
   d_bv1 = expr::term_ref_strong(d_tm, d_tm.mk_bitvector_constant(expr::bitvector(1, 1)));
 
   // The context
-  d_cfg = msat_create_config();
+  if (opts.has_option("solver-logic")) {
+    std::string logic = opts.get_string("solver-logic");
+    d_cfg = msat_create_default_config(logic.c_str());
+  } else {
+    d_cfg = msat_create_config();
+  }
+
   msat_set_option(d_cfg, "model_generation", "true");
   msat_set_option(d_cfg, "interpolation", "true");
   msat_set_option(d_cfg, "theory.la.split_rat_eq", "false");

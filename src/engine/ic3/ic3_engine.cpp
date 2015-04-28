@@ -212,7 +212,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(const induction_oblig
   // If inductive
   if (G.is_null()) {
     // Add to the next frame
-    d_induction_obligations_next.push_back(induction_obligation(f, depth, ind.score()));
+    d_induction_obligations_next.push_back(induction_obligation(f, depth, 0));
     return INDUCTION_SUCCESS;
   }
 
