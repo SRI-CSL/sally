@@ -171,6 +171,15 @@ class ic3_engine : public engine {
   /** Map from frame formulas to information about them */
   expr::term_ref_map<frame_formula_info> d_frame_formula_info;
 
+  /** Mark the formula as invalid (not necessarily in the current frame) */
+  void set_invalid(expr::term_ref f);
+
+  /** Returns true if formula marked as invalid */
+  bool is_invalid(expr::term_ref f) const;
+
+  /** Returns true if formula of any of its parents are invalid */
+  bool is_invalid_or_parent_invalid(expr::term_ref f) const;
+
   /** Queue of induction obligations at the current frame */
   induction_obligation_queue d_induction_obligations;
 
@@ -192,8 +201,17 @@ class ic3_engine : public engine {
   /** Total number of facts in the database */
   size_t total_facts() const;
 
-  /** Add the formul to frame */
+  /** Add the formula to frame */
   void add_to_frame(size_t k, expr::term_ref f);
+
+  /** Add property to 0 frame, returns true if not immediately refuted */
+  bool add_property(expr::term_ref P);
+
+  /** Property components */
+  std::set<expr::term_ref> d_properties;
+
+  /** Is the property invalid */
+  bool d_property_invalid;
 
   /** Check if the frame contains the fiven formula */
   bool frame_contains(size_t k, expr::term_ref f);

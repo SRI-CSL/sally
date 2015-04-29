@@ -22,6 +22,7 @@ struct ic3_engine_info {
         ("ic3-enable-restarts", "Restart solvers when extending to new frame and reduce learnts.")
         ("ic3-no-depth-bound", "Don't bound the reasoning depth for induction checks.")
         ("ic3-single-solver", "One solver for reachability, one for induction, one for bmc.")
+        ("ic3-dump-dependencies", "Dump reasoning dependancy graph.")
         ;
   }
 
