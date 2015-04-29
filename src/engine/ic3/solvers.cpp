@@ -103,21 +103,18 @@ void solvers::init_reachability_solver(size_t k) {
 }
 
 void solvers::ensure_counterexample_solver_depth(size_t k) {
-  // Make sure we unrolled the solver up to k
-  for (; d_counterexample_solver_depth < k; ++ d_counterexample_solver_depth) {
-    // Add transition relation k -> k + 1 to the counter-example solver
-    expr::term_ref T = d_trace->get_transition_formula(d_transition_system->get_transition_relation(), d_counterexample_solver_depth, d_counterexample_solver_depth + 1);
-    get_counterexample_solver()->add(T, smt::solver::CLASS_T);
-  }
-}
-
-void solvers::ensure_counterexample_solver_variables(size_t k) {
-  // Make sure we unrolled the solver up to k
+  // Make sure we unrolled the solver variables up to k
   for (; d_counterexample_solver_variables_depth <= k; ++ d_counterexample_solver_variables_depth) {
     // Add variables
     std::vector<expr::term_ref> variables;
     d_trace->get_state_variables(d_counterexample_solver_variables_depth, variables);
     get_counterexample_solver()->add_variables(variables.begin(), variables.end(), smt::solver::CLASS_A);
+  }
+  // Make sure we unrolled the solver up to k
+  for (; d_counterexample_solver_depth < k; ++ d_counterexample_solver_depth) {
+    // Add transition relation k -> k + 1 to the counter-example solver
+    expr::term_ref T = d_trace->get_transition_formula(d_transition_system->get_transition_relation(), d_counterexample_solver_depth, d_counterexample_solver_depth + 1);
+    get_counterexample_solver()->add(T, smt::solver::CLASS_T);
   }
 }
 
@@ -128,9 +125,9 @@ smt::solver* solvers::get_induction_solver() {
     const std::vector<expr::term_ref>& x_next = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_NEXT);
     // Make the solver
     d_induction_solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options());
-    d_induction_solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_T);
     d_induction_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
     d_induction_solver->add_variables(x_next.begin(), x_next.end(), smt::solver::CLASS_B);
+    d_induction_solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_T);
   }
   return d_induction_solver;
 }
@@ -143,9 +140,9 @@ smt::solver* solvers::get_reachability_solver() {
     const std::vector<expr::term_ref>& x_next = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_NEXT);
     // Make the solver
     d_reachability_solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options());
-    d_reachability_solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_T);
     d_reachability_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
     d_reachability_solver->add_variables(x_next.begin(), x_next.end(), smt::solver::CLASS_B);
+    d_reachability_solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_T);
   }
   return d_reachability_solver;
 }
