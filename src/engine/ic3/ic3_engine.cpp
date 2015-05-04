@@ -336,7 +336,7 @@ void ic3_engine::push_current_frame() {
     // Pick a formula to try and prove inductive, i.e. that F_k & P & T => P'
     induction_obligation ind = pop_induction_obligation();
 
-    // If formula or one of its parents is marked as invalid, skip it
+    // If formula is marked as invalid, skip it
     if (is_invalid(ind.formula())) {
       continue;
     }
@@ -420,7 +420,7 @@ engine::result ic3_engine::search() {
     std::vector<induction_obligation>::const_iterator it = d_induction_obligations_next.begin();
     for (; it != d_induction_obligations_next.end(); ++ it) {
       // Push if not shown invalid
-      if (!is_invalid_or_parent_invalid(it->formula())) {
+      if (!is_invalid(it->formula())) {
         add_to_frame(d_induction_frame, it->formula());
         d_induction_obligations.push(*it);
       }
@@ -482,6 +482,10 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
     // Search
     r = search();
   }
+
+  MSG(1) << "ic3: search done: " << r << std::endl;
+  MSG(1) << "ic3: final frame: " << d_frame_content.back().size() << " facts" << std::endl;
+  MSG(1) << "ic3: total facts: " << total_facts() << std::endl;
 
   return r;
 }
