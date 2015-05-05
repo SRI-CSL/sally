@@ -254,22 +254,42 @@ expr::term_ref solvers::eq_to_ineq(expr::term_ref G) {
 
   std::vector<expr::term_ref> G_new;
 
-  // Get the conjuncts
   const expr::term& G_term = d_tm.term_of(G);
-  if (G_term.op() != expr::TERM_AND) { return G; }
-  for (size_t i = 0; i < G_term.size(); ++ i) {
-    const expr::term& t = d_tm.term_of(G_term[i]);
-    expr::term_ref lhs = t[0];
-    expr::term_ref rhs = t[1];
-    if (t.op() == expr::TERM_EQ && d_tm.is_subtype_of(d_tm.type_of(lhs), d_tm.real_type())) {
+
+  // If pure equality just split it
+  if (G_term.op() == expr::TERM_EQ) {
+    expr::term_ref lhs = G_term[0];
+    expr::term_ref rhs = G_term[1];
+    if (d_tm.is_subtype_of(d_tm.type_of(lhs), d_tm.real_type())) {
       G_new.push_back(d_tm.mk_term(expr::TERM_LEQ, lhs, rhs));
       G_new.push_back(d_tm.mk_term(expr::TERM_GEQ, lhs, rhs));
+      return d_tm.mk_and(G_new);
     } else {
-      G_new.push_back(G_term[i]);
+      return G;
     }
   }
 
-  return d_tm.mk_and(G_new);
+  // If conjunction, split the conjuncts
+  if (G_term.op() == expr::TERM_AND) {
+    for (size_t i = 0; i < G_term.size(); ++ i) {
+      const expr::term& t = d_tm.term_of(G_term[i]);
+      if (t.op() == expr::TERM_EQ) {
+        expr::term_ref lhs = t[0];
+        expr::term_ref rhs = t[1];
+        if (d_tm.is_subtype_of(d_tm.type_of(lhs), d_tm.real_type())) {
+          G_new.push_back(d_tm.mk_term(expr::TERM_LEQ, lhs, rhs));
+          G_new.push_back(d_tm.mk_term(expr::TERM_GEQ, lhs, rhs));
+        } else {
+          G_new.push_back(G_term[i]);
+        }
+      } else {
+        G_new.push_back(G_term[i]);
+      }
+    }
+    return d_tm.mk_and(G_new);
+  }
+
+  return G;
 }
 
 expr::term_ref solvers::generalize_sat(smt::solver* solver) {
