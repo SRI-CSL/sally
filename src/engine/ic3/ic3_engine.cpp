@@ -127,8 +127,6 @@ induction_obligation ic3_engine::pop_induction_obligation() {
 
 void ic3_engine::ensure_frame(size_t k) {
 
-  MSG(1) << "ic3: Extending trace to " << k << std::endl;
-
   // Upsize the frames if necessary
   while (d_frame_content.size() <= k) {
     // Add the empty frame content
@@ -233,18 +231,27 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(const induction_oblig
     return INDUCTION_FAIL;
   }
 
+  // Add to obligations if not already shown invalid
+  expr::term_ref G_not = tm().mk_term(expr::TERM_NOT, G);
+  add_valid_up_to(d_induction_frame, G_not);
+  if (!is_invalid(G_not)) {
+    // Try to push assumptions next time
+    d_induction_obligations.push(induction_obligation(G_not, depth+1, 0));
+    d_frame_formula_info[G_not] = frame_formula_info(f, G);
+  }
+
   // Learn something to refute G
   expr::term_ref learnt = d_smt->learn_forward(d_induction_frame, G);
   TRACE("ic3") << "ic3: learnt: " << learnt << std::endl;
 
-  // Add the learnt
-  add_valid_up_to(d_induction_frame, learnt);
-
-  // Add to obligations if not already shown invalid
-  if (!is_invalid(learnt)) {
-    // Try to push assumptions next time
-    d_induction_obligations.push(induction_obligation(learnt, depth+1, 0));
-    d_frame_formula_info[learnt] = frame_formula_info(f, G);
+  if (learnt != G_not) {
+    // Add to obligations if not already shown invalid
+    add_valid_up_to(d_induction_frame, learnt);
+    if (!is_invalid(learnt)) {
+      // Try to push assumptions next time
+      d_induction_obligations.push(induction_obligation(learnt, depth+1, 0));
+      d_frame_formula_info[learnt] = frame_formula_info(f, G);
+    }
   }
 
   return INDUCTION_RETRY;
@@ -415,6 +422,8 @@ engine::result ic3_engine::search() {
     d_induction_frame ++;
     d_induction_obligations.clear();
     ensure_frame(d_induction_frame);
+
+    MSG(1) << "ic3: Extending trace to " << d_induction_frame << " (" << d_induction_obligations_next.size() << " facts)" << std::endl;
 
     // Add formulas to the new frame
     std::vector<induction_obligation>::const_iterator it = d_induction_obligations_next.begin();
