@@ -1,8 +1,8 @@
 ;;
 ;; Conversion from approx.sal:
 ;;   5 processes
-;;  no faults
-;;  sanity check
+;; Scenario2: one asymmetric transmissive + one symmetric omissive faults
+;; Sanity check
 ;;
 
 ;; constant to represent processes status
@@ -146,8 +146,8 @@
    (= p!4!4 5)
    (= round 0)
    (and
-    (= status!0 Good)
-    (= status!1 Good)
+    (= status!0 AsymmetricTransmissive)
+    (= status!1 AsymmetricOmissive)
     (= status!2 Good)
     (= status!3 Good)
     (= status!4 Good))))
@@ -986,8 +986,6 @@
 ;;
 ;; Assumptions: p!i!j is in { 1, 2, 3, 4, 5 }
 ;;              n!i is in { 0, 1, 2, 3, 4, 5 }
-;;              status!i is in { Good, SymmetricOmissive, AsymmetricOmissive, 
-;;                               SymmetricTransmissive, AsymmetricTransmissive }
 ;;
 (assume T
   (and
@@ -1034,8 +1032,8 @@
 ;;
 (query T
        (and
-        (/= v!0 0)
-        (/= v!1 0)
-        (/= v!2 0)
-        (/= v!3 0)
-        (/= v!4 0)))
+        (> v!0 0)
+        (> v!1 0)
+        (> v!2 0)
+        (> v!3 0)
+        (> v!4 0)))
