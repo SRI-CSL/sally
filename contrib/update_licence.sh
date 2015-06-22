@@ -1,3 +1,8 @@
+#!/bin/bash
+
+# Goes through the source files, removes the initial comments, and adds the copyright
+
+read -d '' LICENCE << EOF
 /**
  * This file is part of sally.
  * Copyright (C) 2015 SRI International.
@@ -15,37 +20,10 @@
  * You should have received a copy of the GNU General Public License
  * along with sally.  If not, see <http://www.gnu.org/licenses/>.
  */
+EOF
 
-#pragma once
-
-#include "engine/engine.h"
-
-namespace boost { namespace program_options {
-  class options_description;
-}}
-
-namespace sally {
-
-/**
- * Factory to create engines.
- */
-class factory {
-
-public:
-
-  /** Construct an engine of the given name */
-  static
-  engine* mk_engine(std::string id, const system::context& ctx);
-
-  /** Get all the engines to setup the options */
-  static
-  void setup_options(boost::program_options::options_description& options);
-
-  /** Get the list of all engines */
-  static
-  void get_engines(std::vector<std::string>& out);
-
-};
-
-
-}
+for file in `find src -name "*.cpp" -or -name "*.h" -or -name "*.g"`;
+do 
+  echo Processing $file
+  (echo "$LICENCE"; perl -0777 -pe 's{^/\*.*?\*/\n*}{\n}s' $file) > tmp; mv tmp $file;
+done
