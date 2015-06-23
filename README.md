@@ -1,5 +1,11 @@
 # Sally
 
+Sally is a model checker for infinite state systems described as transition 
+systems. It is research software under development so the features and the 
+input language may change rapidly.   
+
+The project is supported by NASA contract NNX14AI05A.
+
 ## Prerequisites
 
 In order to compile Sally you will need the following
@@ -31,27 +37,28 @@ In order to compile Sally you will need the following
 
 ## How to Compile
 
-If you've installed Yices2 in the $YD directory, meaning that there are 
+If you have Yices2 installed in the $YD directory, meaning that there are 
 $YD/include and $YD/lib directories with Yices2 headers and libraries, then
-build with 
+configure and build with 
 
     cd build
     cmake .. -DYICES2_HOME=$YD
     make
     make check
 
-If you've installed MathSAT in the $MD directory, meaning that there are 
+If you have MathSAT5 installed in the $MD directory, meaning that there are 
 $MD/include and $MD/lib directories with MathSAT5 headers and libraries, then 
-build with
+configure and build with
 
     cd build
     cmake .. -DMATHSAT5_HOME=$MD
     make
     make check
    
-You can use both Yices2 and MathSAT by adding both options to cmake as expected.
+Of course, you can use both Yices2 and MathSAT by adding both options to 
+cmake as expected.
 
-To compile in debug mode then pass on
+To compile sally in debug mode then configure and build with
 
     cd build
     cmake .. -DCMAKE_BUILD_TYPE=Debug
@@ -67,7 +74,7 @@ SMT2 language. A transition system consists of a description of the state type,
 a formula describing the initial states of the system, and a formula describing 
 the transitions from the current to the next state of the system.
 
-State type is just a list of variables that are pare of the state, together with
+State type is a list of variables that are part of the state, together with
 their types.
 ```lisp
 ;; A definition of a state type called "my_state_type" with variables
@@ -76,8 +83,8 @@ their types.
   ((x Real) (y Real))
 )
 ```
-With a defined state type, we can define sets of states and transition over the
-state type and sate transitions over the state type.
+With a defined state type, we can define sets of states and transitions over the
+state type.
 
 We can describe a set of states with a state formula over the state type. A 
 state formula is a first-order formula over the variables of the state type, 
@@ -101,7 +108,7 @@ over the same state type.
 ```   
 We can describe allowed state transitions by a first-order formula over the 
 current (state) and next variables of the state type. We use the prefix
-``state`` to denote current variables and the prefix ``next`` to denote the 
+``state`` to denote current variables, and the prefix ``next`` to denote the 
 variables in the next state. Previously defined state formulas over the same
 state type can be used as if they were variables (state or next). Similarly, 
 previously defined transitions over the same type can be used directly. 
@@ -150,7 +157,7 @@ states of the system and the transitions that the system can make.
 #### Queries
 
 A query asks a question whether a state property is true in the given transition 
-system. For example, in the system ``T1``, it is clear that we have that the 
+system. For example, in the system ``T1``, it is clear that we the 
 variables ``x`` and ``y`` will always be equal and non-negative. We can check 
 these with the following queries.
 ```lisp
@@ -178,7 +185,7 @@ The example above is available in ``examples/example.mcmt``.
 To see the full set of options run ``sally -h``. Some typical examples are as 
 follows
 
-* Checking the properties with the bounded model-checking (bmc) engine
+* Checking the properties with the bounded model-checking (BMC) engine
     ```
     > sally --engine bmc examples/example.mcmt
     unknown
@@ -187,7 +194,7 @@ follows
     unknown
     ```
     
-* Checking the property with BMC with a bigger bound and showin any 
+* Checking the property with BMC with a bigger bound and showing any 
 counter-example traces
     ```
     > sally --engine bmc --bmc-max 20 --show-trace examples/example.mcmt
@@ -203,7 +210,7 @@ counter-example traces
     )
     ```
     
-* Checking the properties with the k-induction (kind) engine
+* Checking the properties with the k-induction engine
     ```
     > sally --engine kind examples/example.mcmt
     valid
