@@ -1,8 +1,9 @@
 language: cpp
 
-matrix:
-  - CMAKE_BUILD_TYPE=Debug
-  - CMAKE_BUILD_TYPE=Release
+env:
+  matrix:
+    - CMAKE_BUILD_TYPE=Debug
+    - CMAKE_BUILD_TYPE=Release
 
 install:
   - sudo add-apt-repository ppa:boost-latest/ppa -y
