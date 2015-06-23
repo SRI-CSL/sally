@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/SRI-CSL/sally.svg?branch=master)](https://travis-ci.org/SRI-CSL/sally)
+
 # Sally
 
 Sally is a model checker for infinite state systems described as transition 
@@ -27,7 +29,7 @@ In order to compile Sally you will need the following
     
 * Some Boost libraries
     ```
-    sudo apt-get install libboost-program-options-dev libboost-iostreams-dev libboost-test-dev
+    sudo apt-get install libboost-program-options-dev libboost-iostreams-dev libboost-test-dev libboost-thread-dev libboost-system-dev
     ```
     
 * A working Java runtime 
