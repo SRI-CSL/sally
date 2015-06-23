@@ -5,8 +5,9 @@ matrix:
   - CMAKE_BUILD_TYPE=Release
 
 install:
-  - sudo apt-get update -qq
-  - sudo apt-get install -qq g++ 
+  - sudo add-apt-repository ppa:boost-latest/ppa -y
+  - sudo apt-get update 
+  - sudo apt-get install g++ 
   - sudo apt-get install libgmp-dev 
   - sudo apt-get install libboost-program-options-dev libboost-iostreams-dev libboost-test-dev 
   - sudo apt-get install default-jre
