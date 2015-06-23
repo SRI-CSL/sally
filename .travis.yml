@@ -1,0 +1,17 @@
+language: cpp
+
+matrix:
+  - CMAKE_BUILD_TYPE=Debug
+  - CMAKE_BUILD_TYPE=Release
+
+install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq g++ 
+  - sudo apt-get install libgmp-dev 
+  - sudo apt-get install libboost-program-options-dev libboost-iostreams-dev libboost-test-dev 
+  - sudo apt-get install default-jre
+
+script:
+  - cd build
+  - cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} ..
+  - make 
