@@ -6,8 +6,12 @@ compiler:
   
 env:
   matrix:
-    - CMAKE_BUILD_TYPE=Debug
+    - CMAKE_BUILD_TYPE=Debug 
+      ENABLE_COVERAGE=OFF
     - CMAKE_BUILD_TYPE=Release
+      ENABLE_COVERAGE=OFF
+    - CMAKE_BUILD_TYPE=Release
+      ENABLE_COVERAGE=ON
 
 install:
   - sudo add-apt-repository ppa:boost-latest/ppa -y
@@ -20,9 +24,16 @@ install:
   - wget "http://yices.csl.sri.com/cgi-bin/yices2-newnewdownload.cgi?file=yices-2.3.1-src.tar.gz&accept=I+Agree" -O yices.tar.gz
   - tar xzvf yices.tar.gz
   - cd yices* && autoconf && ./configure --prefix=/usr && make MODE=release && sudo make MODE=release install && cd ..
+  - if [[ $ENABLE_COVERAGE == ON ]]; then 
+      sudo pip install cpp-coveralls
+    fi
   
 script:
   - cd build
-  - cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} ..
+  - cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DENABLE_COVERAGE=${ENABLE_COVERAGE} ..
   - make 
   - make check
+  - if [[ $ENABLE_COVERAGE == ON ]]; then
+      coveralls --exclude lib --exclude tests --gcov-options '\-lp'
+    fi
+  
