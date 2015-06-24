@@ -36,6 +36,6 @@ script:
 
 after_script:
   - if [[ $ENABLE_COVERAGE == ON ]]; then
-      coveralls --exclude lib --exclude tests --gcov-options '\-lp';
+      coveralls -r .. -b . --gcov-options '\-lp';
     fi
   
