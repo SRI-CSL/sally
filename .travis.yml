@@ -1,7 +1,7 @@
 language: cpp
 
 compiler:
-  - clang
+  # - clang (Disabling until boost and clang play well)
   - gcc
   
 env:
