@@ -11,10 +11,12 @@ env:
 
 install:
   - sudo add-apt-repository ppa:boost-latest/ppa -y
+  - sudo apt-key update
   - sudo apt-get update 
   - sudo apt-get install libgmp-dev 
   - sudo apt-get install libboost-program-options1.54-dev libboost-iostreams1.54-dev libboost-test1.54-dev libboost-thread1.54-dev libboost-system1.54-dev
   - sudo apt-get install default-jre
+  - sudo apt-get install gperf
   - wget "http://yices.csl.sri.com/cgi-bin/yices2-newnewdownload.cgi?file=yices-2.3.1-src.tar.gz&accept=I+Agree" -O yices.tar.gz
   - tar xzvf yices.tar.gz
   - cd yices* && autoconf && ./configure --prefix=/usr && make MODE=release && sudo make MODE=release install && cd ..
