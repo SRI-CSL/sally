@@ -15,9 +15,9 @@ install:
   - sudo apt-get install libgmp-dev 
   - sudo apt-get install libboost-program-options1.54-dev libboost-iostreams1.54-dev libboost-test1.54-dev libboost-thread1.54-dev libboost-system1.54-dev
   - sudo apt-get install default-jre
-  - wget "http://yices.csl.sri.com/cgi-bin/yices2-newnewdownload.cgi?file=yices-2.3.1-x86_64-unknown-linux-gnu-static-gmp.tar.gz&accept=I+Agree" -O yices.tar.gz
+  - wget "http://yices.csl.sri.com/cgi-bin/yices2-newnewdownload.cgi?file=yices-2.3.1-src.tar.gz&accept=I+Agree" -O yices.tar.gz
   - tar xzvf yices.tar.gz
-  - cd yices* && sudo ./install-yices /usr && cd ..
+  - cd yices* && autoconf && ./configure --prefix=/usr && make MODE=release && sudo make MODE=release install && cd ..
   
 script:
   - cd build
