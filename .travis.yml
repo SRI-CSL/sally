@@ -14,7 +14,7 @@ install:
   - sudo apt-get install default-jre
   - wget "http://yices.csl.sri.com/cgi-bin/yices2-newnewdownload.cgi?file=yices-2.3.1-x86_64-unknown-linux-gnu-static-gmp.tar.gz&accept=I+Agree" -O yices.tar.gz
   - tar xzvf yices.tar.gz
-  - cd yices; sudo ./install-yices /usr
+  - cd yices*; sudo ./install-yices /usr
   
 script:
   - cd build
