@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/SRI-CSL/sally.svg?branch=master)](https://travis-ci.org/SRI-CSL/sally)
+[![Coverage Status](https://coveralls.io/repos/SRI-CSL/sally/badge.svg?branch=master)](https://coveralls.io/r/SRI-CSL/sally?branch=master)
 
 # Sally
 
