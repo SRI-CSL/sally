@@ -1,5 +1,6 @@
 [![Build Status](https://travis-ci.org/SRI-CSL/sally.svg?branch=master)](https://travis-ci.org/SRI-CSL/sally)
 [![Coverage Status](https://coveralls.io/repos/SRI-CSL/sally/badge.svg?branch=master)](https://coveralls.io/r/SRI-CSL/sally?branch=master)
+[![Coverity Scan Build Status](https://scan.coverity.com/projects/5578/badge.svg)](https://scan.coverity.com/projects/5578)
 [![Join the sally chat](https://sri-csl.herokuapp.com/badge.svg)](https://sri-csl.herokuapp.com/)
 
 # Sally
