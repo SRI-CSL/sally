@@ -589,6 +589,7 @@ msat_term mathsat5_internal::to_mathsat5_term(expr::term_ref ref) {
   case expr::TERM_BV_SGT:
   {
     size_t size = t.size();
+    assert(size > 0);
     msat_term children[size];
     for (size_t i = 0; i < size; ++ i) {
       children[i] = to_mathsat5_term(t[i]);

@@ -64,6 +64,7 @@ ic3_engine::ic3_engine(const system::context& ctx)
 , d_trace(0)
 , d_smt(0)
 , d_induction_frame(0)
+, d_property_invalid(false)
 {
   for (size_t i = 0; i < 10; ++ i) {
     std::stringstream ss;

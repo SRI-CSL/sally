@@ -171,7 +171,7 @@ void mathsat5_term_cache::gc() {
 
     // Collect the garbage
     msat_gc_env(d_msat_env, terms_to_keep, d_permanent_terms.size());
-    delete terms_to_keep;
+    delete[] terms_to_keep;
 
     // We're clean now
     d_cache_is_clean = true;

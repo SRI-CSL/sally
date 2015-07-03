@@ -146,7 +146,7 @@ void yices2_term_cache::gc() {
 
     // Collect the garbage
     yices_garbage_collect(terms_to_keep, d_permanent_terms.size(), NULL, 0, true);
-    delete terms_to_keep;
+    delete[] terms_to_keep;
 
     // We're clean now
     d_cache_is_clean = true;

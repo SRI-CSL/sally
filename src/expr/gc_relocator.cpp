@@ -28,7 +28,7 @@ gc_relocator::gc_relocator(term_manager& tm, const relocation_map& gc_reloc)
 
 bool gc_relocator::reloc(expr::term_ref& t) const {
   relocation_map::const_iterator find = d_relocation_map.find(t);
-  if (find == d_relocation_map.end()) {
+  if (find != d_relocation_map.end()) {
     t = find->second;
     return true;
   } else {
@@ -39,7 +39,7 @@ bool gc_relocator::reloc(expr::term_ref& t) const {
 
 bool gc_relocator::reloc(expr::term_ref_strong& t) const {
   relocation_map::const_iterator find = d_relocation_map.find(t);
-  if (find == d_relocation_map.end()) {
+  if (find != d_relocation_map.end()) {
     t = expr::term_ref_strong(d_tm, find->second);
     return true;
   } else {
