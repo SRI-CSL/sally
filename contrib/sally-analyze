@@ -1,0 +1,7 @@
+#!/bin/bash
+rm -rf cov-int
+cd build;
+rm -rf *
+cmake .. -DYICES2_HOME=/usr/local -DMATHSAT5_HOME=/usr/local/mathsat
+make clean
+cov-build --dir ../cov-int make

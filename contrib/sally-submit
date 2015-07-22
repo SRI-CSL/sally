@@ -1,0 +1,19 @@
+#!/bin/bash
+if [ -z $1 ];
+then
+    echo "We need the coverity token: e.g. "
+    echo  "./contrib/sally-submit tHiSiSnOtMyKeY"
+    echo  "Ask Ian: iam@csl.sri.com"
+    exit 1
+else
+   COVERITY_TOKEN=$1
+fi
+
+rm sally.tgz
+tar czvf sally.tgz cov-int
+curl --form token=${COVERITY_TOKEN} \
+  --form email=iam@csl.sri.com \
+  --form file=@sally.tgz \
+  --form version="IPO" \
+  --form description="Initial public offering" \
+  https://scan.coverity.com/builds?project=SRI-CSL%2Fsally
