@@ -44,7 +44,7 @@ void translator::to_stream_mcmt(std::ostream& out) const {
   const system::state_type* state_type = d_ts->get_state_type();
   state_type->use_namespace();
   out << ";; State type" << std::endl;
-  out << "(define-state-type state_type " << state_type->get_type() << ")" << std::endl;
+  out << "(define-state-type state_type " << state_type->get_state_type_var() << " " << state_type->get_input_type_var() << ")" << std::endl;
   out << std::endl;
 
   // Output the initial state
@@ -83,6 +83,10 @@ public:
     if (6 < id.size() && id.substr(0, 6) == "state.") {
       id = id.substr(6);
     } else
+    // input.x => x
+    if (6 < id.size() && id.substr(0, 6) == "input.") {
+        id = id.substr(6);
+      } else
     // next.x => next(x)
     if (5 < id.size() && id.substr(0, 5) == "next.") {
       id = std::string("next(") + id.substr(5) + std::string(")");
@@ -100,20 +104,33 @@ void translator::to_stream_nuxmv(std::ostream& out) const {
   tm().set_name_transformer(name_transformer);
 
   // The state type
-  const system::state_type* state_type = d_ts->get_state_type();
-  state_type->use_namespace();
+  const system::state_type* st = d_ts->get_state_type();
+  st->use_namespace();
 
   out << "MODULE main" << std::endl;
 
   // Declare state variables
+  const std::vector<expr::term_ref>& state_vars = st->get_variables(system::state_type::STATE_CURRENT);
   out << "VAR" << std::endl;
-  const expr::term& state_type_term = tm().term_of(state_type->get_type());
-  size_t state_type_size = tm().get_struct_type_size(state_type_term);
-  for (size_t i = 0; i < state_type_size; ++ i) {
-    std::string var_name = name_transformer->apply(tm().get_struct_type_field_id(state_type_term, i));
-    out << "    " << var_name << ": " << tm().get_struct_type_field_type(state_type_term, i) << ";" << std::endl;
+  for (size_t i = 0; i < state_vars.size(); ++ i) {
+    expr::term_ref var = state_vars[i];
+    const expr::term& var_term = tm().term_of(var);
+    std::string var_name = name_transformer->apply(tm().get_variable_name(var_term));
+    out << "    " << var_name << ": " << tm().type_of(var_term) << ";" << std::endl;
   }
   out << std::endl;
+
+  const std::vector<expr::term_ref>& input_vars = st->get_variables(system::state_type::STATE_INPUT);
+  if (input_vars.size() > 0) {
+    out << "IVAR" << std::endl;
+    for (size_t i = 0; i < input_vars.size(); ++ i) {
+      expr::term_ref var = input_vars[i];
+      const expr::term& var_term = tm().term_of(var);
+      std::string var_name = name_transformer->apply(tm().get_variable_name(var_term));
+      out << "    " << var_name << ": " << tm().type_of(var_term) << ";" << std::endl;
+    }
+    out << std::endl;
+  }
 
   // The transition relation
   out << "TRANS" << std::endl;
@@ -121,14 +138,14 @@ void translator::to_stream_nuxmv(std::ostream& out) const {
   out << std::endl;
 
   // The initial state
-  state_type->use_namespace(system::state_type::STATE_CURRENT);
+  st->use_namespace(system::state_type::STATE_CURRENT);
   out << "INIT" << std::endl;
   out << "    " << d_ts->get_initial_states() << ";" << std::endl;
   out << std::endl;
   ctx().tm().pop_namespace();
 
   // Output the query
-  state_type->use_namespace(system::state_type::STATE_CURRENT);
+  st->use_namespace(system::state_type::STATE_CURRENT);
   out << "INVARSPEC" << std::endl;
   out << "    " << d_sf->get_formula() << ";" << std::endl;
   ctx().tm().pop_namespace();
@@ -141,115 +158,6 @@ void translator::to_stream_nuxmv(std::ostream& out) const {
   tm().set_name_transformer(0);
 }
 
-class lustre_transition_name_transformer : public utils::name_transformer {
-public:
-  std::string apply(std::string id) const {
-    // state.x => x
-    if (6 < id.size() && id.substr(0, 6) == "state.") {
-      id = std::string("pre(") + id.substr(6) + std::string(")");
-    } else
-    // next.x => xx_next
-    if (5 < id.size() && id.substr(0, 5) == "next.") {
-      id = id.substr(5) + std::string("_next");
-    }
-    // Replace any bad characters
-    std::replace(id.begin(), id.end(), '!', '_');
-    return id;
-  }
-};
-
-class lustre_initial_name_transformer : public utils::name_transformer {
-public:
-  std::string apply(std::string id) const {
-    // state.x => x
-    if (6 < id.size() && id.substr(0, 6) == "state.") {
-      id = id.substr(6) + std::string("_init");
-    }
-    // Replace any bad characters
-    std::replace(id.begin(), id.end(), '!', '_');
-    return id;
-  }
-};
-
-
-void translator::to_stream_lustre(std::ostream& out) const {
-
-  lustre_initial_name_transformer init_transformer;
-  lustre_transition_name_transformer transition_transformer;
-
-  // The state type
-  const system::state_type* state_type = d_ts->get_state_type();
-  state_type->use_namespace();
-
-  // Get the variables
-  const expr::term& state_type_term = tm().term_of(state_type->get_type());
-  size_t state_type_size = tm().get_struct_type_size(state_type_term);
-  std::vector<std::string> vars;
-  std::vector<expr::term_ref> types;
-  for (size_t i = 0; i < state_type_size; ++ i) {
-    std::string id = tm().get_struct_type_field_id(state_type_term, i);
-    id = init_transformer.apply(id);
-    vars.push_back(id);
-    types.push_back(tm().get_struct_type_field_type(state_type_term, i));
-  }
-
-  // Main node start
-  out << "node main (";
-  for (size_t i = 0; i < state_type_size; ++ i) {
-    if (i) { out << "; "; }
-    out << vars[i] << "_init : " << types[i] << "; ";
-    out << vars[i] << "_next : " << types[i];
-  }
-  out << ") returns (OK: bool);" << std::endl;
-
-  // Local state variables
-  out << "  var";
-  for (size_t i = 0; i < state_type_size; ++ i) {
-    out << " " << vars[i] << " : " << types[i] << ";";
-  }
-  out << std::endl;
-
-  // Start the node definition
-  out << "let" << std::endl;
-
-  // Initial state
-  tm().set_name_transformer(&init_transformer);
-  out << "  --Initial condition" << std::endl;
-  out << "  assert(" << d_ts->get_initial_states() << ");" << std::endl;
-  out << std::endl;
-  tm().set_name_transformer(0);
-
-  // Transition relation
-  tm().set_name_transformer(&transition_transformer);
-  out << "  --Transition relation" << std::endl;
-  out << "  assert(true -> " << d_ts->get_transition_relation() << ");" << std::endl;
-  out << std::endl;
-  tm().set_name_transformer(0);
-
-  // Assign variable to their next values
-  out << "  --Assign to next" << std::endl;
-  for (size_t i = 0; i < state_type_size; ++ i) {
-    out << "  " << vars[i] << " = " << vars[i] << "_init -> " << vars[i] << "_next;" << std::endl;
-  }
-  out << std::endl;
-
-  // The property
-  state_type->use_namespace(system::state_type::STATE_CURRENT);
-  tm().set_name_transformer(&transition_transformer);
-  out << "  --The property" << std::endl;
-  out << "  OK = " << d_sf->get_formula() << ";" << std::endl;
-  tm().set_name_transformer(0);
-  ctx().tm().pop_namespace();
-
-  // Finish
-  out << "  --%PROPERTY OK;" << std::endl;
-  out << "tel" << std::endl;
-
-  // State type namespace
-  ctx().tm().pop_namespace();
-}
-
-
 void translator::to_stream_horn(std::ostream& out) const {
   // The state type
   const system::state_type* state_type = d_ts->get_state_type();
@@ -260,16 +168,19 @@ void translator::to_stream_horn(std::ostream& out) const {
   // Collect the state variables into these streams
   std::stringstream state_vars;
   std::stringstream next_vars;
-  std::stringstream quant_vars;
+  std::stringstream quant_vars_trans;
+  std::stringstream quant_vars_state;
 
-  quant_vars << expr::set_output_language(output::HORN);
-  quant_vars << expr::set_tm(ctx().tm());
+  quant_vars_trans << expr::set_output_language(output::HORN);
+  quant_vars_trans << expr::set_tm(ctx().tm());
+  quant_vars_state << expr::set_output_language(output::HORN);
+  quant_vars_state << expr::set_tm(ctx().tm());
 
   out << "(set-logic HORN)" << std::endl;
 
   // The invariant we're looking for
   out << "(declare-fun invariant (";
-  const expr::term& state_type_term = tm().term_of(state_type->get_type());
+  const expr::term& state_type_term = tm().term_of(state_type->get_state_type_var());
   size_t state_type_size = tm().get_struct_type_size(state_type_term);
   for (size_t i = 0; i < state_type_size; ++ i) {
     std::string id = tm().get_struct_type_field_id(state_type_term, i);
@@ -278,13 +189,15 @@ void translator::to_stream_horn(std::ostream& out) const {
       out << " ";
       state_vars << " ";
       next_vars << " ";
-      quant_vars << " ";
+      quant_vars_trans << " ";
+      quant_vars_state << " ";
     }
     out << type;
     state_vars << "state." << id;
     next_vars << "next." << id;
-    quant_vars << "(state." << id << " " << type << ")";
-    quant_vars << " (next." << id << " " << type << ")";
+    quant_vars_trans << "(state." << id << " " << type << ")";
+    quant_vars_state << "(state." << id << " " << type << ")";
+    quant_vars_trans << " (next." << id << " " << type << ")";
   }
   out << ") Bool)" << std::endl;
   out << std::endl;
@@ -293,18 +206,28 @@ void translator::to_stream_horn(std::ostream& out) const {
   expr::term_ref I = d_ts->get_initial_states();
   out << ";; Initial state" << std::endl;
   out << "(assert" << std::endl;
-  out << "  (forall (" << quant_vars.str() << ")" << std::endl;
+  out << "  (forall (" << quant_vars_state.str() << ")" << std::endl;
   out << "    (=> " << I << std::endl;
   out << "        (invariant " << state_vars.str() << "))" << std::endl;
   out << "  )" << std::endl;
   out << ")" << std::endl;
   out << std::endl;
 
+  // Add input vars to the transition quant
+  const expr::term& input_type_term = tm().term_of(state_type->get_input_type_var());
+  size_t input_type_size = tm().get_struct_type_size(input_type_term);
+  for (size_t i = 0; i < input_type_size; ++ i) {
+    std::string id = tm().get_struct_type_field_id(input_type_term, i);
+    expr::term_ref type = tm().get_struct_type_field_type(input_type_term, i);
+    quant_vars_trans << " ";
+    quant_vars_trans << "(input." << id << " " << type << ")";
+  }
+
   // The transition relation
   expr::term_ref T = d_ts->get_transition_relation();
   out << ";; Transition relation state" << std::endl;
   out << "(assert" << std::endl;
-  out << "  (forall (" << quant_vars.str() << ")" << std::endl;
+  out << "  (forall (" << quant_vars_trans.str() << ")" << std::endl;
   out << "    (=> (and (invariant " << state_vars.str() << ")" << std::endl;
   out << "             " << T << std::endl;
   out << "        )" << std::endl;
@@ -318,7 +241,7 @@ void translator::to_stream_horn(std::ostream& out) const {
   expr::term_ref Q = d_sf->get_formula();
   out << ";; Property" << std::endl;
   out << "(assert" << std::endl;
-  out << "  (forall (" << quant_vars.str() << ")" << std::endl;
+  out << "  (forall (" << quant_vars_state.str() << ")" << std::endl;
   out << "    (=> (invariant " << state_vars.str() << ")" << std::endl;
   out << "        " << Q << std::endl;
   out << "    )" << std::endl;
@@ -349,9 +272,6 @@ engine::result translator::query(const system::transition_system* ts, const syst
     break;
   case HORN:
     to_stream_horn(std::cout);
-    break;
-  case LUSTRE:
-    to_stream_lustre(std::cout);
     break;
   default:
     throw exception("Unsupported language");

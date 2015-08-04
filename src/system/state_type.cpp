@@ -27,27 +27,22 @@
 namespace sally {
 namespace system {
 
-state_type::state_type(std::string id, expr::term_manager& tm, expr::term_ref type)
+state_type::state_type(std::string id, expr::term_manager& tm, expr::term_ref state_type_var, expr::term_ref input_type_var)
 : gc_participant(tm)
 , d_id(id)
 , d_tm(tm)
-, d_type(tm, type)
+, d_state_type_var(tm, state_type_var)
+, d_input_type_var(tm, input_type_var)
 {
   // Create the state variables
-  d_current_state = expr::term_ref_strong(tm, tm.mk_variable(id + "::" + to_string(STATE_CURRENT), type));
-  d_next_state = expr::term_ref_strong(tm, tm.mk_variable(id + "::" + to_string(STATE_NEXT), type));
+  d_current_vars_struct = expr::term_ref_strong(tm, tm.mk_variable(id + "::" + to_string(STATE_CURRENT), state_type_var));
+  d_input_vars_struct = expr::term_ref_strong(tm, tm.mk_variable(id + "::" + to_string(STATE_INPUT), input_type_var));
+  d_next_vars_struct = expr::term_ref_strong(tm, tm.mk_variable(id + "::" + to_string(STATE_NEXT), state_type_var));
 
   // Get the variables
-  d_tm.get_variables(d_current_state, d_current_vars);
-  d_tm.get_variables(d_next_state, d_next_vars);
-
-  // Remove the first one (the struct variable)
-  for (size_t i = 0; i + 1 < d_current_vars.size(); ++ i) {
-    d_current_vars[i] = d_current_vars[i+1];
-    d_next_vars[i] = d_next_vars[i+1];
-  }
-  d_current_vars.pop_back();
-  d_next_vars.pop_back();
+  d_tm.get_struct_fields(d_tm.term_of(d_current_vars_struct), d_current_vars);
+  d_tm.get_struct_fields(d_tm.term_of(d_input_vars_struct), d_input_vars);
+  d_tm.get_struct_fields(d_tm.term_of(d_next_vars_struct), d_next_vars);
 
   // Make the substitution map
   for (size_t i = 0; i < d_current_vars.size(); ++ i) {
@@ -65,15 +60,17 @@ void state_type::use_namespace(var_class vc) const {
 }
 
 void state_type::to_stream(std::ostream& out) const {
-  out << "[" << d_id << ": " << d_type << "]";
+  out << "[" << d_id << ": " << d_state_type_var << " : " << d_input_type_var << "]";
 }
 
-expr::term_ref state_type::get_state_type_variable(var_class vc) const {
+expr::term_ref state_type::get_vars_struct(var_class vc) const {
   switch (vc) {
   case STATE_CURRENT:
-    return d_current_state;
+    return d_current_vars_struct;
+  case STATE_INPUT:
+    return d_input_vars_struct;
   case STATE_NEXT:
-    return d_next_state;
+    return d_next_vars_struct;
   }
   assert(false);
   return expr::term_ref();
@@ -83,6 +80,8 @@ std::string state_type::to_string(var_class vc) {
   switch (vc) {
   case STATE_CURRENT:
     return "state";
+  case STATE_INPUT:
+    return "input";
   case STATE_NEXT:
     return "next";
   }
@@ -99,6 +98,8 @@ const std::vector<expr::term_ref>& state_type::get_variables(var_class vc) const
   switch (vc) {
   case STATE_CURRENT:
     return d_current_vars;
+  case STATE_INPUT:
+    return d_input_vars;
   case STATE_NEXT:
     return d_next_vars;
   default:
@@ -109,8 +110,7 @@ const std::vector<expr::term_ref>& state_type::get_variables(var_class vc) const
 
 bool state_type::is_state_formula(expr::term_ref f) const {
   // State variables
-  std::set<expr::term_ref> state_variables;
-  d_tm.get_variables(get_state_type_variable(STATE_CURRENT), state_variables);
+  std::set<expr::term_ref> state_variables(d_current_vars.begin(), d_current_vars.end());
   // Formula variables
   std::set<expr::term_ref> f_variables;
   d_tm.get_variables(f, f_variables);
@@ -120,17 +120,19 @@ bool state_type::is_state_formula(expr::term_ref f) const {
 
 bool state_type::is_transition_formula(expr::term_ref f) const {
   // State and next variables
-  std::set<expr::term_ref> state_variables;
-  d_tm.get_variables(get_state_type_variable(STATE_CURRENT), state_variables);
-  d_tm.get_variables(get_state_type_variable(STATE_NEXT), state_variables);
+  std::set<expr::term_ref> all_variables;
+  all_variables.insert(d_current_vars.begin(), d_current_vars.end());
+  all_variables.insert(d_input_vars.begin(), d_input_vars.end());
+  all_variables.insert(d_next_vars.begin(), d_next_vars.end());
   // Formula variables
   std::set<expr::term_ref> f_variables;
   d_tm.get_variables(f, f_variables);
   // State formula if only over state variables
-  return std::includes(state_variables.begin(), state_variables.end(), f_variables.begin(), f_variables.end());
+  return std::includes(all_variables.begin(), all_variables.end(), f_variables.begin(), f_variables.end());
 }
 
 expr::term_ref state_type::change_formula_vars(var_class from, var_class to, expr::term_ref f) const {
+  assert(from != STATE_INPUT && to != STATE_INPUT);
   if (from == to) {
     return f;
   }
@@ -154,10 +156,13 @@ std::string state_type::get_canonical_name(std::string id, var_class vc) const {
 }
 
 void state_type::gc_collect(const expr::gc_relocator& gc_reloc) {
-  gc_reloc.reloc(d_type);
-  gc_reloc.reloc(d_current_state);
-  gc_reloc.reloc(d_next_state);
+  gc_reloc.reloc(d_state_type_var);
+  gc_reloc.reloc(d_input_type_var);
+  gc_reloc.reloc(d_current_vars_struct);
+  gc_reloc.reloc(d_input_vars_struct);
+  gc_reloc.reloc(d_next_vars_struct);
   gc_reloc.reloc(d_current_vars);
+  gc_reloc.reloc(d_input_vars);
   gc_reloc.reloc(d_next_vars);
   gc_reloc.reloc(d_subst_current_next);
   gc_reloc.reloc(d_subst_next_current);

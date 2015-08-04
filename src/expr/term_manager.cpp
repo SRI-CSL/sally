@@ -142,6 +142,11 @@ term_ref term_manager::mk_variable(std::string name, term_ref type) {
   }
 }
 
+std::string term_manager::get_variable_name(term_ref t_ref) const {
+  const term& t = d_tm->term_of(t_ref);
+  return get_variable_name(t);
+}
+
 std::string term_manager::get_variable_name(const term& t) const {
   assert(t.op() == VARIABLE);
   std::string name = d_tm->payload_of<std::string>(t);
@@ -243,6 +248,13 @@ term_ref term_manager::get_struct_field(const term& t, size_t i) const {
   assert(t.op() == VARIABLE);
   assert(i + 1 < t.size());
   return t[i + 1];
+}
+
+/** Get all fields of a struct variable */
+void term_manager::get_struct_fields(const term& t, std::vector<expr::term_ref>& out) const {
+  for (size_t i = 0; i < get_struct_size(t); ++ i) {
+    out.push_back(get_struct_field(t, i));
+  }
 }
 
 term_ref term_manager::ref_of(const term& term) const {

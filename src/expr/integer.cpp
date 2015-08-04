@@ -49,10 +49,6 @@ void integer::to_stream(std::ostream& out) const {
   case output::NUXMV:
     out << d_gmp_int.get_str();
     break;
-  case output::LUSTRE:
-    // TODO: handle integer arithmetic
-    out << d_gmp_int.get_str() << ".0";
-    break;
   default:
     assert(false);
   }

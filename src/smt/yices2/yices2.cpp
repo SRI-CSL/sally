@@ -69,7 +69,7 @@ solver::result yices2::check() {
 
 void yices2::get_model(expr::model& m) const {
   TRACE("yices2") << "yices2[" << d_internal->instance() << "]: get_model()" << std::endl;
-  d_internal->get_model(m, d_A_variables, d_B_variables);
+  d_internal->get_model(m, d_A_variables, d_T_variables, d_B_variables);
 }
 
 void yices2::push() {

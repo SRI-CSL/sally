@@ -62,9 +62,13 @@ term_ref sal_state::get_variable(std::string id) const {
   return d_variables.get_entry(id);
 }
 
-system::state_type* sal_state::mk_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types) const {
-  expr::term_ref type = tm().mk_struct_type(vars, types);
-  return new system::state_type(id, tm(), type);
+system::state_type* sal_state::mk_state_type(std::string id,
+    const std::vector<std::string>& state_vars, const std::vector<expr::term_ref>& state_types,
+    const std::vector<std::string>& input_vars, const std::vector<expr::term_ref>& input_types) const
+{
+  expr::term_ref state_type = tm().mk_struct_type(state_vars, state_types);
+  expr::term_ref input_type = tm().mk_struct_type(input_vars, input_types);
+  return new system::state_type(id, tm(), state_type, input_type);
 }
 
 system::state_formula* sal_state::mk_state_formula(std::string id, std::string type_id, expr::term_ref sf) const {

@@ -41,8 +41,10 @@ public:
 
   /** Class of state variables */
   enum var_class {
-    /** Current state */
+    /** Current variables */
     STATE_CURRENT,
+    /** Input variables */
+    STATE_INPUT,
     /** Next state */
     STATE_NEXT
   };
@@ -51,18 +53,23 @@ public:
   static std::string to_string(var_class vc);
 
   /** Create a new state type of the given type and name */
-  state_type(std::string id, expr::term_manager& tm, expr::term_ref type);
+  state_type(std::string id, expr::term_manager& tm, expr::term_ref state_type_var, expr::term_ref input_type_var);
 
   /** Print the state type to stream */
   void to_stream(std::ostream& out) const;
 
-  /** Get the actual type */
-  expr::term_ref get_type() const {
-    return d_type;
+  /** Get the actual type of the state */
+  expr::term_ref get_state_type_var() const {
+    return d_state_type_var;
   }
 
-  /** Get the state variable(s) of the class */
-  expr::term_ref get_state_type_variable(var_class vc) const;
+  /** Get the actual type of the input */
+  expr::term_ref get_input_type_var() const {
+    return d_input_type_var;
+  }
+
+  /** Get the state variables of the class */
+  expr::term_ref get_vars_struct(var_class vc) const;
 
   /** Use the namespace for the type (pop the namespace yourself) */
   void use_namespace() const;
@@ -85,7 +92,10 @@ public:
   /** Get the term manager for this type */
   expr::term_manager& tm() const { return d_tm; }
 
-  /** Transform the formula from class to another class */
+  /**
+   * Transform the state formula from class to another class. The variable
+   * classes can only be STATE_CURRENT and STATE_NEXT.
+   */
   expr::term_ref change_formula_vars(var_class from, var_class to, expr::term_ref f) const;
 
   /** GC */
@@ -100,16 +110,25 @@ private:
   expr::term_manager& d_tm;
 
   /** The actual type describing the state */
-  expr::term_ref_strong d_type;
+  expr::term_ref_strong d_state_type_var;
 
-  /** The current state */
-  expr::term_ref_strong d_current_state;
+  /** The actual type describing the input */
+  expr::term_ref_strong d_input_type_var;
 
-  /** The next state */
-  expr::term_ref_strong d_next_state;
+  /** The current vars struct */
+  expr::term_ref_strong d_current_vars_struct;
+
+  /** The input vars struct (null if none) */
+  expr::term_ref_strong d_input_vars_struct;
+
+  /** The next vars struct */
+  expr::term_ref_strong d_next_vars_struct;
 
   /** State variables */
   std::vector<expr::term_ref> d_current_vars;
+
+  /** Input variables */
+  std::vector<expr::term_ref> d_input_vars;
 
   /** Next state variables */
   std::vector<expr::term_ref> d_next_vars;

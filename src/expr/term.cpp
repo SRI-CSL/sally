@@ -68,9 +68,6 @@ void term::to_stream(std::ostream& out) const {
   case output::NUXMV:
     to_stream_nuxmv(out, *tm);
     break;
-  case output::LUSTRE:
-    to_stream_lustre(out, *tm);
-    break;
   case output::HORN:
     to_stream_smt(out, *tm);
     break;

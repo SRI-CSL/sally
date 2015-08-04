@@ -48,7 +48,9 @@ public:
   expr::term_manager& tm() const { return d_term_manager; }
 
   /** Add a new state type with the given id (vars : types) */
-  void add_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types);
+  void add_state_type(std::string id,
+      const std::vector<std::string>& state_vars, const std::vector<expr::term_ref>& state_types,
+      const std::vector<std::string>& input_vars, const std::vector<expr::term_ref>& input_types);
 
   /** Add a state type with the given id (to be managed by the context) */
   void add_state_type(std::string id, state_type* st);

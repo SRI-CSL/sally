@@ -33,17 +33,28 @@ class state_trace : public expr::gc_participant {
   /** The state type */
   const state_type* d_state_type;
 
-  /** Sequence of state variables, per step */
+  /** Sequence of state variables, per frame */
   std::vector<expr::term_ref_strong> d_state_variables;
+
+  /** Sequence of input variables, per step */
+  std::vector<expr::term_ref_strong> d_input_variables;
 
   /** Full model of the trace */
   expr::model d_model;
 
-  /** Returns the state variables for step k */
-  expr::term_ref get_state_type_variable(size_t k);
+  /** Ensure variables up to (and including) frame k */
+  void ensure_variables(size_t k);
 
-  /** Returns the variables of state */
-  void get_state_variables(expr::term_ref state_type_var, std::vector<expr::term_ref>& vars) const;
+  /**
+   * Get the variables in the given struct
+   */
+  void get_struct_variables(expr::term_ref s, std::vector<expr::term_ref>& out) const;
+
+  /** Returns the state variables for frame k */
+  expr::term_ref get_state_struct_variable(size_t k);
+
+  /** Retruns the input variables for frame k */
+  expr::term_ref get_input_struct_variable(size_t k);
 
   /** Returns the term manager */
   expr::term_manager& tm() const;
@@ -53,10 +64,18 @@ public:
   /** Create ta trace for the given type */
   state_trace(const state_type* st);
 
+  /** Get the size of the trace */
+  size_t size() const;
+
   /**
    * Get the state variables at k.
    */
   void get_state_variables(size_t k, std::vector<expr::term_ref>& vars);
+
+  /**
+   * Get the input variables at k.
+   */
+  void get_input_variables(size_t k, std::vector<expr::term_ref>& vars);
 
   /**
    * Given a formula in the state type return a state formula in the k-th step.
@@ -65,19 +84,14 @@ public:
 
   /**
    * Given a transition formula in the state type return a transition formula
-   * from i to j step.
+   * from k to k + 1 step.
    */
-  expr::term_ref get_transition_formula(expr::term_ref tf, size_t i, size_t j);
+  expr::term_ref get_transition_formula(expr::term_ref tf, size_t k);
 
   /**
-   * Add model to the trace (with variables already named appropriately.
+   * Add model to the trace (model over trace variables).
    */
   void add_model(const expr::model& m);
-
-  /**
-   * Add model to trace, while remanimg the given state variables to frame k.
-   */
-  void add_model(const expr::model& m, state_type::var_class, size_t k);
 
   /**
    * Output the trace to the stream.

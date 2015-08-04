@@ -43,9 +43,13 @@ void context::add_state_type(std::string id, state_type* st) {
   d_state_types_to_transition_systems[st] = id_set();
 }
 
-void context::add_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types) {
-  expr::term_ref type = tm().mk_struct_type(vars, types);
-  add_state_type(id, new state_type(id, tm(), type));
+void context::add_state_type(std::string id,
+    const std::vector<std::string>& state_vars, const std::vector<expr::term_ref>& state_types,
+    const std::vector<std::string>& input_vars, const std::vector<expr::term_ref>& input_types)
+{
+  expr::term_ref state_vars_struct = tm().mk_struct_type(state_vars, state_types);
+  expr::term_ref input_vars_struct = tm().mk_struct_type(input_vars, input_types);
+  add_state_type(id, new state_type(id, tm(), state_vars_struct, input_vars_struct));
 }
 
 const state_type* context::get_state_type(std::string id) const {

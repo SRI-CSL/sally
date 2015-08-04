@@ -105,6 +105,9 @@ public:
   term_ref mk_variable(std::string name, term_ref type);
 
   /** Get the name of this variable */
+  std::string get_variable_name(expr::term_ref t) const;
+
+  /** Get the name of this variable */
   std::string get_variable_name(const term& t) const;
 
   /** Make a new boolean constant */
@@ -172,6 +175,9 @@ public:
 
   /** Get the field of a struct variable */
   term_ref get_struct_field(const term& t, size_t i) const;
+
+  /** Get all fields of a struct variable */
+  void get_struct_fields(const term& t, std::vector<expr::term_ref>& out) const;
 
   /** Get a reference for the term */
   term_ref ref_of(const term& term) const;

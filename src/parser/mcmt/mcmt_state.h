@@ -65,7 +65,9 @@ public:
   const system::context& ctx() const { return d_context; }
 
   /** Create a new state type. */
-  system::state_type* mk_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types) const;
+  system::state_type* mk_state_type(std::string id,
+      const std::vector<std::string>& state_vars, const std::vector<expr::term_ref>& state_types,
+      const std::vector<std::string>& input_vars, const std::vector<expr::term_ref>& input_types) const;
 
   /**
    * Use the state type, i.e. declare the variables var_class.x, var_class.y, ...

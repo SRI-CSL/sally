@@ -65,15 +65,21 @@ system_command returns [parser::command* cmd = 0]
 declare_state_type returns [parser::command* cmd = 0]
 @declarations {
   std::string id;
-  std::vector<std::string> vars;  
-  std::vector<expr::term_ref> types;
+  std::vector<std::string> state_vars;  
+  std::vector<expr::term_ref> state_types;
+  std::vector<std::string> input_vars;  
+  std::vector<expr::term_ref> input_types;
 }
   : '(' 'define-state-type' 
-        symbol[id, parser::MCMT_STATE_TYPE, false]  
-        variable_list[vars, types] 
+        // Name of the type
+        symbol[id, parser::MCMT_STATE_TYPE, false]
+        // State variables  
+        variable_list[state_vars, state_types]
+        // Input variables
+        variable_list[input_vars, input_types]? 
     ')' 
     {
-      $cmd = new parser::declare_state_type_command(id, STATE->mk_state_type(id, vars, types));
+      $cmd = new parser::declare_state_type_command(id, STATE->mk_state_type(id, state_vars, state_types, input_vars, input_types));
     }
   ; 
 

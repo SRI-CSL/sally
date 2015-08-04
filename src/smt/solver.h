@@ -194,7 +194,7 @@ public:
    *   A and G are consistent (both satisfied by the model M)
    *   G implies \exists y . (T(x, y) and B(y)).
    *
-   * Variables of class B are eliminated from the assertions.
+   * Variables of class T and B are eliminated from the assertions.
    */
   virtual
   void generalize(generalization_type type, std::vector<expr::term_ref>& projection_out) {

@@ -112,6 +112,9 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
       std::vector<expr::term_ref> vars;
       for (size_t i = 0; i <= k; ++ i) {
         d_trace->get_state_variables(i, vars);
+        if (i < k) {
+          d_trace->get_input_variables(i, vars);
+        }
       }
       d_solver_1->add_variables(vars.begin(), vars.end(), smt::solver::CLASS_A);
       // Get the model
@@ -137,7 +140,7 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
     d_solver_2->add(property_k, smt::solver::CLASS_A);
 
     // Unroll the transition relation once more
-    transition_k = d_trace->get_transition_formula(transition_formula, k, k+1);
+    transition_k = d_trace->get_transition_formula(transition_formula, k);
 
     // For (2) add property and transition
     d_solver_2->add(transition_k, smt::solver::CLASS_A);

@@ -731,7 +731,7 @@ expr::bitvector bitvector_from_int32(size_t size, int32_t* value) {
   return bv;
 }
 
-void yices2_internal::get_model(expr::model& m, const std::set<expr::term_ref>& x_variables, const std::set<expr::term_ref>& y_variables) {
+void yices2_internal::get_model(expr::model& m, const std::set<expr::term_ref>& x_variables, const std::set<expr::term_ref>& T_variables, const std::set<expr::term_ref>& y_variables) {
   assert(d_last_check_status == STATUS_SAT);
   assert(x_variables.size() > 0 || y_variables.size() > 0);
 
@@ -749,6 +749,7 @@ void yices2_internal::get_model(expr::model& m, const std::set<expr::term_ref>& 
   std::vector<expr::term_ref> variables;
   bool class_A_used = false;
   bool class_B_used = false;
+  bool class_T_used = false;
   for (size_t i = 0; i < d_assertion_classes.size(); ++ i) {
     switch (d_assertion_classes[i]) {
     case solver::CLASS_A:
@@ -760,6 +761,7 @@ void yices2_internal::get_model(expr::model& m, const std::set<expr::term_ref>& 
     case solver::CLASS_T:
       class_A_used = true;
       class_B_used = true;
+      class_T_used = true;
       break;
     default:
       assert(false);
@@ -771,6 +773,9 @@ void yices2_internal::get_model(expr::model& m, const std::set<expr::term_ref>& 
   }
   if (class_B_used) {
     variables.insert(variables.end(), y_variables.begin(), y_variables.end());
+  }
+  if (class_T_used) {
+    variables.insert(variables.end(), T_variables.begin(), T_variables.end());
   }
 
   // See which variables we have to reason about

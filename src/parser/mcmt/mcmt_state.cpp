@@ -67,9 +67,13 @@ void mcmt_state::set_variable(std::string id, expr::term_ref t) {
 }
 
 
-system::state_type* mcmt_state::mk_state_type(std::string id, const std::vector<std::string>& vars, const std::vector<expr::term_ref>& types) const {
-  expr::term_ref type = tm().mk_struct_type(vars, types);
-  return new system::state_type(id, tm(), type);
+system::state_type* mcmt_state::mk_state_type(std::string id,
+    const std::vector<std::string>& state_vars, const std::vector<expr::term_ref>& state_types,
+    const std::vector<std::string>& input_vars, const std::vector<expr::term_ref>& input_types) const
+{
+  expr::term_ref state_type = tm().mk_struct_type(state_vars, state_types);
+  expr::term_ref input_type = tm().mk_struct_type(input_vars, input_types);
+  return new system::state_type(id, tm(), state_type, input_type);
 }
 
 void mcmt_state::use_state_type(std::string id, system::state_type::var_class var_class, bool use_namespace) {
@@ -93,7 +97,7 @@ void mcmt_state::use_state_type(const system::state_type* st, system::state_type
     d_variables.add_entry(var_name, expr::term_ref_strong(tm(), vars[i]));
   }
 
-  // Declare all the state formulas of this stype
+  // Declare all the state formulas of this type
   system::context::id_set::const_iterator it = ctx().state_formulas_begin(st);
   system::context::id_set::const_iterator it_end = ctx().state_formulas_end(st);
   for (; it != it_end; ++ it) {
@@ -119,7 +123,9 @@ void mcmt_state::use_state_type(const system::state_type* st, system::state_type
 void mcmt_state::use_state_type_and_transitions(const system::state_type* st) {
   // Use the current state
   use_state_type(st, system::state_type::STATE_CURRENT, lsal_extensions());
-  // Use the next stat
+  // Use the input variables
+  use_state_type(st, system::state_type::STATE_INPUT, false);
+  // Use the next state
   use_state_type(st, system::state_type::STATE_NEXT, false);
   // Use all the transition formulas
   system::context::id_set::const_iterator it = ctx().transition_formulas_begin(st);

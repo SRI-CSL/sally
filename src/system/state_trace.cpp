@@ -30,41 +30,69 @@ state_trace::state_trace(const state_type* st)
 , d_model(st->tm(), true)
 {}
 
+size_t state_trace::size() const {
+  return d_state_variables.size();
+}
+
 expr::term_manager& state_trace::tm() const {
   return d_state_type->tm();
 }
 
-expr::term_ref state_trace::get_state_type_variable(size_t k) {
+void state_trace::ensure_variables(size_t k) {
+  assert(d_state_variables.size() == d_input_variables.size());
   // Ensure we have enough
   while (d_state_variables.size() <= k) {
-    std::stringstream ss;
-    ss << "s" << d_state_variables.size();
-    expr::term_ref var = tm().mk_variable(ss.str(), d_state_type->get_type());
-    d_state_variables.push_back(expr::term_ref_strong(tm(), var));
+    // State variable
+    std::stringstream ss_state;
+    ss_state << "s" << d_state_variables.size();
+    expr::term_ref state_var = tm().mk_variable(ss_state.str(), d_state_type->get_state_type_var());
+    d_state_variables.push_back(expr::term_ref_strong(tm(), state_var));
+    // Input variable
+    std::stringstream ss_input;
+    ss_input << "i" << d_input_variables.size();
+    expr::term_ref input_var = tm().mk_variable(ss_input.str(), d_state_type->get_input_type_var());
+    d_input_variables.push_back(expr::term_ref_strong(tm(), input_var));
   }
+  assert(d_state_variables.size() > k);
+  assert(d_input_variables.size() > k);
+}
+
+expr::term_ref state_trace::get_state_struct_variable(size_t k) {
   // Return the variable
+  ensure_variables(k);
   return d_state_variables[k];
 }
 
-void state_trace::get_state_variables(expr::term_ref state_type_var, std::vector<expr::term_ref>& vars) const {
-  const expr::term& state_type_var_term = tm().term_of(state_type_var);
-  size_t size = tm().get_struct_size(state_type_var_term);
+expr::term_ref state_trace::get_input_struct_variable(size_t k) {
+  // Return the variable
+  ensure_variables(k);
+  return d_input_variables[k];
+}
+
+void state_trace::get_struct_variables(expr::term_ref s, std::vector<expr::term_ref>& out) const {
+  const expr::term& s_term = tm().term_of(s);
+  size_t size = tm().get_struct_size(s_term);
   for (size_t i = 0; i < size; ++ i) {
-    vars.push_back(tm().get_struct_field(state_type_var_term, i));
+    out.push_back(tm().get_struct_field(s_term, i));
   }
 }
 
 void state_trace::get_state_variables(size_t k, std::vector<expr::term_ref>& vars) {
-  get_state_variables(get_state_type_variable(k), vars);
+  get_struct_variables(get_state_struct_variable(k), vars);
+}
+
+void state_trace::get_input_variables(size_t k, std::vector<expr::term_ref>& vars) {
+  get_struct_variables(get_input_struct_variable(k), vars);
 }
 
 expr::term_ref state_trace::get_state_formula(expr::term_ref sf, size_t k) {
   // Setup the substitution map
   expr::term_manager::substitution_map subst;
-  std::vector<expr::term_ref> from_vars;
+  // Variables of the state type
+  const std::vector<expr::term_ref>& from_vars = d_state_type->get_variables(state_type::STATE_CURRENT);
+  // Variable to rename them to (k-the step)
   std::vector<expr::term_ref> to_vars;
-  get_state_variables(d_state_type->get_state_type_variable(state_type::STATE_CURRENT), from_vars);
-  get_state_variables(get_state_type_variable(k), to_vars);
+  get_struct_variables(get_state_struct_variable(k), to_vars);
   for (size_t i = 0; i < from_vars.size(); ++ i) {
     subst[from_vars[i]] = to_vars[i];
   }
@@ -72,16 +100,26 @@ expr::term_ref state_trace::get_state_formula(expr::term_ref sf, size_t k) {
   return tm().substitute(sf, subst);
 }
 
-expr::term_ref state_trace::get_transition_formula(expr::term_ref tf, size_t i, size_t j) {
-  assert(i < j);
+expr::term_ref state_trace::get_transition_formula(expr::term_ref tf, size_t k) {
   // Setup the substitution map
   expr::term_manager::substitution_map subst;
+  // Variables in the state type
   std::vector<expr::term_ref> from_vars;
+  const std::vector<expr::term_ref>& current_vars = d_state_type->get_variables(state_type::STATE_CURRENT);
+  const std::vector<expr::term_ref>& input_vars = d_state_type->get_variables(state_type::STATE_INPUT);
+  const std::vector<expr::term_ref>& next_vars = d_state_type->get_variables(state_type::STATE_NEXT);
+  from_vars.insert(from_vars.end(), current_vars.begin(), current_vars.end());
+  from_vars.insert(from_vars.end(), input_vars.begin(), input_vars.end());
+  from_vars.insert(from_vars.end(), next_vars.begin(), next_vars.end());
+
+  // Variables in from k -> k + 1
   std::vector<expr::term_ref> to_vars;
-  get_state_variables(d_state_type->get_state_type_variable(state_type::STATE_CURRENT), from_vars);
-  get_state_variables(d_state_type->get_state_type_variable(state_type::STATE_NEXT), from_vars);
-  get_state_variables(get_state_type_variable(i), to_vars);
-  get_state_variables(get_state_type_variable(j), to_vars);
+  get_struct_variables(get_state_struct_variable(k), to_vars);
+  get_struct_variables(get_input_struct_variable(k), to_vars);
+  get_struct_variables(get_state_struct_variable(k+1), to_vars);
+
+  assert(from_vars.size() == to_vars.size());
+
   for (size_t i = 0; i < from_vars.size(); ++ i) {
     subst[from_vars[i]] = to_vars[i];
   }
@@ -96,54 +134,48 @@ void state_trace::add_model(const expr::model& m) {
   }
 }
 
-void state_trace::add_model(const expr::model& m, state_type::var_class vc, size_t k) {
-
-  // Setup the substitution map
-  expr::term_manager::substitution_map subst;
-  std::vector<expr::term_ref> from_vars;
-  std::vector<expr::term_ref> to_vars;
-  get_state_variables(d_state_type->get_state_type_variable(vc), from_vars);
-  get_state_variables(get_state_type_variable(k), to_vars);
-  for (size_t i = 0; i < from_vars.size(); ++ i) {
-    subst[from_vars[i]] = to_vars[i];
-  }
-
-  expr::model::const_iterator it = m.values_begin();
-  for (; it != m.values_end(); ++ it) {
-    if (subst.find(it->first) != subst.end()) {
-      d_model.set_variable_value(subst[it->first], it->second);
-    }
-  }
-}
-
 void state_trace::to_stream(std::ostream& out) const {
 
   d_state_type->use_namespace();
   d_state_type->use_namespace(state_type::STATE_CURRENT);
+  d_state_type->use_namespace(state_type::STATE_INPUT);
 
   out << "(trace " << std::endl;
 
-  // Output the variables
-  std::vector<expr::term_ref> state_vars;
-  get_state_variables(d_state_type->get_state_type_variable(state_type::STATE_CURRENT), state_vars);
+  // Variables to use for printing names
+  const std::vector<expr::term_ref> state_vars = d_state_type->get_variables(state_type::STATE_CURRENT);
+  const std::vector<expr::term_ref> input_vars = d_state_type->get_variables(state_type::STATE_INPUT);
 
   // Output the values
   for (size_t k = 0; k < d_state_variables.size(); ++ k) {
-    out << "  (frame" << std::endl;
 
+    // The state variables
+    out << "  (state" << std::endl;
     std::vector<expr::term_ref> state_vars_k;
-    get_state_variables(d_state_variables[k], state_vars_k);
-    for (size_t i = 0; i < state_vars.size(); ++ i) {
-      expr::term_ref var = state_vars_k[i];
-      out << "    (" << state_vars[i] << " ";
-      out <<  d_model.get_variable_value(var);
-      out << ")" << std::endl;
+    get_struct_variables(d_state_variables[k], state_vars_k);
+    assert(state_vars.size() == state_vars_k.size());
+    for (size_t i = 0; i < state_vars_k.size(); ++ i) {
+      out << "    (" << state_vars[i] << " " << d_model.get_variable_value(state_vars_k[i]) << ")" << std::endl;
     }
     out << "  )" << std::endl;
+
+    // The input variables (except the last one)
+    if (k + 1 < d_state_variables.size()) {
+      out << "  (input" << std::endl;
+      std::vector<expr::term_ref> input_vars_k;
+      get_struct_variables(d_input_variables[k], input_vars_k);
+      assert(input_vars.size() == input_vars_k.size());
+      for (size_t i = 0; i < input_vars_k.size(); ++ i) {
+        out << "    (" << input_vars[i] << " " << d_model.get_variable_value(input_vars_k[i]) << ")" << std::endl;
+      }
+      out << "  )" << std::endl;
+    }
+
   }
 
   out << ")" << std::endl;
 
+  d_state_type->tm().pop_namespace();
   d_state_type->tm().pop_namespace();
   d_state_type->tm().pop_namespace();
 }
