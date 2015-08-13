@@ -781,12 +781,12 @@ void yices2_internal::get_model(expr::model& m, const std::set<expr::term_ref>& 
     term_t yices_var = to_yices2_term(var);
     expr::term_ref var_type = d_tm.type_of(var);
 
-    expr::term_ref var_value;
+    expr::value var_value;
     switch (d_tm.term_of(var_type).op()) {
     case expr::TYPE_BOOL: {
       int32_t value;
       yices_get_bool_value(yices_model, yices_var, &value);
-      var_value = d_tm.mk_boolean_constant(value);
+      var_value = expr::value(value);
       break;
     }
     case expr::TYPE_INTEGER: {
@@ -795,7 +795,7 @@ void yices2_internal::get_model(expr::model& m, const std::set<expr::term_ref>& 
       mpz_init(value);
       yices_get_mpz_value(yices_model, yices_var, value);
       expr::rational rational_value(value);
-      var_value = d_tm.mk_rational_constant(rational_value);
+      var_value = expr::value(rational_value);
       // Clear the temps
       mpz_clear(value);
       break;
@@ -807,7 +807,7 @@ void yices2_internal::get_model(expr::model& m, const std::set<expr::term_ref>& 
       yices_get_mpq_value(yices_model, yices_var, value);
       // Now, the rational
       expr::rational rational_value(value);
-      var_value = d_tm.mk_rational_constant(rational_value);;
+      var_value = expr::value(rational_value);
       // Clear the temps
       mpq_clear(value);
       break;
@@ -817,7 +817,7 @@ void yices2_internal::get_model(expr::model& m, const std::set<expr::term_ref>& 
       int32_t* value = new int32_t[size];
       yices_get_bv_value(yices_model, yices_var, value);
       expr::bitvector bv = bitvector_from_int32(size, value);
-      var_value = d_tm.mk_bitvector_constant(bv);
+      var_value = expr::value(bv);
       delete[] value;
       break;
     }

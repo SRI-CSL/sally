@@ -28,11 +28,11 @@ namespace sally {
 namespace expr {
 
 model::model(expr::term_manager& tm, bool undef_to_default)
-: d_term_manager(tm)
+: d_tm(tm)
 , d_undef_to_default(undef_to_default)
+, d_true(true)
+, d_false(false)
 {
-  d_true = tm.mk_boolean_constant(true);
-  d_false = tm.mk_boolean_constant(false);
 }
 
 void model::clear() {
@@ -41,29 +41,44 @@ void model::clear() {
   d_variables.clear();
 }
 
-void model::set_variable_value(expr::term_ref var, expr::term_ref value) {
-  assert(d_term_manager.term_of(var).op() == expr::VARIABLE);
+void model::set_variable_value(expr::term_ref var, value v) {
+  assert(d_tm.term_of(var).op() == expr::VARIABLE);
   iterator find = d_variable_to_value_map.find(var);
   if (find != d_variable_to_value_map.end()) {
-    find->second = value;
+    find->second = v;
   } else {
-    d_variables.push_back(expr::term_ref_strong(d_term_manager, var));
-    d_variable_to_value_map[var] = value;
+    d_variables.push_back(expr::term_ref_strong(d_tm, var));
+    d_variable_to_value_map[var] = v;
   }
 }
 
-expr::term_ref model::get_variable_value(expr::term_ref var) const {
-  assert(d_term_manager.term_of(var).op() == expr::VARIABLE);
+value model::get_variable_value(expr::term_ref var) const {
+  assert(d_tm.term_of(var).op() == expr::VARIABLE);
   const_iterator find = d_variable_to_value_map.find(var);
   if (find == d_variable_to_value_map.end()) {
     if (d_undef_to_default) {
-      expr::term_ref type = d_term_manager.type_of(var);
-      expr::term_ref value = d_term_manager.get_default_value(type);
-      TRACE("expr::model") << "get_term_value(" << var << ") => [default] " << value << std::endl;
-      return value;
+      expr::term_ref type = d_tm.type_of(var);
+      value v;
+      switch (d_tm.term_of(type).op()) {
+      case TYPE_BOOL:
+        v = value(false);
+        break;
+      case TYPE_INTEGER:
+      case TYPE_REAL:
+        v = value(rational());
+        break;
+      case TYPE_BITVECTOR:
+        v = value(bitvector(d_tm.get_bitvector_size(type), 0));
+        break;
+      default:
+        assert(false);
+      }
+
+      TRACE("expr::model") << "get_term_value(" << var << ") => [default] " << v << std::endl;
+      return v;
     } else {
       std::stringstream ss;
-      ss << set_tm(d_term_manager) << "Variable " << var << " is not part of the model.";
+      ss << set_tm(d_tm) << "Variable " << var << " is not part of the model.";
       throw exception(ss.str());
     }
   } else {
@@ -71,12 +86,12 @@ expr::term_ref model::get_variable_value(expr::term_ref var) const {
   }
 }
 
-expr::term_ref model::get_term_value(expr::term_ref t) {
+value model::get_term_value(expr::term_ref t) {
 
   TRACE("expr::model") << "get_term_value(" << t << ")" << std::endl;
 
   // If a variable and not in the model, we don't know how to evaluate
-  if (d_term_manager.term_of(t).op() == expr::VARIABLE) {
+  if (d_tm.term_of(t).op() == expr::VARIABLE) {
     return get_variable_value(t);
   } else {
     // Proper term, we have to evaluate, if not in the cache already
@@ -87,70 +102,60 @@ expr::term_ref model::get_term_value(expr::term_ref t) {
     }
 
     // Not cached, evaluate children
-    size_t t_size = d_term_manager.term_of(t).size();
-    std::vector<expr::term_ref> children_values;
+    size_t t_size = d_tm.term_of(t).size();
+    std::vector<value> children_values;
     for (size_t i = 0; i < t_size; ++ i) {
-      expr::term_ref child = d_term_manager.term_of(t)[i];
-      expr::term_ref value = get_term_value(child);
-      children_values.push_back(value);
+      expr::term_ref child = d_tm.term_of(t)[i];
+      children_values.push_back(get_term_value(child));
     }
 
-    // Arith value
-    bool has_arith_value = false;
-    expr::rational arith_value;
-
     // Now, compute the value
-    expr::term_op op = d_term_manager.term_of(t).op();
-    expr::term_ref value;
+    expr::term_op op = d_tm.term_of(t).op();
+    value v;
     switch (op) {
     // ITE
     case TERM_ITE:
       if (children_values[0] == d_true) {
-        value = children_values[1];
+        v = children_values[1];
       } else {
         assert(children_values[0] == d_false);
-        value = children_values[2];
+        v = children_values[2];
       }
       break;
       // Equality
-    case TERM_EQ: {
-      if (d_term_manager.equal_constants(children_values[0], children_values[1])) {
-        value = d_true;
-      } else {
-        value = d_false;
-      }
+    case TERM_EQ:
+      v = children_values[0] == children_values[1];
       break;
-    }
     // Boolean terms
     case CONST_BOOL:
-      value = t;
+      v = d_tm.get_boolean_constant(d_tm.term_of(t));
       break;
     case TERM_AND:
-      value = d_true;
+      v = d_true;
       for (size_t i = 0; i < t_size; ++ i) {
         if (children_values[i] == d_false) {
-          value = d_false;
+          v = d_false;
           break;
         }
       }
       break;
     case TERM_OR:
-      value = d_false;
+      v = d_false;
       for (size_t i = 0; i < t_size; ++ i) {
         if (children_values[i] == d_true) {
-          value = d_true;
+          v = d_true;
           break;
         }
       }
       break;
     case TERM_NOT:
-      value = children_values[0] == d_true ? d_false : d_true;
+      v = children_values[0] == d_true ? d_false : d_true;
       break;
     case TERM_IMPLIES:
       if (children_values[0] == d_true && children_values[1] == d_false) {
-        value = d_false;
+        v = d_false;
       } else {
-        value = d_true;
+        v = d_true;
       }
       break;
     case TERM_XOR: {
@@ -161,65 +166,53 @@ expr::term_ref model::get_term_value(expr::term_ref t) {
         }
       }
       if (true_count % 2) {
-        value = d_true;
+        v = d_true;
       } else {
-        value = d_false;
+        v = d_false;
       }
     }
     break;
     case CONST_RATIONAL:
-      value = t;
+      v = d_tm.get_rational_constant(d_tm.term_of(t));
       break;
-    case TERM_ADD:
+    case TERM_ADD: {
+      rational sum;
       for (size_t i = 0; i < t_size; ++ i) {
-        arith_value += expr::rational(d_term_manager, children_values[i]);
+        sum += children_values[i].get_rational();
       }
-      has_arith_value = true;
+      v = value(sum);
       break;
-    break;
+    }
     case TERM_SUB:
       if (t_size == 1) {
-        arith_value = -expr::rational(d_term_manager, children_values[0]);
+        v = value(-children_values[0].get_rational());
       } else {
-        arith_value = expr::rational(d_term_manager, children_values[0]) - expr::rational(d_term_manager, children_values[1]);
+        v = value(children_values[0].get_rational() -children_values[1].get_rational());
       }
-      has_arith_value = true;
       break;
-    case TERM_MUL:
-      arith_value = expr::rational(d_term_manager, children_values[0]);
-      for (size_t i = 1; i < t_size; ++ i) {
-        arith_value *= expr::rational(d_term_manager, children_values[i]);
+    case TERM_MUL: {
+      rational mul(1, 0);
+      for (size_t i = 0; i < t_size; ++ i) {
+        mul *= children_values[i].get_rational();
       }
-      has_arith_value = true;
+      v = value(mul);
       break;
+    }
     case TERM_DIV:
-      arith_value = expr::rational(d_term_manager, children_values[0]) / expr::rational(d_term_manager, children_values[1]);
-      has_arith_value = true;
+      v = value(children_values[0].get_rational() / children_values[1].get_rational());
       break;
-    case TERM_LEQ: {
-      rational a(d_term_manager, children_values[0]);
-      rational b(d_term_manager, children_values[1]);
-      value = (a <= b ? d_true : d_false);
+    case TERM_LEQ:
+      v = (children_values[0].get_rational() <= children_values[1].get_rational() ? d_true : d_false);
       break;
-    }
-    case TERM_LT: {
-      rational a(d_term_manager, children_values[0]);
-      rational b(d_term_manager, children_values[1]);
-      value = (a < b ? d_true : d_false);
+    case TERM_LT:
+      v = (children_values[0].get_rational() < children_values[1].get_rational() ? d_true : d_false);
       break;
-    }
-    case TERM_GEQ: {
-      rational a(d_term_manager, children_values[0]);
-      rational b(d_term_manager, children_values[1]);
-      value = (a >= b ? d_true : d_false);
+    case TERM_GEQ:
+      v = (children_values[0].get_rational() >= children_values[1].get_rational() ? d_true : d_false);
       break;
-    }
-    case TERM_GT: {
-      rational a(d_term_manager, children_values[0]);
-      rational b(d_term_manager, children_values[1]);
-      value = (a > b ? d_true : d_false);
+    case TERM_GT:
+      v = (children_values[0].get_rational() > children_values[1].get_rational() ? d_true : d_false);
       break;
-    }
 
     // Bit-vector terms
     case CONST_BITVECTOR:
@@ -255,18 +248,14 @@ expr::term_ref model::get_term_value(expr::term_ref t) {
       assert(false);
     }
 
-    if (has_arith_value) {
-      value = d_term_manager.mk_rational_constant(arith_value);
-    }
+    assert(!v.is_null());
 
-    assert(!value.is_null());
-
-    TRACE("expr::model") << "get_term_value(" << t << ") => " << value << std::endl;
+    TRACE("expr::model") << "get_term_value(" << t << ") => " << v << std::endl;
 
     // Remember the cache
-    d_term_to_value_map[t] = value;
+    d_term_to_value_map[t] = v;
 
-    return value;
+    return v;
   }
 }
 
@@ -281,7 +270,7 @@ bool model::is_false(expr::term_ref f) {
 
 
 bool model::has_value(expr::term_ref var) const {
-  assert(d_term_manager.term_of(var).op() == expr::VARIABLE);
+  assert(d_tm.term_of(var).op() == expr::VARIABLE);
   return d_variable_to_value_map.find(var) != d_variable_to_value_map.end();
 }
 

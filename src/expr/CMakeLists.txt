@@ -2,8 +2,9 @@ add_library(expr
   term_ops.cpp 
   term.cpp 
   integer.cpp
-  rational.cpp 
+  rational.cpp  
   bitvector.cpp
+  value.cpp
   term_manager_internal.cpp 
   term_manager.cpp 
   model.cpp

@@ -199,13 +199,6 @@ public:
   /** Check if t1 is a subtype of t2 (say integer and real) */
   bool is_subtype_of(term_ref t1, term_ref t2) const;
 
-  /**
-   * Check if two constant terms are equal semantically. This is important
-   * for constants that might have different representation, say integer and
-   * real. The terms t1 and t2 must have the same super-type.
-   */
-  bool equal_constants(term_ref t1, term_ref t2) const;
-
   /** Get the TCC of the term */
   term_ref tcc_of(const term& t) const;
 

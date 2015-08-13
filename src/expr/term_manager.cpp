@@ -345,13 +345,6 @@ bool term_manager::is_subtype_of(term_ref t1, term_ref t2) const {
   return d_tm->is_subtype_of(t1, t2);
 }
 
-bool term_manager::equal_constants(term_ref t1, term_ref t2) const {
-  if (is_subtype_of(type_of(t1), real_type())) {
-    return rational(*this, t1) == rational(*this, t2);
-  }
-  return t1 == t2;
-}
-
 void term_manager::set_name_transformer(const utils::name_transformer* transformer) {
   d_tm->set_name_transformer(transformer);
 }

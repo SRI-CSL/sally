@@ -917,7 +917,7 @@ void mathsat5_internal::get_model(expr::model& m) {
   for (size_t i = 0; i < d_variables.size(); ++ i) {
     expr::term_ref var = d_variables[i];
     expr::term_ref var_type = d_tm.type_of(var);
-    expr::term_ref var_value;
+    expr::value var_value;
 
     msat_term m_var = to_mathsat5_term(var);
     msat_term m_value = msat_get_model_value(d_env, m_var);
@@ -926,7 +926,7 @@ void mathsat5_internal::get_model(expr::model& m) {
     switch (d_tm.term_of(var_type).op()) {
     case expr::TYPE_BOOL: {
       assert(msat_term_is_true(d_env, m_value) || msat_term_is_false(d_env, m_value));
-      var_value = d_tm.mk_boolean_constant(msat_term_is_true(d_env, m_value));
+      var_value = expr::value(msat_term_is_true(d_env, m_value));
       break;
     }
     case expr::TYPE_INTEGER: {
@@ -935,9 +935,8 @@ void mathsat5_internal::get_model(expr::model& m) {
       mpq_init(value_q);
       msat_term_to_number(d_env, m_value, value_q);
       // The rational
-      expr::rational rational_value(value_q);
-      assert(rational_value.is_integer());
-      var_value = d_tm.mk_rational_constant(rational_value);
+      var_value = expr::value(expr::rational(value_q));
+      assert(var_value.get_rational().is_integer());
       // Clear the temps
       mpq_clear(value_q);
       break;
@@ -947,8 +946,7 @@ void mathsat5_internal::get_model(expr::model& m) {
       mpq_t value;
       mpq_init(value);
       msat_term_to_number(d_env, m_value, value);
-      expr::rational rational_value(value);
-      var_value = d_tm.mk_rational_constant(rational_value);
+      var_value = expr::value(expr::rational(value));
       mpq_clear(value);
       break;
     }
@@ -961,7 +959,7 @@ void mathsat5_internal::get_model(expr::model& m) {
       expr::rational rational_value(value_q);
       assert(rational_value.is_integer());
       expr::bitvector bv_value(d_tm.get_bitvector_type_size(var_type), rational_value.get_numerator());
-      var_value = d_tm.mk_bitvector_constant(bv_value);
+      var_value = expr::value(bv_value);
       // Clear the temps
       mpq_clear(value_q);
       break;
@@ -1057,7 +1055,7 @@ void mathsat5_internal::generalize(solver::generalization_type type, const std::
       // var = value
       expr::term_ref var = *it;
       assert(m.has_value(var));
-      expr::term_ref value = m.get_term_value(var);
+      expr::term_ref value = m.get_term_value(var).to_term(d_tm);
 
       if (d_tm.type_of(var) == d_tm.boolean_type()) {
         if (d_tm.get_boolean_constant(d_tm.term_of(value))) {

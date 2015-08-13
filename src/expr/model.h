@@ -19,6 +19,7 @@
 #pragma once
 
 #include "expr/term_manager.h"
+#include "expr/value.h"
 
 #include <map>
 #include <vector>
@@ -31,7 +32,7 @@ class model {
 
 public:
 
-  typedef std::map<expr::term_ref, expr::term_ref> term_to_value_map;
+  typedef std::map<term_ref, value> term_to_value_map;
   typedef term_to_value_map::const_iterator const_iterator;
   typedef term_to_value_map::iterator iterator;
 
@@ -39,28 +40,28 @@ public:
    * Create a model. If undef_to_default is true, it will return default
    * values for undefined variables. Otherwise an exception is thrown.
    */
-  model(expr::term_manager& tm, bool undef_to_default);
+  model(term_manager& tm, bool undef_to_default);
 
   /** Clear the model */
   void clear();
 
   /** Set the value of a variable */
-  void set_variable_value(expr::term_ref var, expr::term_ref value);
+  void set_variable_value(term_ref var, value v);
 
   /** Get the value of a term in the model (not just variables) */
-  expr::term_ref get_variable_value(expr::term_ref var) const;
+  value get_variable_value(term_ref var) const;
 
   /** Get the value of a term in the model (not just variables) */
-  expr::term_ref get_term_value(expr::term_ref t);
+  value get_term_value(term_ref t);
 
   /** Is the formula true in the model */
-  bool is_true(expr::term_ref f);
+  bool is_true(term_ref f);
 
   /** Is the formula false in the model */
-  bool is_false(expr::term_ref f);
+  bool is_false(term_ref f);
 
   /** Return true if a variable var has a value in the model */
-  bool has_value(expr::term_ref var) const;
+  bool has_value(term_ref var) const;
 
   /** Get the iterator for the first of var -> value */
   const_iterator values_begin() const;
@@ -77,13 +78,13 @@ public:
 private:
 
   /** The term manager */
-  expr::term_manager& d_term_manager;
+  term_manager& d_tm;
 
   /** Undefined variables are interpreted with default values */
   bool d_undef_to_default;
 
   /** All the variables */
-  std::vector<expr::term_ref_strong> d_variables;
+  std::vector<term_ref_strong> d_variables;
 
   /** The map from variables to their values */
   term_to_value_map d_variable_to_value_map;
@@ -92,10 +93,11 @@ private:
   term_to_value_map d_term_to_value_map;
 
   /** True value */
-  term_ref d_true;
+  value d_true;
 
   /** False value */
-  term_ref d_false;
+  value d_false;
+
 };
 
 std::ostream& operator << (std::ostream& out, const model& m);
