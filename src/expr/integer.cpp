@@ -105,11 +105,5 @@ bool integer::operator >= (const integer& other) const {
   return d_gmp_int >= other.d_gmp_int;
 }
 
-integer::integer(const term_manager& tm, term_ref t) {
-  const term& t_term = tm.term_of(t);
-  assert(t_term.op() == CONST_INTEGER);
-  *this = tm.get_integer_constant(t_term);
-}
-
 }
 }

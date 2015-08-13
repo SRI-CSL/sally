@@ -167,10 +167,6 @@ expr::term_ref model::get_term_value(expr::term_ref t) {
       }
     }
     break;
-    // Arithmetic terms
-    case CONST_INTEGER:
-      value = t;
-      break;
     case CONST_RATIONAL:
       value = t;
       break;
@@ -260,12 +256,7 @@ expr::term_ref model::get_term_value(expr::term_ref t) {
     }
 
     if (has_arith_value) {
-      if (d_term_manager.type_of(t) == d_term_manager.real_type()) {
-        value = d_term_manager.mk_rational_constant(arith_value);
-      } else {
-        assert(arith_value.is_integer());
-        value = d_term_manager.mk_integer_constant(arith_value.get_numerator());
-      }
+      value = d_term_manager.mk_rational_constant(arith_value);
     }
 
     assert(!value.is_null());

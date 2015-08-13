@@ -294,10 +294,6 @@ void term::to_stream_smt(std::ostream& out, const term_manager_internal& tm) con
     // Stream is already in SMT mode
     out << tm.payload_of<rational>(*this);
     break;
-  case CONST_INTEGER:
-    // Stream is already in SMT mode
-    out << tm.payload_of<integer>(*this);
-    break;
   case CONST_BITVECTOR:
     out << tm.payload_of<bitvector>(*this);
     break;
@@ -407,9 +403,6 @@ void term::to_stream_nuxmv(std::ostream& out, const term_manager_internal& tm) c
     expr::rational r;
     if (c2_term.op() == CONST_RATIONAL) {
       r = tm.payload_of<rational>(c2_term).invert();
-    } else if (c2_term.op() == CONST_INTEGER) {
-      r = tm.payload_of<integer>(c2_term);
-      r = r.invert();
     } else {
       throw exception("Division by non-constants is not supported!");
     }
@@ -500,10 +493,6 @@ void term::to_stream_nuxmv(std::ostream& out, const term_manager_internal& tm) c
     // Stream is already in NUXMV mode
     out << tm.payload_of<rational>(*this);
     break;
-  case CONST_INTEGER:
-    // Stream is already in NUXMV mode
-    out << tm.payload_of<integer>(*this);
-    break;
   case CONST_BITVECTOR:
     // Stream is already in NUXMV mode
     out << tm.payload_of<bitvector>(*this);
@@ -557,9 +546,6 @@ void term::to_stream_lustre(std::ostream& out, const term_manager_internal& tm) 
     break;
   case CONST_RATIONAL:
     out << tm.payload_of<rational>(*this);
-    break;
-  case CONST_INTEGER:
-    out << tm.payload_of<integer>(*this);
     break;
   case TERM_EQ:
     out << "(" << child(0) << " = " << child(1) << ")";

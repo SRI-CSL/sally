@@ -177,7 +177,6 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
     }
     break;
   // Arithmetic terms
-  case CONST_INTEGER:
   case CONST_RATIONAL:
     break;
   case TERM_ADD:
@@ -425,11 +424,12 @@ term_ref term_manager_internal::type_of(const term& t) const {
     result = boolean_type();
     break;
   // Arithmetic terms
-  case CONST_INTEGER:
-    result = d_integerType;
-    break;
   case CONST_RATIONAL:
-    result = d_realType;
+    if (payload_of<rational>(t).is_integer()) {
+      result = d_integerType;
+    } else {
+      result = d_realType;
+    }
     break;
   case TERM_ADD:
   case TERM_MUL:
@@ -611,7 +611,6 @@ term_ref term_manager_internal::get_default_value(term_ref type_ref) {
   case TYPE_BOOL:
     return mk_term<CONST_BOOL>(false);
   case TYPE_INTEGER:
-    return mk_term<CONST_INTEGER>(integer());
   case TYPE_REAL:
     return mk_term<CONST_RATIONAL>(rational());
   case TYPE_BITVECTOR: {

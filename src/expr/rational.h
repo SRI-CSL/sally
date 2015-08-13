@@ -47,6 +47,8 @@ public:
   rational(const mpq_class& gmp_rat) : d_gmp_rat(gmp_rat) { d_gmp_rat.canonicalize(); }
   /** Construct from GMP */
   rational(mpq_t gmp_rat) : d_gmp_rat(gmp_rat) { d_gmp_rat.canonicalize(); }
+  /** Construct from GMP integer */
+  rational(mpz_t gmp_z) : d_gmp_rat(mpz_class(gmp_z)) { d_gmp_rat.canonicalize(); }
   /** Construct p/q */
   rational(long p, unsigned long q) : d_gmp_rat(p, q) { d_gmp_rat.canonicalize(); }
   /** Construct from string representation */

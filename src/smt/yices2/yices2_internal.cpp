@@ -349,9 +349,6 @@ term_t yices2_internal::to_yices2_term(expr::term_ref ref) {
   case expr::CONST_RATIONAL:
     result = yices_mpq(d_tm.get_rational_constant(t).mpq().get_mpq_t());
     break;
-  case expr::CONST_INTEGER:
-    result = yices_mpz(d_tm.get_integer_constant(t).mpz().get_mpz_t());
-    break;
   case expr::CONST_BITVECTOR: {
     expr::bitvector bv = d_tm.get_bitvector_constant(t);
     result = yices_bvconst_mpz(bv.size(), bv.mpz().get_mpz_t());
@@ -797,8 +794,8 @@ void yices2_internal::get_model(expr::model& m, const std::set<expr::term_ref>& 
       mpz_t value;
       mpz_init(value);
       yices_get_mpz_value(yices_model, yices_var, value);
-      expr::integer integer_value(value);
-      var_value = d_tm.mk_integer_constant(integer_value);
+      expr::rational rational_value(value);
+      var_value = d_tm.mk_rational_constant(rational_value);
       // Clear the temps
       mpz_clear(value);
       break;

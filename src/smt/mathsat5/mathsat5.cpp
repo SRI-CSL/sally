@@ -536,10 +536,6 @@ msat_term mathsat5_internal::to_mathsat5_term(expr::term_ref ref) {
     result = msat_make_number(d_env, d_tm.get_rational_constant(t).mpq().get_str().c_str());
     break;
   }
-  case expr::CONST_INTEGER: {
-    result = msat_make_number(d_env, d_tm.get_integer_constant(t).mpz().get_str(10).c_str());
-    break;
-  }
   case expr::CONST_BITVECTOR: {
     expr::bitvector bv = d_tm.get_bitvector_constant(t);
     result = msat_make_bv_number(d_env, bv.mpz().get_str(10).c_str(), bv.size(), 10);
@@ -645,7 +641,7 @@ expr::term_ref mathsat5_internal::to_term(msat_term t) {
       if (msat_is_bv_type(d_env, t_type, &bv_size)) {
         result = d_tm.mk_bitvector_constant(expr::bitvector(bv_size, rational.get_numerator()));
       } else {
-        result = d_tm.mk_integer_constant(rational.get_numerator());
+        result = d_tm.mk_rational_constant(rational);
       }
     } else {
       result = d_tm.mk_rational_constant(rational);
@@ -941,7 +937,7 @@ void mathsat5_internal::get_model(expr::model& m) {
       // The rational
       expr::rational rational_value(value_q);
       assert(rational_value.is_integer());
-      var_value = d_tm.mk_integer_constant(rational_value.get_numerator());
+      var_value = d_tm.mk_rational_constant(rational_value);
       // Clear the temps
       mpq_clear(value_q);
       break;

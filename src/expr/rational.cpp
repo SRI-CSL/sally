@@ -221,16 +221,8 @@ bool rational::operator >= (const rational& other) const {
 rational::rational(const term_manager& tm, term_ref t) {
   const term& t_term = tm.term_of(t);
   term_op t_op = t_term.op();
-  switch (t_op) {
-  case CONST_INTEGER:
-    *this = tm.get_integer_constant(t_term);
-    break;
-  case CONST_RATIONAL:
-    *this = tm.get_rational_constant(t_term);
-    break;
-  default:
-    assert(false);
-  }
+  assert(t_op == CONST_RATIONAL);
+  *this = tm.get_rational_constant(t_term);
 }
 
 }

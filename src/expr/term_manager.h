@@ -128,12 +128,6 @@ public:
   /** Make a disjunction. If no children => false. One child => child. */
   term_ref mk_or(const std::vector<term_ref>& disjuncts);
 
-  /** Make a new integer constant */
-  term_ref mk_integer_constant(const integer& value);
-
-  /** Returns the integer constant value */
-  integer get_integer_constant(const term& t) const;
-
   /** Make a new rational constant */
   term_ref mk_rational_constant(const rational& value);
 

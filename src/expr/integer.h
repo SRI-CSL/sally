@@ -52,8 +52,6 @@ public:
   integer(const char* s, size_t base): d_gmp_int(s, base) {}
   /** Construct from string representation */
   integer(std::string s, size_t base): d_gmp_int(s, base) {}
-  /** Construct from constant integer term */
-  integer(const term_manager& tm, term_ref t);
 
   // Arithmetic
 

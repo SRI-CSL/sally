@@ -20,7 +20,6 @@
 
 #include <iosfwd>
 
-#include "expr/integer.h"
 #include "expr/rational.h"
 #include "expr/bitvector.h"
 #include "utils/allocator_types.h"
@@ -60,7 +59,6 @@ enum term_op {
   TERM_XOR,
 
   // Arithmetic terms
-  CONST_INTEGER,
   CONST_RATIONAL,
   TERM_ADD,
   TERM_SUB,
@@ -149,14 +147,6 @@ struct term_op_traits<TERM_BV_EXTRACT> {
 template<>
 struct term_op_traits<CONST_BOOL> {
   typedef bool payload_type;
-};
-
-/**
- * Integer constants terms have a payload of type integer (gmp) and no children.
- */
-template<>
-struct term_op_traits<CONST_INTEGER> {
-  typedef integer payload_type;
 };
 
 /**
