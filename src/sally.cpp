@@ -34,7 +34,6 @@ using namespace std;
 using namespace boost::program_options;
 
 using namespace sally;
-using namespace sally::expr;
 
 /** Parses the program arguments. */
 void parse_options(int argc, char* argv[], variables_map& variables);
