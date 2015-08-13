@@ -3,7 +3,7 @@
 <booleanAttribute key="org.eclipse.debug.ui.ATTR_LAUNCH_IN_BACKGROUND" value="false"/>
 <stringAttribute key="org.eclipse.ui.externaltools.ATTR_LOCATION" value="/usr/bin/cmake"/>
 <stringAttribute key="org.eclipse.ui.externaltools.ATTR_RUN_BUILD_KINDS" value="full,incremental,"/>
-<stringAttribute key="org.eclipse.ui.externaltools.ATTR_TOOL_ARGUMENTS" value=".. -DCMAKE_BUILD_TYPE=${config_name:sally} -DMATHSAT5_HOME=${env_var:HOME}/Software/mathsat-5.3.7-linux-x86_64 -DYICES2_HOME=${env_var:HOME}/Software"/>
+<stringAttribute key="org.eclipse.ui.externaltools.ATTR_TOOL_ARGUMENTS" value=".. -DCMAKE_BUILD_TYPE=${config_name:sally} -DMATHSAT5_HOME=${env_var:HOME}/Software/mathsat-5.3.5-linux-x86_64 -DYICES2_HOME=${env_var:HOME}/Software"/>
 <booleanAttribute key="org.eclipse.ui.externaltools.ATTR_TRIGGERS_CONFIGURED" value="true"/>
 <stringAttribute key="org.eclipse.ui.externaltools.ATTR_WORKING_DIRECTORY" value="${workspace_loc:/sally/build}"/>
 </launchConfiguration>

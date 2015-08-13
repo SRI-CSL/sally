@@ -105,6 +105,8 @@ bool value::operator == (const value& v) const {
     return d_bv == v.d_bv;
   case VALUE_RATIONAL:
     return d_q == v.d_q;
+  default:
+    return false;
   }
 }
 
@@ -122,6 +124,8 @@ size_t value::hash() const {
     return d_bv.hash();
   case VALUE_RATIONAL:
     return d_q.hash();
+  default:
+    return 0;
   }
 }
 
@@ -168,6 +172,7 @@ term_ref value::to_term(term_manager& tm) const {
   case VALUE_RATIONAL:
     return tm.mk_rational_constant(d_q);
   }
+  return term_ref();
 }
 
 
