@@ -1,0 +1,249 @@
+%
+% Aanother approximate agreement protocol
+%
+% Reference:
+%   Paul Miner, Alfons Gese, Lee Pike, and Jeffrey Maddalon,
+%   A Unified Fault-Tolerance Protocol,
+%   FORMATS/FTRTFT 2004, LNCS 3253, pp 167--182,
+%   Springer 2004,
+%
+% Similar to Azadmanesh-Kieckhafer model but with inexact
+% communication. When process i transmits a value x, then
+% process j receives a value with an error term. The value
+% is between x - epsilon and x + epsilon.
+%
+% Revised fault model: SymmetricOmmissive now includes Good
+%
+
+scenario2: CONTEXT =
+
+BEGIN
+
+  %
+  % Fault mode: status of process i
+  % - good: not faulty
+  % - benign: faulty and known to be by all good processes (we ignore them for now)
+  % - symmetric ommissive: sends nothing
+  % - asymmetric ommissive: sends a correct value to some, nothing to others
+  % - symmetric transmissive: sends the same value to all (possibly incorrect)
+  % - asymmetric transmissive: can do anything
+  %
+  STATUS: TYPE = { Good, SymmetricOmissive, AsymmetricOmissive,
+                   SymmetricTransmissive, AsymmetricTransmissive };
+
+
+  %
+  % The protocol requires N >= 3a + 2s + wa + ws + b + 1
+  %                   and tau = a + s
+  % where
+  %   a = number of asymmetric transmissive faults
+  %   s = number of symmetric transmissive faults
+  %  wa = number of asymmetric omissive faults
+  %  ws = number of summetric omissive faults
+  %   b = number of benign faults.
+  %
+    
+  N: NATURAL = 5;  %% number of processes
+
+  TAU: NATURAL = 1; %% Maximal number of malicious faults (non-benign)
+
+  PID: TYPE = [1 .. N];
+
+
+  %
+  % Data = real values
+  %
+  DATA: TYPE = REAL;
+
+  %
+  % Constant term for communication error
+  %
+  epsilon: { x: REAL | x > 0 };
+
+  %
+  % Received predicate: received(x, y) means that y is a possible
+  % value received when x is transmitted. This is used for the
+  % non-faulty processes.
+  %
+  received(x: DATA, y: DATA): bool = x - epsilon <= y AND y <= x + epsilon;
+
+  %
+  % Sort and filter function
+  % - input: array v of N values
+  %          array m of N Booleans
+  %   if m[i] = true then v[i] is ignored (i.e., missing)
+  % - output:
+  %   n = number of values in v that are different from missing
+  %   p = a permutation p of the N indices such that
+  %   p[1] ... p[n] enumerate the n non-missing values of v in
+  %   increasing order
+  %
+  sort_and_filter(v: ARRAY PID OF DATA, 
+                  m: ARRAY PID OF BOOLEAN,
+                  n: [0 .. N],
+                  p: ARRAY PID OF PID): BOOLEAN =
+        (FORALL (i: PID): i>n <=> m[p[i]])
+    AND (FORALL (i: PID): i<n AND i<N => v[p[i]] <= v[p[i+1]])   %% We need i<N to convince SAL that this is type correct
+    AND (FORALL (i, j: PID): p[i] = p[j] => i = j);
+
+
+ 
+  %
+  % Voting: midvalue select
+  % - if we have n values, then we sort them in increasing
+  %   order and return (x[tau+1] + x[n-tau])/2
+  % 
+  % If n is smaller than tau, we return 0.
+  %
+  % - input:
+  %    v = array of N values
+  %    n = number of non-missing values
+  %    p = permutation as defined above
+  %
+  midval(a: DATA, b: DATA): DATA = (a + b)/2;
+
+  vote(v: ARRAY PID OF DATA,
+       n: [0 .. N],
+       p: ARRAY PID OF PID): DATA =
+    IF n > TAU THEN midval(v[p[TAU+1]], v[p[n-TAU]]) ELSE 0 ENDIF;
+
+
+
+
+  %
+  % Fault scenarios
+  % - all_good
+  % - scenario1: one symmetric transmissive + one asymmetric omissive fault
+  % - scenario2: one asymmetric transmissive + one asymmetric omissive fault
+  %
+  all_good(s: ARRAY PID OF STATUS): BOOLEAN = 
+     (FORALL (i: PID): s[i] = Good);
+
+  scenario1(s: ARRAY PID OF STATUS): BOOLEAN = 
+     s[1] = SymmetricTransmissive AND 
+     s[2] = AsymmetricOmissive AND
+     (FORALL (i: PID): i > 2 => s[i] = Good);
+
+  scenario2(s: ARRAY PID OF STATUS): BOOLEAN =
+     s[1] = AsymmetricTransmissive AND 
+     s[2] = AsymmetricOmissive AND
+     (FORALL (i: PID): i > 2 => s[i] = Good);
+
+  %
+  % Initial precision: maximum difference between the values
+  % - delta can't be better than 2 * epsilon
+  %
+  initial_delta: { x: REAL| x > 2 * epsilon };
+
+  %
+  % Convergence function: if all values are with some delta
+  % at round k then they are within next(delta) at round k+1.
+  %
+  next(x: REAL): REAL = x/2 + 2 * epsilon;
+
+  %
+  % Approximate agreement: flat representation
+  %   status[i] = status of process i
+  %   v[i] = value of process i
+  %   m[j][i] = true if the value from process i to process j is missing
+  %   c[j][i] = value from process i to process j (only used if m[j][i] is false)
+  %
+  %
+  % So the vectors c[i][1], ..., c[i][N] and m[i][1] ... m[i][N] defines the
+  % list values received by process i
+  %   n[i] = number of values received (i.e., not missing)
+  %   p[i] = permutation used by process i
+  %
+  % To look at convergence properties, we add a variable delta
+  % such that all | v[i] - v[j] | <= delta for all good processes i and j.
+  % We want delta to decrease exponentially (with the number of rounds).
+  %
+  approx: MODULE =
+  BEGIN
+    OUTPUT
+      v: ARRAY PID OF DATA,
+      m: ARRAY PID OF ARRAY PID OF BOOLEAN,
+      c: ARRAY PID OF ARRAY PID OF DATA,
+      p: ARRAY PID OF ARRAY PID OF PID,
+      n: ARRAY PID OF [0 .. N],
+      status: ARRAY PID OF STATUS,
+      round: INTEGER,
+      delta: REAL
+
+  INITIALIZATION
+     %%
+     %% Initial values are within initial_delta of each other.
+     %%
+     delta = initial_delta;
+
+     v IN { a: ARRAY PID OF DATA | (FORALL (i, j: PID): a[i] - a[j] <= initial_delta) };
+
+     p = [[i: PID] [[j: PID] j]];
+
+     round = 0;
+
+     status IN { s: ARRAY PID OF STATUS | scenario2(s) };
+     
+  TRANSITION
+     round' = round + 1;
+
+     status' = status;
+
+     %%
+     %% communication and fault model
+     %%  - m'[j][i] true means nothing received by j from i
+     %%  - c'[j][i] is the value received by j from i if m'[j][i] is false
+     %%
+     %% for a symmetric transmissive sender i and two receivers j and k:
+     %% - either both j and k receive nothing
+     %% - or the value they receive are within 2 * epsilon of each other
+     %%
+     m' IN { x: ARRAY PID OF ARRAY PID OF BOOLEAN | true };
+
+     c' IN { x: ARRAY PID OF ARRAY PID OF DATA |
+              (FORALL (i: PID): status[i] = Good => (FORALL (j: PID): NOT m'[j][i] AND received(v[i], x[j][i])))
+          AND (FORALL (i: PID): status[i] = SymmetricOmissive => 
+                  (FORALL (j: PID): m'[j][i]) OR (FORALL (j: PID): received(v[i], x[j][i])))
+          AND (FORALL (i: PID): status[i] = AsymmetricOmissive =>
+                  (FORALL (j: PID): m'[j][i] OR received(v[i], x[j][i])))
+          AND (FORALL (i: PID): status[i] = SymmetricTransmissive => 
+                  (FORALL (j: PID): m'[j][i]) OR (FORALL (j, k: PID): x[j][i] - x[k][i] <= 2 * epsilon))
+        };
+
+
+     %%
+     %% - process i receives c'[1][i] ... c'[N][i] and m'[1][i] ... m'[N][i] indicates
+     %%   which values are missing
+     %% update rule:
+     %% - process i removes all the missing values
+     %% - it sorts the rest in increasing order
+     %% - then it picks the median as its new value
+     %%
+     n' IN { x: ARRAY PID OF [0 .. N] | true };
+
+     p' IN { x: ARRAY PID OF ARRAY PID OF PID | FORALL (i: PID): sort_and_filter(c'[i], m'[i], n'[i], x[i]) }; 
+
+     %%
+     %% voting
+     %%
+     v' IN { x: ARRAY PID OF DATA | FORALL (i: PID): x[i] = vote(c'[i], n'[i], p'[i]) };
+
+     %%
+     %% convergence
+     %%
+     delta' = next(delta);
+  
+  END;
+
+
+  %%
+  %% Sanity check2: n[i] is at least 3
+  %%
+  sanity2: LEMMA approx |- G(round > 0 => FORALL (i: PID): n[i] >= 3);
+
+  %%
+  %% Convergence property
+  %%
+  convergence: LEMMA approx |- G(FORALL (i, j: PID): v[i] - v[j] <= delta);
+
+END

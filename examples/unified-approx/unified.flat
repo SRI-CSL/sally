@@ -1,0 +1,1521 @@
+SALenv (Version 3.3). Copyright (c) 2003-2011 SRI International.
+Build date: Mon Mar 18 16:26:57 PDT 2013
+Type `(exit)' with parentheses to exit.
+Type `(help)' with parentheses for help.
+
+sal > 
+sal > 
+sal > 
+sal > 
+sal > 
+sal > (|- (flat-module
+      (output v!0::DATA)
+      (output v!1::DATA)
+      (output v!2::DATA)
+      (output v!3::DATA)
+      (output v!4::DATA)
+      (output m!0!0::bool)
+      (output m!0!1::bool)
+      (output m!0!2::bool)
+      (output m!0!3::bool)
+      (output m!0!4::bool)
+      (output m!1!0::bool)
+      (output m!1!1::bool)
+      (output m!1!2::bool)
+      (output m!1!3::bool)
+      (output m!1!4::bool)
+      (output m!2!0::bool)
+      (output m!2!1::bool)
+      (output m!2!2::bool)
+      (output m!2!3::bool)
+      (output m!2!4::bool)
+      (output m!3!0::bool)
+      (output m!3!1::bool)
+      (output m!3!2::bool)
+      (output m!3!3::bool)
+      (output m!3!4::bool)
+      (output m!4!0::bool)
+      (output m!4!1::bool)
+      (output m!4!2::bool)
+      (output m!4!3::bool)
+      (output m!4!4::bool)
+      (output c!0!0::DATA)
+      (output c!0!1::DATA)
+      (output c!0!2::DATA)
+      (output c!0!3::DATA)
+      (output c!0!4::DATA)
+      (output c!1!0::DATA)
+      (output c!1!1::DATA)
+      (output c!1!2::DATA)
+      (output c!1!3::DATA)
+      (output c!1!4::DATA)
+      (output c!2!0::DATA)
+      (output c!2!1::DATA)
+      (output c!2!2::DATA)
+      (output c!2!3::DATA)
+      (output c!2!4::DATA)
+      (output c!3!0::DATA)
+      (output c!3!1::DATA)
+      (output c!3!2::DATA)
+      (output c!3!3::DATA)
+      (output c!3!4::DATA)
+      (output c!4!0::DATA)
+      (output c!4!1::DATA)
+      (output c!4!2::DATA)
+      (output c!4!3::DATA)
+      (output c!4!4::DATA)
+      (output p!0!0::PID)
+      (output p!0!1::PID)
+      (output p!0!2::PID)
+      (output p!0!3::PID)
+      (output p!0!4::PID)
+      (output p!1!0::PID)
+      (output p!1!1::PID)
+      (output p!1!2::PID)
+      (output p!1!3::PID)
+      (output p!1!4::PID)
+      (output p!2!0::PID)
+      (output p!2!1::PID)
+      (output p!2!2::PID)
+      (output p!2!3::PID)
+      (output p!2!4::PID)
+      (output p!3!0::PID)
+      (output p!3!1::PID)
+      (output p!3!2::PID)
+      (output p!3!3::PID)
+      (output p!3!4::PID)
+      (output p!4!0::PID)
+      (output p!4!1::PID)
+      (output p!4!2::PID)
+      (output p!4!3::PID)
+      (output p!4!4::PID)
+      (output n!0::(subrange 0 N))
+      (output n!1::(subrange 0 N))
+      (output n!2::(subrange 0 N))
+      (output n!3::(subrange 0 N))
+      (output n!4::(subrange 0 N))
+      (output status!0::STATUS)
+      (output status!1::STATUS)
+      (output status!2::STATUS)
+      (output status!3::STATUS)
+      (output status!4::STATUS)
+      (output round::INTEGER)
+      (output delta::REAL)
+      (definition true)
+      (initialization
+        (and
+          (= delta initial_delta)
+          (and
+            (<= (- v!0 v!0) initial_delta)
+            (<= (- v!1 v!0) initial_delta)
+            (<= (- v!2 v!0) initial_delta)
+            (<= (- v!3 v!0) initial_delta)
+            (<= (- v!4 v!0) initial_delta)
+            (<= (- v!0 v!1) initial_delta)
+            (<= (- v!1 v!1) initial_delta)
+            (<= (- v!2 v!1) initial_delta)
+            (<= (- v!3 v!1) initial_delta)
+            (<= (- v!4 v!1) initial_delta)
+            (<= (- v!0 v!2) initial_delta)
+            (<= (- v!1 v!2) initial_delta)
+            (<= (- v!2 v!2) initial_delta)
+            (<= (- v!3 v!2) initial_delta)
+            (<= (- v!4 v!2) initial_delta)
+            (<= (- v!0 v!3) initial_delta)
+            (<= (- v!1 v!3) initial_delta)
+            (<= (- v!2 v!3) initial_delta)
+            (<= (- v!3 v!3) initial_delta)
+            (<= (- v!4 v!3) initial_delta)
+            (<= (- v!0 v!4) initial_delta)
+            (<= (- v!1 v!4) initial_delta)
+            (<= (- v!2 v!4) initial_delta)
+            (<= (- v!3 v!4) initial_delta)
+            (<= (- v!4 v!4) initial_delta))
+          (= p!0!0 1)
+          (= p!0!1 2)
+          (= p!0!2 3)
+          (= p!0!3 4)
+          (= p!0!4 5)
+          (= p!1!0 1)
+          (= p!1!1 2)
+          (= p!1!2 3)
+          (= p!1!3 4)
+          (= p!1!4 5)
+          (= p!2!0 1)
+          (= p!2!1 2)
+          (= p!2!2 3)
+          (= p!2!3 4)
+          (= p!2!4 5)
+          (= p!3!0 1)
+          (= p!3!1 2)
+          (= p!3!2 3)
+          (= p!3!3 4)
+          (= p!3!4 5)
+          (= p!4!0 1)
+          (= p!4!1 2)
+          (= p!4!2 3)
+          (= p!4!3 4)
+          (= p!4!4 5)
+          (= round 0)
+          (and
+            (= status!0 Good)
+            (= status!1 Good)
+            (= status!2 Good)
+            (= status!3 Good)
+            (= status!4 Good))))
+      (transition
+        (let ((cs!1362::real (* epsilon 2)))
+          (let ((cond!201::bool (= (- n!0' 1) 2))
+                (cond!202::bool (= (- n!0' 1) 3))
+                (cond!203::bool (= (- n!0' 1) 4))
+                (cond!204::bool (= (- n!0' 1) 5))
+                (cond!210::bool (= (- n!1' 1) 2))
+                (cond!211::bool (= (- n!1' 1) 3))
+                (cond!212::bool (= (- n!1' 1) 4))
+                (cond!213::bool (= (- n!1' 1) 5))
+                (cond!219::bool (= (- n!2' 1) 2))
+                (cond!220::bool (= (- n!2' 1) 3))
+                (cond!221::bool (= (- n!2' 1) 4))
+                (cond!222::bool (= (- n!2' 1) 5))
+                (cond!228::bool (= (- n!3' 1) 2))
+                (cond!229::bool (= (- n!3' 1) 3))
+                (cond!230::bool (= (- n!3' 1) 4))
+                (cond!231::bool (= (- n!3' 1) 5))
+                (cond!237::bool (= (- n!4' 1) 2))
+                (cond!238::bool (= (- n!4' 1) 3))
+                (cond!239::bool (= (- n!4' 1) 4))
+                (cond!240::bool (= (- n!4' 1) 5)))
+            (let ((cs!1298::bool
+                        (and m!0!0' m!1!0' m!2!0' m!3!0' m!4!0'))
+                  (cs!1305::bool (and m!0!1' m!1!1' m!2!1' m!3!1' m!4!1'))
+                  (cs!1312::bool (and m!0!2' m!1!2' m!2!2' m!3!2' m!4!2'))
+                  (cs!1319::bool (and m!0!3' m!1!3' m!2!3' m!3!3' m!4!3'))
+                  (cs!1326::bool (and m!0!4' m!1!4' m!2!4' m!3!4' m!4!4')))
+              (let ((cs!1332::DATA
+                          (cond
+                            ((= p!0!2' 5) c!0!4')
+                            ((= p!0!2' 4) c!0!3')
+                            ((= p!0!2' 3) c!0!2')
+                            ((= p!0!2' 2) c!0!1')
+                            (else c!0!0')))
+                    (cs!1333::DATA
+                           (cond
+                             ((= p!0!3' 5) c!0!4')
+                             ((= p!0!3' 4) c!0!3')
+                             ((= p!0!3' 3) c!0!2')
+                             ((= p!0!3' 2) c!0!1')
+                             (else c!0!0')))
+                    (cs!1336::DATA
+                           (cond
+                             ((= p!1!2' 5) c!1!4')
+                             ((= p!1!2' 4) c!1!3')
+                             ((= p!1!2' 3) c!1!2')
+                             ((= p!1!2' 2) c!1!1')
+                             (else c!1!0')))
+                    (cs!1337::DATA
+                           (cond
+                             ((= p!1!3' 5) c!1!4')
+                             ((= p!1!3' 4) c!1!3')
+                             ((= p!1!3' 3) c!1!2')
+                             ((= p!1!3' 2) c!1!1')
+                             (else c!1!0')))
+                    (cs!1340::DATA
+                           (cond
+                             ((= p!2!2' 5) c!2!4')
+                             ((= p!2!2' 4) c!2!3')
+                             ((= p!2!2' 3) c!2!2')
+                             ((= p!2!2' 2) c!2!1')
+                             (else c!2!0')))
+                    (cs!1341::DATA
+                           (cond
+                             ((= p!2!3' 5) c!2!4')
+                             ((= p!2!3' 4) c!2!3')
+                             ((= p!2!3' 3) c!2!2')
+                             ((= p!2!3' 2) c!2!1')
+                             (else c!2!0')))
+                    (cs!1344::DATA
+                           (cond
+                             ((= p!3!2' 5) c!3!4')
+                             ((= p!3!2' 4) c!3!3')
+                             ((= p!3!2' 3) c!3!2')
+                             ((= p!3!2' 2) c!3!1')
+                             (else c!3!0')))
+                    (cs!1345::DATA
+                           (cond
+                             ((= p!3!3' 5) c!3!4')
+                             ((= p!3!3' 4) c!3!3')
+                             ((= p!3!3' 3) c!3!2')
+                             ((= p!3!3' 2) c!3!1')
+                             (else c!3!0')))
+                    (cs!1348::DATA
+                           (cond
+                             ((= p!4!2' 5) c!4!4')
+                             ((= p!4!2' 4) c!4!3')
+                             ((= p!4!2' 3) c!4!2')
+                             ((= p!4!2' 2) c!4!1')
+                             (else c!4!0')))
+                    (cs!1349::DATA
+                           (cond
+                             ((= p!4!3' 5) c!4!4')
+                             ((= p!4!3' 4) c!4!3')
+                             ((= p!4!3' 3) c!4!2')
+                             ((= p!4!3' 2) c!4!1')
+                             (else c!4!0')))
+                    (cs!1353::DATA
+                           (cond
+                             ((= p!0!1' 5) c!0!4')
+                             ((= p!0!1' 4) c!0!3')
+                             ((= p!0!1' 3) c!0!2')
+                             ((= p!0!1' 2) c!0!1')
+                             (else c!0!0')))
+                    (cs!1355::DATA
+                           (cond
+                             ((= p!1!1' 5) c!1!4')
+                             ((= p!1!1' 4) c!1!3')
+                             ((= p!1!1' 3) c!1!2')
+                             ((= p!1!1' 2) c!1!1')
+                             (else c!1!0')))
+                    (cs!1357::DATA
+                           (cond
+                             ((= p!2!1' 5) c!2!4')
+                             ((= p!2!1' 4) c!2!3')
+                             ((= p!2!1' 3) c!2!2')
+                             ((= p!2!1' 2) c!2!1')
+                             (else c!2!0')))
+                    (cs!1359::DATA
+                           (cond
+                             ((= p!3!1' 5) c!3!4')
+                             ((= p!3!1' 4) c!3!3')
+                             ((= p!3!1' 3) c!3!2')
+                             ((= p!3!1' 2) c!3!1')
+                             (else c!3!0')))
+                    (cs!1361::DATA
+                           (cond
+                             ((= p!4!1' 5) c!4!4')
+                             ((= p!4!1' 4) c!4!3')
+                             ((= p!4!1' 3) c!4!2')
+                             ((= p!4!1' 2) c!4!1')
+                             (else c!4!0'))))
+                (and
+                  (= round' (+ round 1))
+                  (= status!0' status!0)
+                  (= status!1' status!1)
+                  (= status!2' status!2)
+                  (= status!3' status!3)
+                  (= status!4' status!4)
+                  true
+                  (and
+                    (or
+                      (/= status!0 Good)
+                      (and
+                        (not m!0!0')
+                        (not m!1!0')
+                        (not m!2!0')
+                        (not m!3!0')
+                        (not m!4!0')
+                        (<= (- v!0 epsilon) c!0!0')
+                        (<= c!0!0' (+ v!0 epsilon))
+                        (<= (- v!0 epsilon) c!1!0')
+                        (<= c!1!0' (+ v!0 epsilon))
+                        (<= (- v!0 epsilon) c!2!0')
+                        (<= c!2!0' (+ v!0 epsilon))
+                        (<= (- v!0 epsilon) c!3!0')
+                        (<= c!3!0' (+ v!0 epsilon))
+                        (<= (- v!0 epsilon) c!4!0')
+                        (<= c!4!0' (+ v!0 epsilon))))
+                    (or
+                      (/= status!1 Good)
+                      (and
+                        (not m!0!1')
+                        (not m!1!1')
+                        (not m!2!1')
+                        (not m!3!1')
+                        (not m!4!1')
+                        (<= (- v!1 epsilon) c!0!1')
+                        (<= c!0!1' (+ v!1 epsilon))
+                        (<= (- v!1 epsilon) c!1!1')
+                        (<= c!1!1' (+ v!1 epsilon))
+                        (<= (- v!1 epsilon) c!2!1')
+                        (<= c!2!1' (+ v!1 epsilon))
+                        (<= (- v!1 epsilon) c!3!1')
+                        (<= c!3!1' (+ v!1 epsilon))
+                        (<= (- v!1 epsilon) c!4!1')
+                        (<= c!4!1' (+ v!1 epsilon))))
+                    (or
+                      (/= status!2 Good)
+                      (and
+                        (not m!0!2')
+                        (not m!1!2')
+                        (not m!2!2')
+                        (not m!3!2')
+                        (not m!4!2')
+                        (<= (- v!2 epsilon) c!0!2')
+                        (<= c!0!2' (+ v!2 epsilon))
+                        (<= (- v!2 epsilon) c!1!2')
+                        (<= c!1!2' (+ v!2 epsilon))
+                        (<= (- v!2 epsilon) c!2!2')
+                        (<= c!2!2' (+ v!2 epsilon))
+                        (<= (- v!2 epsilon) c!3!2')
+                        (<= c!3!2' (+ v!2 epsilon))
+                        (<= (- v!2 epsilon) c!4!2')
+                        (<= c!4!2' (+ v!2 epsilon))))
+                    (or
+                      (/= status!3 Good)
+                      (and
+                        (not m!0!3')
+                        (not m!1!3')
+                        (not m!2!3')
+                        (not m!3!3')
+                        (not m!4!3')
+                        (<= (- v!3 epsilon) c!0!3')
+                        (<= c!0!3' (+ v!3 epsilon))
+                        (<= (- v!3 epsilon) c!1!3')
+                        (<= c!1!3' (+ v!3 epsilon))
+                        (<= (- v!3 epsilon) c!2!3')
+                        (<= c!2!3' (+ v!3 epsilon))
+                        (<= (- v!3 epsilon) c!3!3')
+                        (<= c!3!3' (+ v!3 epsilon))
+                        (<= (- v!3 epsilon) c!4!3')
+                        (<= c!4!3' (+ v!3 epsilon))))
+                    (or
+                      (/= status!4 Good)
+                      (and
+                        (not m!0!4')
+                        (not m!1!4')
+                        (not m!2!4')
+                        (not m!3!4')
+                        (not m!4!4')
+                        (<= (- v!4 epsilon) c!0!4')
+                        (<= c!0!4' (+ v!4 epsilon))
+                        (<= (- v!4 epsilon) c!1!4')
+                        (<= c!1!4' (+ v!4 epsilon))
+                        (<= (- v!4 epsilon) c!2!4')
+                        (<= c!2!4' (+ v!4 epsilon))
+                        (<= (- v!4 epsilon) c!3!4')
+                        (<= c!3!4' (+ v!4 epsilon))
+                        (<= (- v!4 epsilon) c!4!4')
+                        (<= c!4!4' (+ v!4 epsilon))))
+                    (or
+                      (/= status!0 SymmetricOmissive)
+                      cs!1298
+                      (and
+                        (<= (- v!0 epsilon) c!0!0')
+                        (<= c!0!0' (+ v!0 epsilon))
+                        (<= (- v!0 epsilon) c!1!0')
+                        (<= c!1!0' (+ v!0 epsilon))
+                        (<= (- v!0 epsilon) c!2!0')
+                        (<= c!2!0' (+ v!0 epsilon))
+                        (<= (- v!0 epsilon) c!3!0')
+                        (<= c!3!0' (+ v!0 epsilon))
+                        (<= (- v!0 epsilon) c!4!0')
+                        (<= c!4!0' (+ v!0 epsilon))))
+                    (or
+                      (/= status!1 SymmetricOmissive)
+                      cs!1305
+                      (and
+                        (<= (- v!1 epsilon) c!0!1')
+                        (<= c!0!1' (+ v!1 epsilon))
+                        (<= (- v!1 epsilon) c!1!1')
+                        (<= c!1!1' (+ v!1 epsilon))
+                        (<= (- v!1 epsilon) c!2!1')
+                        (<= c!2!1' (+ v!1 epsilon))
+                        (<= (- v!1 epsilon) c!3!1')
+                        (<= c!3!1' (+ v!1 epsilon))
+                        (<= (- v!1 epsilon) c!4!1')
+                        (<= c!4!1' (+ v!1 epsilon))))
+                    (or
+                      (/= status!2 SymmetricOmissive)
+                      cs!1312
+                      (and
+                        (<= (- v!2 epsilon) c!0!2')
+                        (<= c!0!2' (+ v!2 epsilon))
+                        (<= (- v!2 epsilon) c!1!2')
+                        (<= c!1!2' (+ v!2 epsilon))
+                        (<= (- v!2 epsilon) c!2!2')
+                        (<= c!2!2' (+ v!2 epsilon))
+                        (<= (- v!2 epsilon) c!3!2')
+                        (<= c!3!2' (+ v!2 epsilon))
+                        (<= (- v!2 epsilon) c!4!2')
+                        (<= c!4!2' (+ v!2 epsilon))))
+                    (or
+                      (/= status!3 SymmetricOmissive)
+                      cs!1319
+                      (and
+                        (<= (- v!3 epsilon) c!0!3')
+                        (<= c!0!3' (+ v!3 epsilon))
+                        (<= (- v!3 epsilon) c!1!3')
+                        (<= c!1!3' (+ v!3 epsilon))
+                        (<= (- v!3 epsilon) c!2!3')
+                        (<= c!2!3' (+ v!3 epsilon))
+                        (<= (- v!3 epsilon) c!3!3')
+                        (<= c!3!3' (+ v!3 epsilon))
+                        (<= (- v!3 epsilon) c!4!3')
+                        (<= c!4!3' (+ v!3 epsilon))))
+                    (or
+                      (/= status!4 SymmetricOmissive)
+                      cs!1326
+                      (and
+                        (<= (- v!4 epsilon) c!0!4')
+                        (<= c!0!4' (+ v!4 epsilon))
+                        (<= (- v!4 epsilon) c!1!4')
+                        (<= c!1!4' (+ v!4 epsilon))
+                        (<= (- v!4 epsilon) c!2!4')
+                        (<= c!2!4' (+ v!4 epsilon))
+                        (<= (- v!4 epsilon) c!3!4')
+                        (<= c!3!4' (+ v!4 epsilon))
+                        (<= (- v!4 epsilon) c!4!4')
+                        (<= c!4!4' (+ v!4 epsilon))))
+                    (or
+                      (/= status!0 AsymmetricOmissive)
+                      (and
+                        (or
+                          m!0!0'
+                          (and
+                            (<= (- v!0 epsilon) c!0!0')
+                            (<= c!0!0' (+ v!0 epsilon))))
+                        (or
+                          m!1!0'
+                          (and
+                            (<= (- v!0 epsilon) c!1!0')
+                            (<= c!1!0' (+ v!0 epsilon))))
+                        (or
+                          m!2!0'
+                          (and
+                            (<= (- v!0 epsilon) c!2!0')
+                            (<= c!2!0' (+ v!0 epsilon))))
+                        (or
+                          m!3!0'
+                          (and
+                            (<= (- v!0 epsilon) c!3!0')
+                            (<= c!3!0' (+ v!0 epsilon))))
+                        (or
+                          m!4!0'
+                          (and
+                            (<= (- v!0 epsilon) c!4!0')
+                            (<= c!4!0' (+ v!0 epsilon))))))
+                    (or
+                      (/= status!1 AsymmetricOmissive)
+                      (and
+                        (or
+                          m!0!1'
+                          (and
+                            (<= (- v!1 epsilon) c!0!1')
+                            (<= c!0!1' (+ v!1 epsilon))))
+                        (or
+                          m!1!1'
+                          (and
+                            (<= (- v!1 epsilon) c!1!1')
+                            (<= c!1!1' (+ v!1 epsilon))))
+                        (or
+                          m!2!1'
+                          (and
+                            (<= (- v!1 epsilon) c!2!1')
+                            (<= c!2!1' (+ v!1 epsilon))))
+                        (or
+                          m!3!1'
+                          (and
+                            (<= (- v!1 epsilon) c!3!1')
+                            (<= c!3!1' (+ v!1 epsilon))))
+                        (or
+                          m!4!1'
+                          (and
+                            (<= (- v!1 epsilon) c!4!1')
+                            (<= c!4!1' (+ v!1 epsilon))))))
+                    (or
+                      (/= status!2 AsymmetricOmissive)
+                      (and
+                        (or
+                          m!0!2'
+                          (and
+                            (<= (- v!2 epsilon) c!0!2')
+                            (<= c!0!2' (+ v!2 epsilon))))
+                        (or
+                          m!1!2'
+                          (and
+                            (<= (- v!2 epsilon) c!1!2')
+                            (<= c!1!2' (+ v!2 epsilon))))
+                        (or
+                          m!2!2'
+                          (and
+                            (<= (- v!2 epsilon) c!2!2')
+                            (<= c!2!2' (+ v!2 epsilon))))
+                        (or
+                          m!3!2'
+                          (and
+                            (<= (- v!2 epsilon) c!3!2')
+                            (<= c!3!2' (+ v!2 epsilon))))
+                        (or
+                          m!4!2'
+                          (and
+                            (<= (- v!2 epsilon) c!4!2')
+                            (<= c!4!2' (+ v!2 epsilon))))))
+                    (or
+                      (/= status!3 AsymmetricOmissive)
+                      (and
+                        (or
+                          m!0!3'
+                          (and
+                            (<= (- v!3 epsilon) c!0!3')
+                            (<= c!0!3' (+ v!3 epsilon))))
+                        (or
+                          m!1!3'
+                          (and
+                            (<= (- v!3 epsilon) c!1!3')
+                            (<= c!1!3' (+ v!3 epsilon))))
+                        (or
+                          m!2!3'
+                          (and
+                            (<= (- v!3 epsilon) c!2!3')
+                            (<= c!2!3' (+ v!3 epsilon))))
+                        (or
+                          m!3!3'
+                          (and
+                            (<= (- v!3 epsilon) c!3!3')
+                            (<= c!3!3' (+ v!3 epsilon))))
+                        (or
+                          m!4!3'
+                          (and
+                            (<= (- v!3 epsilon) c!4!3')
+                            (<= c!4!3' (+ v!3 epsilon))))))
+                    (or
+                      (/= status!4 AsymmetricOmissive)
+                      (and
+                        (or
+                          m!0!4'
+                          (and
+                            (<= (- v!4 epsilon) c!0!4')
+                            (<= c!0!4' (+ v!4 epsilon))))
+                        (or
+                          m!1!4'
+                          (and
+                            (<= (- v!4 epsilon) c!1!4')
+                            (<= c!1!4' (+ v!4 epsilon))))
+                        (or
+                          m!2!4'
+                          (and
+                            (<= (- v!4 epsilon) c!2!4')
+                            (<= c!2!4' (+ v!4 epsilon))))
+                        (or
+                          m!3!4'
+                          (and
+                            (<= (- v!4 epsilon) c!3!4')
+                            (<= c!3!4' (+ v!4 epsilon))))
+                        (or
+                          m!4!4'
+                          (and
+                            (<= (- v!4 epsilon) c!4!4')
+                            (<= c!4!4' (+ v!4 epsilon))))))
+                    (or
+                      (/= status!0 SymmetricTransmissive)
+                      cs!1298
+                      (and
+                        (<= (- c!0!0' c!0!0') cs!1362)
+                        (<= (- c!1!0' c!0!0') cs!1362)
+                        (<= (- c!2!0' c!0!0') cs!1362)
+                        (<= (- c!3!0' c!0!0') cs!1362)
+                        (<= (- c!4!0' c!0!0') cs!1362)
+                        (<= (- c!0!0' c!1!0') cs!1362)
+                        (<= (- c!1!0' c!1!0') cs!1362)
+                        (<= (- c!2!0' c!1!0') cs!1362)
+                        (<= (- c!3!0' c!1!0') cs!1362)
+                        (<= (- c!4!0' c!1!0') cs!1362)
+                        (<= (- c!0!0' c!2!0') cs!1362)
+                        (<= (- c!1!0' c!2!0') cs!1362)
+                        (<= (- c!2!0' c!2!0') cs!1362)
+                        (<= (- c!3!0' c!2!0') cs!1362)
+                        (<= (- c!4!0' c!2!0') cs!1362)
+                        (<= (- c!0!0' c!3!0') cs!1362)
+                        (<= (- c!1!0' c!3!0') cs!1362)
+                        (<= (- c!2!0' c!3!0') cs!1362)
+                        (<= (- c!3!0' c!3!0') cs!1362)
+                        (<= (- c!4!0' c!3!0') cs!1362)
+                        (<= (- c!0!0' c!4!0') cs!1362)
+                        (<= (- c!1!0' c!4!0') cs!1362)
+                        (<= (- c!2!0' c!4!0') cs!1362)
+                        (<= (- c!3!0' c!4!0') cs!1362)
+                        (<= (- c!4!0' c!4!0') cs!1362)))
+                    (or
+                      (/= status!1 SymmetricTransmissive)
+                      cs!1305
+                      (and
+                        (<= (- c!0!1' c!0!1') cs!1362)
+                        (<= (- c!1!1' c!0!1') cs!1362)
+                        (<= (- c!2!1' c!0!1') cs!1362)
+                        (<= (- c!3!1' c!0!1') cs!1362)
+                        (<= (- c!4!1' c!0!1') cs!1362)
+                        (<= (- c!0!1' c!1!1') cs!1362)
+                        (<= (- c!1!1' c!1!1') cs!1362)
+                        (<= (- c!2!1' c!1!1') cs!1362)
+                        (<= (- c!3!1' c!1!1') cs!1362)
+                        (<= (- c!4!1' c!1!1') cs!1362)
+                        (<= (- c!0!1' c!2!1') cs!1362)
+                        (<= (- c!1!1' c!2!1') cs!1362)
+                        (<= (- c!2!1' c!2!1') cs!1362)
+                        (<= (- c!3!1' c!2!1') cs!1362)
+                        (<= (- c!4!1' c!2!1') cs!1362)
+                        (<= (- c!0!1' c!3!1') cs!1362)
+                        (<= (- c!1!1' c!3!1') cs!1362)
+                        (<= (- c!2!1' c!3!1') cs!1362)
+                        (<= (- c!3!1' c!3!1') cs!1362)
+                        (<= (- c!4!1' c!3!1') cs!1362)
+                        (<= (- c!0!1' c!4!1') cs!1362)
+                        (<= (- c!1!1' c!4!1') cs!1362)
+                        (<= (- c!2!1' c!4!1') cs!1362)
+                        (<= (- c!3!1' c!4!1') cs!1362)
+                        (<= (- c!4!1' c!4!1') cs!1362)))
+                    (or
+                      (/= status!2 SymmetricTransmissive)
+                      cs!1312
+                      (and
+                        (<= (- c!0!2' c!0!2') cs!1362)
+                        (<= (- c!1!2' c!0!2') cs!1362)
+                        (<= (- c!2!2' c!0!2') cs!1362)
+                        (<= (- c!3!2' c!0!2') cs!1362)
+                        (<= (- c!4!2' c!0!2') cs!1362)
+                        (<= (- c!0!2' c!1!2') cs!1362)
+                        (<= (- c!1!2' c!1!2') cs!1362)
+                        (<= (- c!2!2' c!1!2') cs!1362)
+                        (<= (- c!3!2' c!1!2') cs!1362)
+                        (<= (- c!4!2' c!1!2') cs!1362)
+                        (<= (- c!0!2' c!2!2') cs!1362)
+                        (<= (- c!1!2' c!2!2') cs!1362)
+                        (<= (- c!2!2' c!2!2') cs!1362)
+                        (<= (- c!3!2' c!2!2') cs!1362)
+                        (<= (- c!4!2' c!2!2') cs!1362)
+                        (<= (- c!0!2' c!3!2') cs!1362)
+                        (<= (- c!1!2' c!3!2') cs!1362)
+                        (<= (- c!2!2' c!3!2') cs!1362)
+                        (<= (- c!3!2' c!3!2') cs!1362)
+                        (<= (- c!4!2' c!3!2') cs!1362)
+                        (<= (- c!0!2' c!4!2') cs!1362)
+                        (<= (- c!1!2' c!4!2') cs!1362)
+                        (<= (- c!2!2' c!4!2') cs!1362)
+                        (<= (- c!3!2' c!4!2') cs!1362)
+                        (<= (- c!4!2' c!4!2') cs!1362)))
+                    (or
+                      (/= status!3 SymmetricTransmissive)
+                      cs!1319
+                      (and
+                        (<= (- c!0!3' c!0!3') cs!1362)
+                        (<= (- c!1!3' c!0!3') cs!1362)
+                        (<= (- c!2!3' c!0!3') cs!1362)
+                        (<= (- c!3!3' c!0!3') cs!1362)
+                        (<= (- c!4!3' c!0!3') cs!1362)
+                        (<= (- c!0!3' c!1!3') cs!1362)
+                        (<= (- c!1!3' c!1!3') cs!1362)
+                        (<= (- c!2!3' c!1!3') cs!1362)
+                        (<= (- c!3!3' c!1!3') cs!1362)
+                        (<= (- c!4!3' c!1!3') cs!1362)
+                        (<= (- c!0!3' c!2!3') cs!1362)
+                        (<= (- c!1!3' c!2!3') cs!1362)
+                        (<= (- c!2!3' c!2!3') cs!1362)
+                        (<= (- c!3!3' c!2!3') cs!1362)
+                        (<= (- c!4!3' c!2!3') cs!1362)
+                        (<= (- c!0!3' c!3!3') cs!1362)
+                        (<= (- c!1!3' c!3!3') cs!1362)
+                        (<= (- c!2!3' c!3!3') cs!1362)
+                        (<= (- c!3!3' c!3!3') cs!1362)
+                        (<= (- c!4!3' c!3!3') cs!1362)
+                        (<= (- c!0!3' c!4!3') cs!1362)
+                        (<= (- c!1!3' c!4!3') cs!1362)
+                        (<= (- c!2!3' c!4!3') cs!1362)
+                        (<= (- c!3!3' c!4!3') cs!1362)
+                        (<= (- c!4!3' c!4!3') cs!1362)))
+                    (or
+                      (/= status!4 SymmetricTransmissive)
+                      cs!1326
+                      (and
+                        (<= (- c!0!4' c!0!4') cs!1362)
+                        (<= (- c!1!4' c!0!4') cs!1362)
+                        (<= (- c!2!4' c!0!4') cs!1362)
+                        (<= (- c!3!4' c!0!4') cs!1362)
+                        (<= (- c!4!4' c!0!4') cs!1362)
+                        (<= (- c!0!4' c!1!4') cs!1362)
+                        (<= (- c!1!4' c!1!4') cs!1362)
+                        (<= (- c!2!4' c!1!4') cs!1362)
+                        (<= (- c!3!4' c!1!4') cs!1362)
+                        (<= (- c!4!4' c!1!4') cs!1362)
+                        (<= (- c!0!4' c!2!4') cs!1362)
+                        (<= (- c!1!4' c!2!4') cs!1362)
+                        (<= (- c!2!4' c!2!4') cs!1362)
+                        (<= (- c!3!4' c!2!4') cs!1362)
+                        (<= (- c!4!4' c!2!4') cs!1362)
+                        (<= (- c!0!4' c!3!4') cs!1362)
+                        (<= (- c!1!4' c!3!4') cs!1362)
+                        (<= (- c!2!4' c!3!4') cs!1362)
+                        (<= (- c!3!4' c!3!4') cs!1362)
+                        (<= (- c!4!4' c!3!4') cs!1362)
+                        (<= (- c!0!4' c!4!4') cs!1362)
+                        (<= (- c!1!4' c!4!4') cs!1362)
+                        (<= (- c!2!4' c!4!4') cs!1362)
+                        (<= (- c!3!4' c!4!4') cs!1362)
+                        (<= (- c!4!4' c!4!4') cs!1362))))
+                  true
+                  (and
+                    (<=>
+                      (not (<= 1 n!0'))
+                      (cond
+                        ((= p!0!0' 5) m!0!4')
+                        ((= p!0!0' 4) m!0!3')
+                        ((= p!0!0' 3) m!0!2')
+                        ((= p!0!0' 2) m!0!1')
+                        (else m!0!0')))
+                    (<=>
+                      (not (<= 2 n!0'))
+                      (cond
+                        ((= p!0!1' 5) m!0!4')
+                        ((= p!0!1' 4) m!0!3')
+                        ((= p!0!1' 3) m!0!2')
+                        ((= p!0!1' 2) m!0!1')
+                        (else m!0!0')))
+                    (<=>
+                      (not (<= 3 n!0'))
+                      (cond
+                        ((= p!0!2' 5) m!0!4')
+                        ((= p!0!2' 4) m!0!3')
+                        ((= p!0!2' 3) m!0!2')
+                        ((= p!0!2' 2) m!0!1')
+                        (else m!0!0')))
+                    (<=>
+                      (not (<= 4 n!0'))
+                      (cond
+                        ((= p!0!3' 5) m!0!4')
+                        ((= p!0!3' 4) m!0!3')
+                        ((= p!0!3' 3) m!0!2')
+                        ((= p!0!3' 2) m!0!1')
+                        (else m!0!0')))
+                    (<=>
+                      (not (<= 5 n!0'))
+                      (cond
+                        ((= p!0!4' 5) m!0!4')
+                        ((= p!0!4' 4) m!0!3')
+                        ((= p!0!4' 3) m!0!2')
+                        ((= p!0!4' 2) m!0!1')
+                        (else m!0!0')))
+                    (or
+                      (not (< 1 n!0'))
+                      (<=
+                        (cond
+                          ((= p!0!0' 5) c!0!4')
+                          ((= p!0!0' 4) c!0!3')
+                          ((= p!0!0' 3) c!0!2')
+                          ((= p!0!0' 2) c!0!1')
+                          (else c!0!0'))
+                        cs!1353))
+                    (or (not (< 2 n!0')) (<= cs!1353 cs!1332))
+                    (or (not (< 3 n!0')) (<= cs!1332 cs!1333))
+                    (or
+                      (not (< 4 n!0'))
+                      (<=
+                        cs!1333
+                        (cond
+                          ((= p!0!4' 5) c!0!4')
+                          ((= p!0!4' 4) c!0!3')
+                          ((= p!0!4' 3) c!0!2')
+                          ((= p!0!4' 2) c!0!1')
+                          (else c!0!0'))))
+                    (/= p!0!1' p!0!0')
+                    (/= p!0!2' p!0!0')
+                    (/= p!0!3' p!0!0')
+                    (/= p!0!4' p!0!0')
+                    (/= p!0!0' p!0!1')
+                    (/= p!0!2' p!0!1')
+                    (/= p!0!3' p!0!1')
+                    (/= p!0!4' p!0!1')
+                    (/= p!0!0' p!0!2')
+                    (/= p!0!1' p!0!2')
+                    (/= p!0!3' p!0!2')
+                    (/= p!0!4' p!0!2')
+                    (/= p!0!0' p!0!3')
+                    (/= p!0!1' p!0!3')
+                    (/= p!0!2' p!0!3')
+                    (/= p!0!4' p!0!3')
+                    (/= p!0!0' p!0!4')
+                    (/= p!0!1' p!0!4')
+                    (/= p!0!2' p!0!4')
+                    (/= p!0!3' p!0!4')
+                    (<=>
+                      (not (<= 1 n!1'))
+                      (cond
+                        ((= p!1!0' 5) m!1!4')
+                        ((= p!1!0' 4) m!1!3')
+                        ((= p!1!0' 3) m!1!2')
+                        ((= p!1!0' 2) m!1!1')
+                        (else m!1!0')))
+                    (<=>
+                      (not (<= 2 n!1'))
+                      (cond
+                        ((= p!1!1' 5) m!1!4')
+                        ((= p!1!1' 4) m!1!3')
+                        ((= p!1!1' 3) m!1!2')
+                        ((= p!1!1' 2) m!1!1')
+                        (else m!1!0')))
+                    (<=>
+                      (not (<= 3 n!1'))
+                      (cond
+                        ((= p!1!2' 5) m!1!4')
+                        ((= p!1!2' 4) m!1!3')
+                        ((= p!1!2' 3) m!1!2')
+                        ((= p!1!2' 2) m!1!1')
+                        (else m!1!0')))
+                    (<=>
+                      (not (<= 4 n!1'))
+                      (cond
+                        ((= p!1!3' 5) m!1!4')
+                        ((= p!1!3' 4) m!1!3')
+                        ((= p!1!3' 3) m!1!2')
+                        ((= p!1!3' 2) m!1!1')
+                        (else m!1!0')))
+                    (<=>
+                      (not (<= 5 n!1'))
+                      (cond
+                        ((= p!1!4' 5) m!1!4')
+                        ((= p!1!4' 4) m!1!3')
+                        ((= p!1!4' 3) m!1!2')
+                        ((= p!1!4' 2) m!1!1')
+                        (else m!1!0')))
+                    (or
+                      (not (< 1 n!1'))
+                      (<=
+                        (cond
+                          ((= p!1!0' 5) c!1!4')
+                          ((= p!1!0' 4) c!1!3')
+                          ((= p!1!0' 3) c!1!2')
+                          ((= p!1!0' 2) c!1!1')
+                          (else c!1!0'))
+                        cs!1355))
+                    (or (not (< 2 n!1')) (<= cs!1355 cs!1336))
+                    (or (not (< 3 n!1')) (<= cs!1336 cs!1337))
+                    (or
+                      (not (< 4 n!1'))
+                      (<=
+                        cs!1337
+                        (cond
+                          ((= p!1!4' 5) c!1!4')
+                          ((= p!1!4' 4) c!1!3')
+                          ((= p!1!4' 3) c!1!2')
+                          ((= p!1!4' 2) c!1!1')
+                          (else c!1!0'))))
+                    (/= p!1!1' p!1!0')
+                    (/= p!1!2' p!1!0')
+                    (/= p!1!3' p!1!0')
+                    (/= p!1!4' p!1!0')
+                    (/= p!1!0' p!1!1')
+                    (/= p!1!2' p!1!1')
+                    (/= p!1!3' p!1!1')
+                    (/= p!1!4' p!1!1')
+                    (/= p!1!0' p!1!2')
+                    (/= p!1!1' p!1!2')
+                    (/= p!1!3' p!1!2')
+                    (/= p!1!4' p!1!2')
+                    (/= p!1!0' p!1!3')
+                    (/= p!1!1' p!1!3')
+                    (/= p!1!2' p!1!3')
+                    (/= p!1!4' p!1!3')
+                    (/= p!1!0' p!1!4')
+                    (/= p!1!1' p!1!4')
+                    (/= p!1!2' p!1!4')
+                    (/= p!1!3' p!1!4')
+                    (<=>
+                      (not (<= 1 n!2'))
+                      (cond
+                        ((= p!2!0' 5) m!2!4')
+                        ((= p!2!0' 4) m!2!3')
+                        ((= p!2!0' 3) m!2!2')
+                        ((= p!2!0' 2) m!2!1')
+                        (else m!2!0')))
+                    (<=>
+                      (not (<= 2 n!2'))
+                      (cond
+                        ((= p!2!1' 5) m!2!4')
+                        ((= p!2!1' 4) m!2!3')
+                        ((= p!2!1' 3) m!2!2')
+                        ((= p!2!1' 2) m!2!1')
+                        (else m!2!0')))
+                    (<=>
+                      (not (<= 3 n!2'))
+                      (cond
+                        ((= p!2!2' 5) m!2!4')
+                        ((= p!2!2' 4) m!2!3')
+                        ((= p!2!2' 3) m!2!2')
+                        ((= p!2!2' 2) m!2!1')
+                        (else m!2!0')))
+                    (<=>
+                      (not (<= 4 n!2'))
+                      (cond
+                        ((= p!2!3' 5) m!2!4')
+                        ((= p!2!3' 4) m!2!3')
+                        ((= p!2!3' 3) m!2!2')
+                        ((= p!2!3' 2) m!2!1')
+                        (else m!2!0')))
+                    (<=>
+                      (not (<= 5 n!2'))
+                      (cond
+                        ((= p!2!4' 5) m!2!4')
+                        ((= p!2!4' 4) m!2!3')
+                        ((= p!2!4' 3) m!2!2')
+                        ((= p!2!4' 2) m!2!1')
+                        (else m!2!0')))
+                    (or
+                      (not (< 1 n!2'))
+                      (<=
+                        (cond
+                          ((= p!2!0' 5) c!2!4')
+                          ((= p!2!0' 4) c!2!3')
+                          ((= p!2!0' 3) c!2!2')
+                          ((= p!2!0' 2) c!2!1')
+                          (else c!2!0'))
+                        cs!1357))
+                    (or (not (< 2 n!2')) (<= cs!1357 cs!1340))
+                    (or (not (< 3 n!2')) (<= cs!1340 cs!1341))
+                    (or
+                      (not (< 4 n!2'))
+                      (<=
+                        cs!1341
+                        (cond
+                          ((= p!2!4' 5) c!2!4')
+                          ((= p!2!4' 4) c!2!3')
+                          ((= p!2!4' 3) c!2!2')
+                          ((= p!2!4' 2) c!2!1')
+                          (else c!2!0'))))
+                    (/= p!2!1' p!2!0')
+                    (/= p!2!2' p!2!0')
+                    (/= p!2!3' p!2!0')
+                    (/= p!2!4' p!2!0')
+                    (/= p!2!0' p!2!1')
+                    (/= p!2!2' p!2!1')
+                    (/= p!2!3' p!2!1')
+                    (/= p!2!4' p!2!1')
+                    (/= p!2!0' p!2!2')
+                    (/= p!2!1' p!2!2')
+                    (/= p!2!3' p!2!2')
+                    (/= p!2!4' p!2!2')
+                    (/= p!2!0' p!2!3')
+                    (/= p!2!1' p!2!3')
+                    (/= p!2!2' p!2!3')
+                    (/= p!2!4' p!2!3')
+                    (/= p!2!0' p!2!4')
+                    (/= p!2!1' p!2!4')
+                    (/= p!2!2' p!2!4')
+                    (/= p!2!3' p!2!4')
+                    (<=>
+                      (not (<= 1 n!3'))
+                      (cond
+                        ((= p!3!0' 5) m!3!4')
+                        ((= p!3!0' 4) m!3!3')
+                        ((= p!3!0' 3) m!3!2')
+                        ((= p!3!0' 2) m!3!1')
+                        (else m!3!0')))
+                    (<=>
+                      (not (<= 2 n!3'))
+                      (cond
+                        ((= p!3!1' 5) m!3!4')
+                        ((= p!3!1' 4) m!3!3')
+                        ((= p!3!1' 3) m!3!2')
+                        ((= p!3!1' 2) m!3!1')
+                        (else m!3!0')))
+                    (<=>
+                      (not (<= 3 n!3'))
+                      (cond
+                        ((= p!3!2' 5) m!3!4')
+                        ((= p!3!2' 4) m!3!3')
+                        ((= p!3!2' 3) m!3!2')
+                        ((= p!3!2' 2) m!3!1')
+                        (else m!3!0')))
+                    (<=>
+                      (not (<= 4 n!3'))
+                      (cond
+                        ((= p!3!3' 5) m!3!4')
+                        ((= p!3!3' 4) m!3!3')
+                        ((= p!3!3' 3) m!3!2')
+                        ((= p!3!3' 2) m!3!1')
+                        (else m!3!0')))
+                    (<=>
+                      (not (<= 5 n!3'))
+                      (cond
+                        ((= p!3!4' 5) m!3!4')
+                        ((= p!3!4' 4) m!3!3')
+                        ((= p!3!4' 3) m!3!2')
+                        ((= p!3!4' 2) m!3!1')
+                        (else m!3!0')))
+                    (or
+                      (not (< 1 n!3'))
+                      (<=
+                        (cond
+                          ((= p!3!0' 5) c!3!4')
+                          ((= p!3!0' 4) c!3!3')
+                          ((= p!3!0' 3) c!3!2')
+                          ((= p!3!0' 2) c!3!1')
+                          (else c!3!0'))
+                        cs!1359))
+                    (or (not (< 2 n!3')) (<= cs!1359 cs!1344))
+                    (or (not (< 3 n!3')) (<= cs!1344 cs!1345))
+                    (or
+                      (not (< 4 n!3'))
+                      (<=
+                        cs!1345
+                        (cond
+                          ((= p!3!4' 5) c!3!4')
+                          ((= p!3!4' 4) c!3!3')
+                          ((= p!3!4' 3) c!3!2')
+                          ((= p!3!4' 2) c!3!1')
+                          (else c!3!0'))))
+                    (/= p!3!1' p!3!0')
+                    (/= p!3!2' p!3!0')
+                    (/= p!3!3' p!3!0')
+                    (/= p!3!4' p!3!0')
+                    (/= p!3!0' p!3!1')
+                    (/= p!3!2' p!3!1')
+                    (/= p!3!3' p!3!1')
+                    (/= p!3!4' p!3!1')
+                    (/= p!3!0' p!3!2')
+                    (/= p!3!1' p!3!2')
+                    (/= p!3!3' p!3!2')
+                    (/= p!3!4' p!3!2')
+                    (/= p!3!0' p!3!3')
+                    (/= p!3!1' p!3!3')
+                    (/= p!3!2' p!3!3')
+                    (/= p!3!4' p!3!3')
+                    (/= p!3!0' p!3!4')
+                    (/= p!3!1' p!3!4')
+                    (/= p!3!2' p!3!4')
+                    (/= p!3!3' p!3!4')
+                    (<=>
+                      (not (<= 1 n!4'))
+                      (cond
+                        ((= p!4!0' 5) m!4!4')
+                        ((= p!4!0' 4) m!4!3')
+                        ((= p!4!0' 3) m!4!2')
+                        ((= p!4!0' 2) m!4!1')
+                        (else m!4!0')))
+                    (<=>
+                      (not (<= 2 n!4'))
+                      (cond
+                        ((= p!4!1' 5) m!4!4')
+                        ((= p!4!1' 4) m!4!3')
+                        ((= p!4!1' 3) m!4!2')
+                        ((= p!4!1' 2) m!4!1')
+                        (else m!4!0')))
+                    (<=>
+                      (not (<= 3 n!4'))
+                      (cond
+                        ((= p!4!2' 5) m!4!4')
+                        ((= p!4!2' 4) m!4!3')
+                        ((= p!4!2' 3) m!4!2')
+                        ((= p!4!2' 2) m!4!1')
+                        (else m!4!0')))
+                    (<=>
+                      (not (<= 4 n!4'))
+                      (cond
+                        ((= p!4!3' 5) m!4!4')
+                        ((= p!4!3' 4) m!4!3')
+                        ((= p!4!3' 3) m!4!2')
+                        ((= p!4!3' 2) m!4!1')
+                        (else m!4!0')))
+                    (<=>
+                      (not (<= 5 n!4'))
+                      (cond
+                        ((= p!4!4' 5) m!4!4')
+                        ((= p!4!4' 4) m!4!3')
+                        ((= p!4!4' 3) m!4!2')
+                        ((= p!4!4' 2) m!4!1')
+                        (else m!4!0')))
+                    (or
+                      (not (< 1 n!4'))
+                      (<=
+                        (cond
+                          ((= p!4!0' 5) c!4!4')
+                          ((= p!4!0' 4) c!4!3')
+                          ((= p!4!0' 3) c!4!2')
+                          ((= p!4!0' 2) c!4!1')
+                          (else c!4!0'))
+                        cs!1361))
+                    (or (not (< 2 n!4')) (<= cs!1361 cs!1348))
+                    (or (not (< 3 n!4')) (<= cs!1348 cs!1349))
+                    (or
+                      (not (< 4 n!4'))
+                      (<=
+                        cs!1349
+                        (cond
+                          ((= p!4!4' 5) c!4!4')
+                          ((= p!4!4' 4) c!4!3')
+                          ((= p!4!4' 3) c!4!2')
+                          ((= p!4!4' 2) c!4!1')
+                          (else c!4!0'))))
+                    (/= p!4!1' p!4!0')
+                    (/= p!4!2' p!4!0')
+                    (/= p!4!3' p!4!0')
+                    (/= p!4!4' p!4!0')
+                    (/= p!4!0' p!4!1')
+                    (/= p!4!2' p!4!1')
+                    (/= p!4!3' p!4!1')
+                    (/= p!4!4' p!4!1')
+                    (/= p!4!0' p!4!2')
+                    (/= p!4!1' p!4!2')
+                    (/= p!4!3' p!4!2')
+                    (/= p!4!4' p!4!2')
+                    (/= p!4!0' p!4!3')
+                    (/= p!4!1' p!4!3')
+                    (/= p!4!2' p!4!3')
+                    (/= p!4!4' p!4!3')
+                    (/= p!4!0' p!4!4')
+                    (/= p!4!1' p!4!4')
+                    (/= p!4!2' p!4!4')
+                    (/= p!4!3' p!4!4'))
+                  (and
+                    (=
+                      v!0'
+                      (ite (not (<= n!0' 1))
+                        (/
+                          (+
+                            cs!1353
+                            (cond
+                              ((=
+                                (cond
+                                  (cond!204 p!0!4')
+                                  (cond!203 p!0!3')
+                                  (cond!202 p!0!2')
+                                  (cond!201 p!0!1')
+                                  (else p!0!0'))
+                                5)
+                                c!0!4')
+                              ((=
+                                (cond
+                                  (cond!204 p!0!4')
+                                  (cond!203 p!0!3')
+                                  (cond!202 p!0!2')
+                                  (cond!201 p!0!1')
+                                  (else p!0!0'))
+                                4)
+                                c!0!3')
+                              ((=
+                                (cond
+                                  (cond!204 p!0!4')
+                                  (cond!203 p!0!3')
+                                  (cond!202 p!0!2')
+                                  (cond!201 p!0!1')
+                                  (else p!0!0'))
+                                3)
+                                c!0!2')
+                              ((=
+                                (cond
+                                  (cond!204 p!0!4')
+                                  (cond!203 p!0!3')
+                                  (cond!202 p!0!2')
+                                  (cond!201 p!0!1')
+                                  (else p!0!0'))
+                                2)
+                                c!0!1')
+                              (else c!0!0')))
+                          2)
+                        0))
+                    (=
+                      v!1'
+                      (ite (not (<= n!1' 1))
+                        (/
+                          (+
+                            cs!1355
+                            (cond
+                              ((=
+                                (cond
+                                  (cond!213 p!1!4')
+                                  (cond!212 p!1!3')
+                                  (cond!211 p!1!2')
+                                  (cond!210 p!1!1')
+                                  (else p!1!0'))
+                                5)
+                                c!1!4')
+                              ((=
+                                (cond
+                                  (cond!213 p!1!4')
+                                  (cond!212 p!1!3')
+                                  (cond!211 p!1!2')
+                                  (cond!210 p!1!1')
+                                  (else p!1!0'))
+                                4)
+                                c!1!3')
+                              ((=
+                                (cond
+                                  (cond!213 p!1!4')
+                                  (cond!212 p!1!3')
+                                  (cond!211 p!1!2')
+                                  (cond!210 p!1!1')
+                                  (else p!1!0'))
+                                3)
+                                c!1!2')
+                              ((=
+                                (cond
+                                  (cond!213 p!1!4')
+                                  (cond!212 p!1!3')
+                                  (cond!211 p!1!2')
+                                  (cond!210 p!1!1')
+                                  (else p!1!0'))
+                                2)
+                                c!1!1')
+                              (else c!1!0')))
+                          2)
+                        0))
+                    (=
+                      v!2'
+                      (ite (not (<= n!2' 1))
+                        (/
+                          (+
+                            cs!1357
+                            (cond
+                              ((=
+                                (cond
+                                  (cond!222 p!2!4')
+                                  (cond!221 p!2!3')
+                                  (cond!220 p!2!2')
+                                  (cond!219 p!2!1')
+                                  (else p!2!0'))
+                                5)
+                                c!2!4')
+                              ((=
+                                (cond
+                                  (cond!222 p!2!4')
+                                  (cond!221 p!2!3')
+                                  (cond!220 p!2!2')
+                                  (cond!219 p!2!1')
+                                  (else p!2!0'))
+                                4)
+                                c!2!3')
+                              ((=
+                                (cond
+                                  (cond!222 p!2!4')
+                                  (cond!221 p!2!3')
+                                  (cond!220 p!2!2')
+                                  (cond!219 p!2!1')
+                                  (else p!2!0'))
+                                3)
+                                c!2!2')
+                              ((=
+                                (cond
+                                  (cond!222 p!2!4')
+                                  (cond!221 p!2!3')
+                                  (cond!220 p!2!2')
+                                  (cond!219 p!2!1')
+                                  (else p!2!0'))
+                                2)
+                                c!2!1')
+                              (else c!2!0')))
+                          2)
+                        0))
+                    (=
+                      v!3'
+                      (ite (not (<= n!3' 1))
+                        (/
+                          (+
+                            cs!1359
+                            (cond
+                              ((=
+                                (cond
+                                  (cond!231 p!3!4')
+                                  (cond!230 p!3!3')
+                                  (cond!229 p!3!2')
+                                  (cond!228 p!3!1')
+                                  (else p!3!0'))
+                                5)
+                                c!3!4')
+                              ((=
+                                (cond
+                                  (cond!231 p!3!4')
+                                  (cond!230 p!3!3')
+                                  (cond!229 p!3!2')
+                                  (cond!228 p!3!1')
+                                  (else p!3!0'))
+                                4)
+                                c!3!3')
+                              ((=
+                                (cond
+                                  (cond!231 p!3!4')
+                                  (cond!230 p!3!3')
+                                  (cond!229 p!3!2')
+                                  (cond!228 p!3!1')
+                                  (else p!3!0'))
+                                3)
+                                c!3!2')
+                              ((=
+                                (cond
+                                  (cond!231 p!3!4')
+                                  (cond!230 p!3!3')
+                                  (cond!229 p!3!2')
+                                  (cond!228 p!3!1')
+                                  (else p!3!0'))
+                                2)
+                                c!3!1')
+                              (else c!3!0')))
+                          2)
+                        0))
+                    (=
+                      v!4'
+                      (ite (not (<= n!4' 1))
+                        (/
+                          (+
+                            cs!1361
+                            (cond
+                              ((=
+                                (cond
+                                  (cond!240 p!4!4')
+                                  (cond!239 p!4!3')
+                                  (cond!238 p!4!2')
+                                  (cond!237 p!4!1')
+                                  (else p!4!0'))
+                                5)
+                                c!4!4')
+                              ((=
+                                (cond
+                                  (cond!240 p!4!4')
+                                  (cond!239 p!4!3')
+                                  (cond!238 p!4!2')
+                                  (cond!237 p!4!1')
+                                  (else p!4!0'))
+                                4)
+                                c!4!3')
+                              ((=
+                                (cond
+                                  (cond!240 p!4!4')
+                                  (cond!239 p!4!3')
+                                  (cond!238 p!4!2')
+                                  (cond!237 p!4!1')
+                                  (else p!4!0'))
+                                3)
+                                c!4!2')
+                              ((=
+                                (cond
+                                  (cond!240 p!4!4')
+                                  (cond!239 p!4!3')
+                                  (cond!238 p!4!2')
+                                  (cond!237 p!4!1')
+                                  (else p!4!0'))
+                                2)
+                                c!4!1')
+                              (else c!4!0')))
+                          2)
+                        0)))
+                  (= delta' (+ (/ delta 2) cs!1362))))))))
+      (skip
+        (and
+          (= delta' delta)
+          (= round' round)
+          (= status!0' status!0)
+          (= status!1' status!1)
+          (= status!2' status!2)
+          (= status!3' status!3)
+          (= status!4' status!4)
+          (= n!0' n!0)
+          (= n!1' n!1)
+          (= n!2' n!2)
+          (= n!3' n!3)
+          (= n!4' n!4)
+          (= p!0!0' p!0!0)
+          (= p!0!1' p!0!1)
+          (= p!0!2' p!0!2)
+          (= p!0!3' p!0!3)
+          (= p!0!4' p!0!4)
+          (= p!1!0' p!1!0)
+          (= p!1!1' p!1!1)
+          (= p!1!2' p!1!2)
+          (= p!1!3' p!1!3)
+          (= p!1!4' p!1!4)
+          (= p!2!0' p!2!0)
+          (= p!2!1' p!2!1)
+          (= p!2!2' p!2!2)
+          (= p!2!3' p!2!3)
+          (= p!2!4' p!2!4)
+          (= p!3!0' p!3!0)
+          (= p!3!1' p!3!1)
+          (= p!3!2' p!3!2)
+          (= p!3!3' p!3!3)
+          (= p!3!4' p!3!4)
+          (= p!4!0' p!4!0)
+          (= p!4!1' p!4!1)
+          (= p!4!2' p!4!2)
+          (= p!4!3' p!4!3)
+          (= p!4!4' p!4!4)
+          (= c!0!0' c!0!0)
+          (= c!0!1' c!0!1)
+          (= c!0!2' c!0!2)
+          (= c!0!3' c!0!3)
+          (= c!0!4' c!0!4)
+          (= c!1!0' c!1!0)
+          (= c!1!1' c!1!1)
+          (= c!1!2' c!1!2)
+          (= c!1!3' c!1!3)
+          (= c!1!4' c!1!4)
+          (= c!2!0' c!2!0)
+          (= c!2!1' c!2!1)
+          (= c!2!2' c!2!2)
+          (= c!2!3' c!2!3)
+          (= c!2!4' c!2!4)
+          (= c!3!0' c!3!0)
+          (= c!3!1' c!3!1)
+          (= c!3!2' c!3!2)
+          (= c!3!3' c!3!3)
+          (= c!3!4' c!3!4)
+          (= c!4!0' c!4!0)
+          (= c!4!1' c!4!1)
+          (= c!4!2' c!4!2)
+          (= c!4!3' c!4!3)
+          (= c!4!4' c!4!4)
+          (= m!0!0' m!0!0)
+          (= m!0!1' m!0!1)
+          (= m!0!2' m!0!2)
+          (= m!0!3' m!0!3)
+          (= m!0!4' m!0!4)
+          (= m!1!0' m!1!0)
+          (= m!1!1' m!1!1)
+          (= m!1!2' m!1!2)
+          (= m!1!3' m!1!3)
+          (= m!1!4' m!1!4)
+          (= m!2!0' m!2!0)
+          (= m!2!1' m!2!1)
+          (= m!2!2' m!2!2)
+          (= m!2!3' m!2!3)
+          (= m!2!4' m!2!4)
+          (= m!3!0' m!3!0)
+          (= m!3!1' m!3!1)
+          (= m!3!2' m!3!2)
+          (= m!3!3' m!3!3)
+          (= m!3!4' m!3!4)
+          (= m!4!0' m!4!0)
+          (= m!4!1' m!4!1)
+          (= m!4!2' m!4!2)
+          (= m!4!3' m!4!3)
+          (= m!4!4' m!4!4)
+          (= v!0' v!0)
+          (= v!1' v!1)
+          (= v!2' v!2)
+          (= v!3' v!3)
+          (= v!4' v!4)))
+      (valid-input true)
+      (valid-state true)
+      (valid-constant true))
+    (G
+      (and
+        (<= (- v!0 v!0) delta)
+        (<= (- v!1 v!0) delta)
+        (<= (- v!2 v!0) delta)
+        (<= (- v!3 v!0) delta)
+        (<= (- v!4 v!0) delta)
+        (<= (- v!0 v!1) delta)
+        (<= (- v!1 v!1) delta)
+        (<= (- v!2 v!1) delta)
+        (<= (- v!3 v!1) delta)
+        (<= (- v!4 v!1) delta)
+        (<= (- v!0 v!2) delta)
+        (<= (- v!1 v!2) delta)
+        (<= (- v!2 v!2) delta)
+        (<= (- v!3 v!2) delta)
+        (<= (- v!4 v!2) delta)
+        (<= (- v!0 v!3) delta)
+        (<= (- v!1 v!3) delta)
+        (<= (- v!2 v!3) delta)
+        (<= (- v!3 v!3) delta)
+        (<= (- v!4 v!3) delta)
+        (<= (- v!0 v!4) delta)
+        (<= (- v!1 v!4) delta)
+        (<= (- v!2 v!4) delta)
+        (<= (- v!3 v!4) delta)
+        (<= (- v!4 v!4) delta))))
+sal > 
