@@ -2,7 +2,7 @@
 ;; Approximate agreement with inexact communication
 ;; Five processes
 ;; Scenario2: one Asymmetric Transmissive and one Asymmetric Omissive faults
-;; Convergence property
+;; Non-convergence: try delta ' = delta/2 + k * epsilon where k < 2
 ;;
 
 ;; constant to represent processes status
@@ -1408,7 +1408,7 @@
 		     (else c!4!0')))
 		   2)
 		  0)))
-	   (= delta' (+ (/ delta 2) cs!1362))))))))
+	   (= delta' (+ (/ delta 2) (* (/ 100 201) epsilon)))))))))
 
 (define-transition old_transition state_type
   (let ((cs!1377 (* epsilon 2)))
