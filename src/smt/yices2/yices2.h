@@ -38,7 +38,7 @@ class yices2 : public solver {
 public:
 
   /** Constructor */
-  yices2(expr::term_manager& tm, const options& opts);
+  yices2(expr::term_manager& tm, const options& opts, utils::statistics& stats);
 
   /** Destructor */
   ~yices2();

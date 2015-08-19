@@ -23,8 +23,8 @@
 namespace sally {
 namespace smt {
 
-incremental_wrapper::incremental_wrapper(std::string name, expr::term_manager& tm, const options& opts, solver_constructor* constructor)
-: solver(name, tm, opts)
+incremental_wrapper::incremental_wrapper(std::string name, expr::term_manager& tm, const options& opts, utils::statistics& stats, solver_constructor* constructor)
+: solver(name, tm, opts, stats)
 , d_constructor(constructor)
 {
   d_solver = d_constructor->mk_solver();

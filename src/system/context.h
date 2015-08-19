@@ -101,7 +101,7 @@ public:
   const options& get_options() const;
 
   /** Get the statistics */
-  const utils::statistics& get_statistics() const;
+  utils::statistics& get_statistics() const;
 
   /** Set of ids */
   typedef std::set<std::string> id_set;

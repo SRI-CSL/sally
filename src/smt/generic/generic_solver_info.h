@@ -42,7 +42,7 @@ struct generic_solver_info {
   }
 
   static solver* new_instance(const solver_context& ctx) {
-    return new generic_solver(ctx.tm, ctx.opts);
+    return new generic_solver(ctx.tm, ctx.opts, ctx.stats);
   }
 
 };

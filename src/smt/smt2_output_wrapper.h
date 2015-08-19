@@ -56,7 +56,7 @@ class smt2_output_wrapper : public solver {
 public:
 
   /** Takes over the solver and will destruct it on destruction */
-  smt2_output_wrapper(expr::term_manager& tm, const options& opts, solver* solver, std::string filename);
+  smt2_output_wrapper(expr::term_manager& tm, const options& opts, utils::statistics& stats, solver* solver, std::string filename);
   ~smt2_output_wrapper();
 
   bool supports(feature f) const;

@@ -30,7 +30,7 @@ public:
   term_manager_with_yices_test_fixture()
   : tm(stats)
   {
-    yices2 = factory::mk_solver("yices2", tm, opts);
+    yices2 = factory::mk_solver("yices2", tm, opts, stats);
     cout << set_tm(tm);
     cerr << set_tm(tm);
     output::trace_tag_enable("yices2");

@@ -60,7 +60,7 @@ class incremental_wrapper : public solver {
 
 public:
 
-  incremental_wrapper(std::string name, expr::term_manager& tm, const options& opts, solver_constructor* constructor);
+  incremental_wrapper(std::string name, expr::term_manager& tm, const options& opts, utils::statistics& stats, solver_constructor* constructor);
   ~incremental_wrapper();
 
   bool supports(feature f) const;

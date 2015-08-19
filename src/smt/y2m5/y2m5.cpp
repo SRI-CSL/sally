@@ -40,24 +40,25 @@ size_t y2m5::s_instance = 0;
 class mathsat_constructor : public solver_constructor {
   expr::term_manager& d_tm;
   const options& d_opts;
+  utils::statistics& d_stats;
 public:
-  mathsat_constructor(expr::term_manager& tm, const options& opts)
-  : d_tm(tm), d_opts(opts) {}
+  mathsat_constructor(expr::term_manager& tm, const options& opts, utils::statistics& stats)
+  : d_tm(tm), d_opts(opts), d_stats(stats) {}
   ~mathsat_constructor() {};
-  solver* mk_solver() { return factory::mk_solver("mathsat5", d_tm, d_opts); }
+  solver* mk_solver() { return factory::mk_solver("mathsat5", d_tm, d_opts, d_stats); }
 };
 
-y2m5::y2m5(expr::term_manager& tm, const options& opts)
-: solver("y2m5", tm, opts)
+y2m5::y2m5(expr::term_manager& tm, const options& opts, utils::statistics& stats)
+: solver("y2m5", tm, opts, stats)
 , d_last_mathsat5_result(UNKNOWN)
 , d_last_yices2_result(UNKNOWN)
 {
-  d_yices2 = factory::mk_solver("yices2", tm, opts);
+  d_yices2 = factory::mk_solver("yices2", tm, opts, stats);
   if (opts.get_bool("y2m5-mathsat5-flatten")) {
-    solver_constructor* constructor = new mathsat_constructor(tm, opts);
-    d_mathsat5 = new incremental_wrapper("mathsat5_nonincremental", tm, opts, constructor);
+    solver_constructor* constructor = new mathsat_constructor(tm, opts, stats);
+    d_mathsat5 = new incremental_wrapper("mathsat5_nonincremental", tm, opts, stats, constructor);
   } else {
-    d_mathsat5 = new delayed_wrapper("mathsat5_incremental", tm, opts, factory::mk_solver("mathsat5", tm, opts));
+    d_mathsat5 = new delayed_wrapper("mathsat5_incremental", tm, opts, stats, factory::mk_solver("mathsat5", tm, opts, stats));
   }
   s_instance ++;
 }

@@ -46,7 +46,7 @@ class y2m5 : public solver {
 public:
 
   /** Constructor */
-  y2m5(expr::term_manager& tm, const options& opts);
+  y2m5(expr::term_manager& tm, const options& opts, utils::statistics& stats);
 
   /** Destructor */
   ~y2m5();

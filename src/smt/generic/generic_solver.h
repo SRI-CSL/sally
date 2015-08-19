@@ -38,7 +38,7 @@ class generic_solver : public solver {
 public:
 
   /** Constructor */
-  generic_solver(expr::term_manager& tm, const options& opts);
+  generic_solver(expr::term_manager& tm, const options& opts, utils::statistics& stats);
 
   /** Destructor */
   ~generic_solver();

@@ -106,7 +106,7 @@ void solvers::init_reachability_solver(size_t k) {
 
   // A solver per frame
   while (d_reachability_solvers.size() <= k) {
-    smt::solver* solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options());
+    smt::solver* solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options(), d_ctx.get_statistics());
     d_reachability_solvers.push_back(solver);
     solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
     solver->add_variables(x_next.begin(), x_next.end(), smt::solver::CLASS_B);
@@ -144,7 +144,7 @@ smt::solver* solvers::get_induction_solver() {
     const std::vector<expr::term_ref>& x_next = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_NEXT);
     const std::vector<expr::term_ref>& input = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_INPUT);
     // Make the solver
-    d_induction_solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options());
+    d_induction_solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options(), d_ctx.get_statistics());
     d_induction_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
     d_induction_solver->add_variables(x_next.begin(), x_next.end(), smt::solver::CLASS_B);
     d_induction_solver->add_variables(input.begin(), input.end(), smt::solver::CLASS_T);
@@ -161,7 +161,7 @@ smt::solver* solvers::get_reachability_solver() {
     const std::vector<expr::term_ref>& x_next = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_NEXT);
     const std::vector<expr::term_ref>& input = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_INPUT);
     // Make the solver
-    d_reachability_solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options());
+    d_reachability_solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options(), d_ctx.get_statistics());
     d_reachability_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
     d_reachability_solver->add_variables(x_next.begin(), x_next.end(), smt::solver::CLASS_B);
     d_induction_solver->add_variables(input.begin(), input.end(), smt::solver::CLASS_T);
@@ -179,7 +179,7 @@ smt::solver* solvers::get_reachability_solver(size_t k) {
 smt::solver* solvers::get_counterexample_solver() {
   if (d_counterexample_solver == 0) {
     // Make the solver
-    d_counterexample_solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options());
+    d_counterexample_solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options(), d_ctx.get_statistics());
     // Add the initial state
     expr::term_ref I0 = d_trace->get_state_formula(d_transition_system->get_initial_states(), 0);
     d_counterexample_solver->add(I0, smt::solver::CLASS_A);

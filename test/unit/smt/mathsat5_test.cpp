@@ -29,7 +29,7 @@ public:
   term_manager_with_mathsat5_test_fixture()
   : tm(stats)
   {
-    mathsat5 = factory::mk_solver("mathsat5", tm, opts);
+    mathsat5 = factory::mk_solver("mathsat5", tm, opts, stats);
     cout << set_tm(tm);
     cerr << set_tm(tm);
     output::trace_tag_enable("mathsat5");

@@ -32,7 +32,7 @@ bmc_engine::bmc_engine(const system::context& ctx)
 , d_trace(0)
 {
   // Make the solver
-  d_solver = smt::factory::mk_default_solver(ctx.tm(), ctx.get_options());
+  d_solver = smt::factory::mk_default_solver(ctx.tm(), ctx.get_options(), ctx.get_statistics());
 }
 
 bmc_engine::~bmc_engine() {

@@ -277,8 +277,8 @@ public:
 
 unsigned generic_solver_internal::s_instances = 0;
 
-generic_solver::generic_solver(expr::term_manager& tm, const options& opts)
-: solver("generic smt2 solver", tm, opts)
+generic_solver::generic_solver(expr::term_manager& tm, const options& opts, utils::statistics& stats)
+: solver("generic smt2 solver", tm, opts, stats)
 {
   d_internal = new generic_solver_internal(tm, opts);
 }

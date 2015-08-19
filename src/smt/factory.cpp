@@ -47,15 +47,15 @@ void factory::set_default_solver(std::string id) {
   s_default_solver = id;
 }
 
-solver* factory::mk_default_solver(expr::term_manager& tm, const options& opts) {
+solver* factory::mk_default_solver(expr::term_manager& tm, const options& opts, utils::statistics& stats) {
   if (s_default_solver.size() == 0) {
     throw exception("No default solver set.");
   }
-  return mk_solver(s_default_solver, tm, opts);
+  return mk_solver(s_default_solver, tm, opts, stats);
 }
 
-solver* factory::mk_solver(std::string id, expr::term_manager& tm, const options& opts) {
-  solver_context ctx(tm, opts);
+solver* factory::mk_solver(std::string id, expr::term_manager& tm, const options& opts, utils::statistics& stats) {
+  solver_context ctx(tm, opts, stats);
   if (output::get_verbosity(std::cout) > 2) {
     std::cout << "Creating an instance of " + id + " solver." << std::endl;
   }
@@ -64,7 +64,7 @@ solver* factory::mk_solver(std::string id, expr::term_manager& tm, const options
   if (s_generate_smt) {
     std::stringstream ss;
     ss << s_smt2_prefix << "." << std::setfill('0') << std::setw(3) << s_total_instances << "." << solver->get_name() << ".smt2";
-    solver = new smt2_output_wrapper(tm, opts, solver, ss.str());
+    solver = new smt2_output_wrapper(tm, opts, stats, solver, ss.str());
   }
   return solver;
 }

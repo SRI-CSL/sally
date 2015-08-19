@@ -34,8 +34,8 @@ kind_engine::kind_engine(const system::context& ctx)
 , d_trace(0)
 {
   // Make the solvers
-  d_solver_1 = smt::factory::mk_default_solver(ctx.tm(), ctx.get_options());
-  d_solver_2 = smt::factory::mk_default_solver(ctx.tm(), ctx.get_options());
+  d_solver_1 = smt::factory::mk_default_solver(ctx.tm(), ctx.get_options(), ctx.get_statistics());
+  d_solver_2 = smt::factory::mk_default_solver(ctx.tm(), ctx.get_options(), ctx.get_statistics());
 }
 
 kind_engine::~kind_engine() {

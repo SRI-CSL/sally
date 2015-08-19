@@ -157,7 +157,7 @@ const options& context::get_options() const {
   return d_options;
 }
 
-const utils::statistics& context::get_statistics() const {
+utils::statistics& context::get_statistics() const {
   return d_stats;
 }
 

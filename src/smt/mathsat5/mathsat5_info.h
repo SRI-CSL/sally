@@ -44,7 +44,7 @@ struct mathsat5_info {
   }
 
   static solver* new_instance(const solver_context& ctx) {
-    return new mathsat5(ctx.tm, ctx.opts);
+    return new mathsat5(ctx.tm, ctx.opts, ctx.stats);
   }
 
 };

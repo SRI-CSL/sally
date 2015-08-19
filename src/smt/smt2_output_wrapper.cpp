@@ -39,8 +39,8 @@ public:
   }
 };
 
-smt2_output_wrapper::smt2_output_wrapper(expr::term_manager& tm, const options& opts, solver* solver, std::string filename)
-: smt::solver("smt2_wrapper[" + filename + "]", tm, opts)
+smt2_output_wrapper::smt2_output_wrapper(expr::term_manager& tm, const options& opts, utils::statistics& stats, solver* solver, std::string filename)
+: smt::solver("smt2_wrapper[" + filename + "]", tm, opts, stats)
 , d_solver(solver)
 , d_output(filename.c_str())
 , d_total_assertions_count(0)

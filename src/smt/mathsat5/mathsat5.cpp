@@ -1106,8 +1106,8 @@ void mathsat5_internal::gc_collect(const expr::gc_relocator& gc_reloc) {
   gc_reloc.reloc(d_variables);
 }
 
-mathsat5::mathsat5(expr::term_manager& tm, const options& opts)
-: solver("mathsat5", tm, opts)
+mathsat5::mathsat5(expr::term_manager& tm, const options& opts, utils::statistics& stats)
+: solver("mathsat5", tm, opts, stats)
 {
   d_internal = new mathsat5_internal(tm, opts);
 }

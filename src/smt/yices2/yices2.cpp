@@ -47,8 +47,8 @@
 namespace sally {
 namespace smt {
 
-yices2::yices2(expr::term_manager& tm, const options& opts)
-: solver("yices2", tm, opts)
+yices2::yices2(expr::term_manager& tm, const options& opts, utils::statistics& stats)
+: solver("yices2", tm, opts, stats)
 {
   d_internal = new yices2_internal(tm, opts);
 }

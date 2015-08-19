@@ -42,7 +42,7 @@ struct y2m5_info {
   }
 
   static solver* new_instance(const solver_context& ctx) {
-    return new y2m5(ctx.tm, ctx.opts);
+    return new y2m5(ctx.tm, ctx.opts, ctx.stats);
   }
 
 };

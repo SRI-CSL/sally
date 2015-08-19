@@ -38,7 +38,7 @@ class mathsat5 : public solver {
 public:
 
   /** Constructor */
-  mathsat5(expr::term_manager& tm, const options& opts);
+  mathsat5(expr::term_manager& tm, const options& opts, utils::statistics& stats);
 
   /** Destructor */
   ~mathsat5();

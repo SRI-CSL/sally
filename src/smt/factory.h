@@ -53,10 +53,10 @@ public:
   std::string get_default_solver_id();
 
   static
-  solver* mk_default_solver(expr::term_manager& tm, const options& opts);
+  solver* mk_default_solver(expr::term_manager& tm, const options& opts, utils::statistics& stats);
 
   static
-  solver* mk_solver(std::string id, expr::term_manager& tm, const options& opts);
+  solver* mk_solver(std::string id, expr::term_manager& tm, const options& opts, utils::statistics& stats);
 
   static
   void setup_options(boost::program_options::options_description& options);

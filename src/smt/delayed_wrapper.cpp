@@ -21,8 +21,8 @@
 namespace sally {
 namespace smt {
 
-delayed_wrapper::delayed_wrapper(std::string name, expr::term_manager& tm, const options& opts, solver* s)
-: solver(name, tm, opts)
+delayed_wrapper::delayed_wrapper(std::string name, expr::term_manager& tm, const options& opts, utils::statistics& stats, solver* s)
+: solver(name, tm, opts, stats)
 , d_solver(s)
 , d_index(0)
 , d_scope(0)

@@ -56,7 +56,7 @@ class delayed_wrapper : public solver {
 public:
 
   /** Takes over the solver and will destruct it on destruction */
-  delayed_wrapper(std::string name, expr::term_manager& tm, const options& opts, solver* s);
+  delayed_wrapper(std::string name, expr::term_manager& tm, const options& opts, utils::statistics& stats, solver* s);
   ~delayed_wrapper();
 
   bool supports(feature f) const;
