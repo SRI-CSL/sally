@@ -3,6 +3,8 @@
 #include "expr/term.h"
 #include "expr/term_manager.h"
 
+#include "utils/statistics.h"
+
 #include <iostream>
 
 using namespace std;
@@ -10,9 +12,13 @@ using namespace sally;
 using namespace expr;
 
 struct term_manager_test_fixture {
+
+  utils::statistics stats;
   term_manager tm;
+
 public:
   term_manager_test_fixture()
+  : tm(stats)
   {}
 
   ~term_manager_test_fixture() {

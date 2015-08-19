@@ -169,6 +169,9 @@ private:
 
 public:
 
+  /** Returns the number of allocated objects */
+  size_t size() const { return d_allocated.size(); }
+
   /**
    * Allocate T with children from begin .. end, with potentially extra
    * children. The extras are not destructed automatically so use only for

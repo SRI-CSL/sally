@@ -38,8 +38,8 @@ using namespace sally;
 /** Parses the program arguments. */
 void parse_options(int argc, char* argv[], variables_map& variables);
 
-/** Prints statistics to the given output */
-void live_stats(const utils::statistics* stats, std::string file);
+/** Prints statistics to the given output and given time slice */
+void live_stats(const utils::statistics* stats, std::string file, unsigned time);
 
 int main(int argc, char* argv[]) {
 
@@ -58,8 +58,7 @@ int main(int argc, char* argv[]) {
     output::set_verbosity(cerr, opts.get_unsigned("verbosity"));
 
     // Set the output language
-    output::language out_lang = output::language_from_string(
-        opts.get_string("output-language"));
+    output::language out_lang = output::language_from_string(opts.get_string("output-language"));
     output::set_output_language(cout, out_lang);
     output::set_output_language(cerr, out_lang);
 
@@ -71,17 +70,17 @@ int main(int argc, char* argv[]) {
       }
     }
 
+    // Create the statistics */
+    utils::statistics stats;
+    stats.add(new utils::stat_timer("sally::time", true));
+
     // Create the term manager
-    expr::term_manager tm;
+    expr::term_manager tm(stats);
     cout << expr::set_tm(tm);
     cerr << expr::set_tm(tm);
 
     // Rewrite inequalities if asked to
     tm.set_eq_rewrite(opts.get_bool("arith-eq-to-ineq"));
-
-    // Create the statistics */
-    utils::statistics stats;
-    stats.add(new utils::stat_timer("sally::time", true));
 
     // Create the context
     system::context ctx(tm, opts, stats);
@@ -104,7 +103,8 @@ int main(int argc, char* argv[]) {
     boost::thread *stats_worker = 0;
     if (opts.has_option("live-stats")) {
       std::string stats_out = opts.get_string("live-stats");
-      stats_worker = new boost::thread(live_stats, &stats, stats_out);
+      unsigned time = boost_opts.at("live-stats-time").as<unsigned>();
+      stats_worker = new boost::thread(live_stats, &stats, stats_out, time);
     }
 
     // Go through all the files and run them
@@ -197,7 +197,8 @@ void parse_options(int argc, char* argv[], variables_map& variables)
       ("output-language", value<string>()->default_value("mcmt"), get_output_languages_list().c_str())
       ("arith-eq-to-ineq", "Rewrite equalities into inqualities.")
       ("lsal-extensions", "Use lsal extensions to the MCMT language")
-      ("live-stats", value<string>(), "Output live statistic to the given file.")
+      ("live-stats", value<string>(), "Output live statistic to the given file (- for stdout).")
+      ("live-stats-time", value<unsigned>()->default_value(100), "Time period for statistics output (in miliseconds)")
       ("smt2-output", value<string>(), "Generate smt2 logs of solver queries with given prefix.")
       ;
 
@@ -234,7 +235,7 @@ void parse_options(int argc, char* argv[], variables_map& variables)
   }
 }
 
-void live_stats(const utils::statistics* stats, std::string file) {
+void live_stats(const utils::statistics* stats, std::string file, unsigned time) {
 
   ostream* out = 0;
   ofstream* of_out = 0;
@@ -252,7 +253,7 @@ void live_stats(const utils::statistics* stats, std::string file) {
   try {
     // Output stats
     for (;;) {
-      boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+      boost::this_thread::sleep(boost::posix_time::milliseconds(time));
       *out << *stats << endl;
     }
   } catch (boost::thread_interrupted&) {}

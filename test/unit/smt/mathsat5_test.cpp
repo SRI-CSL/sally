@@ -8,6 +8,7 @@
 #include "smt/factory.h"
 
 #include "utils/options.h"
+#include "utils/statistics.h"
 
 #include <iostream>
 
@@ -19,12 +20,14 @@ using namespace smt;
 
 struct term_manager_with_mathsat5_test_fixture {
 
+  utils::statistics stats;
   term_manager tm;
   solver* mathsat5;
   options opts;
 
 public:
   term_manager_with_mathsat5_test_fixture()
+  : tm(stats)
   {
     mathsat5 = factory::mk_solver("mathsat5", tm, opts);
     cout << set_tm(tm);

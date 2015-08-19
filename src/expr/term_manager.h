@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "utils/statistics.h"
 #include "expr/term.h"
 #include "utils/name_transformer.h"
 
@@ -49,7 +50,7 @@ class term_manager {
 public:
 
   /** Construct them manager */
-  term_manager();
+  term_manager(utils::statistics& stats);
 
   /** Destruct the manager, and destruct all payloads that the manager owns */
   ~term_manager();

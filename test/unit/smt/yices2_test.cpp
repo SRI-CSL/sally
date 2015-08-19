@@ -8,6 +8,7 @@
 #include "smt/factory.h"
 
 #include "utils/options.h"
+#include "utils/statistics.h"
 
 #include <iostream>
 
@@ -19,12 +20,15 @@ using namespace smt;
 
 struct term_manager_with_yices_test_fixture {
 
+  utils::statistics stats;
   term_manager tm;
   solver* yices2;
   options opts;
 
 public:
+
   term_manager_with_yices_test_fixture()
+  : tm(stats)
   {
     yices2 = factory::mk_solver("yices2", tm, opts);
     cout << set_tm(tm);

@@ -21,6 +21,7 @@
 #include "expr/term.h"
 #include "utils/allocator.h"
 #include "utils/name_transformer.h"
+#include "utils/statistics.h"
 
 #include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
@@ -232,10 +233,12 @@ private:
   /** Name transformers */
   const utils::name_transformer* d_name_transformer;
 
+  utils::stat_int* d_stat_terms;
+
 public:
 
   /** Construct them manager */
-  term_manager_internal();
+  term_manager_internal(utils::statistics& stats);
 
   /** Destruct the manager, and destruct all payloads that the manager owns */
   ~term_manager_internal();
@@ -488,6 +491,9 @@ term_ref_fat term_manager_internal::mk_term_internal(const typename term_op_trai
     t_ref = d_memory.allocate(term(op, hash), begin, end, 1);
     *alloc::allocator<term, term_ref>::object_end(d_memory.object_of(t_ref)) = p_ref;
   }
+
+  // Update the statistic
+  d_stat_terms->get_value() = d_memory.size();
 
   // Type-check the term
   if (!typecheck(t_ref)) {

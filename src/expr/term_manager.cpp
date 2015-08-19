@@ -28,8 +28,8 @@
 namespace sally {
 namespace expr {
 
-term_manager::term_manager()
-: d_tm(new term_manager_internal())
+term_manager::term_manager(utils::statistics& stats)
+: d_tm(new term_manager_internal(stats))
 , d_eq_rewrite(false)
 {
 }

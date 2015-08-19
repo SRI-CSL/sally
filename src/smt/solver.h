@@ -24,6 +24,7 @@
 #include "utils/exception.h"
 #include "utils/options.h"
 #include "utils/name_transformer.h"
+#include "utils/statistics.h"
 
 namespace sally {
 namespace smt {
@@ -34,8 +35,9 @@ namespace smt {
 struct solver_context {
   expr::term_manager& tm;
   const options& opts;
-  solver_context(expr::term_manager& tm, const options& opts)
-  : tm(tm), opts(opts) {}
+  utils::statistics& stats;
+  solver_context(expr::term_manager& tm, const options& opts, utils::statistics& stats)
+  : tm(tm), opts(opts), stats(stats) {}
 };
 
 /**
@@ -117,7 +119,7 @@ public:
   }
 
   /** Construct with the given term manager */
-  solver(std::string name, expr::term_manager& tm, const options& opts)
+  solver(std::string name, expr::term_manager& tm, const options& opts, utils::statistics& stats)
   : gc_participant(tm)
   , d_name(name)
   , d_tm(tm)

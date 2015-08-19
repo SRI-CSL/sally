@@ -29,8 +29,9 @@
 using namespace sally;
 using namespace expr;
 
-term_manager_internal::term_manager_internal()
+term_manager_internal::term_manager_internal(utils::statistics& stats)
 : d_name_transformer(0)
+, d_stat_terms(0)
 {
   // The null id
   new_term_id();
@@ -39,6 +40,10 @@ term_manager_internal::term_manager_internal()
   for (unsigned i = 0; i < OP_LAST; ++ i) {
     d_payload_memory[i] = 0;
   }
+
+  // Statistic for size of term table
+  d_stat_terms = new utils::stat_int("sally::expr::term_manager_internal::memory_size", 0);
+  stats.add(d_stat_terms);
 
   // Create the types
   d_booleanType = term_ref_strong(*this, mk_term<TYPE_BOOL>(alloc::empty_type()));
