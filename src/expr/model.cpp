@@ -35,6 +35,28 @@ model::model(expr::term_manager& tm, bool undef_to_default)
 {
 }
 
+model::model(const model& other)
+: d_tm(other.d_tm)
+, d_undef_to_default(other.d_undef_to_default)
+, d_variables(other.d_variables)
+, d_variable_to_value_map(other.d_variable_to_value_map)
+, d_term_to_value_map(other.d_term_to_value_map)
+, d_true(true)
+, d_false(false)
+{
+}
+
+model& model::operator = (const model& other) {
+  assert(&d_tm == &other.d_tm);
+  if (this != &other) {
+    d_undef_to_default = other.d_undef_to_default;
+    d_variables = other.d_variables;
+    d_variable_to_value_map = other.d_variable_to_value_map;
+    d_term_to_value_map = other.d_term_to_value_map;
+  }
+  return *this;
+}
+
 void model::clear() {
   d_variable_to_value_map.clear();
   d_term_to_value_map.clear();
@@ -285,6 +307,36 @@ model::const_iterator model::values_end() const {
 void model::clear_cache() {
   d_term_to_value_map.clear();
 }
+
+void model::restrict_vars_to(const expr::term_manager::substitution_map& subst) {
+  typedef expr::term_manager::substitution_map substitution_map;
+
+  substitution_map::const_iterator it;
+
+  // Clear the cache
+  clear_cache();
+
+  // Rename the variables in the value map
+  term_to_value_map variable_to_value_map_new;
+  for (it = subst.begin(); it != subst.end(); ++ it) {
+    term_ref x = it->first;
+    term_ref x_new = it->second;
+    assert(has_value(x));
+    variable_to_value_map_new[x_new] = get_variable_value(x);
+  }
+  d_variable_to_value_map.swap(variable_to_value_map_new);
+
+  // Rename the variables in the model
+  std::vector<term_ref_strong> variables_new;
+  for (size_t i = 0; i < d_variables.size(); ++ i) {
+    term_ref x = d_variables[i];
+    it = subst.find(x);
+    if (it != subst.end()) {
+      variables_new.push_back(term_ref_strong(d_tm, it->second));
+    }
+  }
+}
+
 
 void model::to_stream(std::ostream& out) const {
   for (const_iterator it = values_begin(); it != values_end(); ++ it) {

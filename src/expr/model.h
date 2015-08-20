@@ -42,6 +42,12 @@ public:
    */
   model(term_manager& tm, bool undef_to_default);
 
+  /** Copy constructor */
+  model(const model& other);
+
+  /** Assignments */
+  model& operator = (const model& other);
+
   /** Clear the model */
   void clear();
 
@@ -74,6 +80,9 @@ public:
 
   /** Clear the cache */
   void clear_cache();
+
+  /** Only keep variables in the map, and replace them with given substitution */
+  void restrict_vars_to(const expr::term_manager::substitution_map& subst);
 
 private:
 
