@@ -229,12 +229,6 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(const induction_oblig
     return INDUCTION_SUCCESS;
   }
 
-  // We have a counterexample, we only try to refute if induction depth is not
-  // exceeded
-  if (!ctx().get_options().get_bool("ic3-no-depth-bound") && depth > d_induction_frame) {
-    return INDUCTION_INCONCLUSIVE;
-  }
-
   // Check if G is reachable
   bool reachable = check_reachable(d_induction_frame, G);
 
