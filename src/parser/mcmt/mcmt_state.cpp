@@ -39,7 +39,7 @@ mcmt_state::mcmt_state(const system::context& context)
   term_manager& tm = context.tm();
   d_types.add_entry("Real", term_ref_strong(tm, tm.real_type()));
   d_types.add_entry("Bool", term_ref_strong(tm, tm.boolean_type()));
-  d_types.add_entry("Integer", term_ref_strong(tm, tm.integer_type()));
+  d_types.add_entry("Int", term_ref_strong(tm, tm.integer_type()));
 }
 
 string mcmt_state::token_text(pANTLR3_COMMON_TOKEN token) {
