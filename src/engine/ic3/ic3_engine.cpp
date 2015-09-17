@@ -243,6 +243,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(const induction_oblig
   if (!is_invalid(G_not)) {
     // Try to push assumptions next time
     d_induction_obligations.push(induction_obligation(G_not, depth+1, 0));
+    assert(d_frame_formula_info.find(G_not) == d_frame_formula_info.end());
     d_frame_formula_info[G_not] = frame_formula_info(f, G);
   }
 
@@ -256,6 +257,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(const induction_oblig
     if (!is_invalid(learnt)) {
       // Try to push assumptions next time
       d_induction_obligations.push(induction_obligation(learnt, depth+1, 0));
+      assert(d_frame_formula_info.find(learnt) == d_frame_formula_info.end());
       d_frame_formula_info[learnt] = frame_formula_info(f, G);
     }
   }
@@ -311,6 +313,7 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
     // therefore looking to satisfy refutes(f) at k.
     assert(is_invalid(f));
 
+    assert(d_frame_formula_info.find(f) != d_frame_formula_info.end());
     expr::term_ref G = d_frame_formula_info[f].refutes;
     expr::term_ref parent = d_frame_formula_info[f].parent;
 
@@ -323,8 +326,8 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
     d_smt->ensure_counterexample_solver_depth(k);
     solver->add(d_trace->get_state_formula(G, k), smt::solver::CLASS_A);
 
-    // If not a generalization, must check to see if we're reachable
-    if (f != tm().mk_term(expr::TERM_NOT, G)) {
+//    // If not a generalization, must check to see if we're reachable
+//    if (f != tm().mk_term(expr::TERM_NOT, G)) {
       // If not a generalization we need to check
       smt::solver::result r = solver->check();
 
@@ -332,7 +335,7 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
       if (r != smt::solver::SAT) {
         break;
       }
-    }
+//    }
 
     // We're sat (either by knowing, or by checking), so we extend further
     f = parent;
