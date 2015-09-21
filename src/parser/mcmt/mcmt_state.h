@@ -123,6 +123,9 @@ public:
   /** Are we using lsal extensions (a' for next.a, a for state.a, cond operator) */
   bool lsal_extensions() const;
 
+  /** Are we not namespacing the input variables (x instead of input.x) */
+  bool no_input_namespace() const;
+
   /** Collect terms */
   void gc_collect(const expr::gc_relocator& gc_reloc);
 

@@ -1,24 +1,23 @@
 (define-state-type st ((x Real) (y Real)))
 
-(define-states sf_01 st 
+(define-states sf_01 st
   (= x 0)
 )
 
-(define-states sf_02 st 
+(define-states sf_02 st
   (and (= x 1) sf_01)
 )
 
 (define-states sf_03 st sf_02)
 
 (define-transition t_01 st
-  (implies state.sf_01 next.sf_02)
+  (=> state.sf_01 next.sf_02)
 )
 
 (define-transition t_02 st
   (or (= next.x state.y) t_01)
 )
 
-(define-transition-system s_02 st sf_01 (or t_01 t_02))  
+(define-transition-system s_02 st sf_01 (or t_01 t_02))
 
 (define-transition-system s_01 st (or sf_01 (> x 1)) t_01)
-

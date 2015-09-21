@@ -124,7 +124,7 @@ void mcmt_state::use_state_type_and_transitions(const system::state_type* st) {
   // Use the current state
   use_state_type(st, system::state_type::STATE_CURRENT, lsal_extensions());
   // Use the input variables
-  use_state_type(st, system::state_type::STATE_INPUT, false);
+  use_state_type(st, system::state_type::STATE_INPUT, no_input_namespace());
   // Use the next state
   use_state_type(st, system::state_type::STATE_NEXT, false);
   // Use all the transition formulas
@@ -202,6 +202,10 @@ expr::term_ref mcmt_state::mk_cond(const std::vector<expr::term_ref>& children) 
 
 bool mcmt_state::lsal_extensions() const {
   return ctx().get_options().get_bool("lsal-extensions");
+}
+
+bool mcmt_state::no_input_namespace() const {
+  return ctx().get_options().get_bool("no-input-namespace");
 }
 
 void mcmt_state::gc_collect(const expr::gc_relocator& gc_reloc) {

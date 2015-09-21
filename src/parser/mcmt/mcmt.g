@@ -311,7 +311,7 @@ term_op returns [expr::term_op op = expr::OP_LAST]
   : 'and'            { op = expr::TERM_AND; } 
   | 'or'             { op = expr::TERM_OR; }
   | 'not'            { op = expr::TERM_NOT; }
-  | 'implies'        { op = expr::TERM_IMPLIES; } 
+  | '=>'        { op = expr::TERM_IMPLIES; } 
   | 'xor'            { op = expr::TERM_XOR; }
   | 'ite'            { op = expr::TERM_ITE; }
   | '='              { op = expr::TERM_EQ;  }
@@ -355,7 +355,8 @@ WHITESPACE
   
 /** Matches a symbol. */
 SYMBOL
-  : ALPHA (ALPHA | DIGIT | '_' | '@' | '.' | '!' )*
+  : ALPHA (ALPHA | DIGIT | '_' | '@' | '.' | '!' | '%' )*
+  | '|' (~'|')* '|'
   ;
 
 /** Matches a letter. */

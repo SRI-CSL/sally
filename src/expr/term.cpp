@@ -88,7 +88,7 @@ std::string get_smt_keyword(term_op op) {
   case TERM_NOT:
     return "not";
   case TERM_IMPLIES:
-    return "implies";
+    return "=>";
   case TERM_XOR:
     return "xor";
   case TERM_ADD:
