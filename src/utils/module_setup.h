@@ -29,26 +29,26 @@
 namespace sally {
 
 /**
- * Class to get information about a module, setup options requrired by the
+ * Class to get information about a module, setup options required by the
  * module and create new module instances.
  */
 template <typename module_type, typename constructor_type>
 struct module_info_dynamic {
   virtual void setup_options(boost::program_options::options_description& options) const = 0;
   virtual std::string get_id() const = 0;
-  virtual module_type* new_instance(const constructor_type& ctx) const = 0;
+  virtual module_type* new_instance(const constructor_type& arg1) const = 0;
   virtual ~module_info_dynamic() {};
 };
 
 /**
- * Given T that implements the interfact of module_info_dynamic with
+ * Given T that implements the interface of module_info_dynamic with
  * static methods, the class implements them as regular methods.
  */
 template <typename T, typename module_type, typename constructor_type>
 class module_info_dynamic_instance : public module_info_dynamic<module_type, constructor_type> {
   void setup_options(boost::program_options::options_description& options) const { T::setup_options(options); }
   std::string get_id() const { return T::get_id(); }
-  module_type* new_instance(const constructor_type& ctx) const { return T::new_instance(ctx); }
+  module_type* new_instance(const constructor_type& arg) const { return T::new_instance(arg); }
   ~module_info_dynamic_instance() {}
 };
 

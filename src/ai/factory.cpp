@@ -16,7 +16,7 @@
  * along with sally.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "engine/factory.h"
+#include "ai/factory.h"
 #include "utils/exception.h"
 #include "utils/module_setup.h"
 
@@ -26,36 +26,36 @@
 namespace sally {
 
 /** Type for setting up individual engines */
-class engine_data : public module_data<engine, system::context> {
+class analyzer_data : public module_data<analyzer, system::context> {
 public:
-  engine_data();
+  analyzer_data();
 };
 
 /** Map from id's to engine information */
-static engine_data s_engine_data;
+static analyzer_data s_analyzer_data;
 
-engine* factory::mk_engine(std::string id, const system::context& ctx) {
-  return s_engine_data.get_module_info(id).new_instance(ctx);
+analyzer* factory::mk_analyzer(std::string id, const system::context& ctx) {
+  return s_analyzer_data.get_module_info(id).new_instance(ctx);
 }
 
 void factory::setup_options(boost::program_options::options_description& options) {
-  for (engine_data::const_iterator it = s_engine_data.data().begin(); it != s_engine_data.data().end(); ++ it) {
+  for (analyzer_data::const_iterator it = s_analyzer_data.data().begin(); it != s_analyzer_data.data().end(); ++ it) {
     std::stringstream ss;
-    ss << "Engine '" << it->second->get_id() << "' options";
-    boost::program_options::options_description engine_options(ss.str());
-    it->second->setup_options(engine_options);
-    if (engine_options.options().size() > 0) {
-      options.add(engine_options);
+    ss << "Analyzer '" << it->second->get_id() << "' options";
+    boost::program_options::options_description analyzer_options(ss.str());
+    it->second->setup_options(analyzer_options);
+    if (analyzer_options.options().size() > 0) {
+      options.add(analyzer_options);
     }
   }
 }
 
-void factory::get_engines(std::vector<std::string>& out) {
-  for (engine_data::const_iterator it = s_engine_data.data().begin(); it != s_engine_data.data().end(); ++ it) {
+void factory::get_analyzers(std::vector<std::string>& out) {
+  for (analyzer_data::const_iterator it = s_analyzer_data.data().begin(); it != s_analyzer_data.data().end(); ++ it) {
     out.push_back(it->second->get_id());
   }
 }
 
 }
 
-#include "engine_list.h"
+#include "analyzer_list.h"

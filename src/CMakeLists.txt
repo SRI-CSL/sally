@@ -1,4 +1,4 @@
-set(sally_SRC_DIRS utils expr smt system parser engine)
+set(sally_SRC_DIRS utils expr smt system parser ai engine)
 
 # Add all the subdirectories
 foreach(DIR ${sally_SRC_DIRS})
