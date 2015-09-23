@@ -16,7 +16,8 @@
  * along with sally.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "engine/factory.h"
+#include "factory.h"
+
 #include "utils/exception.h"
 #include "utils/module_setup.h"
 
@@ -34,11 +35,11 @@ public:
 /** Map from id's to engine information */
 static engine_data s_engine_data;
 
-engine* factory::mk_engine(std::string id, const system::context& ctx) {
+engine* engine_factory::mk_engine(std::string id, const system::context& ctx) {
   return s_engine_data.get_module_info(id).new_instance(ctx);
 }
 
-void factory::setup_options(boost::program_options::options_description& options) {
+void engine_factory::setup_options(boost::program_options::options_description& options) {
   for (engine_data::const_iterator it = s_engine_data.data().begin(); it != s_engine_data.data().end(); ++ it) {
     std::stringstream ss;
     ss << "Engine '" << it->second->get_id() << "' options";
@@ -50,7 +51,7 @@ void factory::setup_options(boost::program_options::options_description& options
   }
 }
 
-void factory::get_engines(std::vector<std::string>& out) {
+void engine_factory::get_engines(std::vector<std::string>& out) {
   for (engine_data::const_iterator it = s_engine_data.data().begin(); it != s_engine_data.data().end(); ++ it) {
     out.push_back(it->second->get_id());
   }

@@ -16,7 +16,8 @@
  * along with sally.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ai/factory.h"
+#include "factory.h"
+
 #include "utils/exception.h"
 #include "utils/module_setup.h"
 
@@ -24,7 +25,6 @@
 #include <map>
 
 namespace sally {
-namespace ai {
 
 /** Type for setting up individual engines */
 class analyzer_data : public module_data<analyzer, system::context> {
@@ -35,11 +35,11 @@ public:
 /** Map from id's to engine information */
 static analyzer_data s_analyzer_data;
 
-analyzer* factory::mk_analyzer(std::string id, const system::context& ctx) {
+analyzer* analyzer_factory::mk_analyzer(std::string id, const system::context& ctx) {
   return s_analyzer_data.get_module_info(id).new_instance(ctx);
 }
 
-void factory::setup_options(boost::program_options::options_description& options) {
+void analyzer_factory::setup_options(boost::program_options::options_description& options) {
   for (analyzer_data::const_iterator it = s_analyzer_data.data().begin(); it != s_analyzer_data.data().end(); ++ it) {
     std::stringstream ss;
     ss << "Analyzer '" << it->second->get_id() << "' options";
@@ -51,13 +51,12 @@ void factory::setup_options(boost::program_options::options_description& options
   }
 }
 
-void factory::get_analyzers(std::vector<std::string>& out) {
+void analyzer_factory::get_analyzers(std::vector<std::string>& out) {
   for (analyzer_data::const_iterator it = s_analyzer_data.data().begin(); it != s_analyzer_data.data().end(); ++ it) {
     out.push_back(it->second->get_id());
   }
 }
 
-}
 }
 
 #include "analyzer_list.h"

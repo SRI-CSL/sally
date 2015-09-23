@@ -21,12 +21,12 @@
 #include <boost/program_options.hpp>
 #include <boost/thread.hpp>
 
+#include "ai/factory.h"
 #include "expr/term_manager.h"
 #include "utils/output.h"
 #include "system/context.h"
 #include "parser/parser.h"
 #include "engine/factory.h"
-#include "ai/factory.h"
 #include "smt/factory.h"
 #include "utils/trace.h"
 #include "utils/statistics.h"
@@ -97,12 +97,12 @@ int main(int argc, char* argv[]) {
     // Create the engine
     engine* engine_to_use = 0;
     if (opts.has_option("engine")) {
-      engine_to_use = factory::mk_engine(boost_opts.at("engine").as<string>(), ctx);
+      engine_to_use = engine_factory::mk_engine(boost_opts.at("engine").as<string>(), ctx);
     }
 
     analyzer* analyzer_to_use = 0;
     if (opts.has_option("ai")) {
-      analyzer_to_use = ai::factory::mk_analyzer(boost_opts.at("ai").as<string>(), ctx);
+      analyzer_to_use = analyzer_factory::mk_analyzer(boost_opts.at("ai").as<string>(), ctx);
       engine_to_use->set_analyzer(analyzer_to_use);
     }
 
@@ -158,7 +158,7 @@ int main(int argc, char* argv[]) {
 
 std::string get_engines_list() {
   std::vector<string> engines;
-  factory::get_engines(engines);
+  engine_factory::get_engines(engines);
   std::stringstream out;
   out << "The engine to use: ";
   for (size_t i = 0; i < engines.size(); ++ i) {
@@ -182,7 +182,7 @@ std::string get_solver_list() {
 
 std::string get_analyzer_list() {
   std::vector<string> analyzers;
-  ai::factory::get_analyzers(analyzers);
+  analyzer_factory::get_analyzers(analyzers);
   std::stringstream out;
   out << "The analyzer to use: ";
   for (size_t i = 0; i < analyzers.size(); ++ i) {
@@ -230,7 +230,7 @@ void parse_options(int argc, char* argv[], variables_map& variables)
       ;
 
   // Get the individual engine options
-  factory::setup_options(description);
+  engine_factory::setup_options(description);
 
   // Get the individual solver options
   smt::factory::setup_options(description);

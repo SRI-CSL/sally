@@ -24,7 +24,7 @@
 
 #include "ai/interval/interval_analyzer_info.h"
 
-sally::ai::analyzer_data::analyzer_data() {
+sally::analyzer_data::analyzer_data() {
   add_module_info<interval::interval_analyzer_info>();
 }
 

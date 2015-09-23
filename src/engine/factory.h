@@ -29,7 +29,7 @@ namespace sally {
 /**
  * Factory to create engines.
  */
-class factory {
+class engine_factory {
 
 public:
 
@@ -46,6 +46,5 @@ public:
   void get_engines(std::vector<std::string>& out);
 
 };
-
 
 }
