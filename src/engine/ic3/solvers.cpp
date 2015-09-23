@@ -237,9 +237,16 @@ void solvers::assert_frame_selection(size_t k, smt::solver* solver) {
   }
 }
 
-expr::term_ref solvers::query_at(size_t k, expr::term_ref f, smt::solver::formula_class f_class) {
+solvers::query_result::query_result()
+: result(smt::solver::UNKNOWN)
+, model(0)
+{
+}
+
+solvers::query_result solvers::query_at(size_t k, expr::term_ref f, smt::solver::formula_class f_class) {
 
   smt::solver* solver = 0;
+  query_result result;
 
   if (d_ctx.get_options().get_bool("ic3-single-solver")) {
     solver = get_reachability_solver();
@@ -258,19 +265,22 @@ expr::term_ref solvers::query_at(size_t k, expr::term_ref f, smt::solver::formul
   }
 
   // Figure out the result
-  smt::solver::result r = solver->check();
-  switch (r) {
+  result.result = solver->check();
+  switch (result.result) {
   case smt::solver::SAT: {
-    return generalize_sat(solver);
+    result.model = new expr::model(d_tm, true);
+    solver->get_model(*result.model);
+    result.generalization = generalize_sat(solver);
+    break;
   }
   case smt::solver::UNSAT:
     // Unsat, we return NULL
-    return expr::term_ref();
+    break;
   default:
     throw exception("SMT unknown result.");
   }
 
-  return expr::term_ref();
+  return result;
 }
 
 expr::term_ref solvers::eq_to_ineq(expr::term_ref G) {

@@ -144,8 +144,19 @@ public:
   /** Add a formula to frame k */
   void add(size_t k, expr::term_ref f);
 
+  struct query_result {
+    /** Result of the query */
+    smt::solver::result result;
+    /** Model, if sat */
+    expr::model::ref model;
+    /** The generalization, if sat */
+    expr::term_ref generalization;
+
+    query_result();
+  };
+
   /** Checks formula f for satisfiability at frame k using the reachability solvers and returns the generalization. */
-  expr::term_ref query_at(size_t k, expr::term_ref f, smt::solver::formula_class f_class);
+  query_result query_at(size_t k, expr::term_ref f, smt::solver::formula_class f_class);
 
   /** Check if f is inductive */
   expr::term_ref check_inductive(expr::term_ref f);

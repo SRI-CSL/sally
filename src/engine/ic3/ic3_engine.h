@@ -22,6 +22,8 @@
 #include "expr/term.h"
 #include "expr/term_map.h"
 
+#include "solvers.h"
+
 #include <vector>
 #include <boost/heap/priority_queue.hpp>
 #include <boost/unordered_map.hpp>
@@ -148,7 +150,7 @@ class ic3_engine : public engine {
    * a formula in terms of state variables. The generalization will be in terms
    * of the state variables (k-1)-th frame.
    */
-  expr::term_ref check_one_step_reachable(size_t k, expr::term_ref f);
+  solvers::query_result check_one_step_reachable(size_t k, expr::term_ref f);
 
   /**
    * Check if the formula or any of its parents is marked as invalid.

@@ -106,7 +106,7 @@ void ic3_engine::reset() {
   }
 }
 
-expr::term_ref ic3_engine::check_one_step_reachable(size_t k, expr::term_ref F) {
+solvers::query_result ic3_engine::check_one_step_reachable(size_t k, expr::term_ref F) {
   assert(k > 0);
 
   // The state type
@@ -187,8 +187,8 @@ bool ic3_engine::check_reachable(size_t k, expr::term_ref f) {
     }
 
     // Check if the obligation is reachable
-    expr::term_ref G = check_one_step_reachable(reach.frame(), reach.formula());
-    if (G.is_null()) {
+    solvers::query_result result = check_one_step_reachable(reach.frame(), reach.formula());
+    if (result.result == smt::solver::UNSAT) {
       // Proven, remove from obligations
       reachability_obligations.pop_back();
       // Learn
@@ -200,7 +200,7 @@ bool ic3_engine::check_reachable(size_t k, expr::term_ref f) {
       }
     } else {
       // New obligation to reach the counterexample
-      reachability_obligations.push_back(reachability_obligation(reach.frame()-1, G));
+      reachability_obligations.push_back(reachability_obligation(reach.frame()-1, result.generalization));
     }
   }
 
@@ -528,8 +528,8 @@ bool ic3_engine::add_property(expr::term_ref P) {
     }
     return true;
   } else {
-    expr::term_ref G = d_smt->query_at(0, tm().mk_term(expr::TERM_NOT, P), smt::solver::CLASS_A);
-    if (G.is_null()) {
+    solvers::query_result result = d_smt->query_at(0, tm().mk_term(expr::TERM_NOT, P), smt::solver::CLASS_A);
+    if (result.result == smt::solver::UNSAT) {
       add_to_frame(0, P);
       d_induction_obligations.push(induction_obligation(P, 0, 0));
       d_properties.insert(P);
