@@ -30,11 +30,13 @@ public:
   interval_analyzer(const system::context& ctx);
   ~interval_analyzer();
 
-  void start(const system::transition_system* ts);
-  void finish();
+  void start(const system::transition_system* ts, const system::state_formula* p);
+  void clear();
 
   void notify_reachable(size_t k, const expr::model& m);
   void notify_unreachable(size_t k, const expr::model& m);
+
+  void infer(std::vector<expr::term_ref>& output);
 
   void gc_collect(const expr::gc_relocator& gc_reloc);
 };

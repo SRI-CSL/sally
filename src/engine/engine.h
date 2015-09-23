@@ -22,6 +22,7 @@
 #include "expr/gc_participant.h"
 #include "system/context.h"
 #include "system/state_trace.h"
+#include "ai/analyzer.h"
 
 #include <string>
 
@@ -35,6 +36,9 @@ class engine : public expr::gc_participant {
   /** The context */
   const system::context& d_ctx;
 
+  /** The analyzer */
+  analyzer* d_ai;
+
 protected:
 
   /** Returns the context of the engine */
@@ -42,6 +46,9 @@ protected:
 
   /** Returns the term manager of the engine */
   expr::term_manager& tm() const;
+
+  /** Returns the analyzer */
+  analyzer* ai() const;
 
 public:
 
@@ -65,6 +72,9 @@ public:
 
   virtual
   ~engine() {};
+
+  /** Add an AI analyzer */
+  void set_analyzer(analyzer* ai);
 
   /** Query the engine */
   virtual

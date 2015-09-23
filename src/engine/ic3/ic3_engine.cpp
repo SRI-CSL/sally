@@ -65,6 +65,7 @@ ic3_engine::ic3_engine(const system::context& ctx)
 , d_smt(0)
 , d_induction_frame(0)
 , d_property_invalid(false)
+
 {
   for (size_t i = 0; i < 10; ++ i) {
     std::stringstream ss;
@@ -79,7 +80,6 @@ ic3_engine::~ic3_engine() {
   delete d_trace;
   delete d_smt;
 }
-
 
 void ic3_engine::reset() {
 
@@ -100,8 +100,11 @@ void ic3_engine::reset() {
   }
   d_properties.clear();
   d_property_invalid = false;
-}
 
+  if (ai()) {
+    ai()->clear();
+  }
+}
 
 expr::term_ref ic3_engine::check_one_step_reachable(size_t k, expr::term_ref F) {
   assert(k > 0);
@@ -411,6 +414,9 @@ engine::result ic3_engine::search() {
   // Push frame by frame */
   for(;;) {
 
+    // Try to learn from
+    learn_from_analyzer();
+
     // Push the current induction frame forward
     push_current_frame();
 
@@ -478,6 +484,11 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   // Initialize the solvers
   if (d_smt) { delete d_smt; }
   d_smt = new solvers(ctx(), ts, d_trace);
+
+  // Initializer the analyzer
+  if (ai()) {
+    ai()->start(d_transition_system, d_property);
+  }
 
   // Start with at least one frame
   ensure_frame(0);
@@ -594,7 +605,12 @@ bool ic3_engine::is_invalid_or_parent_invalid(expr::term_ref f) const {
       return is_invalid_or_parent_invalid(find->second.parent);
     }
   }
+}
 
+void ic3_engine::learn_from_analyzer() {
+  if (ai()) {
+    // TODO: learn
+  }
 }
 
 

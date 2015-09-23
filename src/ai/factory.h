@@ -25,6 +25,7 @@ namespace boost { namespace program_options {
 }}
 
 namespace sally {
+namespace ai {
 
 /**
  * Factory to create abstract interpretation analyers.
@@ -47,5 +48,5 @@ public:
 
 };
 
-
+}
 }

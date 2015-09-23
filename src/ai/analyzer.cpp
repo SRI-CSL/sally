@@ -34,4 +34,7 @@ analyzer::analyzer(const system::context& ctx)
 {
 }
 
+analyzer::~analyzer()
+{}
+
 }

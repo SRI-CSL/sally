@@ -273,6 +273,9 @@ class ic3_engine : public engine {
   /** GC the solvers */
   void gc_solvers();
 
+  /** Try to learn from the analyzer */
+  void learn_from_analyzer();
+
 public:
 
   ic3_engine(const system::context& ctx);

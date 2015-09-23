@@ -26,6 +26,7 @@
 #include "system/context.h"
 #include "parser/parser.h"
 #include "engine/factory.h"
+#include "ai/factory.h"
 #include "smt/factory.h"
 #include "utils/trace.h"
 #include "utils/statistics.h"
@@ -95,8 +96,14 @@ int main(int argc, char* argv[]) {
 
     // Create the engine
     engine* engine_to_use = 0;
-    if (opts.has_option("engine") > 0) {
+    if (opts.has_option("engine")) {
       engine_to_use = factory::mk_engine(boost_opts.at("engine").as<string>(), ctx);
+    }
+
+    analyzer* analyzer_to_use = 0;
+    if (opts.has_option("ai")) {
+      analyzer_to_use = ai::factory::mk_analyzer(boost_opts.at("ai").as<string>(), ctx);
+      engine_to_use->set_analyzer(analyzer_to_use);
     }
 
     // Setup live stats if asked
@@ -130,6 +137,11 @@ int main(int argc, char* argv[]) {
       delete engine_to_use;
     }
 
+    // Delete the analyzer
+    if (analyzer_to_use != 0) {
+      delete analyzer_to_use;
+    }
+
     // Stop the live stats thread
     if (stats_worker) {
       stats_worker->interrupt();
@@ -156,7 +168,7 @@ std::string get_engines_list() {
   return out.str();
 }
 
-std::string get_solvers_list() {
+std::string get_solver_list() {
   std::vector<string> solvers;
   smt::factory::get_solvers(solvers);
   std::stringstream out;
@@ -167,6 +179,19 @@ std::string get_solvers_list() {
   }
   return out.str();
 }
+
+std::string get_analyzer_list() {
+  std::vector<string> analyzers;
+  ai::factory::get_analyzers(analyzers);
+  std::stringstream out;
+  out << "The analyzer to use: ";
+  for (size_t i = 0; i < analyzers.size(); ++ i) {
+    if (i) { out << ", "; }
+    out << analyzers[i];
+  }
+  return out.str();
+}
+
 
 std::string get_output_languages_list() {
   std::stringstream out;
@@ -192,7 +217,7 @@ void parse_options(int argc, char* argv[], variables_map& variables)
       ("show-trace", "Show the counterexample trace if found.")
       ("parse-only", "Just parse, don't solve.")
       ("engine", value<string>(), get_engines_list().c_str())
-      ("solver", value<string>()->default_value(smt::factory::get_default_solver_id()), get_solvers_list().c_str())
+      ("solver", value<string>()->default_value(smt::factory::get_default_solver_id()), get_solver_list().c_str())
       ("solver-logic", value<string>(), "Optional smt2 logic to set to the solver (e.g. QF_LRA, QF_LIA, ...).")
       ("output-language", value<string>()->default_value("mcmt"), get_output_languages_list().c_str())
       ("arith-eq-to-ineq", "Rewrite equalities into inqualities.")
@@ -201,6 +226,7 @@ void parse_options(int argc, char* argv[], variables_map& variables)
       ("live-stats", value<string>(), "Output live statistic to the given file (- for stdout).")
       ("live-stats-time", value<unsigned>()->default_value(100), "Time period for statistics output (in miliseconds)")
       ("smt2-output", value<string>(), "Generate smt2 logs of solver queries with given prefix.")
+      ("ai", value<string>(), get_analyzer_list().c_str())
       ;
 
   // Get the individual engine options

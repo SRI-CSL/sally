@@ -24,6 +24,7 @@
 #include <map>
 
 namespace sally {
+namespace ai {
 
 /** Type for setting up individual engines */
 class analyzer_data : public module_data<analyzer, system::context> {
@@ -56,6 +57,7 @@ void factory::get_analyzers(std::vector<std::string>& out) {
   }
 }
 
+}
 }
 
 #include "analyzer_list.h"

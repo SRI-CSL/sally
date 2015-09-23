@@ -49,13 +49,17 @@ public:
   /** Create the analyzer for the transition system */
   analyzer(const system::context& ctx);
 
-  /** Start the analyzer */
+  /** Destructor */
   virtual
-  void start(const system::transition_system* ts) = 0;
+  ~analyzer();
 
-  /** Finish */
+  /** Start the analyzer with the transition system and the property of interest */
   virtual
-  void finish() = 0;
+  void start(const system::transition_system* ts, const system::state_formula* p) = 0;
+
+  /** Reset error */
+  virtual
+  void clear() = 0;
 
   /** Notification of new reachable states at frame k */
   virtual
@@ -65,8 +69,9 @@ public:
   virtual
   void notify_unreachable(size_t k, const expr::model& m) = 0;
 
+  /** Output new inferences (potential invariants) */
   virtual
-  ~analyzer() {};
+  void infer(std::vector<expr::term_ref>& output) = 0;
 
 };
 

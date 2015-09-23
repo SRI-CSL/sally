@@ -25,6 +25,7 @@ namespace sally {
 engine::engine(const system::context& ctx)
 : gc_participant(ctx.tm())
 , d_ctx(ctx)
+, d_ai(0)
 {}
 
 const system::context& engine::ctx() const {
@@ -57,4 +58,17 @@ std::ostream& operator << (std::ostream& out, engine::result result) {
   return out;
 }
 
+analyzer* engine::ai() const {
+  return d_ai;
 }
+
+void engine::set_analyzer(analyzer* ai) {
+  if (d_ai == 0) {
+    delete d_ai;
+  }
+  d_ai = ai;
+}
+
+
+}
+
