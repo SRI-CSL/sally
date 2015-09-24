@@ -126,7 +126,7 @@ public:
   solver::result check();
 
   /** Returns the model */
-  void get_model(expr::model& m, const std::set<expr::term_ref>& x_variables, const std::set<expr::term_ref>& T_variables, const std::set<expr::term_ref>& y_variables);
+  expr::model::ref get_model(const std::set<expr::term_ref>& x_variables, const std::set<expr::term_ref>& T_variables, const std::set<expr::term_ref>& y_variables);
 
   /** Push the context */
   void push();

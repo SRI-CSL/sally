@@ -87,9 +87,8 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
       // See what happened
       switch (r) {
       case smt::solver::SAT: {
-        expr::model m(tm(), false);
-        d_solver->get_model(m);
-        d_trace->add_model(m);
+        expr::model::ref m = d_solver->get_model();
+        d_trace->set_model(m);
         return INVALID;
       }
       case smt::solver::UNKNOWN:

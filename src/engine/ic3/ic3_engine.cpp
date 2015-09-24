@@ -188,9 +188,6 @@ bool ic3_engine::check_reachable(size_t k, expr::term_ref f, expr::model::ref f_
       d_counterexample.clear();
       for (size_t i = 0; i < reachability_obligations.size(); ++ i) {
         d_counterexample.push_front(reachability_obligations[i].formula());
-        if (ai()) {
-          ai()->notify_reachable(i, reach.model());
-        }
       }
       break;
     }
@@ -320,6 +317,12 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
     solver->add(G_k, smt::solver::CLASS_A);
   }
 
+  // Should be SAT
+  smt::solver::result r = solver->check();
+  assert(r == smt::solver::SAT);
+  expr::model::ref model = solver->get_model();
+  d_trace->set_model(model);
+
   // Try to extend it
   for (;; ++ k) {
 
@@ -336,6 +339,16 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
 
     // If no more parents, we're done
     if (parent.is_null()) {
+      // If this is a counter-example to the property itself, then we extend to
+      // full counterexample
+      if (d_properties.find(f) != d_properties.end()) {
+        d_smt->ensure_counterexample_solver_depth(k);
+        solver->add(d_trace->get_state_formula(tm().mk_term(expr::TERM_NOT, f), k), smt::solver::CLASS_A);
+        r = solver->check();
+        assert(r == smt::solver::SAT);
+        model = solver->get_model();
+        d_trace->set_model(model);
+      }
       break;
     }
 
@@ -344,7 +357,7 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
     solver->add(d_trace->get_state_formula(G, k), smt::solver::CLASS_A);
 
     // If not a generalization we need to check
-    smt::solver::result r = solver->check();
+    r = solver->check();
 
     // If not sat, we can't extend any more
     if (r != smt::solver::SAT) {
@@ -354,6 +367,8 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
     // We're sat (either by knowing, or by checking), so we extend further
     f = parent;
     set_invalid(f);
+    model = solver->get_model();
+    d_trace->set_model(model);
     d_counterexample.push_back(G);
   }
 }
@@ -553,40 +568,6 @@ bool ic3_engine::add_property(expr::term_ref P) {
 }
 
 const system::state_trace* ic3_engine::get_trace() {
-
-  // Add the property to the end of the counterexample
-  d_counterexample.push_back(tm().mk_term(expr::TERM_NOT, d_property->get_formula()));
-  d_trace->resize_to(d_counterexample.size());
-
-  // Get the counterexample solver
-  smt::solver_scope solver_scope;
-  d_smt->get_counterexample_solver(solver_scope);
-  smt::solver* solver = solver_scope.get_solver();
-  solver_scope.push();
-
-  // Assert needed stuff
-  for (size_t k = 0; k < d_counterexample.size(); ++ k) {
-    // Add the counter-example part
-    expr::term_ref G = d_counterexample[k];
-    expr::term_ref G_k = d_trace->get_state_formula(G, k);
-    solver->add(G_k, smt::solver::CLASS_A);
-  }
-
-  // Add the unrolling
-  d_smt->ensure_counterexample_solver_depth(d_counterexample.size()-1);
-
-  // Check
-  smt::solver::result r = solver->check();
-  unused_var(r);
-  assert(r == smt::solver::SAT);
-
-  // Get the model
-  expr::model m(tm(), true);
-  solver->get_model(m);
-
-  // Set the model to the trace
-  d_trace->add_model(m);
-
   return d_trace;
 }
 

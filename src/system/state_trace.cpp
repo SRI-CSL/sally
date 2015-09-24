@@ -27,7 +27,6 @@ namespace system {
 state_trace::state_trace(const state_type* st)
 : gc_participant(st->tm())
 , d_state_type(st)
-, d_model(st->tm(), true)
 {}
 
 size_t state_trace::size() const {
@@ -127,11 +126,8 @@ expr::term_ref state_trace::get_transition_formula(expr::term_ref tf, size_t k) 
   return tm().substitute(tf, subst);
 }
 
-void state_trace::add_model(const expr::model& m) {
-  expr::model::const_iterator it = m.values_begin();
-  for (; it != m.values_end(); ++ it) {
-    d_model.set_variable_value(it->first, it->second);
-  }
+void state_trace::set_model(expr::model::ref m) {
+  d_model = m;
 }
 
 void state_trace::to_stream(std::ostream& out) const {
@@ -155,7 +151,7 @@ void state_trace::to_stream(std::ostream& out) const {
     get_struct_variables(d_state_variables[k], state_vars_k);
     assert(state_vars.size() == state_vars_k.size());
     for (size_t i = 0; i < state_vars_k.size(); ++ i) {
-      out << "    (" << state_vars[i] << " " << d_model.get_variable_value(state_vars_k[i]) << ")" << std::endl;
+      out << "    (" << state_vars[i] << " " << d_model->get_variable_value(state_vars_k[i]) << ")" << std::endl;
     }
     out << "  )" << std::endl;
 
@@ -166,7 +162,7 @@ void state_trace::to_stream(std::ostream& out) const {
       get_struct_variables(d_input_variables[k], input_vars_k);
       assert(input_vars.size() == input_vars_k.size());
       for (size_t i = 0; i < input_vars_k.size(); ++ i) {
-        out << "    (" << input_vars[i] << " " << d_model.get_variable_value(input_vars_k[i]) << ")" << std::endl;
+        out << "    (" << input_vars[i] << " " << d_model->get_variable_value(input_vars_k[i]) << ")" << std::endl;
       }
       out << "  )" << std::endl;
     }

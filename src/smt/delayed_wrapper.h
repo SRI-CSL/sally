@@ -63,7 +63,7 @@ public:
   void add(expr::term_ref f, formula_class f_class);
   result check();
   void check_model();
-  void get_model(expr::model& m) const;
+  expr::model::ref get_model() const;
   void push();
   void pop();
   void generalize(generalization_type type, std::vector<expr::term_ref>& projection_out);

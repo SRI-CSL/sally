@@ -270,8 +270,7 @@ solvers::query_result solvers::query_at(size_t k, expr::term_ref f, smt::solver:
   switch (result.result) {
   case smt::solver::SAT: {
     if (d_generate_models_for_queries) {
-      result.model = new expr::model(d_tm, true);
-      solver->get_model(*result.model);
+      result.model = solver->get_model();
     }
     result.generalization = generalize_sat(solver);
     break;
@@ -414,8 +413,7 @@ solvers::query_result solvers::check_inductive(expr::term_ref f) {
   switch (result.result) {
   case smt::solver::SAT:
     if (d_generate_models_for_queries) {
-      result.model = new expr::model(d_tm, true);
-      solver->get_model(*result.model);
+      result.model = solver->get_model();
     }
     result.generalization = generalize_sat(solver);
     break;

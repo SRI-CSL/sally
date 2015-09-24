@@ -381,6 +381,10 @@ std::ostream& operator << (std::ostream& out, const model& m) {
   return out;
 }
 
+model::ref::ref()
+: d_model(0)
+{}
+
 model::ref::ref(model* model)
 : d_model(0)
 {

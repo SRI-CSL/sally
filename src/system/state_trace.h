@@ -40,7 +40,7 @@ class state_trace : public expr::gc_participant {
   std::vector<expr::term_ref_strong> d_input_variables;
 
   /** Full model of the trace */
-  expr::model d_model;
+  expr::model::ref d_model;
 
   /** Ensure variables up to (and including) frame k */
   void ensure_variables(size_t k);
@@ -91,7 +91,7 @@ public:
   /**
    * Add model to the trace (model over trace variables).
    */
-  void add_model(const expr::model& m);
+  void set_model(expr::model::ref m);
 
   /**
    * Output the trace to the stream.

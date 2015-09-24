@@ -134,7 +134,7 @@ public:
   void check_model();
 
   /** Returns the model */
-  void get_model(expr::model& m);
+  expr::model::ref get_model();
 
   /** Push the context */
   void push();
@@ -896,23 +896,22 @@ void mathsat5_internal::check_model() {
   }
 
   // Get the model
-  expr::model m(d_tm, true);
-  get_model(m);
+  expr::model::ref m = get_model();
 
   // Go through the assertions and evaluate
   for (size_t i = 0; i < d_assertions.size(); ++ i) {
-    if (!m.is_true(d_assertions[i])) {
+    if (!m->is_true(d_assertions[i])) {
       throw exception("Check error: an assertion is false in the obtained model!");
     }
   }
 }
 
-void mathsat5_internal::get_model(expr::model& m) {
+expr::model::ref mathsat5_internal::get_model() {
 
   assert(d_last_check_status == MSAT_SAT);
 
   // Clear any data already there
-  m.clear();
+  expr::model::ref m = new expr::model(d_tm, true);
 
   // Get the model from mathsat
   for (size_t i = 0; i < d_variables.size(); ++ i) {
@@ -970,8 +969,10 @@ void mathsat5_internal::get_model(expr::model& m) {
     }
 
     // Add the association
-    m.set_variable_value(var, var_value);
+    m->set_variable_value(var, var_value);
   }
+
+  return m;
 }
 
 void mathsat5_internal::interpolate(std::vector<expr::term_ref>& projection_out) {
@@ -1002,8 +1003,8 @@ void mathsat5_internal::get_unsat_core(std::vector<expr::term_ref>& out) {
 }
 
 void mathsat5_internal::generalize(solver::generalization_type type, const std::set<expr::term_ref>& vars_to_keep, const std::set<expr::term_ref>& vars_to_elim, std::vector<expr::term_ref>& out) {
-  expr::model m(d_tm, true);
-  get_model(m);
+
+  expr::model::ref m = get_model();
 
   if (d_opts.get_bool("mathsat5-generalize-qe")) {
 
@@ -1055,8 +1056,8 @@ void mathsat5_internal::generalize(solver::generalization_type type, const std::
     for (; it != it_end; ++it) {
       // var = value
       expr::term_ref var = *it;
-      assert(m.has_value(var));
-      expr::term_ref value = m.get_term_value(var).to_term(d_tm);
+      assert(m->has_value(var));
+      expr::term_ref value = m->get_term_value(var).to_term(d_tm);
 
       if (d_tm.type_of(var) == d_tm.boolean_type()) {
         if (d_tm.get_boolean_constant(d_tm.term_of(value))) {
@@ -1132,9 +1133,9 @@ void mathsat5::check_model() {
   d_internal->check_model();
 }
 
-void mathsat5::get_model(expr::model& m) const {
+expr::model::ref mathsat5::get_model() const {
   TRACE("mathsat5") << "mathsat5[" << d_internal->instance() << "]: get_model()" << std::endl;
-  d_internal->get_model(m);
+  return d_internal->get_model();
 }
 
 void mathsat5::push() {

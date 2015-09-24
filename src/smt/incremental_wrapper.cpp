@@ -62,8 +62,8 @@ solver::result incremental_wrapper::check() {
   return d_solver->check();
 }
 
-void incremental_wrapper::get_model(expr::model& m) const {
-  d_solver->get_model(m);
+expr::model::ref incremental_wrapper::get_model() const {
+  return d_solver->get_model();
 }
 
 void incremental_wrapper::push() {

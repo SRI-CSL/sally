@@ -84,10 +84,10 @@ solver::result y2m5::check() {
   return d_last_yices2_result;
 }
 
-void y2m5::get_model(expr::model& m) const {
+expr::model::ref y2m5::get_model() const {
   TRACE("y2m5") << "y2m5[" << s_instance << "]: get_model()" << std::endl;
   assert(d_last_yices2_result == SAT);
-  d_yices2->get_model(m);
+  return d_yices2->get_model();
 }
 
 void y2m5::push() {

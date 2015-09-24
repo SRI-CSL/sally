@@ -58,8 +58,8 @@ void delayed_wrapper::check_model() {
   d_solver->check_model();
 }
 
-void delayed_wrapper::get_model(expr::model& m) const {
-  d_solver->get_model(m);
+expr::model::ref delayed_wrapper::get_model() const {
+  return d_solver->get_model();
 }
 
 void delayed_wrapper::push() {

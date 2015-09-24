@@ -113,7 +113,7 @@ solver::result smt2_output_wrapper::check() {
   return d_solver->check();
 }
 
-void smt2_output_wrapper::get_model(expr::model& m) const {
+expr::model::ref smt2_output_wrapper::get_model() const {
   set_name_transformer nt(d_tm);
 
   std::ofstream& out_nonconst = const_cast<smt2_output_wrapper*>(this)->d_output;
@@ -130,7 +130,7 @@ void smt2_output_wrapper::get_model(expr::model& m) const {
   }
   out_nonconst << "))" << std::endl;
 
-  d_solver->get_model(m);
+  return d_solver->get_model();
 }
 
 void smt2_output_wrapper::push() {

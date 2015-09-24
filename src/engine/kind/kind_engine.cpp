@@ -118,10 +118,9 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
       }
       d_solver_1->add_variables(vars.begin(), vars.end(), smt::solver::CLASS_A);
       // Get the model
-      expr::model m(tm(), false);
-      d_solver_1->get_model(m);
+      expr::model::ref m = d_solver_1->get_model();
       // Add model to trace
-      d_trace->add_model(m);
+      d_trace->set_model(m);
       return INVALID;
     }
     case smt::solver::UNKNOWN:

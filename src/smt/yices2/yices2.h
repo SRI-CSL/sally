@@ -63,7 +63,7 @@ public:
   result check();
 
   /** Get the model */
-  void get_model(expr::model& m) const;
+  expr::model::ref get_model() const;
 
   /** Push the solving context */
   void push();
