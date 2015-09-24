@@ -126,6 +126,10 @@ expr::term_ref state_trace::get_transition_formula(expr::term_ref tf, size_t k) 
   return tm().substitute(tf, subst);
 }
 
+expr::model::ref state_trace::get_model() const {
+  return d_model;
+}
+
 void state_trace::set_model(expr::model::ref m) {
   d_model = m;
 }
@@ -174,12 +178,6 @@ void state_trace::to_stream(std::ostream& out) const {
   d_state_type->tm().pop_namespace();
   d_state_type->tm().pop_namespace();
   d_state_type->tm().pop_namespace();
-}
-
-void state_trace::resize_to(size_t size) {
-  if (size < d_state_variables.size()) {
-    d_state_variables.resize(size);
-  }
 }
 
 std::ostream& operator << (std::ostream& out, const state_trace& trace) {

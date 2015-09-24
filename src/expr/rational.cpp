@@ -223,6 +223,11 @@ rational::rational(const term_manager& tm, term_ref t) {
   *this = tm.get_rational_constant(t_term);
 }
 
+rational rational::value_between(const rational& a, const rational& b) {
+  return (a + b) / 2;
+}
+
+
 }
 }
 

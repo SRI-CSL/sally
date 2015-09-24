@@ -118,6 +118,10 @@ public:
   /** Negate, i.e. -Q */
   rational negate() const;
 
+  /** Get a simple value in (a, b) */
+  static
+  rational value_between(const rational& a, const rational& b);
+
   const mpq_class& mpq() const {
     return d_gmp_rat;
   }

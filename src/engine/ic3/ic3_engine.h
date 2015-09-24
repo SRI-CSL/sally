@@ -276,7 +276,7 @@ class ic3_engine : public engine {
   void gc_solvers();
 
   /** Try to learn from the analyzer */
-  void learn_from_analyzer();
+  void learn_from_analyzer(std::vector<expr::term_ref>& out);
 
 public:
 

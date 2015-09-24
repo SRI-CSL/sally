@@ -256,7 +256,7 @@ solvers::query_result solvers::query_at(size_t k, expr::term_ref f, smt::solver:
   }
   smt::solver_scope scope(solver);
 
-  // Add the formula (moving current -> next)
+  // Add the formula
   scope.push();
   solver->add(f, f_class);
 

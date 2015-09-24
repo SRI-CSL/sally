@@ -253,6 +253,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(const induction_oblig
 
   // Add to obligations if not already shown invalid
   expr::term_ref G_not = tm().mk_term(expr::TERM_NOT, G);
+  TRACE("ic3") << "ic3: backkward learnt: " << G_not << std::endl;
   add_valid_up_to(d_induction_frame, G_not);
   if (!is_invalid(G_not)) {
     // Try to push assumptions next time
@@ -263,7 +264,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(const induction_oblig
 
   // Learn something to refute G
   expr::term_ref learnt = d_smt->learn_forward(d_induction_frame, G);
-  TRACE("ic3") << "ic3: learnt: " << learnt << std::endl;
+  TRACE("ic3") << "ic3: forward learnt: " << learnt << std::endl;
 
   if (learnt != G_not) {
     // Add to obligations if not already shown invalid
@@ -273,6 +274,22 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(const induction_oblig
       d_induction_obligations.push(induction_obligation(learnt, depth+1, 0));
       assert(d_frame_formula_info.find(learnt) == d_frame_formula_info.end());
       d_frame_formula_info[learnt] = frame_formula_info(f, G);
+    }
+  }
+
+  // Learn with the analyzer
+  if (ai()) {
+    std::vector<expr::term_ref> analyzer_learnt;
+    learn_from_analyzer(analyzer_learnt);
+    for (size_t i = 0; i < analyzer_learnt.size(); ++ i) {
+      learnt = analyzer_learnt[i];
+      TRACE("ic3") << "ic3: analyzer learnt[" << i << "]" << learnt << std::endl;
+      if (!is_invalid(learnt)) {
+        // Try to push assumptions next time
+        d_induction_obligations.push(induction_obligation(learnt, depth+1, 0));
+        assert(d_frame_formula_info.find(learnt) == d_frame_formula_info.end());
+        d_frame_formula_info[learnt] = frame_formula_info();
+      }
     }
   }
 
@@ -446,9 +463,6 @@ engine::result ic3_engine::search() {
   // Push frame by frame */
   for(;;) {
 
-    // Try to learn from
-    learn_from_analyzer();
-
     // Push the current induction frame forward
     push_current_frame();
 
@@ -606,9 +620,58 @@ bool ic3_engine::is_invalid_or_parent_invalid(expr::term_ref f) const {
   }
 }
 
-void ic3_engine::learn_from_analyzer() {
+void ic3_engine::learn_from_analyzer(std::vector<expr::term_ref>& potential_invariants) {
   if (ai()) {
-    // TODO: learn
+
+    // The state type
+    const system::state_type* state_type = d_transition_system->get_state_type();
+
+    // Potential invariants from the analyzer
+    ai()->infer(potential_invariants);
+
+    // Next varsion of the potential invariants
+    std::vector<expr::term_ref> potential_invariants_next;
+    for (size_t i = 0; i < potential_invariants.size(); ++ i) {
+      potential_invariants_next.push_back(state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, potential_invariants[i]));
+    }
+
+    // Check the invariants at frame 0
+    size_t to_keep = 0;
+    for (size_t i = 0; i < potential_invariants.size(); ++ i) {
+      expr::term_ref invariant = potential_invariants[i];
+      solvers::query_result result = d_smt->query_at(0, tm().mk_term(expr::TERM_NOT, invariant), smt::solver::CLASS_A);
+      if (result.result == smt::solver::UNSAT) {
+        // holds at 0
+        potential_invariants[to_keep++] = invariant;
+        potential_invariants_next[to_keep] = potential_invariants_next[i];
+      }
+    }
+    potential_invariants.resize(to_keep);
+    potential_invariants_next.resize(to_keep);
+
+
+    for (size_t k = 1; k <= d_induction_frame; ++ k) {
+      to_keep = 0;
+      for (size_t i = 0; i < potential_invariants.size(); ++ i) {
+        // The invariant
+        expr::term_ref invariant = potential_invariants[i];
+        expr::term_ref invariant_next = potential_invariants_next[i];
+        // Check if we've done it already
+        if (frame_contains(1, invariant)) {
+          continue;
+        }
+        // Check if R_{k-1} && T => Inv
+        solvers::query_result result = d_smt->query_at(k-1, tm().mk_term(expr::TERM_NOT, invariant_next), smt::solver::CLASS_B);
+        if (result.result == smt::solver::UNSAT) {
+          // holds at 0
+          potential_invariants[to_keep++] = invariant;
+          potential_invariants_next[to_keep] = invariant_next;
+          add_valid_up_to(k, invariant);
+        }
+      }
+      potential_invariants.resize(to_keep);
+      potential_invariants_next.resize(to_keep);
+    }
   }
 }
 

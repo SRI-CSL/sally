@@ -63,7 +63,7 @@ public:
 
   /** Notification of new reachable states at frame k */
   virtual
-  void notify_reachable(const system::state_trace* trace) = 0;
+  void notify_reachable(system::state_trace* trace) = 0;
 
   /** Notification of unreachable states at frame k */
   virtual

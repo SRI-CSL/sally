@@ -89,6 +89,11 @@ public:
   expr::term_ref get_transition_formula(expr::term_ref tf, size_t k);
 
   /**
+   * Returns the model associated with the trace.
+   */
+  expr::model::ref get_model() const;
+
+  /**
    * Add model to the trace (model over trace variables).
    */
   void set_model(expr::model::ref m);
@@ -97,9 +102,6 @@ public:
    * Output the trace to the stream.
    */
   void to_stream(std::ostream& out) const;
-
-  /** Resize trace to 0 .. size -1 */
-  void resize_to(size_t size);
 
   /** Collect the terms */
   void gc_collect(const expr::gc_relocator& gc_reloc);
