@@ -322,6 +322,9 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
   assert(r == smt::solver::SAT);
   expr::model::ref model = solver->get_model();
   d_trace->set_model(model);
+  if (ai()) {
+    ai()->notify_reachable(d_trace);
+  }
 
   // Try to extend it
   for (;; ++ k) {
@@ -369,6 +372,9 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
     set_invalid(f);
     model = solver->get_model();
     d_trace->set_model(model);
+    if (ai()) {
+      ai()->notify_reachable(d_trace);
+    }
     d_counterexample.push_back(G);
   }
 }

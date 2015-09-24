@@ -33,7 +33,7 @@ public:
   void start(const system::transition_system* ts, const system::state_formula* p);
   void clear();
 
-  void notify_reachable(size_t k, const expr::model::ref m);
+  void notify_reachable(const system::state_trace* trace);
   void notify_unreachable(size_t k, const expr::model::ref m);
 
   void infer(std::vector<expr::term_ref>& output);

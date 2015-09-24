@@ -42,9 +42,9 @@ void interval_analyzer::clear() {
   TRACE("interval") << "interval_analyzer::clear()" << std::endl;
 }
 
-void interval_analyzer::notify_reachable(size_t k, const expr::model::ref m) {
-  TRACE("interval") << "interval_analyzer::notify_reachable(" << k << "): " << std::endl;
-  TRACE("interval") << *m << std::endl;
+void interval_analyzer::notify_reachable(const system::state_trace* trace) {
+  TRACE("interval") << "interval_analyzer::notify_reachable(): " << std::endl;
+  TRACE("interval") << *trace << std::endl;
 }
 
 void interval_analyzer::notify_unreachable(size_t k, const expr::model::ref m) {
