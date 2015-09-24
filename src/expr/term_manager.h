@@ -47,6 +47,12 @@ class term_manager {
   /** Participants in garbage collection */
   std::set<gc_participant*> d_gc_participants;
 
+  /** Id of the manager */
+  size_t d_id;
+
+  /** Total number of managers ever created */
+  static size_t s_instances;
+
 public:
 
   /** Construct them manager */
@@ -258,6 +264,9 @@ public:
 
   /** Unregister from garbage collection */
   void gc_deregister(gc_participant* o);
+
+  /** Id of this manager */
+  size_t id() const;
 };
 
 inline

@@ -73,7 +73,7 @@ class mathsat5_term_cache : public expr::gc_participant {
 
   class tm_to_cache_map {
   public:
-    typedef std::map<expr::term_manager*, mathsat5_term_cache*> map_type;
+    typedef std::map<size_t, mathsat5_term_cache*> map_type;
     map_type map;
     ~tm_to_cache_map();
   };

@@ -28,9 +28,12 @@
 namespace sally {
 namespace expr {
 
+size_t term_manager::s_instances = 0;
+
 term_manager::term_manager(utils::statistics& stats)
 : d_tm(new term_manager_internal(stats))
 , d_eq_rewrite(false)
+, d_id(s_instances ++)
 {
 }
 
@@ -394,6 +397,10 @@ void term_manager::gc_register(gc_participant* o) {
 void term_manager::gc_deregister(gc_participant* o) {
   assert(d_gc_participants.find(o) != d_gc_participants.end());
   d_gc_participants.erase(o);
+}
+
+size_t term_manager::id() const {
+  return d_id;
 }
 
 }

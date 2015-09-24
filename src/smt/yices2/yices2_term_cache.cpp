@@ -126,12 +126,12 @@ yices2_term_cache* yices2_term_cache::get_cache(expr::term_manager& tm) {
   yices2_term_cache* cache = 0;
 
   // Try to find an existing one
-  tm_to_cache_map::map_type::const_iterator find = s_tm_to_cache_map.map.find(&tm);
+  tm_to_cache_map::map_type::const_iterator find = s_tm_to_cache_map.map.find(tm.id());
   if (find != s_tm_to_cache_map.map.end()) {
     cache = find->second;
   } else {
     cache = new yices2_term_cache(tm);
-    s_tm_to_cache_map.map[&tm] = cache;
+    s_tm_to_cache_map.map[tm.id()] = cache;
   }
 
   return cache;
