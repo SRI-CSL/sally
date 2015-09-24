@@ -124,6 +124,9 @@ class solvers {
   /** Assert frame selection variables */
   void assert_frame_selection(size_t k, smt::solver* solver);
 
+  /** Whether to generate models for queries */
+  bool d_generate_models_for_queries;
+
 public:
 
   /** Create solvers for the given transition system */
@@ -172,6 +175,9 @@ public:
 
   /** Make sure that the counter-example solver has frames 0, ..., k */
   void ensure_counterexample_solver_depth(size_t k);
+
+  /** Whether to return models with queries */
+  void generate_models_for_queries(bool flag);
 
   /** Collect solver garbage */
   void gc();

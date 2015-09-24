@@ -498,6 +498,7 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 
   // Initializer the analyzer
   if (ai()) {
+    d_smt->generate_models_for_queries(true);
     ai()->start(d_transition_system, d_property);
   }
 

@@ -40,6 +40,7 @@ solvers::solvers(const system::context& ctx, const system::transition_system* tr
 , d_counterexample_solver(0)
 , d_counterexample_solver_depth(0)
 , d_counterexample_solver_variables_depth(0)
+, d_generate_models_for_queries(false)
 {
 }
 
@@ -268,8 +269,10 @@ solvers::query_result solvers::query_at(size_t k, expr::term_ref f, smt::solver:
   result.result = solver->check();
   switch (result.result) {
   case smt::solver::SAT: {
-    result.model = new expr::model(d_tm, true);
-    solver->get_model(*result.model);
+    if (d_generate_models_for_queries) {
+      result.model = new expr::model(d_tm, true);
+      solver->get_model(*result.model);
+    }
     result.generalization = generalize_sat(solver);
     break;
   }
@@ -410,8 +413,10 @@ solvers::query_result solvers::check_inductive(expr::term_ref f) {
   result.result = solver->check();
   switch (result.result) {
   case smt::solver::SAT:
-    result.model = new expr::model(d_tm, true);
-    solver->get_model(*result.model);
+    if (d_generate_models_for_queries) {
+      result.model = new expr::model(d_tm, true);
+      solver->get_model(*result.model);
+    }
     result.generalization = generalize_sat(solver);
     break;
   case smt::solver::UNSAT:
@@ -476,6 +481,10 @@ void solvers::new_frame() {
 
 size_t solvers::size() {
   return d_size;
+}
+
+void solvers::generate_models_for_queries(bool flag) {
+  d_generate_models_for_queries = flag;
 }
 
 }
