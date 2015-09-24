@@ -21,15 +21,18 @@
 namespace sally {
 namespace expr {
 
-gc_participant::gc_participant(term_manager& tm)
+gc_participant::gc_participant(term_manager& tm, bool deregister)
 : d_gc_participant_tm(tm)
+, d_deregister(deregister)
 {
   d_gc_participant_tm.gc_register(this);
 }
 
 gc_participant::~gc_participant()
 {
-  d_gc_participant_tm.gc_deregister(this);
+  if (d_deregister) {
+    d_gc_participant_tm.gc_deregister(this);
+  }
 }
 
 }

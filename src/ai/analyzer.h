@@ -63,11 +63,11 @@ public:
 
   /** Notification of new reachable states at frame k */
   virtual
-  void notify_reachable(size_t k, const expr::model& m) = 0;
+  void notify_reachable(size_t k, const expr::model::ref m) = 0;
 
   /** Notification of unreachable states at frame k */
   virtual
-  void notify_unreachable(size_t k, const expr::model& m) = 0;
+  void notify_unreachable(size_t k, const expr::model::ref m) = 0;
 
   /** Output new inferences (potential invariants) */
   virtual

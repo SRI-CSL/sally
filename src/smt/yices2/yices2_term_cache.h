@@ -71,11 +71,15 @@ class yices2_term_cache : public expr::gc_participant {
   /** Vector of all permanent terms (such as variables) to stay beyond gc */
   std::vector<term_t> d_permanent_terms_yices;
 
-  typedef std::map<expr::term_manager*, yices2_term_cache*> tm_to_cache_map;
+  class tm_to_cache_map {
+  public:
+    typedef std::map<expr::term_manager*, yices2_term_cache*> map_type;
+    map_type map;
+    ~tm_to_cache_map();
+  };
 
   /** Map from term managers to their term caches */
-  static
-  std::map<expr::term_manager*, yices2_term_cache*> s_tm_to_cache_map;
+  static tm_to_cache_map s_tm_to_cache_map;
 
 public:
 

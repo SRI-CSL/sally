@@ -71,11 +71,16 @@ class mathsat5_term_cache : public expr::gc_participant {
   /** Vector of permanent stuff (such as variables) that doesn't go away with gc */
   std::vector<msat_term> d_permanent_terms_msat;
 
-  typedef std::map<expr::term_manager*, mathsat5_term_cache*> tm_to_cache_map;
+  class tm_to_cache_map {
+  public:
+    typedef std::map<expr::term_manager*, mathsat5_term_cache*> map_type;
+    map_type map;
+    ~tm_to_cache_map();
+  };
 
   /** Map from term managers to their term caches */
   static
-  std::map<expr::term_manager*, mathsat5_term_cache*> s_tm_to_cache_map;
+  tm_to_cache_map s_tm_to_cache_map;
 
 public:
 

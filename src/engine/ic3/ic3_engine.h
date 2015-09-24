@@ -239,7 +239,7 @@ class ic3_engine : public engine {
    * unreachability at k. Note that if k == 0, this returns true without any
    * checking.
    */
-  bool check_reachable(size_t k, expr::term_ref f);
+  bool check_reachable(size_t k, expr::term_ref f, expr::model::ref f_model);
 
   /** Print the frame content */
   void print_frame(size_t k, std::ostream& out) const;

@@ -40,20 +40,26 @@ class reachability_obligation {
 
   /** The frame of the obligation */
   size_t d_k;
-  /** The forumula in question */
+  /** The formula in question */
   expr::term_ref d_P;
+  /** Local model of the formula */
+  expr::model::ref d_P_model;
 
 public:
 
   /** Construct the obligation */
-  reachability_obligation(size_t k, expr::term_ref P)
-  : d_k(k), d_P(P){}
+  reachability_obligation(size_t k, expr::term_ref P, expr::model::ref P_model)
+  : d_k(k), d_P(P), d_P_model(P_model)
+  {}
 
   /** Get the frame */
   size_t frame() const { return d_k; }
 
   /** Get the formula */
   expr::term_ref formula() const { return d_P; }
+
+  /** Get the model */
+  expr::model::ref model() const { return d_P_model; }
 
 };
 
@@ -158,13 +164,13 @@ bool ic3_engine::frame_contains(size_t k, expr::term_ref f) {
   return d_frame_content[k].find(f) != d_frame_content[k].end();
 }
 
-bool ic3_engine::check_reachable(size_t k, expr::term_ref f) {
+bool ic3_engine::check_reachable(size_t k, expr::term_ref f, expr::model::ref f_model) {
 
   TRACE("ic3") << "ic3: checking reachability at " << k << std::endl;
 
   // Queue of reachability obligations
   std::vector<reachability_obligation> reachability_obligations;
-  reachability_obligations.push_back(reachability_obligation(k, f));
+  reachability_obligations.push_back(reachability_obligation(k, f, f_model));
 
   // We're not reachable, if we hit 0 we set it to true
   bool reachable = false;
@@ -178,10 +184,13 @@ bool ic3_engine::check_reachable(size_t k, expr::term_ref f) {
     if (reach.frame() == 0) {
       // We're reachable, mark it
       reachable = true;
-      // Remember the counterexample
+      // Remember the counterexample and notify the analyzer
       d_counterexample.clear();
       for (size_t i = 0; i < reachability_obligations.size(); ++ i) {
         d_counterexample.push_front(reachability_obligations[i].formula());
+        if (ai()) {
+          ai()->notify_reachable(i, reach.model());
+        }
       }
       break;
     }
@@ -191,6 +200,10 @@ bool ic3_engine::check_reachable(size_t k, expr::term_ref f) {
     if (result.result == smt::solver::UNSAT) {
       // Proven, remove from obligations
       reachability_obligations.pop_back();
+      // Notify the analyzer
+      if (ai()) {
+        ai()->notify_unreachable(k, reach.model());
+      }
       // Learn
       if (reach.frame() < k) {
         // Learn something at k that refutes the formula
@@ -200,7 +213,7 @@ bool ic3_engine::check_reachable(size_t k, expr::term_ref f) {
       }
     } else {
       // New obligation to reach the counterexample
-      reachability_obligations.push_back(reachability_obligation(reach.frame()-1, result.generalization));
+      reachability_obligations.push_back(reachability_obligation(reach.frame()-1, result.generalization, result.model));
     }
   }
 
@@ -221,19 +234,20 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(const induction_oblig
   TRACE("ic3") << "ic3: pushing at " << d_induction_frame << ": " << f << std::endl;
 
   // Check if inductive
-  expr::term_ref G = d_smt->check_inductive(f);
+  solvers::query_result result = d_smt->check_inductive(f);
+  expr::term_ref G = result.generalization;
 
   TRACE("ic3::generalization") << "ic3: generalization " << G << std::endl;
 
   // If inductive
-  if (G.is_null()) {
+  if (result.result == smt::solver::UNSAT) {
     // Add to the next frame
     d_induction_obligations_next.push_back(induction_obligation(f, depth, 0));
     return INDUCTION_SUCCESS;
   }
 
   // Check if G is reachable
-  bool reachable = check_reachable(d_induction_frame, G);
+  bool reachable = check_reachable(d_induction_frame, G, result.model);
 
   // If reachable, we're not inductive
   if (reachable) {
@@ -329,16 +343,13 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
     d_smt->ensure_counterexample_solver_depth(k);
     solver->add(d_trace->get_state_formula(G, k), smt::solver::CLASS_A);
 
-//    // If not a generalization, must check to see if we're reachable
-//    if (f != tm().mk_term(expr::TERM_NOT, G)) {
-      // If not a generalization we need to check
-      smt::solver::result r = solver->check();
+    // If not a generalization we need to check
+    smt::solver::result r = solver->check();
 
-      // If not sat, we can't extend any more
-      if (r != smt::solver::SAT) {
-        break;
-      }
-//    }
+    // If not sat, we can't extend any more
+    if (r != smt::solver::SAT) {
+      break;
+    }
 
     // We're sat (either by knowing, or by checking), so we extend further
     f = parent;

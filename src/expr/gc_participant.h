@@ -31,12 +31,16 @@ class gc_relocator;
  */
 class gc_participant {
 
+  /** The term manager we're participating in */
   term_manager& d_gc_participant_tm;
+
+  /** Should we deregister when destructed */
+  bool d_deregister;
 
 public:
 
   /** Construct a GC participant */
-  gc_participant(term_manager& tm);
+  gc_participant(term_manager& tm, bool deregister = true);
 
   /** Destruct a GC participant */
   virtual ~gc_participant();

@@ -159,7 +159,7 @@ public:
   query_result query_at(size_t k, expr::term_ref f, smt::solver::formula_class f_class);
 
   /** Check if f is inductive */
-  expr::term_ref check_inductive(expr::term_ref f);
+  query_result check_inductive(expr::term_ref f);
 
   /** Learn forward to refute G at k from k-1 using reachability solvers */
   expr::term_ref learn_forward(size_t k, expr::term_ref G);

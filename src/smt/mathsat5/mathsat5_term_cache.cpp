@@ -33,7 +33,7 @@ namespace sally {
 namespace smt {
 
 mathsat5_term_cache::mathsat5_term_cache(expr::term_manager& tm)
-: gc_participant(tm)
+: gc_participant(tm, false)
 , d_tm(tm)
 , d_cache_is_clean(true)
 {
@@ -54,6 +54,13 @@ mathsat5_term_cache::~mathsat5_term_cache() {
 }
 
 mathsat5_term_cache::tm_to_cache_map mathsat5_term_cache::s_tm_to_cache_map;
+
+mathsat5_term_cache::tm_to_cache_map::~tm_to_cache_map() {
+  tm_to_cache_map::map_type::iterator it = s_tm_to_cache_map.map.begin();
+  for (; it != s_tm_to_cache_map.map.end(); ++ it) {
+    delete it->second;
+  }
+}
 
 void mathsat5_term_cache::set_term_cache(expr::term_ref t, msat_term t_msat) {
   // Due to normalization in SMT solvers, two terms t1 and t2 can map to the
@@ -143,11 +150,12 @@ mathsat5_term_cache* mathsat5_term_cache::get_cache(expr::term_manager& tm) {
   mathsat5_term_cache* cache = 0;
 
   // Try to find an existing one
-  tm_to_cache_map::const_iterator find = s_tm_to_cache_map.find(&tm);
-  if (find != s_tm_to_cache_map.end()) {
+  tm_to_cache_map::map_type::const_iterator find = s_tm_to_cache_map.map.find(&tm);
+  if (find != s_tm_to_cache_map.map.end()) {
     cache = find->second;
   } else {
     cache = new mathsat5_term_cache(tm);
+    s_tm_to_cache_map.map[&tm] = cache;
   }
 
   return cache;

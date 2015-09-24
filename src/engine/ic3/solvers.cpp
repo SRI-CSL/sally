@@ -392,9 +392,11 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
   return learnt;
 }
 
-expr::term_ref solvers::check_inductive(expr::term_ref f) {
+solvers::query_result solvers::check_inductive(expr::term_ref f) {
 
-  // Push the scoppe
+  query_result result;
+
+  // Push the scope
   smt::solver* solver = get_induction_solver();
   smt::solver_scope scope(solver);
   scope.push();
@@ -405,15 +407,14 @@ expr::term_ref solvers::check_inductive(expr::term_ref f) {
   solver->add(F_not_next, smt::solver::CLASS_B);
 
   // Figure out the result
-  expr::term_ref result;
-  smt::solver::result r = solver->check();
-  switch (r) {
-  case smt::solver::SAT: {
-    result = generalize_sat(solver);
+  result.result = solver->check();
+  switch (result.result) {
+  case smt::solver::SAT:
+    result.model = new expr::model(d_tm, true);
+    solver->get_model(*result.model);
+    result.generalization = generalize_sat(solver);
     break;
-  }
   case smt::solver::UNSAT:
-    // Unsat, we return NULL
     break;
   default:
     throw exception("SMT unknown result.");
