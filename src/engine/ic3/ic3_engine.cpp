@@ -35,6 +35,41 @@
 namespace sally {
 namespace ic3 {
 
+induction_obligation::induction_obligation(expr::term_ref P, bool analzye)
+: d_P(P)
+, d_budget(0)
+, d_analyze(analzye)
+{}
+
+expr::term_ref induction_obligation::formula() const {
+  return d_P;
+}
+
+bool induction_obligation::operator == (const induction_obligation& o) const {
+  return d_P == o.d_P;
+}
+
+bool induction_obligation::operator < (const induction_obligation& o) const {
+  // Smaller budget wins
+  if (used_budget() != o.used_budget()) {
+    return used_budget() > o.used_budget();
+  }
+  // Break ties
+  return formula() > o.formula();
+}
+
+bool induction_obligation::analyze_cti() const {
+  return d_analyze;
+}
+
+size_t induction_obligation::used_budget() const {
+  return d_budget;
+}
+
+void induction_obligation::add_to_used_budget(size_t size) {
+  d_budget += size;
+}
+
 /** A reachability obligation at frame k. */
 class reachability_obligation {
 
@@ -164,9 +199,11 @@ bool ic3_engine::frame_contains(size_t k, expr::term_ref f) {
   return d_frame_content[k].find(f) != d_frame_content[k].end();
 }
 
-bool ic3_engine::check_reachable(size_t k, expr::term_ref f, expr::model::ref f_model) {
+ic3_engine::reachability_status ic3_engine::check_reachable(size_t k, expr::term_ref f, expr::model::ref f_model, size_t& budget) {
 
   TRACE("ic3") << "ic3: checking reachability at " << k << std::endl;
+
+  assert(budget > 0);
 
   // Queue of reachability obligations
   std::vector<reachability_obligation> reachability_obligations;
@@ -207,6 +244,10 @@ bool ic3_engine::check_reachable(size_t k, expr::term_ref f, expr::model::ref f_
         expr::term_ref learnt = d_smt->learn_forward(reach.frame(), reach.formula());
         // Add any unreachability learnts, but not f itself
         add_valid_up_to(reach.frame(), learnt);
+        // Use the budget
+        if (--budget == 0) {
+          return BUDGET_EXCEEDED;
+        }
       }
     } else {
       // New obligation to reach the counterexample
@@ -217,12 +258,16 @@ bool ic3_engine::check_reachable(size_t k, expr::term_ref f, expr::model::ref f_
   TRACE("ic3") << "ic3: " << (reachable ? "reachable" : "not reachable") << std::endl;
 
   // All discharged, so it's not reachable
-  return reachable;
+  if (reachable) {
+    return REACHABLE;
+  } else {
+    return UNREACHABLE;
+  }
 }
 
-ic3_engine::induction_result ic3_engine::push_if_inductive(const induction_obligation& ind) {
+ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation& ind) {
 
-  size_t depth = ind.depth();
+  bool analyze_cti = ind.analyze_cti();
   expr::term_ref f = ind.formula();
 
   assert(d_induction_frame < d_frame_content.size());
@@ -239,25 +284,39 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(const induction_oblig
   // If inductive
   if (result.result == smt::solver::UNSAT) {
     // Add to the next frame
-    d_induction_obligations_next.push_back(induction_obligation(f, depth, 0));
+    d_induction_obligations_next.push_back(induction_obligation(f, analyze_cti));
     return INDUCTION_SUCCESS;
   }
 
+  // If we're not analyzing the CTI, we're done
+  if (!analyze_cti) {
+    return INDUCTION_INCONCLUSIVE;
+  }
+
   // Check if G is reachable
-  bool reachable = check_reachable(d_induction_frame, G, result.model);
+  size_t reachability_budget = ind.used_budget();
+  if (reachability_budget == 0) { reachability_budget = 1; }
+  size_t budget_to_use = reachability_budget;
+  reachability_status reachable = check_reachable(d_induction_frame, G, result.model, budget_to_use);
+  ind.add_to_used_budget(reachability_budget - budget_to_use);
 
   // If reachable, we're not inductive
-  if (reachable) {
+  if (reachable == REACHABLE) {
     return INDUCTION_FAIL;
+  }
+
+  // If budget exceeded, we retry later
+  if (reachable == BUDGET_EXCEEDED) {
+    return INDUCTION_RETRY;
   }
 
   // Add to obligations if not already shown invalid
   expr::term_ref G_not = tm().mk_term(expr::TERM_NOT, G);
-  TRACE("ic3") << "ic3: backkward learnt: " << G_not << std::endl;
+  TRACE("ic3") << "ic3: backward learnt: " << G_not << std::endl;
   add_valid_up_to(d_induction_frame, G_not);
   if (!is_invalid(G_not)) {
     // Try to push assumptions next time
-    d_induction_obligations.push(induction_obligation(G_not, depth+1, 0));
+    d_induction_obligations.push(induction_obligation(G_not, analyze_cti));
     assert(d_frame_formula_info.find(G_not) == d_frame_formula_info.end());
     d_frame_formula_info[G_not] = frame_formula_info(f, G);
   }
@@ -271,7 +330,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(const induction_oblig
     add_valid_up_to(d_induction_frame, learnt);
     if (!is_invalid(learnt)) {
       // Try to push assumptions next time
-      d_induction_obligations.push(induction_obligation(learnt, depth+1, 0));
+      d_induction_obligations.push(induction_obligation(learnt, analyze_cti));
       assert(d_frame_formula_info.find(learnt) == d_frame_formula_info.end());
       d_frame_formula_info[learnt] = frame_formula_info(f, G);
     }
@@ -285,8 +344,8 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(const induction_oblig
       learnt = analyzer_learnt[i];
       TRACE("ic3") << "ic3: analyzer learnt[" << i << "]" << learnt << std::endl;
       if (!is_invalid(learnt)) {
-        // Try to push assumptions next time
-        d_induction_obligations.push(induction_obligation(learnt, depth+1, 0));
+        // Try to push assumptions next time (but don't analyze the failures)
+        d_induction_obligations.push(induction_obligation(learnt, false));
         assert(d_frame_formula_info.find(learnt) == d_frame_formula_info.end());
         d_frame_formula_info[learnt] = frame_formula_info();
       }
@@ -410,9 +469,7 @@ void ic3_engine::push_current_frame() {
     }
 
     // Push the formula forward if it's inductive at the frame
-    size_t old_total = total_facts();
     induction_result ind_result = push_if_inductive(ind);
-    ind.add_score(total_facts() - old_total);
 
     // See what happened
     switch (ind_result) {
@@ -484,6 +541,11 @@ engine::result ic3_engine::search() {
     d_induction_obligations.clear();
     ensure_frame(d_induction_frame);
 
+    // If exceeded number of frames
+    if (d_induction_frame == ctx().get_options().get_unsigned("ic3-max")) {
+      return engine::INTERRUPTED;
+    }
+
     MSG(1) << "ic3: Extending trace to " << d_induction_frame << " (" << d_induction_obligations_next.size() << " facts)" << std::endl;
 
     // Add formulas to the new frame
@@ -543,7 +605,7 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   // Add the initial state
   expr::term_ref I = d_transition_system->get_initial_states();
   add_to_frame(0, I);
-  d_induction_obligations.push(induction_obligation(I, 0, 0));
+  d_induction_obligations.push(induction_obligation(I, true));
 
   // Add the property we're trying to prove (if not already invalid at frame 0)
   bool ok = add_property(d_property->get_formula());
@@ -578,7 +640,7 @@ bool ic3_engine::add_property(expr::term_ref P) {
     solvers::query_result result = d_smt->query_at(0, tm().mk_term(expr::TERM_NOT, P), smt::solver::CLASS_A);
     if (result.result == smt::solver::UNSAT) {
       add_to_frame(0, P);
-      d_induction_obligations.push(induction_obligation(P, 0, 0));
+      d_induction_obligations.push(induction_obligation(P, true));
       d_properties.insert(P);
       return true;
     } else {

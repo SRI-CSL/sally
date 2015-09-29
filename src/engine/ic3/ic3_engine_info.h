@@ -28,11 +28,13 @@ namespace ic3 {
 struct ic3_engine_info {
 
   static void setup_options(boost::program_options::options_description& options) {
+    using namespace boost::program_options;
     options.add_options()
         ("ic3-show-invariant", "Show the invariant if a property is proved true.")
         ("ic3-enable-restarts", "Restart solvers when extending to new frame and reduce learnts.")
         ("ic3-single-solver", "One solver for reachability, one for induction, one for bmc.")
         ("ic3-dump-dependencies", "Dump reasoning dependancy graph.")
+        ("ic3-max", value<unsigned>()->default_value(0), "Maximal frame to consider.")
         ;
   }
 

@@ -43,46 +43,33 @@ class induction_obligation {
 
   /** The formula in question */
   expr::term_ref d_P;
-  /** Assumption depth */
-  size_t d_depth;
-  /** Any score */
-  double d_score;
+  /** The used budget */
+  size_t d_budget;
+  /** Should we analyze induction failure */
+  bool d_analyze;
 
 public:
 
   /** Construct the obligation */
-  induction_obligation(expr::term_ref P, size_t depth, double score = 0)
-  : d_P(P), d_depth(depth), d_score(score) {}
+  induction_obligation(expr::term_ref P, bool analzye);
 
   /** Get the formula */
-  expr::term_ref formula() const { return d_P; }
+  expr::term_ref formula() const;
 
-  /** Get the weight */
-  size_t depth() const { return d_depth; }
+  /** Return the used budget */
+  size_t used_budget() const;
 
-  /** Get the score */
-  double score() const { return d_score; }
+  /** Add to used budget */
+  void add_to_used_budget(size_t size);
 
-  /** Add to score */
-  void add_score(double amount) { d_score += amount; }
+  /** Should we anlyze the induction failure */
+  bool analyze_cti() const;
 
   /** Compare for equality */
-  bool operator == (const induction_obligation& o) const {
-    return d_P == o.d_P;
-  }
+  bool operator == (const induction_obligation& o) const;
 
-  bool operator < (const induction_obligation& o) const {
-    // Bigger depth wins
-    if (depth() != o.depth()) {
-      return depth() < o.depth();
-    }
-    // Smaller score wins
-    if (score() != o.score()) {
-      return score() > o.score();
-    }
-    // Break ties
-    return formula() > o.formula();
-  }
+  /** Compare the budget values */
+  bool operator < (const induction_obligation& o) const;
 
 };
 
@@ -169,7 +156,7 @@ class ic3_engine : public engine {
   };
 
   /** Push the formula forward if its inductive. Returns true if inductive. */
-  induction_result push_if_inductive(const induction_obligation& o);
+  induction_result push_if_inductive(induction_obligation& o);
 
   /**
    * Add a formula that's inductive up to k-1 and holds at k. The formula will
@@ -232,6 +219,13 @@ class ic3_engine : public engine {
   /** Make sure all frame content is ready */
   void ensure_frame(size_t k);
 
+  enum reachability_status {
+    REACHABLE,
+    UNREACHABLE,
+    BUDGET_EXCEEDED
+  };
+
+
   /**
    * Assuming f is satisfiable at k, check if f is reachable at k. During
    * exploration, new facts are added to frames, but no induction obligations.
@@ -239,7 +233,7 @@ class ic3_engine : public engine {
    * unreachability at k. Note that if k == 0, this returns true without any
    * checking.
    */
-  bool check_reachable(size_t k, expr::term_ref f, expr::model::ref f_model);
+  reachability_status check_reachable(size_t k, expr::term_ref f, expr::model::ref f_model, size_t& budget);
 
   /** Print the frame content */
   void print_frame(size_t k, std::ostream& out) const;
