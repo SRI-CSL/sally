@@ -23,6 +23,7 @@
 #include "utils/name_transformer.h"
 
 #include <set>
+#include <string>
 #include <vector>
 #include <boost/unordered_map.hpp>
 
@@ -53,6 +54,9 @@ class term_manager {
   /** Total number of managers ever created */
   static size_t s_instances;
 
+  /** Set of all ever used variable names */
+  std::set<std::string> d_variable_names;
+
 public:
 
   /** Construct them manager */
@@ -63,6 +67,9 @@ public:
 
   /** Get the internal term manager */
   term_manager_internal* get_internal() { return d_tm; }
+
+  /** Get the internal term manager */
+  const term_manager_internal* get_internal() const { return d_tm; }
 
   /** Print the term manager information and all the terms to out */
   void to_stream(std::ostream& out) const;
@@ -116,6 +123,9 @@ public:
 
   /** Get the name of this variable */
   std::string get_variable_name(const term& t) const;
+
+  /** Get a fresh variable name (never used before) */
+  std::string get_fresh_variable_name();
 
   /** Make a new boolean constant */
   term_ref mk_boolean_constant(bool value);
@@ -277,9 +287,8 @@ std::ostream& operator << (std::ostream& out, const term_manager& tm) {
 
 /** IO modifier to set the term manager */
 struct set_tm {
-  const term_manager_internal* d_tm;
-  set_tm(const term_manager_internal& tm): d_tm(&tm) {}
-  set_tm(const term_manager& tm): d_tm(tm.d_tm) {}
+  term_manager& d_tm;
+  set_tm(term_manager& tm): d_tm(tm) {}
 };
 
 /** IO manipulator to set the term manager on the stream */

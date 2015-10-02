@@ -63,7 +63,7 @@ void translator::to_stream_mcmt(std::ostream& out) const {
 
   // Output the transition system
   out << ";; Transition system" << std::endl;
-  out << "(define-transition-system T state_type initial_states (transition))" << std::endl;
+  out << "(define-transition-system T state_type initial_states transition)" << std::endl;
   out << std::endl;
 
   // Output the query
@@ -132,22 +132,51 @@ void translator::to_stream_nuxmv(std::ostream& out) const {
     out << std::endl;
   }
 
+  // Get the let definitions
+  const expr::term& trans = tm().term_of(d_ts->get_transition_relation());
+  const expr::term& init = tm().term_of(d_ts->get_initial_states());
+  const expr::term& invar = tm().term_of(d_sf->get_formula());
+
+  expr::term::expr_let_cache let_cache;
+  std::vector<expr::term_ref> definitions;
+  trans.mk_let_cache(tm(), let_cache, definitions);
+  init.mk_let_cache(tm(), let_cache, definitions);
+  invar.mk_let_cache(tm(), let_cache, definitions);
+
+  if (definitions.size()) {
+    out << "DEFINE" << std::endl;
+    for (size_t i = 0; i < definitions.size(); ++ i) {
+      expr::term::expr_let_cache::const_iterator find = let_cache.find(definitions[i]);
+      assert(find != let_cache.end());
+      out << "    " << find->second << " := ";
+      tm().term_of(definitions[i]).to_stream_nuxmv_without_let(out, tm(), let_cache, false);
+      out << ";" << std::endl;
+    }
+  }
+  out << std::endl;
+
   // The transition relation
   out << "TRANS" << std::endl;
-  out << "    " << d_ts->get_transition_relation() << ";" << std::endl;
+  out << "    ";
+  trans.to_stream_nuxmv_without_let(out, tm(), let_cache);
+  out << ";" << std::endl;
   out << std::endl;
 
   // The initial state
   st->use_namespace(system::state_type::STATE_CURRENT);
   out << "INIT" << std::endl;
-  out << "    " << d_ts->get_initial_states() << ";" << std::endl;
+  out << "    ";
+  init.to_stream_nuxmv_without_let(out, tm(), let_cache);
+  out << ";" << std::endl;
   out << std::endl;
   ctx().tm().pop_namespace();
 
   // Output the query
   st->use_namespace(system::state_type::STATE_CURRENT);
   out << "INVARSPEC" << std::endl;
-  out << "    " << d_sf->get_formula() << ";" << std::endl;
+  out << "    ";
+  invar.to_stream_nuxmv_without_let(out, tm(), let_cache);
+  out << ";" << std::endl;
   ctx().tm().pop_namespace();
 
   // State type namespace

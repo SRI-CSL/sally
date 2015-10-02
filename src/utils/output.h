@@ -47,13 +47,10 @@ std::string language_to_string(language lang);
 language language_from_string(std::string lang);
 
 /** Get the term manager associated with out */
-const expr::term_manager_internal* get_term_manager(std::ostream& out);
+expr::term_manager* get_term_manager(std::ostream& out);
 
 /** Set the term manager associated with out */
-void set_term_manager(std::ostream& out, const expr::term_manager* tm);
-
-/** Set the term manager associated with out */
-void set_term_manager(std::ostream& out, const expr::term_manager_internal* tm);
+void set_term_manager(std::ostream& out, expr::term_manager* tm);
 
 /** Get the output language associated with out */
 language get_output_language(std::ostream& out);

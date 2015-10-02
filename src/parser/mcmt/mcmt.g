@@ -339,7 +339,7 @@ variable_list[std::vector<std::string>& out_vars, std::vector<expr::term_ref>& o
         symbol[type_id, parser::MCMT_TYPE, true] { 
         	out_types.push_back(STATE->get_type(type_id)); 
         }
-    ')' )+ 
+    ')' )*
     ')'
   ; 
         

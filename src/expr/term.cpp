@@ -49,7 +49,7 @@ void term_ref::to_stream(std::ostream& out) const {
   if (is_null()) {
     out << "null";
   } else {
-    const term_manager_internal* tm = output::get_term_manager(out);
+    const term_manager* tm = output::get_term_manager(out);
     if (tm == 0) {
       out << d_ref;
     } else {
@@ -58,18 +58,114 @@ void term_ref::to_stream(std::ostream& out) const {
   }
 }
 
+void term::mk_let_cache(term_manager& tm, expr_let_cache& let_cache, std::vector<expr::term_ref>& definitions) const {
+
+  expr::term_ref ref = tm.ref_of(*this);
+  expr_let_cache::const_iterator find = let_cache.find(ref);
+  if (find != let_cache.end()) {
+    return;
+  }
+
+  bool record_let = true;
+
+  // Whether to record the let, and work on the children
+  switch(d_op) {
+  case TYPE_BOOL:
+  case TYPE_INTEGER:
+  case TYPE_REAL:
+  case TYPE_STRUCT:
+  case TYPE_BITVECTOR:
+  case VARIABLE:
+  case CONST_BOOL:
+  case CONST_RATIONAL:
+  case CONST_BITVECTOR:
+  case CONST_STRING:
+    record_let = false;
+    break;
+  case TERM_EQ:
+  case TERM_AND:
+  case TERM_OR:
+  case TERM_NOT:
+  case TERM_IMPLIES:
+  case TERM_XOR:
+  case TERM_ITE:
+  case TERM_ADD:
+  case TERM_SUB:
+  case TERM_MUL:
+  case TERM_DIV:
+  case TERM_LEQ:
+  case TERM_LT:
+  case TERM_GEQ:
+  case TERM_GT:
+  case TERM_BV_ADD:
+  case TERM_BV_MUL:
+  case TERM_BV_XOR:
+  case TERM_BV_SHL:
+  case TERM_BV_LSHR:
+  case TERM_BV_ASHR:
+  case TERM_BV_NOT:
+  case TERM_BV_AND:
+  case TERM_BV_OR:
+  case TERM_BV_NAND:
+  case TERM_BV_NOR:
+  case TERM_BV_XNOR:
+  case TERM_BV_CONCAT:
+  case TERM_BV_ULEQ:
+  case TERM_BV_SLEQ:
+  case TERM_BV_ULT:
+  case TERM_BV_SLT:
+  case TERM_BV_UGEQ:
+  case TERM_BV_SGEQ:
+  case TERM_BV_UGT:
+  case TERM_BV_SGT:
+  case TERM_BV_UDIV:
+  case TERM_BV_SDIV:
+  case TERM_BV_UREM:
+  case TERM_BV_SREM:
+  case TERM_BV_SMOD:
+  case TERM_BV_SUB:
+  case TERM_BV_EXTRACT:
+    for (const term_ref* it = begin(); it != end(); ++ it) {
+      const term& child = tm.term_of(*it);
+      child.mk_let_cache(tm, let_cache, definitions);
+    }
+    break;
+  default:
+    assert(false);
+  }
+
+  // Record the mapping
+  if (record_let) {
+    std::string name = tm.get_fresh_variable_name();
+    let_cache[ref] = name;
+    definitions.push_back(ref);
+  }
+
+}
+
 void term::to_stream(std::ostream& out) const {
+  // Get the output language
   output::language lang = output::get_output_language(out);
-  const term_manager_internal* tm = output::get_term_manager(out);
+
+  // Get the term manager
+  term_manager* tm = output::get_term_manager(out);
+  if (tm == 0) {
+    throw exception("No expression manager set for the output stream");
+  }
+
+  expr_let_cache let_cache;
+
+  // Print
   switch (lang) {
   case output::MCMT:
-    to_stream_smt(out, *tm);
+  case output::HORN: {
+    std::vector<expr::term_ref> definitions;
+    mk_let_cache(*tm, let_cache, definitions);
+    to_stream_smt_with_let(out, *tm, let_cache, definitions);
     break;
+  }
   case output::NUXMV:
-    to_stream_nuxmv(out, *tm);
-    break;
-  case output::HORN:
-    to_stream_smt(out, *tm);
+    to_stream_nuxmv_without_let(out, *tm, let_cache);
     break;
   default:
     assert(false);
@@ -177,7 +273,47 @@ std::string get_smt_keyword(term_op op) {
   }
 }
 
-void term::to_stream_smt(std::ostream& out, const term_manager_internal& tm) const {
+void term::to_stream_smt_with_let(std::ostream& out, term_manager& tm, const expr_let_cache& let_cache, const std::vector<expr::term_ref>& definitions) const {
+
+  assert(let_cache.size() == definitions.size());
+
+  if (definitions.size() > 0) {
+    // (let ((v1 t1) (v2 t2) .. (vn tn)) t)
+    out << "(let (";
+    for (size_t i = 0; i < definitions.size(); ++ i) {
+      if (i) out << " ";
+      expr_let_cache::const_iterator find = let_cache.find(definitions[i]);
+      assert(find != let_cache.end());
+      out << "(" << find->second << " ";
+      const term& t = tm.term_of(find->first);
+      t.to_stream_smt_without_let(out, tm, let_cache, false);
+      out << ")";
+    }
+    out << ") ";
+    to_stream_smt_without_let(out, tm, let_cache);
+    out << ")";
+  } else {
+    // No let definitions needed
+    to_stream_smt_without_let(out, tm, let_cache);
+  }
+}
+
+#define SMT_REF_OUT(ref) tm.term_of(ref).to_stream_smt_without_let(out, tm, let_cache);
+
+void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const expr_let_cache& let_cache, bool use_cache) const {
+
+  // The internals
+  const term_manager_internal& tm_internal = *tm.get_internal();
+
+  // See if it's been cached already
+  if (use_cache) {
+    expr_let_cache::const_iterator find = let_cache.find(tm_internal.ref_of(*this));
+    if (find != let_cache.end()) {
+      out << find->second;
+      return;
+    }
+  }
+
   switch (d_op) {
   case TYPE_BOOL:
   case TYPE_INTEGER:
@@ -190,34 +326,35 @@ void term::to_stream_smt(std::ostream& out, const term_manager_internal& tm) con
     for (size_t i = 0; i < size(); ++ i) {
       if (i) { out << " "; }
       if (i % 2 == 0) { out << "("; }
-      out << this->operator [](i);
+      SMT_REF_OUT(child(i));
       if (i % 2 == 1) { out << ")"; }
     }
     out << ")";
     break;
   }
   case TYPE_BITVECTOR: {
-    size_t size = tm.payload_of<size_t>(*this);
+    size_t size = tm_internal.payload_of<size_t>(*this);
     out << "(_ BitVec " << size << ")";
     break;
   }
   case VARIABLE: {
-    std::string name = tm.payload_of<std::string>(*this);
-    name = tm.name_normalize(name);
+    std::string name = tm_internal.payload_of<std::string>(*this);
+    name = tm_internal.name_normalize(name);
     if (size() == 1) {
       out << name;
     } else {
       out << "[" << name << ":";
       // The variables of the struct
       for (size_t i = 1; i < size(); ++ i) {
-        out << " " << this->operator [](i);
+        out << " ";
+        SMT_REF_OUT(child(i));
       }
       out << "]";
     }
     break;
   }
   case CONST_BOOL:
-    out << (tm.payload_of<bool>(*this) ? "true" : "false");
+    out << (tm_internal.payload_of<bool>(*this) ? "true" : "false");
     break;
   case TERM_EQ:
   case TERM_AND:
@@ -266,7 +403,8 @@ void term::to_stream_smt(std::ostream& out, const term_manager_internal& tm) con
     }
     out << get_smt_keyword(d_op);
     for (const term_ref* it = begin(); it != end(); ++ it) {
-      out << " " << *it;
+      out << " ";
+      SMT_REF_OUT(*it);
     }
     if (size() > 0) {
       out << ")";
@@ -277,28 +415,34 @@ void term::to_stream_smt(std::ostream& out, const term_manager_internal& tm) con
   {
     out << "(";
     if (size() == 1) {
-      out << "bvneg" << " " << (*this)[0];
+      out << "bvneg" << " ";
+      SMT_REF_OUT(child(0));
     } else {
       assert(size() == 2);
-      out << "bvsub" << " " << (*this)[0] << " " << (*this)[1];
+      out << "bvsub" << " ";
+      SMT_REF_OUT(child(0));
+      out << " ";
+      SMT_REF_OUT(child(1));
     }
     out << ")";
     break;
   }
   case TERM_BV_EXTRACT: {
-    const bitvector_extract& extract = tm.payload_of<bitvector_extract>(*this);
-    out << "((_ extract " << extract.high << " " << extract.low << ") " << *begin() << ")";
+    const bitvector_extract& extract = tm_internal.payload_of<bitvector_extract>(*this);
+    out << "((_ extract " << extract.high << " " << extract.low << ") ";
+    SMT_REF_OUT(child(0));
+    out << ")";
     break;
   }
   case CONST_RATIONAL:
     // Stream is already in SMT mode
-    out << tm.payload_of<rational>(*this);
+    out << tm_internal.payload_of<rational>(*this);
     break;
   case CONST_BITVECTOR:
-    out << tm.payload_of<bitvector>(*this);
+    out << tm_internal.payload_of<bitvector>(*this);
     break;
   case CONST_STRING:
-    out << tm.payload_of<std::string>(*this);
+    out << tm_internal.payload_of<std::string>(*this);
     break;
   default:
     assert(false);
@@ -319,13 +463,44 @@ std::string get_nuxmv_operator(expr::term_op op) {
   case TERM_BV_AND: return "&";
   case TERM_BV_OR: return "|";
   case TERM_BV_CONCAT: return "::";
+
+  case TERM_LEQ: return "<=";
+  case TERM_LT: return "<";
+  case TERM_GEQ: return ">=";
+  case TERM_GT: return ">";
+  case TERM_BV_SUB: return "-";
+  case TERM_BV_SHL: return "<<";
+  case TERM_BV_LSHR: return ">>";
+
+  case TERM_BV_XNOR: return "xnor";
+  case TERM_BV_ULEQ: return "<=";
+  case TERM_BV_ULT: return "<";
+  case TERM_BV_UGEQ: return ">=";
+  case TERM_BV_UGT: return ">";
+  case TERM_BV_UDIV: return "/";
+  case TERM_BV_UREM: return "mod";
   default:
     assert(false);
   }
   return "unknown";
 }
 
-void term::to_stream_nuxmv(std::ostream& out, const term_manager_internal& tm) const {
+#define SMV_REF_OUT(ref) tm.term_of(ref).to_stream_nuxmv_without_let(out, tm, let_cache);
+
+void term::to_stream_nuxmv_without_let(std::ostream& out, term_manager& tm, const expr_let_cache& let_cache, bool use_cache_for_root) const {
+
+  // The internals
+  const term_manager_internal& tm_internal = *tm.get_internal();
+
+  // See if it's been cached already
+  if (use_cache_for_root) {
+    expr_let_cache::const_iterator find = let_cache.find(tm_internal.ref_of(*this));
+    if (find != let_cache.end()) {
+      out << find->second;
+      return;
+    }
+  }
+
   switch (d_op) {
   case TYPE_BOOL:
     out << "boolean";
@@ -337,271 +512,202 @@ void term::to_stream_nuxmv(std::ostream& out, const term_manager_internal& tm) c
     out << "real";
     break;
   case TYPE_BITVECTOR: {
-    size_t size = tm.payload_of<size_t>(*this);
+    size_t size = tm_internal.payload_of<size_t>(*this);
     out << "unsigned word[" << size << "]";
     break;
   }
   case VARIABLE: {
-    std::string name = tm.payload_of<std::string>(*this);
-    name = tm.name_normalize(name);
+    std::string name = tm_internal.payload_of<std::string>(*this);
+    name = tm_internal.name_normalize(name);
     if (size() == 1) {
       out << name;
     } else {
       out << "[" << name << ":";
       // The variables of the struct
       for (size_t i = 1; i < size(); ++ i) {
-        out << " " << this->operator [](i);
+        out << " ";
+        SMV_REF_OUT(child(i));
       }
       out << "]";
     }
     break;
   }
   case CONST_BOOL:
-    out << (tm.payload_of<bool>(*this) ? "TRUE" : "FALSE");
+    out << (tm_internal.payload_of<bool>(*this) ? "TRUE" : "FALSE");
     break;
   case TERM_EQ:
-    out << "(" << child(0) << " = " << child(1) << ")";
+    out << "(";
+    SMV_REF_OUT(child(0));
+    out << " = ";
+    SMV_REF_OUT(child(1));
+    out << ")";
     break;
   case TERM_IMPLIES:
-    out << "(" << child(0) << " -> " << child(1) << ")";
+    out << "(";
+    SMV_REF_OUT(child(0));
+    out << " -> ";
+    SMV_REF_OUT(child(1));
+    out << ")";
     break;
   case TERM_AND:
   case TERM_OR:
   case TERM_ADD:
   case TERM_XOR:
   case TERM_MUL:
+  case TERM_LEQ:
+  case TERM_LT:
+  case TERM_GEQ:
+  case TERM_GT:
   case TERM_BV_ADD:
   case TERM_BV_MUL:
   case TERM_BV_XOR:
   case TERM_BV_AND:
   case TERM_BV_OR:
   case TERM_BV_CONCAT:
+  case TERM_BV_SUB:
+  case TERM_BV_SHL:
+  case TERM_BV_LSHR:
+  case TERM_BV_XNOR:
+  case TERM_BV_ULEQ:
+  case TERM_BV_ULT:
+  case TERM_BV_UGEQ:
+  case TERM_BV_UGT:
+  case TERM_BV_UDIV:
+  case TERM_BV_UREM:
     out << "(";
     for (size_t i = 0; i < size(); ++ i) {
       if (i) out << " " << get_nuxmv_operator(d_op) << " ";
-      out << child(i);
+      SMV_REF_OUT(child(i));
     }
     out << ")";
     break;
   case TERM_NOT:
-    out << "(!" << child(0) << ")";
+    out << "(!";
+    SMV_REF_OUT(child(0));
+    out << ")";
     break;
   case TERM_ITE:
-    out << "(" << child(0) << " ? " << child(1) << " : " << child(2) << ")";
+    out << "(";
+    SMV_REF_OUT(child(0));
+    out << " ? ";
+    SMV_REF_OUT(child(1));
+    out << " : ";
+    SMV_REF_OUT(child(2));
+    out << ")";
     break;
   case TERM_SUB:
     if (size() == 1) {
       out << "(- " << child(0) << ")";
     } else {
-      out << "(" << child(0) << " - " << child(1) << ")";
+      out << "(";
+      SMV_REF_OUT(child(0));
+      out << " - ";
+      SMV_REF_OUT(child(1));
+      out << ")";
     }
     break;
   case TERM_DIV: {
     term_ref c1 = child(0);
     term_ref c2 = child(1);
-    const term& c2_term = tm.term_of(c2);
+    const term& c2_term = tm_internal.term_of(c2);
     expr::rational r;
     if (c2_term.op() == CONST_RATIONAL) {
-      r = tm.payload_of<rational>(c2_term).invert();
+      r = tm_internal.payload_of<rational>(c2_term).invert();
     } else {
       throw exception("Division by non-constants is not supported!");
     }
-    out << "(" << c1 << " * " << r << ")";
+    out << "(";
+    SMV_REF_OUT(c1);
+    out << " * " << r << ")";
     break;
   }
-  case TERM_LEQ:
-    out << "(" << child(0) << " <= " << child(1) << ")";
-    break;
-  case TERM_LT:
-    out << "(" << child(0) << " < " << child(1) << ")";
-    break;
-  case TERM_GEQ:
-    out << "(" << child(0) << " >= " << child(1) << ")";
-    break;
-  case TERM_GT:
-    out << "(" << child(0) << " > " << child(1) << ")";
-    break;
-  case TERM_BV_SUB:
-    out << "(" << child(0) << " - " << child(1) << ")";
-    break;
-  case TERM_BV_SHL:
-    out << "(" << child(0) << " << " << child(1) << ")";
-    break;
-  case TERM_BV_LSHR:
-    out << "(" << child(0) << " >> " << child(1) << ")";
-    break;
   case TERM_BV_ASHR:
-    out << "unsigned(signed(" << child(0) << ") << " << child(1) << ")";
+    out << "unsigned(signed(";
+    SMV_REF_OUT(child(0));
+    out << ") << ";
+    SMV_REF_OUT(child(1));
+    out << ")";
     break;
   case TERM_BV_NOT:
-    out << "(!" << child(0) << ")";
+    out << "(!";
+    SMV_REF_OUT(child(0));
+    out << ")";
     break;
   case TERM_BV_NAND:
-    out << "(!(" << child(0) << " & " << child(1) << "))";
+    out << "(!(";
+    SMV_REF_OUT(child(0));
+    out << " & ";
+    SMV_REF_OUT(child(1));
+    out <<"))";
     break;
   case TERM_BV_NOR:
-    out << "(!(" << child(0) << " | " << child(1) << "))";
-    break;
-  case TERM_BV_XNOR:
-    out << "(" << child(0) << " xnor " << child(1) << ")";
-    break;
-  case TERM_BV_ULEQ:
-    out << "(" << child(0) << " <= " << child(1) << ")";
+    out << "(!(" << child(0) << " | ";
+    SMV_REF_OUT(child(1));
+    out <<"))";
     break;
   case TERM_BV_SLEQ:
-    out << "(signed(" << child(0) << ") <= signed(" << child(1) << "))";
-    break;
-  case TERM_BV_ULT:
-    out << "(" << child(0) << " < " << child(1) << ")";
+    out << "(signed(";
+    SMV_REF_OUT(child(0));
+    out << ") <= signed(";
+    SMV_REF_OUT(child(1));
+    out << "))";
     break;
   case TERM_BV_SLT:
-    out << "(signed(" << child(0) << ") < signed(" << child(1) << "))";
-    break;
-  case TERM_BV_UGEQ:
-    out << "(" << child(0) << " >= " << child(1) << ")";
+    out << "(signed(";
+    SMV_REF_OUT(child(0));
+    out << ") < signed(";
+    SMV_REF_OUT(child(1));
+    out <<"))";
     break;
   case TERM_BV_SGEQ:
-    out << "(signed(" << child(0) << ") >= signed(" << child(1) << "))";
-    break;
-  case TERM_BV_UGT:
-    out << "(" << child(0) << " > " << child(1) << ")";
+    out << "(signed(";
+    SMV_REF_OUT(child(0));
+    out << ") >= signed(";
+    SMV_REF_OUT(child(1));
+    out <<"))";
     break;
   case TERM_BV_SGT:
-    out << "(signed(" << child(0) << ") > signed(" << child(1) << "))";
-    break;
-  case TERM_BV_UDIV:
-    out << "(" << child(0) << " / " << child(1) << ")";
+    out << "(signed(";
+    SMV_REF_OUT(child(0));
+    out << ") > signed(";
+    SMV_REF_OUT(child(1));
+    out <<"))";
     break;
   case TERM_BV_SDIV:
-    out << "(signed(" << child(0) << ") / signed(" << child(1) << "))";
-    break;
-  case TERM_BV_UREM: // MOD
-    out << "(" << child(0) << " mod " << child(1) << ")";
+    out << "(signed(";
+    SMV_REF_OUT(child(0));
+    out << ") / signed(";
+    SMV_REF_OUT(child(1));
+    out <<"))";
     break;
   case TERM_BV_SREM: // MOD
-    out << "(signed(" << child(0) << ") mod signed(" << child(1) << "))";
+    out << "(signed(";
+    SMV_REF_OUT(child(0));
+    out << ") mod signed(";
+    SMV_REF_OUT(child(1));
+    out <<"))";
     break;
   case TERM_BV_SMOD:
     throw exception("SMOD not yet supported!");
     break;
   case TERM_BV_EXTRACT: {
-    const bitvector_extract& extract = tm.payload_of<bitvector_extract>(*this);
+    const bitvector_extract& extract = tm_internal.payload_of<bitvector_extract>(*this);
     out << child(0) << "[" << extract.high << ":" << extract.low << "]";
     break;
   }
   case CONST_RATIONAL:
     // Stream is already in NUXMV mode
-    out << tm.payload_of<rational>(*this);
+    out << tm_internal.payload_of<rational>(*this);
     break;
   case CONST_BITVECTOR:
     // Stream is already in NUXMV mode
-    out << tm.payload_of<bitvector>(*this);
+    out << tm_internal.payload_of<bitvector>(*this);
     break;
   case CONST_STRING:
-    out << tm.payload_of<std::string>(*this);
+    out << tm_internal.payload_of<std::string>(*this);
     break;
   default:
     assert(false);
-  }
-}
-
-inline
-std::string get_lustre_operator(expr::term_op op) {
-  switch (op) {
-  case TERM_AND: return "and";
-  case TERM_OR: return "or";
-  case TERM_ADD: return "+";
-  case TERM_XOR: return "xor";
-  case TERM_MUL: return "*";
-  default:
-    return "??";
-  }
-}
-
-void term::to_stream_lustre(std::ostream& out, const term_manager_internal& tm) const {
-  bool unsupported = false;
-
-  switch (d_op) {
-  case TYPE_BOOL:
-    out << "bool";
-    break;
-  case TYPE_INTEGER:
-    out << "integer";
-    break;
-  case TYPE_REAL:
-    out << "real";
-    break;
-  case VARIABLE: {
-    std::string name = tm.payload_of<std::string>(*this);
-    name = tm.name_normalize(name);
-    if (size() == 1) {
-      out << name;
-    } else {
-      unsupported = true;
-    }
-    break;
-  }
-  case CONST_BOOL:
-    out << (tm.payload_of<bool>(*this) ? "true" : "false");
-    break;
-  case CONST_RATIONAL:
-    out << tm.payload_of<rational>(*this);
-    break;
-  case TERM_EQ:
-    out << "(" << child(0) << " = " << child(1) << ")";
-    break;
-  case TERM_IMPLIES:
-    out << "(not " << child(0) << " or " << child(1) << ")";
-    break;
-  case TERM_AND:
-  case TERM_OR:
-  case TERM_ADD:
-  case TERM_XOR:
-  case TERM_MUL:
-    out << "(";
-    for (size_t i = 0; i < size(); ++ i) {
-      if (i) out << " " << get_lustre_operator(d_op) << " ";
-      out << child(i);
-    }
-    out << ")";
-    break;
-  case TERM_NOT:
-    out << "(not " << child(0) << ")";
-    break;
-  case TERM_ITE:
-    out << "(if " << child(0) << " then " << child(1) << " else " << child(2) << ")";
-    break;
-  case TERM_SUB:
-    if (size() == 1) {
-      out << "(- " << child(0) << ")";
-    } else {
-      out << "(" << child(0) << " - " << child(1) << ")";
-    }
-    break;
-  case TERM_DIV:
-    out << "(" << child(0) << "/" << child(1) << ")";
-    break;
-  case TERM_LEQ:
-    out << "(" << child(0) << " <= " << child(1) << ")";
-    break;
-  case TERM_LT:
-    out << "(" << child(0) << " < " << child(1) << ")";
-    break;
-  case TERM_GEQ:
-    out << "(" << child(0) << " >= " << child(1) << ")";
-    break;
-  case TERM_GT:
-    out << "(" << child(0) << " > " << child(1) << ")";
-    break;
-  default:
-    unsupported = true;
-    break;
-  }
-
-  if (unsupported) {
-    std::stringstream ss;
-    ss << "Output for " << d_op << " not supported in Lustre.";
-    throw exception(ss.str());
   }
 }
 

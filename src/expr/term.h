@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <map>
 #include <vector>
 #include <cassert>
 #include <iosfwd>
@@ -135,17 +136,22 @@ class term {
 
 public:
 
-  /** Output to the stream using the language set on the stream */
-  void to_stream(std::ostream& out) const;
+  typedef std::map<expr::term_ref, std::string> expr_let_cache;
+
+  /** Collect the cache of let definitions */
+  void mk_let_cache(term_manager& tm, expr_let_cache& let_cache, std::vector<expr::term_ref>& definitions) const;
 
   /** Output to the stream using the SMT2 language */
-  void to_stream_smt(std::ostream& out, const term_manager_internal& tm) const;
+  void to_stream_smt_with_let(std::ostream& out, term_manager& tm, const expr_let_cache& let_cache, const std::vector<expr::term_ref>& definitions) const;
+
+  /** Output to the stream using the SMT2 language */
+  void to_stream_smt_without_let(std::ostream& out, term_manager& tm, const expr_let_cache& let_cache, bool use_cache_on_root = true) const;
 
   /** Output to the stream using the NUXMV language */
-  void to_stream_nuxmv(std::ostream& out, const term_manager_internal& tm) const;
+  void to_stream_nuxmv_without_let(std::ostream& out, term_manager& tm, const expr_let_cache& let_cache, bool use_cache_on_root = true) const;
 
-  /** Output to the stream using the lustre language */
-  void to_stream_lustre(std::ostream& out, const term_manager_internal& tm) const;
+  /** Output to the stream using the language set on the stream */
+  void to_stream(std::ostream& out) const;
 
   /** What kind of term is this */
   term_op op() const { return d_op; }

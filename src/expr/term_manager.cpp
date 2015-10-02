@@ -22,6 +22,7 @@
 #include "expr/gc_participant.h"
 #include "expr/gc_relocator.h"
 
+#include <string>
 #include <iostream>
 #include <sstream>
 
@@ -117,10 +118,12 @@ term_ref term_manager::mk_variable(term_ref type) {
   static size_t id = 0;
   std::stringstream ss;
   ss << "_" << (id ++);
+  d_variable_names.insert(ss.str());
   return mk_variable(ss.str(), type);
 }
 
 term_ref term_manager::mk_variable(std::string name, term_ref type) {
+  d_variable_names.insert(name);
   if (term_of(type).op() == TYPE_STRUCT) {
     // Size of the struct
     size_t fields_count = get_struct_type_size(term_of(type));
@@ -143,6 +146,20 @@ term_ref term_manager::mk_variable(std::string name, term_ref type) {
     // If this is not a struct type, we just create the variable
     return d_tm->mk_term<VARIABLE>(name, type);
   }
+}
+
+std::string term_manager::get_fresh_variable_name() {
+  static size_t id = 0;
+  for (;;) {
+    std::stringstream ss;
+    ss << "l" << (id ++);
+    std::string name = ss.str();
+    if (d_variable_names.count(name) == 0) {
+      d_variable_names.insert(name);
+      return name;
+    }
+  }
+  return "never_here";
 }
 
 std::string term_manager::get_variable_name(term_ref t_ref) const {
@@ -284,7 +301,9 @@ size_t term_manager::id_of(term_ref ref) const {
 }
 
 std::string term_manager::to_string(term_ref ref) const {
-  return d_tm->to_string(ref);
+  std::stringstream ss;
+  ss << set_tm(*const_cast<expr::term_manager*>(this)) << ref;
+  return ss.str();
 }
 
 void term_manager::use_namespace(std::string ns) {
@@ -361,7 +380,7 @@ term_ref term_manager::get_default_value(term_ref type) const {
 }
 
 std::ostream& operator << (std::ostream& out, const set_tm& stm) {
-  output::set_term_manager(out, stm.d_tm);
+  output::set_term_manager(out, &stm.d_tm);
   return out;
 }
 

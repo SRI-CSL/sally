@@ -382,9 +382,6 @@ public:
     return term_of(ref).hash();
   }
 
-  /** Get the string representation of the term */
-  std::string to_string(term_ref ref) const;
-
   /** Add a namespace entry (will be removed from prefix when printing. */
   void use_namespace(std::string ns);
 

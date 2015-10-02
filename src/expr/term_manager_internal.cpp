@@ -353,7 +353,10 @@ bool term_manager_internal::typecheck(term_ref t_ref) {
 
   if (!ok) {
     std::stringstream ss;
-    output::set_term_manager(ss, this);
+    expr::term_manager* tm = output::get_term_manager(std::cerr);
+    if (tm->get_internal() == this) {
+      output::set_term_manager(ss, tm);
+    }
     ss << "Can't typecheck " << t_ref << ".";
     throw exception(ss.str());
   }
@@ -378,12 +381,6 @@ void term_manager_internal::to_stream(std::ostream& out) const {
   for (term_ref_hash_set::const_iterator it = d_pool.begin(); it != d_pool.end(); ++ it) {
     out << "[id: " << it->id() << ", ref_count = " << d_term_refcount[it->id()] << "] : " << *it << std::endl;
   }
-}
-
-std::string term_manager_internal::to_string(term_ref ref) const {
-  std::stringstream ss;
-  ss << set_tm(*this) << ref;
-  return ss.str();
 }
 
 term_ref term_manager_internal::type_of(const term& t) const {
