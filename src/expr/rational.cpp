@@ -71,7 +71,7 @@ void rational::to_stream(std::ostream& out) const {
     } else if (sign > 0) {
       if (is_integer()) {
         // Integer output
-        out << d_gmp_rat.get_str(10);
+        out << "f'" << d_gmp_rat.get_str(10) << "/1";
       } else {
         // Rational output
         out << "f'" << d_gmp_rat.get_str(10);
