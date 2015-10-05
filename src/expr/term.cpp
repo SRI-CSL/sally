@@ -162,6 +162,7 @@ void term::to_stream(std::ostream& out) const {
     std::vector<expr::term_ref> definitions;
     mk_let_cache(*tm, let_cache, definitions);
     to_stream_smt_with_let(out, *tm, let_cache, definitions);
+    tm->reset_fresh_variables();
     break;
   }
   case output::NUXMV:
@@ -277,26 +278,21 @@ void term::to_stream_smt_with_let(std::ostream& out, term_manager& tm, const exp
 
   assert(let_cache.size() == definitions.size());
 
-  if (definitions.size() > 0) {
-    // (let ...
-    for (size_t i = 0; i < definitions.size(); ++ i) {
-      out << "(let (";
-      expr_let_cache::const_iterator find = let_cache.find(definitions[i]);
-      assert(find != let_cache.end());
-      out << "(" << find->second << " ";
-      const term& t = tm.term_of(find->first);
-      t.to_stream_smt_without_let(out, tm, let_cache, false);
-      out << ")) ";
-    }
-    // t
-    to_stream_smt_without_let(out, tm, let_cache);
-    // close the lets
-    for (size_t i = 0; i < definitions.size(); ++ i) {
-      out << ")";
-    }
-  } else {
-    // No let definitions needed
-    to_stream_smt_without_let(out, tm, let_cache);
+  // (let ...
+  for (size_t i = 0; i < definitions.size(); ++ i) {
+    out << "(let (";
+    expr_let_cache::const_iterator find = let_cache.find(definitions[i]);
+    assert(find != let_cache.end());
+    out << "(" << find->second << " ";
+    const term& t = tm.term_of(find->first);
+    t.to_stream_smt_without_let(out, tm, let_cache, false);
+    out << ")) ";
+  }
+  // t
+  to_stream_smt_without_let(out, tm, let_cache);
+  // close the lets
+  for (size_t i = 0; i < definitions.size(); ++ i) {
+    out << ")";
   }
 }
 

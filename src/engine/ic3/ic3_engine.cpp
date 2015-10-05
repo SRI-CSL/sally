@@ -291,7 +291,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   expr::term_ref G = result.generalization;
   TRACE("ic3::generalization") << "ic3: generalization " << G << std::endl;
   if (output::trace_tag_is_enabled("ic3::check-learnt")) {
-    output_efsmt(f, G);
+    output_efsmt(tm().mk_term(expr::TERM_NOT, f), G);
   }
 
   // If we're not analyzing the CTI, we're done

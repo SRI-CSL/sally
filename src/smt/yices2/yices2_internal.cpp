@@ -880,10 +880,6 @@ void yices2_internal::generalize(smt::solver::generalization_type type, std::vec
   // When we generalize backward we eliminate from T and B
   // When we generalize forward we eliminate from A and T
 
-  // Assertions not used to generalize, so we ignore them if they come back
-  std::set<term_t> ignore_yices;
-  std::set<expr::term_ref> ignore_terms;
-
   // Count the A/B formulas
   size_t assertions_size = 0;
   for (size_t i = 0; i < d_assertions.size(); ++ i) {
@@ -891,17 +887,11 @@ void yices2_internal::generalize(smt::solver::generalization_type type, std::vec
     case smt::solver::GENERALIZE_BACKWARD:
       if (d_assertion_classes[i] != solver::CLASS_A) {
         assertions_size++;
-      } else {
-        ignore_terms.insert(d_assertions[i]);
-        ignore_yices.insert(to_yices2_term(d_assertions[i]));
       }
       break;
     case smt::solver::GENERALIZE_FORWARD:
       if (d_assertion_classes[i] != solver::CLASS_B) {
         assertions_size++;
-      } else {
-        ignore_terms.insert(d_assertions[i]);
-        ignore_yices.insert(to_yices2_term(d_assertions[i]));
       }
       break;
     default:
@@ -915,27 +905,20 @@ void yices2_internal::generalize(smt::solver::generalization_type type, std::vec
   switch (type) {
   case smt::solver::GENERALIZE_BACKWARD:
     for (size_t i = 0; i < d_assertions.size(); ++ i) {
-      if (d_assertion_classes[i] == solver::CLASS_B) {
+      if (d_assertion_classes[i] != solver::CLASS_A) {
         assertions[j++] = to_yices2_term(d_assertions[i]);
       }
     }
     break;
   case smt::solver::GENERALIZE_FORWARD:
     for (size_t i = 0; i < d_assertions.size(); ++ i) {
-      if (d_assertion_classes[i] == solver::CLASS_A) {
+      if (d_assertion_classes[i] != solver::CLASS_B) {
         assertions[j++] = to_yices2_term(d_assertions[i]);
       }
     }
     break;
   default:
     assert(false);
-  }
-
-  // Add T formulas
-  for (size_t i = 0; i < d_assertions.size(); ++ i) {
-    if (d_assertion_classes[i] == solver::CLASS_T) {
-      assertions[j++] = to_yices2_term(d_assertions[i]);
-    }
   }
 
   // Yices version of the variables to eliminate
@@ -984,14 +967,8 @@ void yices2_internal::generalize(smt::solver::generalization_type type, std::vec
 
   for (size_t i = 0; i < G_y.size; ++ i) {
     assert(yices_formula_true_in_model(m, G_y.data[i]));
-    if (ignore_yices.find(G_y.data[i]) == ignore_yices.end()) {
-      expr::term_ref t_i = to_term(G_y.data[i]);
-      if (ignore_terms.find(t_i) == ignore_terms.end()) {
-        projection_out.push_back(t_i);
-        ignore_yices.insert(G_y.data[i]);
-        ignore_terms.insert(t_i);
-      }
-    }
+    expr::term_ref t_i = to_term(G_y.data[i]);
+    projection_out.push_back(t_i);
   }
 
   // Check generalizatations
@@ -1109,7 +1086,7 @@ void yices2_internal::efsmt_to_stream(std::ostream& out, const term_vector_t* G_
     out << ")";
   }
   out << ")" << std::endl; // end forall variables
-  out << "(not (and" << std::endl;
+  out << "(not (and";
   for (size_t i = 0; i < assertions_size; ++ i) {
     expr::term_ref assertion = to_term(assertions[i]);
     out << std::endl << "  " << assertion;

@@ -35,6 +35,7 @@ term_manager::term_manager(utils::statistics& stats)
 : d_tm(new term_manager_internal(stats))
 , d_eq_rewrite(false)
 , d_id(s_instances ++)
+, d_tmp_var_id(0)
 {
 }
 
@@ -149,17 +150,19 @@ term_ref term_manager::mk_variable(std::string name, term_ref type) {
 }
 
 std::string term_manager::get_fresh_variable_name() {
-  static size_t id = 0;
   for (;;) {
     std::stringstream ss;
-    ss << "l" << (id ++);
+    ss << "l" << (d_tmp_var_id ++);
     std::string name = ss.str();
     if (d_variable_names.count(name) == 0) {
-      d_variable_names.insert(name);
       return name;
     }
   }
   return "never_here";
+}
+
+void term_manager::reset_fresh_variables() {
+  d_tmp_var_id = 0;
 }
 
 std::string term_manager::get_variable_name(term_ref t_ref) const {

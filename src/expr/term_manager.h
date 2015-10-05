@@ -57,6 +57,9 @@ class term_manager {
   /** Set of all ever used variable names */
   std::set<std::string> d_variable_names;
 
+  /** Ids of temp variables */
+  size_t d_tmp_var_id;
+
 public:
 
   /** Construct them manager */
@@ -126,6 +129,9 @@ public:
 
   /** Get a fresh variable name (never used before) */
   std::string get_fresh_variable_name();
+
+  /** Reset the fresh variables counter */
+  void reset_fresh_variables();
 
   /** Make a new boolean constant */
   term_ref mk_boolean_constant(bool value);
