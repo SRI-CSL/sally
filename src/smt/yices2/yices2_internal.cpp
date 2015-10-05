@@ -22,8 +22,10 @@
 #include "smt/yices2/yices2_term_cache.h"
 #include "utils/trace.h"
 #include "expr/gc_relocator.h"
+#include "utils/output.h"
 
 #include <iostream>
+#include <fstream>
 
 namespace sally {
 namespace smt {
@@ -979,6 +981,22 @@ void yices2_internal::generalize(smt::solver::generalization_type type, std::vec
   if (ret < 0) {
     throw exception("Generalization failed in Yices.");
   }
+
+  // Check generalizatations
+  if (output::trace_tag_is_enabled("yices2::check-generalization")) {
+    static size_t id = 0;
+
+    // we have
+    //  \forall x G(x) => \exists y F(x, y) is valid
+    //  \exists x G(x) and \forall y not F(x, y) is unsat
+
+    // File to write to
+    std::stringstream ss;
+    ss << "gen_check_" << (id ++) << ".smt2";
+    std::ofstream out(ss.str().c_str());
+    efsmt_to_stream(out, &G_y, assertions, assertions_size, d_A_variables, d_T_variables, d_B_variables);
+  }
+
   for (size_t i = 0; i < G_y.size; ++ i) {
     if (ignore_yices.find(G_y.data[i]) == ignore_yices.end()) {
       expr::term_ref t_i = to_term(G_y.data[i]);
@@ -1041,6 +1059,66 @@ void yices2_internal::gc_collect(const expr::gc_relocator& gc_reloc) {
   gc_reloc.reloc(d_T_variables);
   gc_reloc.reloc(d_bv1);
   gc_reloc.reloc(d_bv0);
+}
+
+void yices2_internal::efsmt_to_stream(std::ostream& out, const term_vector_t* G_y, const term_t* assertions, size_t assertions_size,
+    const std::vector<expr::term_ref>& exists_vars,
+    const std::vector<expr::term_ref>& forall_vars_1,
+    const std::vector<expr::term_ref>& forall_vars_2) {
+
+  out << expr::set_tm(d_tm);
+
+  const utils::name_transformer* old_transformer = d_tm.get_name_transformer();
+  smt2_name_transformer name_transformer;
+  d_tm.set_name_transformer(&name_transformer);
+
+  out << "(set-logic LRA)" << std::endl;
+  out << "(set-info :smt-lib-version 2.0)" << std::endl;
+  out << "(set-info :status unsat)" << std::endl;
+  out << std::endl;
+
+  for (size_t i = 0; i < exists_vars.size(); ++ i) {
+    expr::term_ref variable = exists_vars[i];
+    out << "(declare-fun " << variable << " () " << d_tm.type_of(variable) << ")" << std::endl;
+  }
+
+  out << std::endl;
+
+  for (size_t i = 0; i < G_y->size; ++ i) {
+    expr::term_ref assertion = to_term(G_y->data[i]);
+    out << ";; G[" << i << "]" << std::endl;
+    out << "(assert " << assertion << ")" << std::endl;
+  }
+
+  out << std::endl;
+  out << "(assert (forall (";
+  for (size_t i = 0; i < forall_vars_1.size(); ++ i) {
+    expr::term_ref variable = forall_vars_1[i];
+    if (i) out << " ";
+    out << "(";
+    out << variable << " " << d_tm.type_of(variable);
+    out << ")";
+  }
+  for (size_t i = 0; i < forall_vars_2.size(); ++ i) {
+    expr::term_ref variable = forall_vars_2[i];
+    out << " (";
+    out << variable << " " << d_tm.type_of(variable);
+    out << ")";
+  }
+  out << ")" << std::endl; // end forall variables
+  out << "(not (and" << std::endl;
+  for (size_t i = 0; i < assertions_size; ++ i) {
+    expr::term_ref assertion = to_term(assertions[i]);
+    out << std::endl << "  " << assertion;
+  }
+  out << "))" << std::endl; // end negation and and
+
+  out << "))" << std::endl; // end forall
+
+  out << std::endl;
+  out << "(check-sat)" << std::endl;
+
+  d_tm.set_name_transformer(old_transformer);
 }
 
 

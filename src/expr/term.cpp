@@ -278,20 +278,22 @@ void term::to_stream_smt_with_let(std::ostream& out, term_manager& tm, const exp
   assert(let_cache.size() == definitions.size());
 
   if (definitions.size() > 0) {
-    // (let ((v1 t1) (v2 t2) .. (vn tn)) t)
-    out << "(let (";
+    // (let ...
     for (size_t i = 0; i < definitions.size(); ++ i) {
-      if (i) out << " ";
+      out << "(let (";
       expr_let_cache::const_iterator find = let_cache.find(definitions[i]);
       assert(find != let_cache.end());
       out << "(" << find->second << " ";
       const term& t = tm.term_of(find->first);
       t.to_stream_smt_without_let(out, tm, let_cache, false);
+      out << ")) ";
+    }
+    // t
+    to_stream_smt_without_let(out, tm, let_cache);
+    // close the lets
+    for (size_t i = 0; i < definitions.size(); ++ i) {
       out << ")";
     }
-    out << ") ";
-    to_stream_smt_without_let(out, tm, let_cache);
-    out << ")";
   } else {
     // No let definitions needed
     to_stream_smt_without_let(out, tm, let_cache);

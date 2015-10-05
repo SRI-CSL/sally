@@ -90,6 +90,12 @@ class yices2_internal {
   /** The instance */
   size_t d_instance;
 
+  /** Print the EFSMT to output */
+  void efsmt_to_stream(std::ostream& out, const term_vector_t* G_y, const term_t* assertions, size_t assertions_size,
+      const std::vector<expr::term_ref>& exists_vars,
+      const std::vector<expr::term_ref>& forall_vars_1,
+      const std::vector<expr::term_ref>& forall_vars_2);
+
 public:
 
   /** Construct an instance of yices with the given temr manager and options */
