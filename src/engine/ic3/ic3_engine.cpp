@@ -425,6 +425,8 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
         assert(r == smt::solver::SAT);
         model = solver->get_model();
         d_trace->set_model(model);
+
+        MSG(1) << "ic3: CEX found at depth " << d_smt->get_counterexample_solver_depth() << " (with induction frame at " << d_induction_frame << ")" << std::endl;
       }
       break;
     }
