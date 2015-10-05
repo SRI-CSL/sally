@@ -250,6 +250,9 @@ ic3_engine::reachability_status ic3_engine::check_reachable(size_t k, expr::term
         }
       }
     } else {
+      if (output::trace_tag_is_enabled("ic3::check-learnt")) {
+        output_efsmt(reach.formula(), result.generalization);
+      }
       // New obligation to reach the counterexample
       reachability_obligations.push_back(reachability_obligation(reach.frame()-1, result.generalization, result.model));
     }
@@ -277,15 +280,18 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
 
   // Check if inductive
   solvers::query_result result = d_smt->check_inductive(f);
-  expr::term_ref G = result.generalization;
-
-  TRACE("ic3::generalization") << "ic3: generalization " << G << std::endl;
 
   // If inductive
   if (result.result == smt::solver::UNSAT) {
     // Add to the next frame
     d_induction_obligations_next.push_back(induction_obligation(f, analyze_cti));
     return INDUCTION_SUCCESS;
+  }
+
+  expr::term_ref G = result.generalization;
+  TRACE("ic3::generalization") << "ic3: generalization " << G << std::endl;
+  if (output::trace_tag_is_enabled("ic3::check-learnt")) {
+    output_efsmt(f, G);
   }
 
   // If we're not analyzing the CTI, we're done
@@ -317,8 +323,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   if (!is_invalid(G_not)) {
     // Try to push assumptions next time
     d_induction_obligations.push(induction_obligation(G_not, analyze_cti));
-    assert(d_frame_formula_info.find(G_not) == d_frame_formula_info.end());
-    d_frame_formula_info[G_not] = frame_formula_info(f, G);
+    set_refutes_info(f, G, G_not);
   }
 
   // Learn something to refute G
@@ -331,8 +336,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
     if (!is_invalid(learnt)) {
       // Try to push assumptions next time
       d_induction_obligations.push(induction_obligation(learnt, analyze_cti));
-      assert(d_frame_formula_info.find(learnt) == d_frame_formula_info.end());
-      d_frame_formula_info[learnt] = frame_formula_info(f, G);
+      set_refutes_info(f, G, learnt);
     }
   }
 
@@ -346,8 +350,6 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
       if (!is_invalid(learnt)) {
         // Try to push assumptions next time (but don't analyze the failures)
         d_induction_obligations.push(induction_obligation(learnt, false));
-        assert(d_frame_formula_info.find(learnt) == d_frame_formula_info.end());
-        d_frame_formula_info[learnt] = frame_formula_info();
       }
     }
   }
@@ -412,12 +414,8 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
     // therefore looking to satisfy refutes(f) at k.
     assert(is_invalid(f));
 
-    assert(d_frame_formula_info.find(f) != d_frame_formula_info.end());
-    expr::term_ref G = d_frame_formula_info[f].refutes;
-    expr::term_ref parent = d_frame_formula_info[f].parent;
-
     // If no more parents, we're done
-    if (parent.is_null()) {
+    if (!has_parent(f)) {
       // If this is a counter-example to the property itself, then we extend to
       // full counterexample
       if (d_properties.find(f) != d_properties.end()) {
@@ -430,6 +428,10 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
       }
       break;
     }
+
+    // Try to extend
+    expr::term_ref G = get_refutes(f);
+    expr::term_ref parent = get_parent(f);
 
     // Check at frame k
     d_smt->ensure_counterexample_solver_depth(k);
@@ -783,6 +785,100 @@ std::ostream& operator << (std::ostream& out, const ic3_engine& ic3) {
   ic3.to_stream(out);
   return out;
 }
+
+void ic3_engine::set_refutes_info(expr::term_ref f, expr::term_ref g, expr::term_ref l) {
+  assert(d_frame_formula_info.find(l) == d_frame_formula_info.end());
+  d_frame_formula_info[l] = frame_formula_info(f, g);
+}
+
+expr::term_ref ic3_engine::get_refutes(expr::term_ref l) const {
+  assert(has_parent(l));
+  expr::term_ref_map<frame_formula_info>::const_iterator find = d_frame_formula_info.find(l);
+  return find->second.refutes;
+}
+
+expr::term_ref ic3_engine::get_parent(expr::term_ref l) const {
+  assert(has_parent(l));
+  expr::term_ref_map<frame_formula_info>::const_iterator find = d_frame_formula_info.find(l);
+  return find->second.parent;
+}
+
+bool ic3_engine::has_parent(expr::term_ref l) const {
+  expr::term_ref_map<frame_formula_info>::const_iterator find = d_frame_formula_info.find(l);
+  if (find == d_frame_formula_info.end()) { return false; }
+  return !find->second.parent.is_null();
+}
+
+void ic3_engine::output_efsmt(expr::term_ref f, expr::term_ref g) const {
+
+  assert(!f.is_null());
+  assert(!g.is_null());
+
+  static size_t i = 0;
+
+  // we have
+  //  \forall x G(x) => \exists x' T(x, x') and f is valid
+  //  G(x) and \forall y not (T(x, x') and f') is unsat
+
+  std::stringstream ss;
+  ss << "ic3_gen_check_" << i++ << ".smt2";
+  std::ofstream out(ss.str().c_str());
+
+  out << expr::set_tm(tm());
+
+  const utils::name_transformer* old_transformer = tm().get_name_transformer();
+  smt::smt2_name_transformer name_transformer;
+  tm().set_name_transformer(&name_transformer);
+
+  out << "(set-logic LRA)" << std::endl;
+  out << "(set-info :smt-lib-version 2.0)" << std::endl;
+  out << "(set-info :status unsat)" << std::endl;
+  out << std::endl;
+
+  const system::state_type* state_type = d_transition_system->get_state_type();
+
+  const std::vector<expr::term_ref>& state_vars = state_type->get_variables(system::state_type::STATE_CURRENT);
+  const std::vector<expr::term_ref>& input_vars = state_type->get_variables(system::state_type::STATE_INPUT);
+  const std::vector<expr::term_ref>& next_vars = state_type->get_variables(system::state_type::STATE_NEXT);
+
+  for (size_t i = 0; i < state_vars.size(); ++ i) {
+    expr::term_ref variable = state_vars[i];
+    out << "(declare-fun " << variable << " () " << tm().type_of(variable) << ")" << std::endl;
+  }
+
+  out << std::endl;
+  out << ";; generalization" << std::endl;
+  out << "(assert " << g << ")" << std::endl;
+
+  out << std::endl;
+  out << "(assert (forall (";
+  for (size_t i = 0; i < input_vars.size(); ++ i) {
+    expr::term_ref variable = input_vars[i];
+    if (i) out << " ";
+    out << "(";
+    out << variable << " " << tm().type_of(variable);
+    out << ")";
+  }
+  for (size_t i = 0; i < next_vars.size(); ++ i) {
+    expr::term_ref variable = next_vars[i];
+    out << " (";
+    out << variable << " " << tm().type_of(variable);
+    out << ")";
+  }
+  out << ")" << std::endl; // end forall variables
+  out << "(not (and" << std::endl;
+  out << "  " << d_transition_system->get_transition_relation() << std::endl;
+  out << "  " << state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, f) << std::endl;
+  out << "))" << std::endl; // end negation and and
+
+  out << "))" << std::endl; // end forall
+
+  out << std::endl;
+  out << "(check-sat)" << std::endl;
+
+  tm().set_name_transformer(old_transformer);
+}
+
 
 }
 }

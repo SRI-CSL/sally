@@ -884,7 +884,7 @@ void yices2_internal::generalize(smt::solver::generalization_type type, std::vec
   std::set<term_t> ignore_yices;
   std::set<expr::term_ref> ignore_terms;
 
-  // Counte the A/B formulas
+  // Count the A/B formulas
   size_t assertions_size = 0;
   for (size_t i = 0; i < d_assertions.size(); ++ i) {
     switch (type) {
@@ -982,6 +982,18 @@ void yices2_internal::generalize(smt::solver::generalization_type type, std::vec
     throw exception("Generalization failed in Yices.");
   }
 
+  for (size_t i = 0; i < G_y.size; ++ i) {
+    assert(yices_formula_true_in_model(m, G_y.data[i]));
+    if (ignore_yices.find(G_y.data[i]) == ignore_yices.end()) {
+      expr::term_ref t_i = to_term(G_y.data[i]);
+      if (ignore_terms.find(t_i) == ignore_terms.end()) {
+        projection_out.push_back(t_i);
+        ignore_yices.insert(G_y.data[i]);
+        ignore_terms.insert(t_i);
+      }
+    }
+  }
+
   // Check generalizatations
   if (output::trace_tag_is_enabled("yices2::check-generalization")) {
     static size_t id = 0;
@@ -997,17 +1009,8 @@ void yices2_internal::generalize(smt::solver::generalization_type type, std::vec
     efsmt_to_stream(out, &G_y, assertions, assertions_size, d_A_variables, d_T_variables, d_B_variables);
   }
 
-  for (size_t i = 0; i < G_y.size; ++ i) {
-    if (ignore_yices.find(G_y.data[i]) == ignore_yices.end()) {
-      expr::term_ref t_i = to_term(G_y.data[i]);
-      if (ignore_terms.find(t_i) == ignore_terms.end()) {
-        projection_out.push_back(t_i);
-        ignore_yices.insert(G_y.data[i]);
-        ignore_terms.insert(t_i);
-      }
-    }
-  }
   yices_delete_term_vector(&G_y);
+
 
   if (output::trace_tag_is_enabled("yices2")) {
     std::cerr << "generalization: " << std::endl;

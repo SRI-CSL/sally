@@ -171,6 +171,21 @@ class ic3_engine : public engine {
   /** Map from frame formulas to information about them */
   expr::term_ref_map<frame_formula_info> d_frame_formula_info;
 
+  /** Check that g => \exists x' f */
+  void output_efsmt(expr::term_ref f, expr::term_ref g) const;
+
+  /** Sets the refutation info */
+  void set_refutes_info(expr::term_ref f, expr::term_ref g, expr::term_ref l);
+
+  /** Get the formula l refutes */
+  expr::term_ref get_refutes(expr::term_ref l) const;
+
+  /** Get the parent of l */
+  expr::term_ref get_parent(expr::term_ref l) const;
+
+  /** Does l have a parent */
+  bool has_parent(expr::term_ref l) const;
+
   /** Mark the formula as invalid (not necessarily in the current frame) */
   void set_invalid(expr::term_ref f);
 
