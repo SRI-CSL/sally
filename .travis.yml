@@ -1,5 +1,7 @@
 language: cpp
 
+sudo: false
+
 compiler:
   # - clang (Disabling until boost and clang play well)
   - gcc
@@ -13,24 +15,33 @@ env:
     - CMAKE_BUILD_TYPE=Release
       ENABLE_COVERAGE=ON
 
+addons:
+  apt:
+    sources:
+      - boost-latest
+    packages:
+      - libgmp-dev
+      - libboost-program-options1.54-dev 
+      - libboost-iostreams1.54-dev
+      - libboost-test1.54-dev
+      - libboost-thread1.54-dev
+      - libboost-system1.54-dev
+      - default-jre
+      - gperf
+
+cache:
+  directories:
+    - $HOME/yices2
+
 install:
-  - sudo add-apt-repository ppa:boost-latest/ppa -y
-  - sudo apt-key update
-  - sudo apt-get update 
-  - sudo apt-get install libgmp-dev 
-  - sudo apt-get install libboost-program-options1.54-dev libboost-iostreams1.54-dev libboost-test1.54-dev libboost-thread1.54-dev libboost-system1.54-dev
-  - sudo apt-get install default-jre
-  - sudo apt-get install gperf
-  - wget "http://yices.csl.sri.com/cgi-bin/yices2-newnewdownload.cgi?file=yices-2.3.1-src.tar.gz&accept=I+Agree" -O yices.tar.gz
-  - tar xzvf yices.tar.gz
-  - cd yices* && autoconf && ./configure --prefix=/usr && make MODE=release && sudo make MODE=release install && cd ..
+  - bash contrib/install_yices2.sh
   - if [[ $ENABLE_COVERAGE == ON ]]; then 
       sudo pip install cpp-coveralls;
     fi
   
 script:
   - cd build
-  - cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DENABLE_COVERAGE=${ENABLE_COVERAGE} ..
+  - cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DENABLE_COVERAGE=${ENABLE_COVERAGE} -DYICES2_HOME=$HOME/yices2 ..
   - make 
   - make check
 
