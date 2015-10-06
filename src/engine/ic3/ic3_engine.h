@@ -96,17 +96,15 @@ typedef boost::heap::priority_queue<induction_obligation> induction_obligation_q
  * THe parent links are non-circular and all end up in either F or some intial
  * state formula.
  */
-struct frame_formula_info {
+struct frame_formula_parent_info {
   /** We introduced this formula to help inductivity of parent */
   expr::term_ref parent;
   /** This formula was introduced to eliminate this counter-example generalization */
   expr::term_ref refutes;
-  /** Has this formula been shown refuted by a real conuterexample */
-  bool invalid;
 
-  frame_formula_info(): invalid(false) {}
-  frame_formula_info(expr::term_ref parent, expr::term_ref refutes)
-  : parent(parent), refutes(refutes), invalid(false) {}
+  frame_formula_parent_info() {}
+  frame_formula_parent_info(expr::term_ref parent, expr::term_ref refutes)
+  : parent(parent), refutes(refutes) {}
 };
 
 class ic3_engine : public engine {
@@ -169,7 +167,7 @@ class ic3_engine : public engine {
   size_t d_induction_frame;
 
   /** Map from frame formulas to information about them */
-  expr::term_ref_map<frame_formula_info> d_frame_formula_info;
+  expr::term_ref_map<frame_formula_parent_info> d_frame_formula_parent_info;
 
   /** Check that g => \exists x' f */
   void output_efsmt(expr::term_ref f, expr::term_ref g) const;
@@ -186,8 +184,11 @@ class ic3_engine : public engine {
   /** Does l have a parent */
   bool has_parent(expr::term_ref l) const;
 
+  /** Map from formulas to frame where its invalid */
+  expr::term_ref_map<size_t> d_frame_formula_invalid_info;
+
   /** Mark the formula as invalid (not necessarily in the current frame) */
-  void set_invalid(expr::term_ref f);
+  void set_invalid(expr::term_ref f, size_t frame);
 
   /** Returns true if formula marked as invalid */
   bool is_invalid(expr::term_ref f) const;

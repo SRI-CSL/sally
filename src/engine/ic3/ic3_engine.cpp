@@ -173,7 +173,7 @@ void ic3_engine::add_valid_up_to(size_t k, expr::term_ref F) {
     }
     add_to_frame(i, F);
   }
-  assert(i < k);
+  assert(i < (int) k);
 }
 
 induction_obligation ic3_engine::pop_induction_obligation() {
@@ -334,9 +334,11 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
 
   // Add to obligations if not already shown invalid
   add_valid_up_to(d_induction_frame, learnt);
-  // Try to push assumptions next time
-  d_induction_obligations.push(induction_obligation(learnt, 0, analyze_cti));
-  set_refutes_info(f, G, learnt);
+  // Try to push assumptions next time (unless, already invalid)
+  if (!is_invalid(learnt)) {
+    d_induction_obligations.push(induction_obligation(learnt, 0, analyze_cti));
+    set_refutes_info(f, G, learnt);
+  }
 
   // Learn with the analyzer
   if (ai()) {
@@ -433,6 +435,11 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
     expr::term_ref G = get_refutes(f);
     expr::term_ref parent = get_parent(f);
 
+    // If invalid already, done
+    if (is_invalid(parent)) {
+      break;
+    }
+
     // Check at frame k
     d_smt->ensure_counterexample_solver_depth(k);
     solver->add(d_trace->get_state_formula(G, k), smt::solver::CLASS_A);
@@ -447,7 +454,7 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
 
     // We're sat (either by knowing, or by checking), so we extend further
     f = parent;
-    set_invalid(f);
+    set_invalid(f, k + 1);
     model = solver->get_model();
     d_trace->set_model(model);
     if (ai()) {
@@ -484,7 +491,7 @@ void ic3_engine::push_current_frame() {
       break;
     case INDUCTION_FAIL:
       // Not inductive, mark it
-      set_invalid(ind.formula());
+      set_invalid(ind.formula(), d_induction_frame + 1);
       // Try to extend the counter-example further
       extend_induction_failure(ind.formula());
       break;
@@ -502,8 +509,8 @@ void ic3_engine::push_current_frame() {
     output << "digraph G {" << std::endl;
 
     // Output relationships
-    expr::term_ref_map<frame_formula_info>::const_iterator it = d_frame_formula_info.begin();
-    expr::term_ref_map<frame_formula_info>::const_iterator it_end = d_frame_formula_info.end();
+    expr::term_ref_map<frame_formula_parent_info>::const_iterator it = d_frame_formula_parent_info.begin();
+    expr::term_ref_map<frame_formula_parent_info>::const_iterator it_end = d_frame_formula_parent_info.end();
     for (; it != it_end; ++ it) {
       expr::term_ref learnt = it->first;
       expr::term_ref parent = it->second.parent;
@@ -548,7 +555,7 @@ engine::result ic3_engine::search() {
       return engine::INTERRUPTED;
     }
 
-    MSG(1) << "ic3: Extending trace to " << d_induction_frame << " (" << d_induction_obligations_next.size() << "/" << d_frame_content[d_induction_frame-1].size() << "facts)" << std::endl;
+    MSG(1) << "ic3: Extending trace to " << d_induction_frame << " (" << d_induction_obligations_next.size() << "/" << d_frame_content[d_induction_frame-1].size() << " facts)" << std::endl;
 
     // Add formulas to the new frame
     std::vector<induction_obligation>::const_iterator it = d_induction_obligations_next.begin();
@@ -655,32 +662,27 @@ const system::state_trace* ic3_engine::get_trace() {
   return d_trace;
 }
 
-void ic3_engine::set_invalid(expr::term_ref f) {
-  d_frame_formula_info[f].invalid = true;
+void ic3_engine::set_invalid(expr::term_ref f, size_t frame) {
+  assert(frame >= d_induction_frame);
+  assert(d_frame_formula_invalid_info.find(f) == d_frame_formula_invalid_info.end());
+  d_frame_formula_invalid_info[f] = frame;
   if (d_properties.find(f) != d_properties.end()) {
     d_property_invalid = true;
   }
 }
 
 bool ic3_engine::is_invalid(expr::term_ref f) const {
-  expr::term_ref_map<frame_formula_info>::const_iterator find = d_frame_formula_info.find(f);
-  if (find == d_frame_formula_info.end()) {
-    return false;
-  } else {
-    return find->second.invalid;
-  }
+  expr::term_ref_map<size_t>::const_iterator find = d_frame_formula_invalid_info.find(f);
+  return (find != d_frame_formula_invalid_info.end());
 }
 
 bool ic3_engine::is_invalid_or_parent_invalid(expr::term_ref f) const {
-  expr::term_ref_map<frame_formula_info>::const_iterator find = d_frame_formula_info.find(f);
-  if (find == d_frame_formula_info.end()) {
+  if (is_invalid(f)) return true;
+  expr::term_ref_map<frame_formula_parent_info>::const_iterator find = d_frame_formula_parent_info.find(f);
+  if (find == d_frame_formula_parent_info.end()) {
     return false;
   } else {
-    if (find->second.invalid) {
-      return true;
-    } else {
-      return is_invalid_or_parent_invalid(find->second.parent);
-    }
+    return is_invalid_or_parent_invalid(find->second.parent);
   }
 }
 
@@ -742,7 +744,7 @@ void ic3_engine::learn_from_analyzer(std::vector<expr::term_ref>& potential_inva
 
 void ic3_engine::gc_collect(const expr::gc_relocator& gc_reloc) {
   gc_reloc.reloc(d_counterexample);
-  d_frame_formula_info.reloc(gc_reloc);
+  d_frame_formula_parent_info.reloc(gc_reloc);
   assert(d_induction_obligations_next.size() == 0);
   for (size_t i = 0; i < d_frame_content.size(); ++ i) {
     gc_reloc.reloc(d_frame_content[i]);
@@ -787,25 +789,38 @@ std::ostream& operator << (std::ostream& out, const ic3_engine& ic3) {
 }
 
 void ic3_engine::set_refutes_info(expr::term_ref f, expr::term_ref g, expr::term_ref l) {
-  assert(d_frame_formula_info.find(l) == d_frame_formula_info.end());
-  d_frame_formula_info[l] = frame_formula_info(f, g);
+  if (d_frame_formula_parent_info.find(l) != d_frame_formula_parent_info.end()) {
+    std::cerr << "l = " << l << std::endl;
+    std::cerr << "f = " << f << std::endl;
+    std::cerr << "g = " << g << std::endl;
+
+    expr::term_ref_map<frame_formula_parent_info>::const_iterator find = d_frame_formula_parent_info.find(l);
+    std::cerr << "f = " << find->second.parent << std::endl;
+    std::cerr << "g = " << find->second.refutes << std::endl;
+
+    std::cerr << "f_invalid = " << is_invalid(f) << std::endl;
+    std::cerr << "l_invalid = " << is_invalid(l) << std::endl;
+
+    assert(false);
+  }
+  d_frame_formula_parent_info[l] = frame_formula_parent_info(f, g);
 }
 
 expr::term_ref ic3_engine::get_refutes(expr::term_ref l) const {
   assert(has_parent(l));
-  expr::term_ref_map<frame_formula_info>::const_iterator find = d_frame_formula_info.find(l);
+  expr::term_ref_map<frame_formula_parent_info>::const_iterator find = d_frame_formula_parent_info.find(l);
   return find->second.refutes;
 }
 
 expr::term_ref ic3_engine::get_parent(expr::term_ref l) const {
   assert(has_parent(l));
-  expr::term_ref_map<frame_formula_info>::const_iterator find = d_frame_formula_info.find(l);
+  expr::term_ref_map<frame_formula_parent_info>::const_iterator find = d_frame_formula_parent_info.find(l);
   return find->second.parent;
 }
 
 bool ic3_engine::has_parent(expr::term_ref l) const {
-  expr::term_ref_map<frame_formula_info>::const_iterator find = d_frame_formula_info.find(l);
-  if (find == d_frame_formula_info.end()) { return false; }
+  expr::term_ref_map<frame_formula_parent_info>::const_iterator find = d_frame_formula_parent_info.find(l);
+  if (find == d_frame_formula_parent_info.end()) { return false; }
   return !find->second.parent.is_null();
 }
 

@@ -72,7 +72,7 @@ public:
     // Create the input stream for the file
     d_input = antlr3FileStreamNew((pANTLR3_UINT8) file_to_parse, ANTLR3_ENC_8BIT);
     if (d_input == 0) {
-      throw parser_exception(std::string("can't open") + file_to_parse);
+      throw parser_exception(std::string("can't open ") + file_to_parse);
     }
 
     // Create a lexer
