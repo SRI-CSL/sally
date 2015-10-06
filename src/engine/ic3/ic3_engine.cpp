@@ -35,9 +35,9 @@
 namespace sally {
 namespace ic3 {
 
-induction_obligation::induction_obligation(expr::term_ref P, bool analzye)
+induction_obligation::induction_obligation(expr::term_ref P, size_t used_budget, bool analzye)
 : d_P(P)
-, d_budget(0)
+, d_budget(used_budget)
 , d_analyze(analzye)
 {}
 
@@ -166,12 +166,14 @@ void ic3_engine::add_valid_up_to(size_t k, expr::term_ref F) {
   assert(k < d_frame_content.size());
 
   // Add to all frames from 1..k (not adding to 0, initial states need no refinement)
-  for(int i = k; i >= 1; -- i) {
+  int i;
+  for(i = k; i >= 1; -- i) {
     if (frame_contains(i, F)) {
       break;
     }
     add_to_frame(i, F);
   }
+  assert(i < k);
 }
 
 induction_obligation ic3_engine::pop_induction_obligation() {
@@ -284,7 +286,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   // If inductive
   if (result.result == smt::solver::UNSAT) {
     // Add to the next frame
-    d_induction_obligations_next.push_back(induction_obligation(f, analyze_cti));
+    d_induction_obligations_next.push_back(induction_obligation(f, ind.used_budget() / 2, analyze_cti));
     return INDUCTION_SUCCESS;
   }
 
@@ -299,8 +301,8 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
     return INDUCTION_INCONCLUSIVE;
   }
 
-  // Check if G is reachable
-  size_t reachability_budget = ind.used_budget();
+  // Check if G is reachable (give a budget enough for frame length fails)
+  size_t reachability_budget = d_induction_frame;
   if (reachability_budget == 0) { reachability_budget = 1; }
   size_t budget_to_use = reachability_budget;
   reachability_status reachable = check_reachable(d_induction_frame, G, result.model, budget_to_use);
@@ -316,29 +318,25 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
     return INDUCTION_RETRY;
   }
 
-  // Add to obligations if not already shown invalid
+  // Basic thing to learn is the generalization
   expr::term_ref G_not = tm().mk_term(expr::TERM_NOT, G);
   TRACE("ic3") << "ic3: backward learnt: " << G_not << std::endl;
-  add_valid_up_to(d_induction_frame, G_not);
-  if (!is_invalid(G_not)) {
-    // Try to push assumptions next time
-    d_induction_obligations.push(induction_obligation(G_not, analyze_cti));
-    set_refutes_info(f, G, G_not);
-  }
 
   // Learn something to refute G
   expr::term_ref learnt = d_smt->learn_forward(d_induction_frame, G);
   TRACE("ic3") << "ic3: forward learnt: " << learnt << std::endl;
 
-  if (learnt != G_not) {
-    // Add to obligations if not already shown invalid
-    add_valid_up_to(d_induction_frame, learnt);
-    if (!is_invalid(learnt)) {
-      // Try to push assumptions next time
-      d_induction_obligations.push(induction_obligation(learnt, analyze_cti));
-      set_refutes_info(f, G, learnt);
-    }
+  // If forward learnt is already refuted in the future, use generalization, it's
+  // more precise
+  if (is_invalid(learnt)) {
+    learnt = G_not;
   }
+
+  // Add to obligations if not already shown invalid
+  add_valid_up_to(d_induction_frame, learnt);
+  // Try to push assumptions next time
+  d_induction_obligations.push(induction_obligation(learnt, 0, analyze_cti));
+  set_refutes_info(f, G, learnt);
 
   // Learn with the analyzer
   if (ai()) {
@@ -349,7 +347,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
       TRACE("ic3") << "ic3: analyzer learnt[" << i << "]" << learnt << std::endl;
       if (!is_invalid(learnt)) {
         // Try to push assumptions next time (but don't analyze the failures)
-        d_induction_obligations.push(induction_obligation(learnt, false));
+        d_induction_obligations.push(induction_obligation(learnt, 0, false));
       }
     }
   }
@@ -550,7 +548,7 @@ engine::result ic3_engine::search() {
       return engine::INTERRUPTED;
     }
 
-    MSG(1) << "ic3: Extending trace to " << d_induction_frame << " (" << d_induction_obligations_next.size() << " facts)" << std::endl;
+    MSG(1) << "ic3: Extending trace to " << d_induction_frame << " (" << d_induction_obligations_next.size() << "/" << d_frame_content[d_induction_frame-1].size() << "facts)" << std::endl;
 
     // Add formulas to the new frame
     std::vector<induction_obligation>::const_iterator it = d_induction_obligations_next.begin();
@@ -609,7 +607,7 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   // Add the initial state
   expr::term_ref I = d_transition_system->get_initial_states();
   add_to_frame(0, I);
-  d_induction_obligations.push(induction_obligation(I, true));
+  d_induction_obligations.push(induction_obligation(I, 0, true));
 
   // Add the property we're trying to prove (if not already invalid at frame 0)
   bool ok = add_property(d_property->get_formula());
@@ -644,7 +642,7 @@ bool ic3_engine::add_property(expr::term_ref P) {
     solvers::query_result result = d_smt->query_at(0, tm().mk_term(expr::TERM_NOT, P), smt::solver::CLASS_A);
     if (result.result == smt::solver::UNSAT) {
       add_to_frame(0, P);
-      d_induction_obligations.push(induction_obligation(P, true));
+      d_induction_obligations.push(induction_obligation(P, 0, true));
       d_properties.insert(P);
       return true;
     } else {

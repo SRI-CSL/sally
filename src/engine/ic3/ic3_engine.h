@@ -51,7 +51,7 @@ class induction_obligation {
 public:
 
   /** Construct the obligation */
-  induction_obligation(expr::term_ref P, bool analzye);
+  induction_obligation(expr::term_ref P, size_t used_budget, bool analzye);
 
   /** Get the formula */
   expr::term_ref formula() const;

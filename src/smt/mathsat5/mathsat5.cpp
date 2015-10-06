@@ -206,7 +206,7 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
   msat_set_option(d_cfg, "interpolation", "true");
   msat_set_option(d_cfg, "theory.la.split_rat_eq", "false");
   msat_set_option(d_cfg, "theory.bv.eager", "false");
-  //msat_set_option(d_cfg, "preprocessor.simplification", "0");
+  msat_set_option(d_cfg, "preprocessor.simplification", "0");
   if (opts.get_bool("mathsat5-unsat-cores")) {
     msat_set_option(d_cfg, "unsat_core_generation", "1");
   }
