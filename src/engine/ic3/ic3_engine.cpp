@@ -664,10 +664,10 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 }
 
 void ic3_engine::add_initial_states(expr::term_ref I) {
-  const expr::term& I_term = tm().term_of(I);
-  if (I_term.op() == expr::TERM_AND) {
-    for (size_t i = 0; i < I_term.size(); ++ i) {
-      add_initial_states(I_term[i]);
+  if (tm().term_of(I).op() == expr::TERM_AND) {
+    size_t size = tm().term_of(I).size();
+    for (size_t i = 0; i < size; ++ i) {
+      add_initial_states(tm().term_of(I)[i]);
     }
   } else {
     if (!frame_contains(0, I)) {
@@ -678,10 +678,10 @@ void ic3_engine::add_initial_states(expr::term_ref I) {
 }
 
 bool ic3_engine::add_property(expr::term_ref P) {
-  const expr::term& P_term = tm().term_of(P);
-  if (P_term.op() == expr::TERM_AND) {
-    for (size_t i = 0; i < P_term.size(); ++ i) {
-      bool ok = add_property(P_term[i]);
+  if (tm().term_of(P).op() == expr::TERM_AND) {
+    size_t size = tm().term_of(P).size();
+    for (size_t i = 0; i < size; ++ i) {
+      bool ok = add_property(tm().term_of(P)[i]);
       if (!ok) return false;
     }
     return true;
