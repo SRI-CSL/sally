@@ -43,7 +43,7 @@ class induction_obligation {
 
   /** The formula in question */
   expr::term_ref d_P;
-  /** The used budget */
+  /** The available budget */
   size_t d_budget;
   /** Should we analyze induction failure */
   bool d_analyze;
@@ -51,16 +51,16 @@ class induction_obligation {
 public:
 
   /** Construct the obligation */
-  induction_obligation(expr::term_manager& tm, expr::term_ref P, size_t used_budget, bool analzye);
+  induction_obligation(expr::term_manager& tm, expr::term_ref P, size_t budget, bool analzye);
 
   /** Get the formula */
   expr::term_ref formula() const;
 
   /** Return the used budget */
-  size_t used_budget() const;
+  size_t get_budget() const;
 
   /** Add to used budget */
-  void add_to_used_budget(size_t size);
+  void set_budget(size_t size);
 
   /** Should we anlyze the induction failure */
   bool analyze_cti() const;

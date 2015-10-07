@@ -36,9 +36,9 @@
 namespace sally {
 namespace ic3 {
 
-induction_obligation::induction_obligation(expr::term_manager& tm, expr::term_ref P, size_t used_budget, bool analzye)
+induction_obligation::induction_obligation(expr::term_manager& tm, expr::term_ref P, size_t budget, bool analzye)
 : d_P(P)
-, d_budget(used_budget)
+, d_budget(budget)
 , d_analyze(analzye)
 {
 }
@@ -52,11 +52,9 @@ bool induction_obligation::operator == (const induction_obligation& o) const {
 }
 
 bool induction_obligation::operator < (const induction_obligation& o) const {
-  // The heap is a max-heap, so to get min heao, we reverse the order
-
-  // Smaller budget wins
-  if (used_budget() != o.used_budget()) {
-    return used_budget() > o.used_budget();
+  // Larger budget wins
+  if (get_budget() != o.get_budget()) {
+    return get_budget() < o.get_budget();
   }
   // Break ties
   return formula() > o.formula();
@@ -66,12 +64,12 @@ bool induction_obligation::analyze_cti() const {
   return d_analyze;
 }
 
-size_t induction_obligation::used_budget() const {
+size_t induction_obligation::get_budget() const {
   return d_budget;
 }
 
-void induction_obligation::add_to_used_budget(size_t size) {
-  d_budget += size;
+void induction_obligation::set_budget(size_t size) {
+  d_budget = size;
 }
 
 /** A reachability obligation at frame k. */
@@ -310,12 +308,13 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
     return INDUCTION_INCONCLUSIVE;
   }
 
+
   // Check if G is reachable (give a budget enough for frame length fails)
-  size_t reachability_budget = d_induction_frame;
-  if (reachability_budget == 0) { reachability_budget = 1; }
-  size_t budget_to_use = reachability_budget;
-  reachability_status reachable = check_reachable(d_induction_frame, G, result.model, budget_to_use);
-  ind.add_to_used_budget(reachability_budget - budget_to_use);
+  size_t default_budget = d_induction_frame + 1;
+  size_t reachability_budget = ind.get_budget();
+  if (reachability_budget == 0) { reachability_budget = default_budget; }
+  reachability_status reachable = check_reachable(d_induction_frame, G, result.model, reachability_budget);
+  ind.set_budget(reachability_budget);
 
   // If reachable, we're not inductive
   if (reachable == REACHABLE) {
@@ -348,7 +347,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   add_valid_up_to(d_induction_frame, learnt);
   // Try to push assumptions next time (unless, already invalid)
   if (!is_invalid(learnt)) {
-    d_induction_obligations.push(induction_obligation(tm(), learnt, 0, analyze_cti));
+    d_induction_obligations.push(induction_obligation(tm(), learnt, default_budget, analyze_cti));
     set_refutes_info(f, G, learnt);
   }
 
@@ -361,7 +360,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
       TRACE("ic3") << "ic3: analyzer learnt[" << i << "]" << learnt << std::endl;
       if (!is_invalid(learnt)) {
         // Try to push assumptions next time (but don't analyze the failures)
-        d_induction_obligations.push(induction_obligation(tm(), learnt, 0, false));
+        d_induction_obligations.push(induction_obligation(tm(), learnt, default_budget, false));
       }
     }
   }
