@@ -979,13 +979,15 @@ void mathsat5_internal::interpolate(std::vector<expr::term_ref>& projection_out)
   int itp_classes[1] = { d_itp_A };
   msat_term I = msat_get_interpolant(d_env, itp_classes, 1);
   if (MSAT_ERROR_TERM(I)) {
-    if (output::trace_tag_is_enabled("mathsat5")) {
+    if (output::trace_tag_is_enabled("mathsat5::interpolation")) {
       std::cerr << "Error while interpolating:" << std::endl;
       for (size_t i = 0; i < d_assertions.size(); ++ i) {
-        std::cerr << "[" << i << "]: " << d_assertions[i] << std::endl;
+        std::cerr << "[" << i << "]: " << d_assertion_classes[i] << " " << d_assertions[i] << std::endl;
       }
     }
-    throw exception("MathSAT interpolation error.");
+    std::stringstream ss;
+    ss << "MathSAT interpolation error: " << msat_last_error_message(d_env);
+    throw exception(std::string(ss.str()));
   }
   projection_out.push_back(to_term(I));
 }
