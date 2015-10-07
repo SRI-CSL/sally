@@ -89,9 +89,6 @@ class solvers {
   /** Generalize the SAT result at k */
   expr::term_ref generalize_sat(smt::solver* solver);
 
-  /** Rewrite equalitites to inequalities */
-  expr::term_ref eq_to_ineq(expr::term_ref G);
-
   /** Get the enabling varibale of frame k */
   expr::term_ref get_frame_variable(size_t k);
 
@@ -185,6 +182,8 @@ public:
   /** Collect term manager garbage */
   void gc_collect(const expr::gc_relocator& gc_reloc);
 
+  /** Rewrite equalitites to inequalities */
+  expr::term_ref eq_to_ineq(expr::term_ref G);
 };
 
 

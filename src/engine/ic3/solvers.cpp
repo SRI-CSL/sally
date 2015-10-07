@@ -331,7 +331,7 @@ expr::term_ref solvers::generalize_sat(smt::solver* solver) {
   std::vector<expr::term_ref> generalization_facts;
   solver->generalize(smt::solver::GENERALIZE_BACKWARD, generalization_facts);
   expr::term_ref G = d_tm.mk_and(generalization_facts);
-  G = eq_to_ineq(G);
+  // G = eq_to_ineq(G);
   return G;
 }
 

@@ -29,17 +29,19 @@
 #include <sstream>
 #include <iostream>
 #include <fstream>
+#include <algorithm>
 
 #define unused_var(x) { (void)x; }
 
 namespace sally {
 namespace ic3 {
 
-induction_obligation::induction_obligation(expr::term_ref P, size_t used_budget, bool analzye)
+induction_obligation::induction_obligation(expr::term_manager& tm, expr::term_ref P, size_t used_budget, bool analzye)
 : d_P(P)
 , d_budget(used_budget)
 , d_analyze(analzye)
-{}
+{
+}
 
 expr::term_ref induction_obligation::formula() const {
   return d_P;
@@ -50,6 +52,8 @@ bool induction_obligation::operator == (const induction_obligation& o) const {
 }
 
 bool induction_obligation::operator < (const induction_obligation& o) const {
+  // The heap is a max-heap, so to get min heao, we reverse the order
+
   // Smaller budget wins
   if (used_budget() != o.used_budget()) {
     return used_budget() > o.used_budget();
@@ -105,8 +109,9 @@ ic3_engine::ic3_engine(const system::context& ctx)
 , d_trace(0)
 , d_smt(0)
 , d_induction_frame(0)
+, d_previous_frame_equal(0)
 , d_property_invalid(false)
-
+, d_learning_type(LEARN_UNDEFINED)
 {
   for (size_t i = 0; i < 10; ++ i) {
     std::stringstream ss;
@@ -134,6 +139,8 @@ void ic3_engine::reset() {
   d_induction_obligations_next.clear();
   d_induction_obligations_count.clear();
   d_frame_content.clear();
+  d_previous_frame.clear();
+  d_previous_frame_equal = 0;
   delete d_smt;
   d_smt = 0;
   for (size_t i = 0; i < d_stat_frame_size.size(); ++ i) {
@@ -141,6 +148,8 @@ void ic3_engine::reset() {
   }
   d_properties.clear();
   d_property_invalid = false;
+  d_frame_formula_invalid_info.clear();
+  d_frame_formula_parent_info.clear();
 
   if (ai()) {
     ai()->clear();
@@ -286,7 +295,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   // If inductive
   if (result.result == smt::solver::UNSAT) {
     // Add to the next frame
-    d_induction_obligations_next.push_back(induction_obligation(f, ind.used_budget() / 2, analyze_cti));
+    d_induction_obligations_next.push_back(induction_obligation(tm(), f, 0, analyze_cti));
     return INDUCTION_SUCCESS;
   }
 
@@ -323,20 +332,23 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   TRACE("ic3") << "ic3: backward learnt: " << G_not << std::endl;
 
   // Learn something to refute G
-  expr::term_ref learnt = d_smt->learn_forward(d_induction_frame, G);
-  TRACE("ic3") << "ic3: forward learnt: " << learnt << std::endl;
-
-  // If forward learnt is already refuted in the future, use generalization, it's
-  // more precise
-  if (is_invalid(learnt)) {
-    learnt = G_not;
+  expr::term_ref learnt = G_not;
+  if (d_learning_type != LEARN_BACKWARD) {
+    // Learn forward
+    learnt = d_smt->learn_forward(d_induction_frame, G);
+    TRACE("ic3") << "ic3: forward learnt: " << learnt << std::endl;
+    // If forward learnt is already refuted in the future, use generalization, it's
+    // more precise
+    if (is_invalid(learnt)) {
+      learnt = G_not;
+    }
   }
 
   // Add to obligations if not already shown invalid
   add_valid_up_to(d_induction_frame, learnt);
   // Try to push assumptions next time (unless, already invalid)
   if (!is_invalid(learnt)) {
-    d_induction_obligations.push(induction_obligation(learnt, 0, analyze_cti));
+    d_induction_obligations.push(induction_obligation(tm(), learnt, 0, analyze_cti));
     set_refutes_info(f, G, learnt);
   }
 
@@ -349,7 +361,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
       TRACE("ic3") << "ic3: analyzer learnt[" << i << "]" << learnt << std::endl;
       if (!is_invalid(learnt)) {
         // Try to push assumptions next time (but don't analyze the failures)
-        d_induction_obligations.push(induction_obligation(learnt, 0, false));
+        d_induction_obligations.push(induction_obligation(tm(), learnt, 0, false));
       }
     }
   }
@@ -358,6 +370,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
 }
 
 void ic3_engine::add_to_frame(size_t k, expr::term_ref f) {
+
   assert(k < d_frame_content.size());
   assert(d_frame_content[k].count(f) == 0);
 
@@ -555,8 +568,6 @@ engine::result ic3_engine::search() {
       return engine::INTERRUPTED;
     }
 
-    MSG(1) << "ic3: Extending trace to " << d_induction_frame << " (" << d_induction_obligations_next.size() << "/" << d_frame_content[d_induction_frame-1].size() << " facts)" << std::endl;
-
     // Add formulas to the new frame
     std::vector<induction_obligation>::const_iterator it = d_induction_obligations_next.begin();
     for (; it != d_induction_obligations_next.end(); ++ it) {
@@ -567,6 +578,22 @@ engine::result ic3_engine::search() {
       }
     }
     d_induction_obligations_next.clear();
+
+    const formula_set& current_frame = d_frame_content[d_induction_frame];
+    std::vector<expr::term_ref> common_formulas;
+    std::set_intersection(d_previous_frame.begin(), d_previous_frame.end(), current_frame.begin(), current_frame.end(), std::back_inserter(common_formulas));
+
+    MSG(1) << "ic3: Extending trace to " << d_induction_frame
+           << " (" << d_induction_obligations.size() << "/" << d_frame_content[d_induction_frame-1].size() << " facts"
+           << " with " << common_formulas.size() << " same as before)" << std::endl;
+
+    // See howm many frames have we been carrying this around
+    if (d_previous_frame.size() == common_formulas.size() && current_frame.size() == common_formulas.size()) {
+      d_previous_frame_equal ++;
+    } else {
+      d_previous_frame_equal = 0;
+      d_previous_frame = current_frame;
+    }
 
     // Do garbage collection
     d_smt->gc();
@@ -613,8 +640,7 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 
   // Add the initial state
   expr::term_ref I = d_transition_system->get_initial_states();
-  add_to_frame(0, I);
-  d_induction_obligations.push(induction_obligation(I, 0, true));
+  add_initial_states(I);
 
   // Add the property we're trying to prove (if not already invalid at frame 0)
   bool ok = add_property(d_property->get_formula());
@@ -637,6 +663,20 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   return r;
 }
 
+void ic3_engine::add_initial_states(expr::term_ref I) {
+  const expr::term& I_term = tm().term_of(I);
+  if (I_term.op() == expr::TERM_AND) {
+    for (size_t i = 0; i < I_term.size(); ++ i) {
+      add_initial_states(I_term[i]);
+    }
+  } else {
+    if (!frame_contains(0, I)) {
+      add_to_frame(0, I);
+      d_induction_obligations.push(induction_obligation(tm(), I, 0, true));
+    }
+  }
+}
+
 bool ic3_engine::add_property(expr::term_ref P) {
   const expr::term& P_term = tm().term_of(P);
   if (P_term.op() == expr::TERM_AND) {
@@ -648,8 +688,10 @@ bool ic3_engine::add_property(expr::term_ref P) {
   } else {
     solvers::query_result result = d_smt->query_at(0, tm().mk_term(expr::TERM_NOT, P), smt::solver::CLASS_A);
     if (result.result == smt::solver::UNSAT) {
-      add_to_frame(0, P);
-      d_induction_obligations.push(induction_obligation(P, 0, true));
+      if (!frame_contains(0, P)) {
+        add_to_frame(0, P);
+        d_induction_obligations.push(induction_obligation(tm(), P, 0, true));
+      }
       d_properties.insert(P);
       return true;
     } else {

@@ -51,7 +51,7 @@ class induction_obligation {
 public:
 
   /** Construct the obligation */
-  induction_obligation(expr::term_ref P, size_t used_budget, bool analzye);
+  induction_obligation(expr::term_manager& tm, expr::term_ref P, size_t used_budget, bool analzye);
 
   /** Get the formula */
   expr::term_ref formula() const;
@@ -73,7 +73,7 @@ public:
 
 };
 
-/** Priority queue for obligations */
+/** Priority queue for obligations (max-heap) */
 typedef boost::heap::priority_queue<induction_obligation> induction_obligation_queue;
 
 /**
@@ -211,6 +211,12 @@ class ic3_engine : public engine {
   /** Set of facts valid per frame */
   std::vector<formula_set> d_frame_content;
 
+  /** How long has the frame content been preserved */
+  size_t d_previous_frame_equal;
+
+  /** The previous frame */
+  formula_set d_previous_frame;
+
   /** Returns the frame variable */
   expr::term_ref get_frame_variable(size_t i);
 
@@ -222,6 +228,9 @@ class ic3_engine : public engine {
 
   /** Add property to 0 frame, returns true if not immediately refuted */
   bool add_property(expr::term_ref P);
+
+  /** Add the initial states to 0 frame */
+  void add_initial_states(expr::term_ref I);
 
   /** Property components */
   std::set<expr::term_ref> d_properties;
@@ -240,7 +249,6 @@ class ic3_engine : public engine {
     UNREACHABLE,
     BUDGET_EXCEEDED
   };
-
 
   /**
    * Assuming f is satisfiable at k, check if f is reachable at k. During
@@ -284,6 +292,16 @@ class ic3_engine : public engine {
 
   /** GC the solvers */
   void gc_solvers();
+
+  /** Types of learning */
+  enum learning_type {
+    LEARN_UNDEFINED,
+    LEARN_FORWARD,
+    LEARN_BACKWARD,
+  };
+
+  /** Type of learning to use */
+  learning_type d_learning_type;
 
   /** Try to learn from the analyzer */
   void learn_from_analyzer(std::vector<expr::term_ref>& out);

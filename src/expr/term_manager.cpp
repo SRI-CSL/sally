@@ -331,6 +331,16 @@ void term_manager::get_variables(term_ref ref, std::set<term_ref>& out) const {
   d_tm->get_subterms(ref, variable_matcher(), out);
 }
 
+struct all_matcher {
+  bool operator() (const term& t) const {
+    return true;
+  }
+};
+
+void term_manager::get_subterms(term_ref ref, std::vector<term_ref>& out) const {
+  d_tm->get_subterms(ref, all_matcher(), out);
+}
+
 term_ref term_manager::substitute(term_ref t, const substitution_map& subst) {
   substitution_map subst_copy(subst);
   return d_tm->substitute(t, subst_copy);
