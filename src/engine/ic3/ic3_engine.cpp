@@ -639,7 +639,11 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 
   // Add the initial state
   expr::term_ref I = d_transition_system->get_initial_states();
-  add_initial_states(I);
+  if (!ctx().get_options().get_bool("ic3-no-initial-states")) {
+    add_initial_states(I);
+  } else {
+    add_to_frame(0, I);
+  }
 
   // Add the property we're trying to prove (if not already invalid at frame 0)
   bool ok = add_property(d_property->get_formula());
@@ -671,9 +675,7 @@ void ic3_engine::add_initial_states(expr::term_ref I) {
   } else {
     if (!frame_contains(0, I)) {
       add_to_frame(0, I);
-      if (!ctx().get_options().get_bool("ic3-no-initial-states")) {
-        d_induction_obligations.push(induction_obligation(tm(), I, 0, true));
-      }
+      d_induction_obligations.push(induction_obligation(tm(), I, 0, true));
     }
   }
 }
