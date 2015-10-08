@@ -671,7 +671,9 @@ void ic3_engine::add_initial_states(expr::term_ref I) {
   } else {
     if (!frame_contains(0, I)) {
       add_to_frame(0, I);
-      d_induction_obligations.push(induction_obligation(tm(), I, 0, true));
+      if (!ctx().get_options().get_bool("ic3-no-initial-states")) {
+        d_induction_obligations.push(induction_obligation(tm(), I, 0, true));
+      }
     }
   }
 }
