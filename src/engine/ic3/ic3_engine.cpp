@@ -53,7 +53,6 @@ bool induction_obligation::operator == (const induction_obligation& o) const {
 }
 
 void induction_obligation::bump_score(double amount) {
-  std::cerr << "(" << d_score << ", " << amount << ") ";
   if (d_score + amount > 1) {
     d_score += amount;
   } else {
@@ -345,7 +344,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
         double bump = 1.0 / (double) core.size();
         for (size_t i = 0; i < core.size(); ++ i) {
           set_needed(core[i]);
-          bump_induction_obligation(f, bump);
+          bump_induction_obligation(core[i], bump);
         }
       }
     }
