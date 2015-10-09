@@ -325,6 +325,8 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   bool analyze_cti = ind.analyze_cti();
   expr::term_ref f = ind.formula();
 
+  size_t default_budget = d_induction_frame + 1;
+
   assert(d_induction_frame < d_frame_content.size());
   assert(frame_contains(d_induction_frame, f));
 
@@ -364,7 +366,6 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   }
 
   // Check if G is reachable (give a budget enough for frame length fails)
-  size_t default_budget = d_induction_frame + 1;
   size_t reachability_budget = ind.get_budget();
   if (reachability_budget == 0) { reachability_budget = default_budget; }
   reachability_status reachable = check_reachable(d_induction_frame, G, result.model, reachability_budget);
@@ -605,6 +606,7 @@ engine::result ic3_engine::search() {
       std::set<expr::term_ref>::const_iterator prop_it = d_properties.begin();
       for (; prop_it != d_properties.end(); ++ prop_it) {
         set_needed(*prop_it);
+        bump_induction_obligation(*prop_it, 1);
       }
     }
 
@@ -659,7 +661,7 @@ engine::result ic3_engine::search() {
     if (d_previous_frame.size() == common_formulas.size() && current_frame.size() == common_formulas.size()) {
       d_previous_frame_equal ++;
       // Check with k-induction
-      if (d_previous_frame_equal > 1) {
+      if (d_previous_frame_equal > 1 && ctx().get_options().get_bool("ic3-kind")) {
         ctx().get_options().set_unsigned("kind-min", d_previous_frame_equal);
         ctx().get_options().set_unsigned("kind-max", d_previous_frame_equal);
         engine* kind_engine = engine_factory::mk_engine("kind", ctx());

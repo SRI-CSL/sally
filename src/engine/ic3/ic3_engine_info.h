@@ -36,6 +36,7 @@ struct ic3_engine_info {
         ("ic3-dump-dependencies", "Dump reasoning dependancy graph.")
         ("ic3-max", value<unsigned>()->default_value(0), "Maximal frame to consider.")
         ("ic3-no-initial-states", "Don't use inital states as potential invariant.")
+        ("ic3-kind", "Use k-induction as a helper.")
         ;
   }
 
