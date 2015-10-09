@@ -145,6 +145,7 @@ void ic3_engine::reset() {
     d_stat_frame_size[i]->get_value() = 0;
   }
   d_properties.clear();
+  d_needed.clear();
   d_property_invalid = false;
   d_frame_formula_invalid_info.clear();
   d_frame_formula_parent_info.clear();
@@ -288,12 +289,20 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   TRACE("ic3") << "ic3: pushing at " << d_induction_frame << ": " << f << std::endl;
 
   // Check if inductive
-  solvers::query_result result = d_smt->check_inductive(f);
+  std::vector<expr::term_ref> core;
+  solvers::query_result result = d_smt->check_inductive(f, core);
 
   // If inductive
   if (result.result == smt::solver::UNSAT) {
     // Add to the next frame
     d_induction_obligations_next.push_back(induction_obligation(tm(), f, 0, analyze_cti));
+    // Mark all as needed if core was obtained
+    if (d_smt->check_inductive_returns_core()) {
+      for (size_t i = 0; i < core.size(); ++ i) {
+        d_needed.insert(core[i]);
+      }
+      d_needed.insert(f);
+    }
     return INDUCTION_SUCCESS;
   }
 
@@ -307,7 +316,6 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   if (!analyze_cti) {
     return INDUCTION_INCONCLUSIVE;
   }
-
 
   // Check if G is reachable (give a budget enough for frame length fails)
   size_t default_budget = d_induction_frame + 1;
@@ -407,11 +415,17 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
     solver->add(G_k, smt::solver::CLASS_A);
   }
 
+  // Assert f at next frame
+  assert(k == d_induction_frame + 1);
+  d_smt->ensure_counterexample_solver_depth(k);
+  solver->add(d_trace->get_state_formula(tm().mk_term(expr::TERM_NOT, f), k), smt::solver::CLASS_A);
+
   // Should be SAT
   smt::solver::result r = solver->check();
   assert(r == smt::solver::SAT);
   expr::model::ref model = solver->get_model();
   d_trace->set_model(model);
+
   if (ai()) {
     ai()->notify_reachable(d_trace);
   }
@@ -428,33 +442,24 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
 
     // If no more parents, we're done
     if (!has_parent(f)) {
-      // If this is a counter-example to the property itself, then we extend to
-      // full counterexample
+      // If this is a counter-example to the property itself => full counterexample
       if (d_properties.find(f) != d_properties.end()) {
-        d_smt->ensure_counterexample_solver_depth(k);
-        solver->add(d_trace->get_state_formula(tm().mk_term(expr::TERM_NOT, f), k), smt::solver::CLASS_A);
-        r = solver->check();
-        assert(r == smt::solver::SAT);
-        model = solver->get_model();
-        d_trace->set_model(model);
-
         MSG(1) << "ic3: CEX found at depth " << d_smt->get_counterexample_solver_depth() << " (with induction frame at " << d_induction_frame << ")" << std::endl;
       }
       break;
     }
 
     // Try to extend
-    expr::term_ref G = get_refutes(f);
-    expr::term_ref parent = get_parent(f);
+    f = get_parent(f);
 
     // If invalid already, done
-    if (is_invalid(parent)) {
+    if (is_invalid(f)) {
       break;
     }
 
-    // Check at frame k
-    d_smt->ensure_counterexample_solver_depth(k);
-    solver->add(d_trace->get_state_formula(G, k), smt::solver::CLASS_A);
+    // Check at frame k + 1
+    d_smt->ensure_counterexample_solver_depth(k+1);
+    solver->add(d_trace->get_state_formula(tm().mk_term(expr::TERM_NOT, f), k+1), smt::solver::CLASS_A);
 
     // If not a generalization we need to check
     r = solver->check();
@@ -465,14 +470,12 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
     }
 
     // We're sat (either by knowing, or by checking), so we extend further
-    f = parent;
-    set_invalid(f, k + 1);
+    set_invalid(f, k+1);
     model = solver->get_model();
     d_trace->set_model(model);
     if (ai()) {
       ai()->notify_reachable(d_trace);
     }
-    d_counterexample.push_back(G);
   }
 }
 
@@ -541,6 +544,9 @@ engine::result ic3_engine::search() {
   // Push frame by frame */
   for(;;) {
 
+    // Clear the frame-specific info
+    d_needed.clear();
+
     // Push the current induction frame forward
     push_current_frame();
 
@@ -549,8 +555,10 @@ engine::result ic3_engine::search() {
       return engine::INVALID;
     }
 
-    // If we pushed all of them, we're done
-    if (d_frame_content[d_induction_frame].size() == d_induction_obligations_next.size()) {
+    // If we pushed all that's needed, we're done
+    if (d_smt->check_inductive_returns_core() && d_needed.size() == d_induction_obligations_next.size()) {
+      return engine::VALID;
+    } else if (d_frame_content[d_induction_frame].size() == d_induction_obligations_next.size()) {
       if (ctx().get_options().get_bool("ic3-show-invariant")) {
         print_frame(d_induction_frame, std::cout);
       }
@@ -568,12 +576,12 @@ engine::result ic3_engine::search() {
     }
 
     // Add formulas to the new frame
-    std::vector<induction_obligation>::const_iterator it = d_induction_obligations_next.begin();
-    for (; it != d_induction_obligations_next.end(); ++ it) {
+    std::vector<induction_obligation>::const_iterator next_it = d_induction_obligations_next.begin();
+    for (; next_it != d_induction_obligations_next.end(); ++ next_it) {
       // Push if not shown invalid
-      if (!is_invalid(it->formula())) {
-        add_to_frame(d_induction_frame, it->formula());
-        d_induction_obligations.push(*it);
+      if (!is_invalid(next_it->formula())) {
+        add_to_frame(d_induction_frame, next_it->formula());
+        d_induction_obligations.push(*next_it);
       }
     }
     d_induction_obligations_next.clear();
@@ -583,7 +591,7 @@ engine::result ic3_engine::search() {
     std::set_intersection(d_previous_frame.begin(), d_previous_frame.end(), current_frame.begin(), current_frame.end(), std::back_inserter(common_formulas));
 
     MSG(1) << "ic3: Extending trace to " << d_induction_frame
-           << " (" << d_induction_obligations.size() << "/" << d_frame_content[d_induction_frame-1].size() << " facts"
+           << " (" << d_induction_obligations.size() << "/" << d_needed.size() << "/" << d_frame_content[d_induction_frame-1].size() << " facts"
            << " with " << common_formulas.size() << " same as before)" << std::endl;
 
     // See howm many frames have we been carrying this around

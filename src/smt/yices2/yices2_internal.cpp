@@ -735,13 +735,13 @@ expr::model::ref yices2_internal::get_model(const std::set<expr::term_ref>& x_va
   assert(x_variables.size() > 0 || y_variables.size() > 0);
 
   // Clear any data already there
-  expr::model::ref m = new expr::model(d_tm, true);
+  expr::model::ref m = new expr::model(d_tm, false);
 
   // Get the model from yices
   model_t* yices_model = yices_get_model(d_ctx, true);
 
-  if (output::trace_tag_is_enabled("yices2")) {
-    yices_pp_model(stderr, yices_model, 80, 100, 0);
+  if (output::trace_tag_is_enabled("yices2::model")) {
+    yices_pp_model(stderr, yices_model, 80, 100000, 0);
   }
 
   // Get the variables

@@ -235,6 +235,9 @@ class ic3_engine : public engine {
   /** Property components */
   std::set<expr::term_ref> d_properties;
 
+  /** Formulas neded for sucesseful induction */
+  std::set<expr::term_ref> d_needed;
+
   /** Is the property invalid */
   bool d_property_invalid;
 

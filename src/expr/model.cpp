@@ -40,7 +40,6 @@ model::model(const model& other)
 , d_undef_to_default(other.d_undef_to_default)
 , d_variables(other.d_variables)
 , d_variable_to_value_map(other.d_variable_to_value_map)
-, d_term_to_value_map(other.d_term_to_value_map)
 , d_true(true)
 , d_false(false)
 {
@@ -52,7 +51,6 @@ model& model::operator = (const model& other) {
     d_undef_to_default = other.d_undef_to_default;
     d_variables = other.d_variables;
     d_variable_to_value_map = other.d_variable_to_value_map;
-    d_term_to_value_map = other.d_term_to_value_map;
   }
   return *this;
 }
@@ -91,7 +89,6 @@ void model::model_refcounted::detach() {
 
 void model::clear() {
   d_variable_to_value_map.clear();
-  d_term_to_value_map.clear();
   d_variables.clear();
 }
 
@@ -107,11 +104,27 @@ void model::set_variable_value(expr::term_ref var, value v) {
 }
 
 value model::get_variable_value(expr::term_ref var) const {
+  expr::term_manager::substitution_map renaming;
+  return get_variable_value(var, renaming);
+}
+
+value model::get_variable_value(expr::term_ref var, const expr::term_manager::substitution_map& var_renaming) const {
   assert(d_tm.term_of(var).op() == expr::VARIABLE);
-  const_iterator find = d_variable_to_value_map.find(var);
+
+  // Rename the variable if necessary
+  expr::term_manager::substitution_map::const_iterator renaming_find = var_renaming.find(var);
+  expr::term_ref var_to_evaluate;
+  if (renaming_find == var_renaming.end()) {
+    var_to_evaluate = var;
+  } else {
+    var_to_evaluate = renaming_find->second;
+    TRACE("expr::model") << "get_variable_value(" << var << ") => evaluating " << var_to_evaluate << std::endl;
+  }
+
+  const_iterator find = d_variable_to_value_map.find(var_to_evaluate);
   if (find == d_variable_to_value_map.end()) {
     if (d_undef_to_default) {
-      expr::term_ref type = d_tm.type_of(var);
+      expr::term_ref type = d_tm.type_of(var_to_evaluate);
       value v;
       switch (d_tm.term_of(type).op()) {
       case TYPE_BOOL:
@@ -128,30 +141,43 @@ value model::get_variable_value(expr::term_ref var) const {
         assert(false);
       }
 
-      TRACE("expr::model") << "get_term_value(" << var << ") => [default] " << v << std::endl;
+      TRACE("expr::model") << "get_variable_value(" << var_to_evaluate << ") => [default] " << v << std::endl;
       return v;
     } else {
       std::stringstream ss;
-      ss << set_tm(d_tm) << "Variable " << var << " is not part of the model.";
+      ss << set_tm(d_tm) << "Variable " << var_to_evaluate << " is not part of the model.";
       throw exception(ss.str());
     }
   } else {
-    return find->second;
+    value v = find->second;
+    TRACE("expr::model") << "get_variable_value(" << var_to_evaluate << ") => " << v << std::endl;
+    return v;
   }
 }
 
-value model::get_term_value(expr::term_ref t) {
+value model::get_term_value(expr::term_ref t) const {
+  expr::term_manager::substitution_map renaming;
+  return get_term_value(t, renaming);
+}
 
-  TRACE("expr::model") << "get_term_value(" << t << ")" << std::endl;
+value model::get_term_value(expr::term_ref t, const expr::term_manager::substitution_map& var_renaming) const {
+  term_to_value_map cache;
+  return get_term_value_internal(t, var_renaming, cache);
+}
+
+value model::get_term_value_internal(expr::term_ref t, const expr::term_manager::substitution_map& var_renaming, term_to_value_map& cache) const {
+
+  TRACE("expr::model") << "get_term_value_internal(" << t << ")" << std::endl;
 
   // If a variable and not in the model, we don't know how to evaluate
-  if (d_tm.term_of(t).op() == expr::VARIABLE) {
-    return get_variable_value(t);
+  expr::term_op op = d_tm.term_of(t).op();
+  if (op == expr::VARIABLE) {
+    return get_variable_value(t, var_renaming);
   } else {
     // Proper term, we have to evaluate, if not in the cache already
-    const_iterator find = d_term_to_value_map.find(t);
-    if (find != d_term_to_value_map.end()) {
-      TRACE("expr::model") << "get_term_value(" << t << ") => " << find->second << std::endl;
+    const_iterator find = cache.find(t);
+    if (find != cache.end()) {
+      TRACE("expr::model") << "get_term_value_internal(" << t << ") => " << find->second << std::endl;
       return find->second;
     }
 
@@ -160,11 +186,10 @@ value model::get_term_value(expr::term_ref t) {
     std::vector<value> children_values;
     for (size_t i = 0; i < t_size; ++ i) {
       expr::term_ref child = d_tm.term_of(t)[i];
-      children_values.push_back(get_term_value(child));
+      children_values.push_back(get_term_value_internal(child, var_renaming, cache));
     }
 
     // Now, compute the value
-    expr::term_op op = d_tm.term_of(t).op();
     value v;
     switch (op) {
     // ITE
@@ -178,7 +203,9 @@ value model::get_term_value(expr::term_ref t) {
       break;
       // Equality
     case TERM_EQ:
-      v = children_values[0] == children_values[1];
+      if (!children_values[0].is_null() && !children_values[1].is_null()) {
+        v = value(children_values[0] == children_values[1]);
+      }
       break;
     // Boolean terms
     case CONST_BOOL:
@@ -241,11 +268,11 @@ value model::get_term_value(expr::term_ref t) {
       if (t_size == 1) {
         v = value(-children_values[0].get_rational());
       } else {
-        v = value(children_values[0].get_rational() -children_values[1].get_rational());
+        v = value(children_values[0].get_rational() - children_values[1].get_rational());
       }
       break;
     case TERM_MUL: {
-      rational mul(1, 0);
+      rational mul(1, 1);
       for (size_t i = 0; i < t_size; ++ i) {
         mul *= children_values[i].get_rational();
       }
@@ -304,24 +331,32 @@ value model::get_term_value(expr::term_ref t) {
 
     assert(!v.is_null());
 
-    TRACE("expr::model") << "get_term_value(" << t << ") => " << v << std::endl;
+    TRACE("expr::model") << "get_term_value_internal(" << t << ") => " << v << std::endl;
 
     // Remember the cache
-    d_term_to_value_map[t] = v;
+    cache[t] = v;
 
     return v;
   }
 }
 
-bool model::is_true(expr::term_ref f) {
-  return get_term_value(f) == d_true;
+bool model::is_true(expr::term_ref f) const {
+  expr::term_manager::substitution_map renaming;
+  return is_true(f, renaming);
 }
 
-/** Is the formula false in the model */
-bool model::is_false(expr::term_ref f) {
-  return get_term_value(f) == d_false;
+bool model::is_true(expr::term_ref f, const expr::term_manager::substitution_map& var_renaming) const {
+  return get_term_value(f, var_renaming) == d_true;
 }
 
+bool model::is_false(expr::term_ref f) const {
+  expr::term_manager::substitution_map renaming;
+  return is_false(f, renaming);
+}
+
+bool model::is_false(expr::term_ref f, const expr::term_manager::substitution_map& var_renaming) const {
+  return get_term_value(f, var_renaming) == d_false;
+}
 
 bool model::has_value(expr::term_ref var) const {
   assert(d_tm.term_of(var).op() == expr::VARIABLE);
@@ -336,17 +371,10 @@ model::const_iterator model::values_end() const {
   return d_variable_to_value_map.end();
 }
 
-void model::clear_cache() {
-  d_term_to_value_map.clear();
-}
-
 void model::restrict_vars_to(const expr::term_manager::substitution_map& subst) {
   typedef expr::term_manager::substitution_map substitution_map;
 
   substitution_map::const_iterator it;
-
-  // Clear the cache
-  clear_cache();
 
   // Rename the variables in the value map
   term_to_value_map variable_to_value_map_new;

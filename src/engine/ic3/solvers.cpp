@@ -149,7 +149,8 @@ smt::solver* solvers::get_induction_solver() {
     d_induction_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
     d_induction_solver->add_variables(x_next.begin(), x_next.end(), smt::solver::CLASS_B);
     d_induction_solver->add_variables(input.begin(), input.end(), smt::solver::CLASS_T);
-    d_induction_solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_T);
+    d_transition_relation = d_transition_system->get_transition_relation();
+    d_induction_solver->add(d_transition_relation, smt::solver::CLASS_T);
   }
   return d_induction_solver;
 }
@@ -394,7 +395,12 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
   return learnt;
 }
 
-solvers::query_result solvers::check_inductive(expr::term_ref f) {
+bool solvers::check_inductive_returns_core() const {
+  return d_induction_solver->supports(smt::solver::UNSAT_CORE);
+}
+
+
+solvers::query_result solvers::check_inductive(expr::term_ref f, std::vector<expr::term_ref>& core) {
 
   query_result result;
 
@@ -418,6 +424,18 @@ solvers::query_result solvers::check_inductive(expr::term_ref f) {
     result.generalization = generalize_sat(solver);
     break;
   case smt::solver::UNSAT:
+    if (solver->supports(smt::solver::UNSAT_CORE)) {
+      solver->get_unsat_core(core);
+      // Only keep frame
+      size_t to_keep = 0;
+      for (size_t i = 0; i < core.size(); ++ i) {
+        if (core[i] != F_not_next && core[i] != d_transition_relation) {
+          assert(d_transition_system->get_state_type()->is_state_formula(core[i]));
+          core[to_keep++] = core[i];
+        }
+      }
+      core.resize(to_keep);
+    }
     break;
   default:
     throw exception("SMT unknown result.");

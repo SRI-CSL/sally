@@ -39,6 +39,9 @@ class state_trace : public expr::gc_participant {
   /** Sequence of input variables, per step */
   std::vector<expr::term_ref_strong> d_input_variables;
 
+  /** Renamings from state variable to frame variables */
+  std::vector<expr::term_manager::substitution_map> d_subst_maps;
+
   /** Full model of the trace */
   expr::model::ref d_model;
 
@@ -97,6 +100,16 @@ public:
    * Add model to the trace (model over trace variables).
    */
   void set_model(expr::model::ref m);
+
+  /**
+   * Check if formula is false in given frame.
+   */
+  bool is_true_in_frame(size_t frame, expr::term_ref f, expr::model::ref model);
+
+  /**
+   * Check if formula is true in given frame.
+   */
+  bool is_false_in_frame(size_t frame, expr::term_ref f, expr::model::ref model);
 
   /**
    * Output the trace to the stream.

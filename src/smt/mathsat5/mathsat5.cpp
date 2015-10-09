@@ -912,7 +912,7 @@ expr::model::ref mathsat5_internal::get_model() {
   assert(d_last_check_status == MSAT_SAT);
 
   // Clear any data already there
-  expr::model::ref m = new expr::model(d_tm, true);
+  expr::model::ref m = new expr::model(d_tm, false);
 
   // Get the model from mathsat
   for (size_t i = 0; i < d_variables.size(); ++ i) {
@@ -993,15 +993,33 @@ void mathsat5_internal::interpolate(std::vector<expr::term_ref>& projection_out)
   projection_out.push_back(to_term(I));
 }
 
+struct msat_term_cmp {
+  bool operator () (const msat_term& t1, const msat_term& t2) const {
+    return msat_term_id(t1) < msat_term_id(t2);
+  }
+};
+
 void mathsat5_internal::get_unsat_core(std::vector<expr::term_ref>& out) {
   size_t core_size = 0;
   msat_term* core = msat_get_unsat_core(d_env, &core_size);
-  if (core == 0) {
+  if (core == 0 || core_size == 0) {
     throw exception("MathSAT unsat core error.");
   }
-  for (size_t i = 0; i < core_size; ++ i) {
-    out.push_back(to_term(core[i]));
+
+  // We need the actuall assertions
+  std::set<msat_term, msat_term_cmp> core_set;
+  for(size_t i = 0; i < core_size; ++ i) {
+    core_set.insert(core[i]);
   }
+
+  // Output them
+  for (size_t i = 0; i < d_assertions_mathsat.size(); ++ i) {
+    if (core_set.count(d_assertions_mathsat[i]) > 0) {
+      out.push_back(d_assertions[i]);
+    }
+  }
+
+  // Free the core
   msat_free(core);
 }
 

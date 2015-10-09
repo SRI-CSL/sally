@@ -32,7 +32,7 @@ value::value()
 }
 
 value::value(bool b)
-: d_type(VALUE_NONE)
+: d_type(VALUE_BOOL)
 , d_b(b)
 {
 }
@@ -68,12 +68,15 @@ value::value(const term_manager& tm, term_ref t)
   switch (op) {
   case CONST_BOOL:
     d_b = tm.get_boolean_constant(t_term);
+    d_type = VALUE_BOOL;
     break;
   case CONST_BITVECTOR:
     d_bv = tm.get_bitvector_constant(t_term);
+    d_type = VALUE_BITVECTOR;
     break;
   case CONST_RATIONAL:
     d_q = tm.get_rational_constant(t_term);
+    d_type = VALUE_RATIONAL;
     break;
   default:
     assert(false);

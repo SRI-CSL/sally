@@ -51,6 +51,19 @@ void state_trace::ensure_variables(size_t k) {
     ss_input << "i" << d_input_variables.size();
     expr::term_ref input_var = tm().mk_variable(ss_input.str(), d_state_type->get_input_type_var());
     d_input_variables.push_back(expr::term_ref_strong(tm(), input_var));
+
+    // Add a new substitution map
+    d_subst_maps.push_back(expr::term_manager::substitution_map());
+    expr::term_manager::substitution_map& subst = d_subst_maps.back();
+    // Variables of the state type
+    const std::vector<expr::term_ref>& from_vars = d_state_type->get_variables(state_type::STATE_CURRENT);
+    // Variable to rename them to (k-the step)
+    std::vector<expr::term_ref> frame_k_vars;
+    get_struct_variables(state_var, frame_k_vars);
+    for (size_t i = 0; i < from_vars.size(); ++ i) {
+      subst[from_vars[i]] = frame_k_vars[i];
+    }
+
   }
   assert(d_state_variables.size() > k);
   assert(d_input_variables.size() > k);
@@ -178,6 +191,19 @@ void state_trace::to_stream(std::ostream& out) const {
   d_state_type->tm().pop_namespace();
   d_state_type->tm().pop_namespace();
   d_state_type->tm().pop_namespace();
+}
+
+bool state_trace::is_true_in_frame(size_t frame, expr::term_ref f, expr::model::ref model) {
+  // Return
+  ensure_variables(frame);
+  return model->is_true(f, d_subst_maps[frame]);
+}
+
+bool state_trace::is_false_in_frame(size_t frame, expr::term_ref f, expr::model::ref model) {
+  // Return
+  ensure_variables(frame);
+  assert(frame < d_subst_maps.size());
+  return model->is_false(f, d_subst_maps[frame]);
 }
 
 std::ostream& operator << (std::ostream& out, const state_trace& trace) {

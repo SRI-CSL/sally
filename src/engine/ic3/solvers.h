@@ -71,6 +71,9 @@ class solvers {
   /** Solver for induction queries when in single-solver mode */
   smt::solver* d_induction_solver;
 
+  /** Relation used in the induction solver */
+  expr::term_ref d_transition_relation;
+
   /** Counter-example solver */
   smt::solver* d_counterexample_solver;
 
@@ -159,7 +162,10 @@ public:
   query_result query_at(size_t k, expr::term_ref f, smt::solver::formula_class f_class);
 
   /** Check if f is inductive */
-  query_result check_inductive(expr::term_ref f);
+  query_result check_inductive(expr::term_ref f, std::vector<expr::term_ref>& core);
+
+  /** Returns true if inductive checks produce unsat cores */
+  bool check_inductive_returns_core() const;
 
   /** Learn forward to refute G at k from k-1 using reachability solvers */
   expr::term_ref learn_forward(size_t k, expr::term_ref G);

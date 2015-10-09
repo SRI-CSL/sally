@@ -86,13 +86,25 @@ public:
   value get_variable_value(term_ref var) const;
 
   /** Get the value of a term in the model (not just variables) */
-  value get_term_value(term_ref t);
+  value get_variable_value(term_ref var, const expr::term_manager::substitution_map& var_renaming) const;
+
+  /** Get the value of a term in the model (not just variables) */
+  value get_term_value(term_ref t) const;
+
+  /** Get the value of a term in the model (not just variables), modulo the renaming (x_t -> x_model) */
+  value get_term_value(term_ref t, const expr::term_manager::substitution_map& var_renaming) const;
 
   /** Is the formula true in the model */
-  bool is_true(term_ref f);
+  bool is_true(term_ref f) const ;
+
+  /** Is the formula true in the model, modulo the renaming (x_f -> x_model) */
+  bool is_true(term_ref f, const expr::term_manager::substitution_map& var_renaming) const;
 
   /** Is the formula false in the model */
-  bool is_false(term_ref f);
+  bool is_false(term_ref f) const;
+
+  /** Is the formula true in the model, modulo the renaming (x_f -> x_model) */
+  bool is_false(term_ref f, const expr::term_manager::substitution_map& var_renaming) const;
 
   /** Return true if a variable var has a value in the model */
   bool has_value(term_ref var) const;
@@ -105,9 +117,6 @@ public:
 
   /** Output to stream */
   void to_stream(std::ostream& out) const;
-
-  /** Clear the cache */
-  void clear_cache();
 
   /** Only keep variables in the map, and replace them with given substitution */
   void restrict_vars_to(const expr::term_manager::substitution_map& subst);
@@ -126,14 +135,14 @@ private:
   /** The map from variables to their values */
   term_to_value_map d_variable_to_value_map;
 
-  /** Cache of term values */
-  term_to_value_map d_term_to_value_map;
-
   /** True value */
   value d_true;
 
   /** False value */
   value d_false;
+
+  /** Actual computation */
+  value get_term_value_internal(expr::term_ref t, const expr::term_manager::substitution_map& var_renaming, term_to_value_map& cache) const;
 };
 
 std::ostream& operator << (std::ostream& out, const model& m);
