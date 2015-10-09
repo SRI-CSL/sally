@@ -90,11 +90,11 @@ public:
   /** Remove the cache */
   ~mathsat5_term_cache();
 
-  /**
-   * Set the term cache from t -> t_msat. If t_msat doesn't exist in the
-   * cache already, add the map t_msat -> t.
-   */
+  /** Set the term cache from t -> t_msat. */
   void set_term_cache(expr::term_ref t, msat_term t_msat);
+
+  /** Set the term cache from t_msat -> t. */
+  void set_term_cache(msat_term t_msat, expr::term_ref t);
 
   /** Returns the mathsat5 term associated with t, or NULL_TERM otherwise */
   msat_term get_term_cache(expr::term_ref t) const;

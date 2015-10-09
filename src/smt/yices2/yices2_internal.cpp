@@ -344,6 +344,7 @@ term_t yices2_internal::to_yices2_term(expr::term_ref ref) {
   case expr::VARIABLE:
     result = yices_new_uninterpreted_term(to_yices2_type(t[0]));
     yices_set_term_name(result, d_tm.get_variable_name(t).c_str());
+    d_conversion_cache->set_term_cache(result, ref);
     break;
   case expr::CONST_BOOL:
     result = d_tm.get_boolean_constant(t) ? yices_true() : yices_false();
@@ -508,40 +509,40 @@ expr::bitvector yices_bv_to_bitvector(size_t size, int32_t* bits) {
   return bv;
 }
 
-expr::term_ref yices2_internal::to_term(term_t t) {
+expr::term_ref yices2_internal::to_term(term_t yices_term) {
 
   expr::term_ref result;
 
   // Check the cache
-  result = d_conversion_cache->get_term_cache(t);
+  result = d_conversion_cache->get_term_cache(yices_term);
   if (!result.is_null()) {
     return result;
   }
 
   // Get the constructor type of t
-  term_constructor_t t_constructor = yices_term_constructor(t);
+  term_constructor_t t_constructor = yices_term_constructor(yices_term);
 
   switch (t_constructor) {
   // atomic terms
   case YICES_BOOL_CONSTANT: {
     int32_t value;
-    yices_bool_const_value(t, &value);
+    yices_bool_const_value(yices_term, &value);
     result = d_tm.mk_boolean_constant(value);
     break;
   }
   case YICES_ARITH_CONSTANT: {
     mpq_t q;
     mpq_init(q);
-    yices_rational_const_value(t, q);
+    yices_rational_const_value(yices_term, q);
     expr::rational r(q);
     result = d_tm.mk_rational_constant(r);
     mpq_clear(q);
     break;
   }
   case YICES_BV_CONSTANT: {
-    size_t size = yices_term_bitsize(t);
+    size_t size = yices_term_bitsize(yices_term);
     int32_t* bits = new int32_t[size];
-    yices_bv_const_value(t, bits);
+    yices_bv_const_value(yices_term, bits);
     result = d_tm.mk_bitvector_constant(yices_bv_to_bitvector(size, bits));
     delete[] bits;
     break;
@@ -580,10 +581,10 @@ expr::term_ref yices2_internal::to_term(term_t t) {
   case YICES_BV_GE_ATOM:
   case YICES_BV_SGE_ATOM:
   case YICES_ARITH_GE_ATOM: {
-    size_t n = yices_term_num_children(t);
+    size_t n = yices_term_num_children(yices_term);
     std::vector<expr::term_ref> children;
     for (size_t i = 0; i < n; ++ i) {
-      term_t child = yices_term_child(t, i);
+      term_t child = yices_term_child(yices_term, i);
       expr::term_ref child_term = to_term(child);
       children.push_back(child_term);
     }
@@ -596,8 +597,8 @@ expr::term_ref yices2_internal::to_term(term_t t) {
     break;
   case YICES_BIT_TERM: {
     // Selects a bit, and the result is Boolean
-    size_t index = yices_proj_index(t);
-    expr::term_ref argument = to_term(yices_proj_arg(t));
+    size_t index = yices_proj_index(yices_term);
+    expr::term_ref argument = to_term(yices_proj_arg(yices_term));
     result = d_tm.mk_bitvector_extract(argument, expr::bitvector_extract(index, index));
     // Convert to boolean
     result = d_tm.mk_term(expr::TERM_EQ, result, d_bv1);
@@ -606,13 +607,13 @@ expr::term_ref yices2_internal::to_term(term_t t) {
   // sums
   case YICES_BV_SUM: {
     // sum a_i * t_i
-    size_t bv_size = yices_term_bitsize(t);
+    size_t bv_size = yices_term_bitsize(yices_term);
     int32_t* a_i_bits = new int32_t[bv_size];
-    size_t size = yices_term_num_children(t);
+    size_t size = yices_term_num_children(yices_term);
     std::vector<expr::term_ref> sum_children;
     for (size_t i = 0; i < size; ++i) {
       term_t t_i_yices;
-      yices_bvsum_component(t, i, a_i_bits, &t_i_yices);
+      yices_bvsum_component(yices_term, i, a_i_bits, &t_i_yices);
       expr::term_ref a_i = d_tm.mk_bitvector_constant(yices_bv_to_bitvector(bv_size, a_i_bits));
       if (t_i_yices != NULL_TERM) {
         expr::term_ref t_i = to_term(t_i_yices);
@@ -633,11 +634,11 @@ expr::term_ref yices2_internal::to_term(term_t t) {
     mpq_t c_y;
     mpq_init(c_y);
     // sum c_i a_i
-    size_t size = yices_term_num_children(t);
+    size_t size = yices_term_num_children(yices_term);
     std::vector<expr::term_ref> sum_children;
     for (size_t i = 0; i < size; ++ i) {
       term_t a_y;
-      yices_sum_component(t, i, c_y, &a_y);
+      yices_sum_component(yices_term, i, c_y, &a_y);
       expr::term_ref c = d_tm.mk_rational_constant(expr::rational(c_y));
       if (a_y != NULL_TERM) {
         expr::term_ref a = to_term(a_y);
@@ -672,7 +673,7 @@ expr::term_ref yices2_internal::to_term(term_t t) {
   }
 
   // Set the cache ref -> result
-  d_conversion_cache->set_term_cache(result, t);
+  d_conversion_cache->set_term_cache(yices_term, result);
 
   return result;
 }
@@ -944,7 +945,7 @@ void yices2_internal::generalize(smt::solver::generalization_type type, std::vec
     break;
   }
 
-  if (output::trace_tag_is_enabled("yices2")) {
+  if (output::trace_tag_is_enabled("yices2::gen")) {
     std::cerr << "assertions:" << std::endl;
     for (size_t i = 0; i < assertions_size; ++ i) {
       std::cerr << i << ": ";
@@ -953,7 +954,7 @@ void yices2_internal::generalize(smt::solver::generalization_type type, std::vec
     std::cerr << "variables:" << std::endl;
     for (size_t i = 0; i < variables_size; ++ i) {
       std::cerr << i << ": ";
-      yices_pp_term(stdout, variables[i], 80, 100, 0);
+      yices_pp_term(stderr, variables[i], 80, 100, 0);
     }
   }
 
@@ -989,7 +990,7 @@ void yices2_internal::generalize(smt::solver::generalization_type type, std::vec
   yices_delete_term_vector(&G_y);
 
 
-  if (output::trace_tag_is_enabled("yices2")) {
+  if (output::trace_tag_is_enabled("yices2::gen")) {
     std::cerr << "generalization: " << std::endl;
     for (size_t i = 0; i < projection_out.size(); ++ i) {
       std::cerr << i << ": " << projection_out[i] << std::endl;

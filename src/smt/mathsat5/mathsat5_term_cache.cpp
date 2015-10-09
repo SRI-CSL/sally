@@ -63,20 +63,47 @@ mathsat5_term_cache::tm_to_cache_map::~tm_to_cache_map() {
 }
 
 void mathsat5_term_cache::set_term_cache(expr::term_ref t, msat_term t_msat) {
-  // Due to normalization in SMT solvers, two terms t1 and t2 can map to the
-  // same term t_msat. We can't map t_msat to both t1 and t2, so we only keep
-  // one
-  bool added = false;
-  if (d_term_to_msat_cache.find(t) == d_term_to_msat_cache.end()) {
-    d_term_to_msat_cache[t] = t_msat;
-    added = true;
+  assert(d_term_to_msat_cache.find(t) == d_term_to_msat_cache.end());
+  d_term_to_msat_cache[t] = t_msat;
+  // If a variable, remember it
+  if (d_tm.term_of(t).op() == expr::VARIABLE) {
+    d_permanent_terms.push_back(t);
+    d_permanent_terms_msat.push_back(t_msat);
+  } else {
+    // Mark cache as dirty
+    d_cache_is_clean = false;
   }
-  if (d_msat_to_term_cache.find(t_msat) == d_msat_to_term_cache.end()) {
-    d_msat_to_term_cache[t_msat] = t;
-    added = true;
+
+  // If enabled, check the term transformations by producing a series of
+  // smt queries
+  if (output::trace_tag_is_enabled("mathsat5::terms")) {
+    static size_t k = 0;
+    std::stringstream ss;
+    ss << "mathsat5_term_query_" << std::setfill('0') << std::setw(5) << k++ << ".smt2";
+    smt2_name_transformer name_transformer;
+    d_tm.set_name_transformer(&name_transformer);
+    std::ofstream query(ss.str().c_str());
+    output::set_term_manager(query, &d_tm);
+    output::set_output_language(query, output::MCMT);
+
+    // Prelude
+    for (size_t i = 0; i < d_permanent_terms.size(); ++ i) {
+      query << "(declare-fun " << d_permanent_terms[i] << " () " << d_tm.type_of(d_permanent_terms[i]) << ")" << std::endl;
+    }
+
+    // Check the representation
+    char* repr = msat_to_smtlib2_term(d_msat_env, t_msat);
+    query << "(assert (not (= " << repr << " " << t << ")))" << std::endl;
+    msat_free(repr);
+
+    query << "(check-sat)" << std::endl;
+    d_tm.set_name_transformer(0);
   }
-  unused_var(added);
-  assert(added);
+}
+
+void mathsat5_term_cache::set_term_cache(msat_term t_msat, expr::term_ref t) {
+  assert(d_msat_to_term_cache.find(t_msat) == d_msat_to_term_cache.end());
+  d_msat_to_term_cache[t_msat] = t;
   // If a variable, remember it
   if (d_tm.term_of(t).op() == expr::VARIABLE) {
     d_permanent_terms.push_back(t);

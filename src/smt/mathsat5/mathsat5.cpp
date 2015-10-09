@@ -68,6 +68,11 @@ class mathsat5_internal {
   /** Classes of the assertions */
   std::vector<smt::solver::formula_class> d_assertion_classes;
 
+  typedef expr::hash_map_to_term_ref<msat_term, mathsat5_hasher, mathsat5_eq> msat_to_term_cache;
+
+  /** Map from mathsat assertions to our assertions */
+  msat_to_term_cache d_assertion_map;
+
   /** The assertions size per push/pop */
   std::vector<size_t> d_assertions_size;
 
@@ -160,7 +165,7 @@ public:
     case solver::INTERPOLATION:
       return true;
     case solver::UNSAT_CORE:
-      return d_opts.get_bool("mathsat5-unsat-cores");
+      return true;
     case solver::GENERALIZATION:
       return d_opts.get_bool("mathsat5-generalize-trivial") || d_opts.get_bool("mathsat5-generalize-qe");
     default:
@@ -208,9 +213,8 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
   msat_set_option(d_cfg, "theory.bv.eager", "false");
   msat_set_option(d_cfg, "theory.euf.enabled", "false");
   msat_set_option(d_cfg, "preprocessor.simplification", "0");
-  if (opts.get_bool("mathsat5-unsat-cores")) {
-    msat_set_option(d_cfg, "unsat_core_generation", "1");
-  }
+  msat_set_option(d_cfg, "unsat_core_generation", "1");
+
   if (opts.get_bool("mathsat5-generate-api-log")) {
    msat_set_option(d_cfg, "debug.api_call_trace", "2");
    msat_set_option(d_cfg, "debug.api_call_trace_dump_config", "true");
@@ -529,6 +533,7 @@ msat_term mathsat5_internal::to_mathsat5_term(expr::term_ref ref) {
     result = msat_make_constant(d_env, var);
     // Remember, for model construction
     d_variables.push_back(ref);
+    d_term_cache->set_term_cache(result, ref);
     break;
   }
   case expr::CONST_BOOL:
@@ -827,16 +832,26 @@ expr::term_ref mathsat5_internal::to_term(msat_term t) {
   }
 
   // Set the cache ref -> result
-  d_term_cache->set_term_cache(result, t);
+  d_term_cache->set_term_cache(t, result);
 
   return result;
 }
 
 void mathsat5_internal::add(expr::term_ref ref, solver::formula_class f_class) {
+
+  // The mathsat version
+  msat_term m_term = to_mathsat5_term(ref);
+  if (d_assertion_map.find(m_term) != d_assertion_map.end()) {
+    // Already asserted
+    return;
+  }
+
   // Remember the assertions
   expr::term_ref_strong ref_strong(d_tm, ref);
   d_assertions.push_back(ref_strong);
   d_assertion_classes.push_back(f_class);
+  d_assertions_mathsat.push_back(m_term);
+  d_assertion_map[m_term] = ref;
 
   // Get the interpolation group
   int itp_group = f_class == solver::CLASS_B ? d_itp_B : d_itp_A;
@@ -845,14 +860,11 @@ void mathsat5_internal::add(expr::term_ref ref, solver::formula_class f_class) {
   msat_set_itp_group(d_env, itp_group);
 
   // Assert to mathsat5
-  msat_term m_term = to_mathsat5_term(ref);
-  d_assertions_mathsat.push_back(m_term);
   if (output::trace_tag_is_enabled("mathsat5")) {
     char* str = msat_term_repr(m_term);
     TRACE("mathsat5") << "msat_term: " << str << std::endl;
     msat_free(str);
   }
-
 
   int ret = msat_assert_formula(d_env, m_term);
   if (ret != 0) {
@@ -1006,17 +1018,10 @@ void mathsat5_internal::get_unsat_core(std::vector<expr::term_ref>& out) {
     throw exception("MathSAT unsat core error.");
   }
 
-  // We need the actuall assertions
-  std::set<msat_term, msat_term_cmp> core_set;
-  for(size_t i = 0; i < core_size; ++ i) {
-    core_set.insert(core[i]);
-  }
-
   // Output them
-  for (size_t i = 0; i < d_assertions_mathsat.size(); ++ i) {
-    if (core_set.count(d_assertions_mathsat[i]) > 0) {
-      out.push_back(d_assertions[i]);
-    }
+  for (size_t i = 0; i < core_size; ++ i) {
+    assert(d_assertion_map.find(core[i]) != d_assertion_map.end());
+    out.push_back(d_assertion_map[core[i]]);
   }
 
   // Free the core
@@ -1111,6 +1116,7 @@ void mathsat5_internal::pop() {
   size_t size = d_assertions_size.back();
   d_assertions_size.pop_back();
   while (d_assertions.size() > size) {
+    d_assertion_map.erase(d_assertions_mathsat.back());
     d_assertions.pop_back();
     d_assertions_mathsat.pop_back();
     d_assertion_classes.pop_back();
