@@ -18,6 +18,7 @@
 
 #include "engine/ic3/ic3_engine.h"
 #include "engine/ic3/solvers.h"
+#include "engine/factory.h"
 
 #include "smt/factory.h"
 #include "system/state_trace.h"
@@ -652,11 +653,25 @@ engine::result ic3_engine::search() {
 
     MSG(1) << "ic3: Extending trace to " << d_induction_frame
            << " (" << d_induction_obligations.size() << "/" << d_needed.size() << "/" << d_frame_content[d_induction_frame-1].size() << " facts"
-           << " with " << common_formulas.size() << " same as before)" << std::endl;
+           << " with " << common_formulas.size() << " same as last " << d_previous_frame_equal << ")" << std::endl;
 
     // See howm many frames have we been carrying this around
     if (d_previous_frame.size() == common_formulas.size() && current_frame.size() == common_formulas.size()) {
       d_previous_frame_equal ++;
+      // Check with k-induction
+      if (d_previous_frame_equal > 1) {
+        ctx().get_options().set_unsigned("kind-min", d_previous_frame_equal);
+        ctx().get_options().set_unsigned("kind-max", d_previous_frame_equal);
+        engine* kind_engine = engine_factory::mk_engine("kind", ctx());
+        expr::term_ref f = tm().mk_and(common_formulas);
+        system::state_formula* sf = new system::state_formula(tm(), d_transition_system->get_state_type(), f);
+        result r = kind_engine->query(d_transition_system, sf);
+        if (r == engine::VALID) {
+          return r;
+        }
+        delete sf;
+        delete kind_engine;
+      }
     } else {
       d_previous_frame_equal = 0;
       d_previous_frame = current_frame;

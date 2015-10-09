@@ -21,7 +21,7 @@
 namespace sally {
 namespace system {
 
-context::context(expr::term_manager& tm, const options& opts, utils::statistics& stats)
+context::context(expr::term_manager& tm, options& opts, utils::statistics& stats)
 : d_term_manager(tm)
 , d_state_types("state types")
 , d_state_formulas("state formulas")
@@ -153,7 +153,7 @@ void context::add_assumption_to(std::string id, state_formula* sf) {
 }
 
 
-const options& context::get_options() const {
+options& context::get_options() const {
   return d_options;
 }
 

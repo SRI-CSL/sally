@@ -33,7 +33,7 @@ namespace sally {
 class options {
 
   /** Options passed in */
-  const boost::program_options::variables_map* d_options;
+  boost::program_options::variables_map* d_options;
 
   /** Options created internally */
   boost::program_options::variables_map* d_my_options;
@@ -41,7 +41,7 @@ class options {
 public:
 
   options();
-  options(const boost::program_options::variables_map& options);
+  options(boost::program_options::variables_map& options);
 
   ~options();
 
@@ -54,8 +54,14 @@ public:
   /** Get the value of the unsigned option opt */
   unsigned get_unsigned(std::string opt) const;
 
+  /** Set the value of the unsigned option opt */
+  void set_unsigned(std::string opt, unsigned value);
+
   /** Get the value of the int option opt */
   int get_int(std::string opt) const;
+
+  /** Get the value of the int option opt */
+  void set_int(std::string opt, int value);
 
   /** Get the value of the bool option opt */
   bool get_bool(std::string opt) const;
