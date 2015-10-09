@@ -36,6 +36,7 @@ solvers::solvers(const system::context& ctx, const system::transition_system* tr
 , d_size(0)
 , d_trace(trace)
 , d_reachability_solver(0)
+, d_initial_solver(0)
 , d_induction_solver(0)
 , d_counterexample_solver(0)
 , d_counterexample_solver_depth(0)
@@ -46,6 +47,7 @@ solvers::solvers(const system::context& ctx, const system::transition_system* tr
 
 solvers::~solvers() {
   delete d_reachability_solver;
+  delete d_initial_solver;
   delete d_induction_solver;
   delete d_counterexample_solver;
   for (size_t k = 0; k < d_reachability_solvers.size(); ++ k) {
@@ -71,6 +73,10 @@ void solvers::reset(const std::vector<solvers::formula_set>& frames) {
     }
     d_reachability_solvers.clear();
   }
+
+  // Clear the initial solver
+  delete d_initial_solver;
+  d_initial_solver = 0;
 
   // Clear the induction solver
   delete d_induction_solver;
@@ -155,6 +161,19 @@ smt::solver* solvers::get_induction_solver() {
   return d_induction_solver;
 }
 
+smt::solver* solvers::get_initial_solver() {
+  if (d_initial_solver == 0) {
+    // The variables from the state types
+    const std::vector<expr::term_ref>& x = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_CURRENT);
+    // Make the solver
+    d_initial_solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options(), d_ctx.get_statistics());
+    d_initial_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
+    d_initial_solver->add(d_transition_system->get_initial_states(), smt::solver::CLASS_A);
+  }
+  return d_initial_solver;
+}
+
+
 smt::solver* solvers::get_reachability_solver() {
   assert(d_ctx.get_options().get_bool("ic3-single-solver"));
   if (d_reachability_solver == 0) {
@@ -210,6 +229,9 @@ void solvers::gc() {
   }
   if (d_counterexample_solver) {
     d_counterexample_solver->gc();
+  }
+  if (d_initial_solver) {
+    d_initial_solver->gc();
   }
   if (d_induction_solver) {
     d_induction_solver->gc();
@@ -332,6 +354,10 @@ expr::term_ref solvers::generalize_sat(smt::solver* solver) {
   std::vector<expr::term_ref> generalization_facts;
   solver->generalize(smt::solver::GENERALIZE_BACKWARD, generalization_facts);
   expr::term_ref G = d_tm.mk_and(generalization_facts);
+  if (!d_transition_system->get_state_type()->is_state_formula(G)) {
+    std::cerr << G << std::endl;
+    assert(0);
+  }
   // G = eq_to_ineq(G);
   return G;
 }
@@ -344,15 +370,12 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
 
   // The solvers we'll be using
   smt::solver* I1_solver = 0;
-  smt::solver* I2_solver = 0;
-
   if (d_ctx.get_options().get_bool("ic3-single-solver")) {
     I1_solver = get_reachability_solver();
-    I2_solver = get_reachability_solver();
   } else {
     I1_solver = get_reachability_solver(k-1);
-    I2_solver = get_reachability_solver(0);
   }
+  smt::solver* I2_solver = get_initial_solver();
 
   // If we don't have interpolation, just learn not G
   if (!I1_solver->supports(smt::solver::INTERPOLATION)) {
@@ -377,9 +400,7 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
 
   // Get the interpolant I2 for I => I2, I2 and G unsat
   I2_solver->push();
-  if (d_ctx.get_options().get_bool("ic3-single-solver")) {
-    assert_frame_selection(0, I2_solver);
-  }
+  assert(d_transition_system->get_state_type()->is_state_formula(G));
   I2_solver->add(G, smt::solver::CLASS_B);
   smt::solver::result I2_result = I2_solver->check();
   unused_var(I2_result);
@@ -430,7 +451,11 @@ solvers::query_result solvers::check_inductive(expr::term_ref f, std::vector<exp
       size_t to_keep = 0;
       for (size_t i = 0; i < core.size(); ++ i) {
         if (core[i] != F_not_next && core[i] != d_transition_relation) {
-          assert(d_transition_system->get_state_type()->is_state_formula(core[i]));
+          if (!d_transition_system->get_state_type()->is_state_formula(core[i])) {
+            std::cerr << "core = " << core[i] << std::endl;
+            std::cerr << "ts   = " << d_transition_relation << std::endl;
+            assert(false);
+          }
           core[to_keep++] = core[i];
         }
       }

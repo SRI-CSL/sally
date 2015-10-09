@@ -25,7 +25,7 @@
 #include "solvers.h"
 
 #include <vector>
-#include <boost/heap/priority_queue.hpp>
+#include <boost/heap/fibonacci_heap.hpp>
 #include <boost/unordered_map.hpp>
 #include <iosfwd>
 
@@ -47,6 +47,8 @@ class induction_obligation {
   size_t d_budget;
   /** Should we analyze induction failure */
   bool d_analyze;
+  /** Score of the obligation */
+  size_t d_score;
 
 public:
 
@@ -71,10 +73,12 @@ public:
   /** Compare the budget values */
   bool operator < (const induction_obligation& o) const;
 
+  /** Bump the internal score */
+  void bump_score();
 };
 
 /** Priority queue for obligations (max-heap) */
-typedef boost::heap::priority_queue<induction_obligation> induction_obligation_queue;
+typedef boost::heap::fibonacci_heap<induction_obligation> induction_obligation_queue;
 
 /**
  * Information on formulas. A formula is found in a frame because it refutes a
@@ -193,11 +197,20 @@ class ic3_engine : public engine {
   /** Returns true if formula marked as invalid */
   bool is_invalid(expr::term_ref f) const;
 
+  /** Mark the formula as needed for induction */
+  void set_needed(expr::term_ref f);
+
+  /** Is the formula needed for induction */
+  bool is_needed(expr::term_ref f) const;
+
   /** Returns true if formula of any of its parents are invalid */
   bool is_invalid_or_parent_invalid(expr::term_ref f) const;
 
   /** Queue of induction obligations at the current frame */
   induction_obligation_queue d_induction_obligations;
+
+  /** Map from formulas to their positions in the queue */
+  expr::term_ref_hash_map<induction_obligation_queue::handle_type> d_induction_obligations_handles;
 
   /** Set of obligations for the next frame */
   std::vector<induction_obligation> d_induction_obligations_next;
@@ -207,6 +220,12 @@ class ic3_engine : public engine {
 
   /** Get the next induction obligations */
   induction_obligation pop_induction_obligation();
+
+  /** Push the obligation */
+  void push_induction_obligation(const induction_obligation& ind);
+
+  /** Bump the score of the obligation */
+  void bump_induction_obligation(expr::term_ref ind);
 
   /** Set of facts valid per frame */
   std::vector<formula_set> d_frame_content;

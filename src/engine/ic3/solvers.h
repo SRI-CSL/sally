@@ -68,7 +68,10 @@ class solvers {
   /** Solver for reachability queries when in single-solver mode */
   smt::solver* d_reachability_solver;
 
-  /** Solver for induction queries when in single-solver mode */
+  /** Solver for initial state queries */
+  smt::solver* d_initial_solver;
+
+  /** Solver for induction queries */
   smt::solver* d_induction_solver;
 
   /** Relation used in the induction solver */
@@ -94,6 +97,9 @@ class solvers {
 
   /** Get the enabling varibale of frame k */
   expr::term_ref get_frame_variable(size_t k);
+
+  /** Returns the induction solver */
+  smt::solver* get_initial_solver();
 
   /** Returns the induction solver */
   smt::solver* get_induction_solver();

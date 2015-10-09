@@ -40,6 +40,7 @@ induction_obligation::induction_obligation(expr::term_manager& tm, expr::term_re
 : d_P(P)
 , d_budget(budget)
 , d_analyze(analzye)
+, d_score(0)
 {
 }
 
@@ -51,7 +52,15 @@ bool induction_obligation::operator == (const induction_obligation& o) const {
   return d_P == o.d_P;
 }
 
+void induction_obligation::bump_score() {
+  d_score ++;
+}
+
 bool induction_obligation::operator < (const induction_obligation& o) const {
+  // Larger score wins
+  if (d_score != o.d_score) {
+    return d_score < o.d_score;
+  }
   // Larger budget wins
   if (get_budget() != o.get_budget()) {
     return get_budget() < o.get_budget();
@@ -188,7 +197,23 @@ induction_obligation ic3_engine::pop_induction_obligation() {
   assert(d_induction_obligations.size() > 0);
   induction_obligation ind = d_induction_obligations.top();
   d_induction_obligations.pop();
+  d_induction_obligations_handles.erase(ind.formula());
   return ind;
+}
+
+void ic3_engine::push_induction_obligation(const induction_obligation& ind) {
+  assert(d_induction_obligations_handles.find(ind.formula()) == d_induction_obligations_handles.end());
+  induction_obligation_queue::handle_type h = d_induction_obligations.push(ind);
+  d_induction_obligations_handles[ind.formula()] = h;
+}
+
+void ic3_engine::bump_induction_obligation(expr::term_ref f) {
+  expr::term_ref_hash_map<induction_obligation_queue::handle_type>::const_iterator find = d_induction_obligations_handles.find(f);
+  assert(find != d_induction_obligations_handles.end());
+  induction_obligation_queue::handle_type h = find->second;
+  induction_obligation& ind = *h;
+  ind.bump_score();
+  d_induction_obligations.update(h);
 }
 
 void ic3_engine::ensure_frame(size_t k) {
@@ -298,10 +323,10 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
     d_induction_obligations_next.push_back(induction_obligation(tm(), f, 0, analyze_cti));
     // Mark all as needed if core was obtained
     if (d_smt->check_inductive_returns_core()) {
+      assert(is_needed(f));
       for (size_t i = 0; i < core.size(); ++ i) {
-        d_needed.insert(core[i]);
+        set_needed(core[i]);
       }
-      d_needed.insert(f);
     }
     return INDUCTION_SUCCESS;
   }
@@ -355,7 +380,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   add_valid_up_to(d_induction_frame, learnt);
   // Try to push assumptions next time (unless, already invalid)
   if (!is_invalid(learnt)) {
-    d_induction_obligations.push(induction_obligation(tm(), learnt, default_budget, analyze_cti));
+    push_induction_obligation(induction_obligation(tm(), learnt, default_budget, analyze_cti));
     set_refutes_info(f, G, learnt);
   }
 
@@ -368,7 +393,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
       TRACE("ic3") << "ic3: analyzer learnt[" << i << "]" << learnt << std::endl;
       if (!is_invalid(learnt)) {
         // Try to push assumptions next time (but don't analyze the failures)
-        d_induction_obligations.push(induction_obligation(tm(), learnt, default_budget, false));
+        push_induction_obligation(induction_obligation(tm(), learnt, default_budget, false));
       }
     }
   }
@@ -492,6 +517,11 @@ void ic3_engine::push_current_frame() {
       continue;
     }
 
+    // If not needed, we don't push
+    if (d_smt->check_inductive_returns_core() && !is_needed(ind.formula())) {
+      continue;
+    }
+
     // Push the formula forward if it's inductive at the frame
     induction_result ind_result = push_if_inductive(ind);
 
@@ -499,7 +529,7 @@ void ic3_engine::push_current_frame() {
     switch (ind_result) {
     case INDUCTION_RETRY:
       // We'll retry the same formula (it's already added to the solver)
-      d_induction_obligations.push(ind);
+      push_induction_obligation(ind);
       break;
     case INDUCTION_SUCCESS:
       // Boss
@@ -545,7 +575,14 @@ engine::result ic3_engine::search() {
   for(;;) {
 
     // Clear the frame-specific info
-    d_needed.clear();
+    d_frame_formula_parent_info.clear();
+    if (d_smt->check_inductive_returns_core()) {
+      d_needed.clear();
+      std::set<expr::term_ref>::const_iterator prop_it = d_properties.begin();
+      for (; prop_it != d_properties.end(); ++ prop_it) {
+        set_needed(*prop_it);
+      }
+    }
 
     // Push the current induction frame forward
     push_current_frame();
@@ -581,7 +618,7 @@ engine::result ic3_engine::search() {
       // Push if not shown invalid
       if (!is_invalid(next_it->formula())) {
         add_to_frame(d_induction_frame, next_it->formula());
-        d_induction_obligations.push(*next_it);
+        push_induction_obligation(*next_it);
       }
     }
     d_induction_obligations_next.clear();
@@ -683,7 +720,7 @@ void ic3_engine::add_initial_states(expr::term_ref I) {
   } else {
     if (!frame_contains(0, I)) {
       add_to_frame(0, I);
-      d_induction_obligations.push(induction_obligation(tm(), I, 0, true));
+      push_induction_obligation(induction_obligation(tm(), I, 0, true));
     }
   }
 }
@@ -701,7 +738,7 @@ bool ic3_engine::add_property(expr::term_ref P) {
     if (result.result == smt::solver::UNSAT) {
       if (!frame_contains(0, P)) {
         add_to_frame(0, P);
-        d_induction_obligations.push(induction_obligation(tm(), P, 0, true));
+        push_induction_obligation(induction_obligation(tm(), P, 0, true));
       }
       d_properties.insert(P);
       return true;
@@ -728,6 +765,19 @@ bool ic3_engine::is_invalid(expr::term_ref f) const {
   expr::term_ref_map<size_t>::const_iterator find = d_frame_formula_invalid_info.find(f);
   return (find != d_frame_formula_invalid_info.end());
 }
+
+void ic3_engine::set_needed(expr::term_ref f) {
+  std::set<expr::term_ref>::iterator find = d_needed.find(f);
+  if (find == d_needed.end()) {
+    d_needed.insert(f);
+    bump_induction_obligation(f);
+  }
+}
+
+bool ic3_engine::is_needed(expr::term_ref f) const {
+  return d_needed.find(f) != d_needed.end();
+}
+
 
 bool ic3_engine::is_invalid_or_parent_invalid(expr::term_ref f) const {
   if (is_invalid(f)) return true;
