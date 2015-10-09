@@ -48,7 +48,7 @@ class induction_obligation {
   /** Should we analyze induction failure */
   bool d_analyze;
   /** Score of the obligation */
-  size_t d_score;
+  double d_score;
 
 public:
 
@@ -73,8 +73,8 @@ public:
   /** Compare the budget values */
   bool operator < (const induction_obligation& o) const;
 
-  /** Bump the internal score */
-  void bump_score();
+  /** Bump the internal score (score is capped below at 1) */
+  void bump_score(double amount);
 };
 
 /** Priority queue for obligations (max-heap) */
@@ -225,7 +225,7 @@ class ic3_engine : public engine {
   void push_induction_obligation(const induction_obligation& ind);
 
   /** Bump the score of the obligation */
-  void bump_induction_obligation(expr::term_ref ind);
+  void bump_induction_obligation(expr::term_ref ind, double amount);
 
   /** Set of facts valid per frame */
   std::vector<formula_set> d_frame_content;

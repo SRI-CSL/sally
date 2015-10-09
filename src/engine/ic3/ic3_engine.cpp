@@ -52,8 +52,13 @@ bool induction_obligation::operator == (const induction_obligation& o) const {
   return d_P == o.d_P;
 }
 
-void induction_obligation::bump_score() {
-  d_score ++;
+void induction_obligation::bump_score(double amount) {
+  std::cerr << "(" << d_score << ", " << amount << ") ";
+  if (d_score + amount > 1) {
+    d_score += amount;
+  } else {
+    d_score = 1;
+  }
 }
 
 bool induction_obligation::operator < (const induction_obligation& o) const {
@@ -215,14 +220,14 @@ void ic3_engine::push_induction_obligation(const induction_obligation& ind) {
   d_induction_obligations_handles[ind.formula()] = h;
 }
 
-void ic3_engine::bump_induction_obligation(expr::term_ref f) {
+void ic3_engine::bump_induction_obligation(expr::term_ref f, double amount) {
   expr::term_ref_hash_map<induction_obligation_queue::handle_type>::const_iterator find = d_induction_obligations_handles.find(f);
   if (find == d_induction_obligations_handles.end()) {
     return; // not in queue... already processed
   }
   induction_obligation_queue::handle_type h = find->second;
   induction_obligation& ind = *h;
-  ind.bump_score();
+  ind.bump_score(amount);
   d_induction_obligations.update(h);
 }
 
@@ -336,8 +341,12 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
     // Mark all as needed if core was obtained
     if (d_smt->check_inductive_returns_core()) {
       assert(is_needed(f));
-      for (size_t i = 0; i < core.size(); ++ i) {
-        set_needed(core[i]);
+      if (core.size() > 0) {
+        double bump = 1.0 / (double) core.size();
+        for (size_t i = 0; i < core.size(); ++ i) {
+          set_needed(core[i]);
+          bump_induction_obligation(f, bump);
+        }
       }
     }
     return INDUCTION_SUCCESS;
@@ -360,6 +369,9 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   if (reachability_budget == 0) { reachability_budget = default_budget; }
   reachability_status reachable = check_reachable(d_induction_frame, G, result.model, reachability_budget);
   ind.set_budget(reachability_budget);
+  if (reachability_budget == 0) {
+    bump_induction_obligation(ind.formula(), -1);
+  }
 
   // If reachable, we're not inductive
   if (reachable == REACHABLE) {
@@ -782,7 +794,6 @@ void ic3_engine::set_needed(expr::term_ref f) {
   std::set<expr::term_ref>::iterator find = d_needed.find(f);
   if (find == d_needed.end()) {
     d_needed.insert(f);
-    bump_induction_obligation(f);
   }
 }
 
