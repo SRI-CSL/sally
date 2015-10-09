@@ -290,6 +290,15 @@ class ic3_engine : public engine {
   /** Statistics per frame (some number of frames) */
   std::vector<utils::stat_int*> d_stat_frame_size;
 
+  /** How many reachable facts */
+  utils::stat_int* d_stat_reachable;
+
+  /** How many unreahable facts */
+  utils::stat_int* d_stat_unreachable;
+
+  /** How many reachability queries */
+  utils::stat_int* d_stat_queries;
+
   /**
    * The formula f has been shown not induction by a concrete counterexample.
    * The counterexample is recorded in C: d_counterexample. Try to extend it

@@ -354,10 +354,6 @@ expr::term_ref solvers::generalize_sat(smt::solver* solver) {
   std::vector<expr::term_ref> generalization_facts;
   solver->generalize(smt::solver::GENERALIZE_BACKWARD, generalization_facts);
   expr::term_ref G = d_tm.mk_and(generalization_facts);
-  if (!d_transition_system->get_state_type()->is_state_formula(G)) {
-    std::cerr << G << std::endl;
-    assert(0);
-  }
   // G = eq_to_ineq(G);
   return G;
 }
@@ -400,7 +396,6 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
 
   // Get the interpolant I2 for I => I2, I2 and G unsat
   I2_solver->push();
-  assert(d_transition_system->get_state_type()->is_state_formula(G));
   I2_solver->add(G, smt::solver::CLASS_B);
   smt::solver::result I2_result = I2_solver->check();
   unused_var(I2_result);
@@ -451,11 +446,6 @@ solvers::query_result solvers::check_inductive(expr::term_ref f, std::vector<exp
       size_t to_keep = 0;
       for (size_t i = 0; i < core.size(); ++ i) {
         if (core[i] != F_not_next && core[i] != d_transition_relation) {
-          if (!d_transition_system->get_state_type()->is_state_formula(core[i])) {
-            std::cerr << "core = " << core[i] << std::endl;
-            std::cerr << "ts   = " << d_transition_relation << std::endl;
-            assert(false);
-          }
           core[to_keep++] = core[i];
         }
       }

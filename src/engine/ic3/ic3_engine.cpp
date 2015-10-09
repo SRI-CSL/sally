@@ -120,6 +120,12 @@ ic3_engine::ic3_engine(const system::context& ctx)
 , d_property_invalid(false)
 , d_learning_type(LEARN_UNDEFINED)
 {
+  d_stat_reachable = new utils::stat_int("sally::ic3::reachable", 0);
+  d_stat_unreachable = new utils::stat_int("sally::ic3::unreachable", 0);
+  d_stat_queries = new utils::stat_int("sally::ic3::reachability_queries", 0);
+  ctx.get_statistics().add(d_stat_reachable);
+  ctx.get_statistics().add(d_stat_unreachable);
+  ctx.get_statistics().add(d_stat_queries);
   for (size_t i = 0; i < 10; ++ i) {
     std::stringstream ss;
     ss << "sally::ic3::frame_size[" << i << "]";
@@ -166,6 +172,8 @@ void ic3_engine::reset() {
 
 solvers::query_result ic3_engine::check_one_step_reachable(size_t k, expr::term_ref F) {
   assert(k > 0);
+
+  d_stat_queries->get_value() ++;
 
   // The state type
   const system::state_type* state_type = d_transition_system->get_state_type();
@@ -299,8 +307,10 @@ ic3_engine::reachability_status ic3_engine::check_reachable(size_t k, expr::term
 
   // All discharged, so it's not reachable
   if (reachable) {
+    d_stat_reachable->get_value() ++;
     return REACHABLE;
   } else {
+    d_stat_unreachable->get_value() ++;
     return UNREACHABLE;
   }
 }
