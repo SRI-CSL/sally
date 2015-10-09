@@ -137,10 +137,10 @@ expr::term_ref state_type::change_formula_vars(var_class from, var_class to, exp
     return f;
   }
   if (from == STATE_CURRENT && to == STATE_NEXT) {
-    return tm().substitute(f, d_subst_current_next);
+    return tm().substitute_and_cache(f, const_cast<state_type*>(this)->d_subst_current_next);
   }
   if (from == STATE_NEXT && to == STATE_CURRENT) {
-    return tm().substitute(f, d_subst_next_current);
+    return tm().substitute_and_cache(f, const_cast<state_type*>(this)->d_subst_next_current);
   }
   // They are the same
   return f;

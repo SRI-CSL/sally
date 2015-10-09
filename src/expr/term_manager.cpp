@@ -346,6 +346,10 @@ term_ref term_manager::substitute(term_ref t, const substitution_map& subst) {
   return d_tm->substitute(t, subst_copy);
 }
 
+term_ref term_manager::substitute_and_cache(term_ref t, substitution_map& subst) {
+  return d_tm->substitute(t, subst);
+}
+
 term_ref term_manager::mk_and(const std::vector<term_ref>& conjuncts) {
   if (conjuncts.size() == 0) {
     return mk_boolean_constant(true);

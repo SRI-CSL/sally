@@ -245,7 +245,7 @@ command* btor_state::finalize() const {
     }
   }
   term_ref transition = tm().mk_and(transition_children);
-  transition = tm().substitute(transition, btor_to_state_var);
+  transition = tm().substitute_and_cache(transition, btor_to_state_var);
   system::transition_formula* transition_formula = new system::transition_formula(tm(), state_type, transition);
 
   // Define the transition system
@@ -255,7 +255,7 @@ command* btor_state::finalize() const {
   // Query
   std::vector<term_ref> bad_children;
   for (size_t i = 0; i < d_roots.size(); ++ i) {
-    term_ref bad = tm().substitute(d_roots[i], btor_to_state_var);
+    term_ref bad = tm().substitute_and_cache(d_roots[i], btor_to_state_var);
     bad_children.push_back(bad);
   }
   term_ref property = tm().mk_or(bad_children);

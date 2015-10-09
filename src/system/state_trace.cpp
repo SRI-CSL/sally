@@ -98,18 +98,8 @@ void state_trace::get_input_variables(size_t k, std::vector<expr::term_ref>& var
 }
 
 expr::term_ref state_trace::get_state_formula(expr::term_ref sf, size_t k) {
-  // Setup the substitution map
-  expr::term_manager::substitution_map subst;
-  // Variables of the state type
-  const std::vector<expr::term_ref>& from_vars = d_state_type->get_variables(state_type::STATE_CURRENT);
-  // Variable to rename them to (k-the step)
-  std::vector<expr::term_ref> to_vars;
-  get_struct_variables(get_state_struct_variable(k), to_vars);
-  for (size_t i = 0; i < from_vars.size(); ++ i) {
-    subst[from_vars[i]] = to_vars[i];
-  }
-  // Substitute
-  return tm().substitute(sf, subst);
+  ensure_variables(k);
+  return tm().substitute_and_cache(sf, d_subst_maps[k]);
 }
 
 expr::term_ref state_trace::get_transition_formula(expr::term_ref tf, size_t k) {
@@ -136,7 +126,7 @@ expr::term_ref state_trace::get_transition_formula(expr::term_ref tf, size_t k) 
     subst[from_vars[i]] = to_vars[i];
   }
   // Substitute
-  return tm().substitute(tf, subst);
+  return tm().substitute_and_cache(tf, subst);
 }
 
 expr::model::ref state_trace::get_model() const {
