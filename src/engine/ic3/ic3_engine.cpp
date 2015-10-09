@@ -209,7 +209,9 @@ void ic3_engine::push_induction_obligation(const induction_obligation& ind) {
 
 void ic3_engine::bump_induction_obligation(expr::term_ref f) {
   expr::term_ref_hash_map<induction_obligation_queue::handle_type>::const_iterator find = d_induction_obligations_handles.find(f);
-  assert(find != d_induction_obligations_handles.end());
+  if (find == d_induction_obligations_handles.end()) {
+    return; // not in queue... already processed
+  }
   induction_obligation_queue::handle_type h = find->second;
   induction_obligation& ind = *h;
   ind.bump_score();
