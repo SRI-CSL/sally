@@ -16,13 +16,14 @@
  * along with sally.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "solvers.h"
+#include "reachability.h"
+
 #include "smt/solver.h"
 #include "system/context.h"
 #include "engine/engine.h"
 #include "expr/term.h"
 #include "expr/term_map.h"
-
-#include "solvers.h"
 
 #include <vector>
 #include <boost/heap/fibonacci_heap.hpp>
@@ -121,18 +122,24 @@ class ic3_engine : public engine {
   /** The property we're trying to prove */
   const system::state_formula* d_property;
 
-  /**
-   * A counter-example, if any, to the current induction check. The queue is
-   * stuffed with generalization, so the guarantee is that the every element
-   * can reach the next element.
-   */
-  std::deque<expr::term_ref> d_counterexample;
-
   /** The trace we're building for counterexamples */
   system::state_trace* d_trace;
 
   /** The solvers */
   solvers* d_smt;
+
+  /** Reachability solver */
+  reachability d_reachability;
+
+  /** IC3 statistics */
+  struct stats {
+    utils::stat_int* frame_index;
+    utils::stat_int* frame_size;
+    utils::stat_int* frame_pushed;
+    utils::stat_int* frame_needed;
+    utils::stat_int* queue_size;
+  } d_stats;
+
 
   /**
    * Checks if the formula is reachable in one step at frame k > 0. F should be
@@ -160,21 +167,14 @@ class ic3_engine : public engine {
   /** Push the formula forward if its inductive. Returns true if inductive. */
   induction_result push_if_inductive(induction_obligation& o);
 
-  /**
-   * Add a formula that's inductive up to k-1 and holds at k. The formula will
-   * be added to frames 0, ..., k, and additionally added to induction
-   * obligations at k.
-   */
-  void add_valid_up_to(size_t k, expr::term_ref f);
-
   /** The current frame we are trying to push */
-  size_t d_induction_frame;
+  size_t d_induction_frame_index;
+
+  /** The content of the induction frame */
+  formula_set d_induction_frame;
 
   /** Map from frame formulas to information about them */
   expr::term_ref_map<frame_formula_parent_info> d_frame_formula_parent_info;
-
-  /** Check that g => \exists x' f */
-  void output_efsmt(expr::term_ref f, expr::term_ref g) const;
 
   /** Sets the refutation info */
   void set_refutes_info(expr::term_ref f, expr::term_ref g, expr::term_ref l);
@@ -203,9 +203,6 @@ class ic3_engine : public engine {
   /** Is the formula needed for induction */
   bool is_needed(expr::term_ref f) const;
 
-  /** Returns true if formula of any of its parents are invalid */
-  bool is_invalid_or_parent_invalid(expr::term_ref f) const;
-
   /** Queue of induction obligations at the current frame */
   induction_obligation_queue d_induction_obligations;
 
@@ -218,32 +215,20 @@ class ic3_engine : public engine {
   /** Count of obligations per frame */
   std::vector<size_t> d_induction_obligations_count;
 
+  /** Add to induction frame and solver */
+  void add_to_induction_frame(expr::term_ref F);
+
   /** Get the next induction obligations */
   induction_obligation pop_induction_obligation();
 
-  /** Push the obligation */
-  void push_induction_obligation(const induction_obligation& ind);
+  /** Push to the obligation */
+  void enqueue_induction_obligation(const induction_obligation& ind);
 
   /** Bump the score of the obligation */
   void bump_induction_obligation(expr::term_ref ind, double amount);
 
-  /** Set of facts valid per frame */
-  std::vector<formula_set> d_frame_content;
-
-  /** How long has the frame content been preserved */
-  size_t d_previous_frame_equal;
-
-  /** The previous frame */
-  formula_set d_previous_frame;
-
   /** Returns the frame variable */
   expr::term_ref get_frame_variable(size_t i);
-
-  /** Total number of facts in the database */
-  size_t total_facts() const;
-
-  /** Add the formula to frame */
-  void add_to_frame(size_t k, expr::term_ref f);
 
   /** Add property to 0 frame, returns true if not immediately refuted */
   bool add_property(expr::term_ref P);
@@ -260,44 +245,8 @@ class ic3_engine : public engine {
   /** Is the property invalid */
   bool d_property_invalid;
 
-  /** Check if the frame contains the fiven formula */
-  bool frame_contains(size_t k, expr::term_ref f);
-
-  /** Make sure all frame content is ready */
-  void ensure_frame(size_t k);
-
-  enum reachability_status {
-    REACHABLE,
-    UNREACHABLE,
-    BUDGET_EXCEEDED
-  };
-
-  /**
-   * Assuming f is satisfiable at k, check if f is reachable at k. During
-   * exploration, new facts are added to frames, but no induction obligations.
-   * After return the content of frame k-1 will be sufficient to prove
-   * unreachability at k. Note that if k == 0, this returns true without any
-   * checking.
-   */
-  reachability_status check_reachable(size_t k, expr::term_ref f, expr::model::ref f_model, size_t& budget);
-
-  /** Print the frame content */
-  void print_frame(size_t k, std::ostream& out) const;
-
-  /** Print all frames */
-  void print_frames(std::ostream& out) const;
-
-  /** Statistics per frame (some number of frames) */
-  std::vector<utils::stat_int*> d_stat_frame_size;
-
-  /** How many reachable facts */
-  utils::stat_int* d_stat_reachable;
-
-  /** How many unreahable facts */
-  utils::stat_int* d_stat_unreachable;
-
-  /** How many reachability queries */
-  utils::stat_int* d_stat_queries;
+  /** Is some needed formula invalid */
+  bool d_needed_invalid;
 
   /**
    * The formula f has been shown not induction by a concrete counterexample.
@@ -334,9 +283,6 @@ class ic3_engine : public engine {
   /** Type of learning to use */
   learning_type d_learning_type;
 
-  /** Try to learn from the analyzer */
-  void learn_from_analyzer(std::vector<expr::term_ref>& out);
-
 public:
 
   ic3_engine(const system::context& ctx);
@@ -347,9 +293,6 @@ public:
 
   /** Trace */
   const system::state_trace* get_trace();
-
-  /** Output the state of the system to the stream */
-  void to_stream(std::ostream& out) const;
 
   /** Collect terms */
   void gc_collect(const expr::gc_relocator& gc_reloc);

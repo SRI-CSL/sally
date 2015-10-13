@@ -101,9 +101,6 @@ class solvers {
   /** Returns the induction solver */
   smt::solver* get_initial_solver();
 
-  /** Returns the induction solver */
-  smt::solver* get_induction_solver();
-
   /** Returns the unique reachability solver */
   smt::solver* get_reachability_solver();
 
@@ -142,7 +139,7 @@ public:
   ~solvers();
 
   /** Mark a new frame */
-  void new_frame();
+  void new_reachability_frame();
 
   /** Get number of frames */
   size_t size();
@@ -151,7 +148,7 @@ public:
   void reset(const std::vector<formula_set>& frames);
 
   /** Add a formula to frame k */
-  void add(size_t k, expr::term_ref f);
+  void add_to_reachability_solver(size_t k, expr::term_ref f);
 
   struct query_result {
     /** Result of the query */
@@ -170,10 +167,16 @@ public:
   /** Check if f is inductive */
   query_result check_inductive(expr::term_ref f, std::vector<expr::term_ref>& core);
 
+  /** Returns the induction solver */
+  smt::solver* get_induction_solver();
+
+  /** Reset induction solver */
+  void reset_induction_solver();
+
   /** Returns true if inductive checks produce unsat cores */
   bool check_inductive_returns_core() const;
 
-  /** Learn forward to refute G at k from k-1 using reachability solvers */
+  /** Learn forward to refute G at k from k-1 and initial state using reachability solvers */
   expr::term_ref learn_forward(size_t k, expr::term_ref G);
 
   /** Returns the counterexample solver */
@@ -196,6 +199,13 @@ public:
 
   /** Rewrite equalitites to inequalities */
   expr::term_ref eq_to_ineq(expr::term_ref G);
+
+  /** Output EFSMT problem */
+  void output_efsmt(expr::term_ref f, expr::term_ref g) const;
+
+  /** Print formulas */
+  void print_formulas(const formula_set& set, std::ostream& out) const;
+
 };
 
 

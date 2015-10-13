@@ -38,6 +38,14 @@ public:
 
 std::ostream& operator << (std::ostream& out, const stat& s);
 
+/** Column delimiter */
+class stat_delimiter : public stat {
+public:
+  stat_delimiter(const char* delim = "|")
+  : stat(delim) {}
+  void to_stream(std::ostream& out) const { out << get_id(); }
+};
+
 /** Double valued statistic */
 class stat_double : public stat {
   double d_value;

@@ -21,8 +21,8 @@
 #include "smt/factory.h"
 #include "utils/trace.h"
 
-
 #include <iostream>
+#include <fstream>
 
 #define unused_var(x) { (void)x; }
 
@@ -96,7 +96,7 @@ void solvers::reset(const std::vector<solvers::formula_set>& frames) {
     // Add the content again
     formula_set::const_iterator it = frames[k].begin();
     for (; it != frames[k].end(); ++ it) {
-      add(k, *it);
+      add_to_reachability_solver(k, *it);
     }
   }
 }
@@ -473,7 +473,7 @@ void solvers::gc_collect(const expr::gc_relocator& gc_reloc) {
   gc_reloc.reloc(d_frame_variables);
 }
 
-void solvers::add(size_t k, expr::term_ref f)  {
+void solvers::add_to_reachability_solver(size_t k, expr::term_ref f)  {
 
   assert(k < d_size);
 
@@ -488,14 +488,9 @@ void solvers::add(size_t k, expr::term_ref f)  {
     smt::solver* solver = get_reachability_solver(k);
     solver->add(f, smt::solver::CLASS_A);
   }
-
-  // If at induction frame, add to induction solver
-  if (k + 1 == d_size) {
-    get_induction_solver()->add(f, smt::solver::CLASS_A);
-  }
 }
 
-void solvers::new_frame() {
+void solvers::new_reachability_frame() {
   // Make sure we have counter-examples space for 0, ..., size
   ensure_counterexample_solver_depth(d_size);
   // Add the frame selection variable if needed
@@ -505,9 +500,6 @@ void solvers::new_frame() {
   }
   // Increase the size
   d_size ++;
-  // Reset the induction solver
-  delete d_induction_solver;
-  d_induction_solver = 0;
 }
 
 size_t solvers::size() {
@@ -516,6 +508,89 @@ size_t solvers::size() {
 
 void solvers::generate_models_for_queries(bool flag) {
   d_generate_models_for_queries = flag;
+}
+
+void solvers::reset_induction_solver() {
+  // Reset the induction solver
+  delete d_induction_solver;
+  d_induction_solver = 0;
+}
+
+void solvers::output_efsmt(expr::term_ref f, expr::term_ref g) const {
+
+  assert(!f.is_null());
+  assert(!g.is_null());
+
+  static size_t i = 0;
+
+  // we have
+  //  \forall x G(x) => \exists x' T(x, x') and f is valid
+  //  G(x) and \forall y not (T(x, x') and f') is unsat
+
+  std::stringstream ss;
+  ss << "ic3_gen_check_" << i++ << ".smt2";
+  std::ofstream out(ss.str().c_str());
+
+  out << expr::set_tm(d_tm);
+
+  const utils::name_transformer* old_transformer = d_tm.get_name_transformer();
+  smt::smt2_name_transformer name_transformer;
+  d_tm.set_name_transformer(&name_transformer);
+
+  out << "(set-logic LRA)" << std::endl;
+  out << "(set-info :smt-lib-version 2.0)" << std::endl;
+  out << "(set-info :status unsat)" << std::endl;
+  out << std::endl;
+
+  const system::state_type* state_type = d_transition_system->get_state_type();
+
+  const std::vector<expr::term_ref>& state_vars = state_type->get_variables(system::state_type::STATE_CURRENT);
+  const std::vector<expr::term_ref>& input_vars = state_type->get_variables(system::state_type::STATE_INPUT);
+  const std::vector<expr::term_ref>& next_vars = state_type->get_variables(system::state_type::STATE_NEXT);
+
+  for (size_t i = 0; i < state_vars.size(); ++ i) {
+    expr::term_ref variable = state_vars[i];
+    out << "(declare-fun " << variable << " () " << d_tm.type_of(variable) << ")" << std::endl;
+  }
+
+  out << std::endl;
+  out << ";; generalization" << std::endl;
+  out << "(assert " << g << ")" << std::endl;
+
+  out << std::endl;
+  out << "(assert (forall (";
+  for (size_t i = 0; i < input_vars.size(); ++ i) {
+    expr::term_ref variable = input_vars[i];
+    if (i) out << " ";
+    out << "(";
+    out << variable << " " << d_tm.type_of(variable);
+    out << ")";
+  }
+  for (size_t i = 0; i < next_vars.size(); ++ i) {
+    expr::term_ref variable = next_vars[i];
+    out << " (";
+    out << variable << " " << d_tm.type_of(variable);
+    out << ")";
+  }
+  out << ")" << std::endl; // end forall variables
+  out << "(not (and" << std::endl;
+  out << "  " << d_transition_system->get_transition_relation() << std::endl;
+  out << "  " << state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, f) << std::endl;
+  out << "))" << std::endl; // end negation and and
+
+  out << "))" << std::endl; // end forall
+
+  out << std::endl;
+  out << "(check-sat)" << std::endl;
+
+  d_tm.set_name_transformer(old_transformer);
+}
+
+void solvers::print_formulas(const formula_set& set, std::ostream& out) const {
+  formula_set::const_iterator it = set.begin();
+  for (; it != set.end(); ++ it) {
+    out << *it << std::endl;
+  }
 }
 
 }

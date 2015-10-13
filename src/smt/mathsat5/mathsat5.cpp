@@ -165,7 +165,7 @@ public:
     case solver::INTERPOLATION:
       return true;
     case solver::UNSAT_CORE:
-      return true;
+      return d_opts.get_bool("mathsat5-unsat-cores");
     case solver::GENERALIZATION:
       return d_opts.get_bool("mathsat5-generalize-trivial") || d_opts.get_bool("mathsat5-generalize-qe");
     default:
@@ -213,7 +213,10 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
   msat_set_option(d_cfg, "theory.bv.eager", "false");
   msat_set_option(d_cfg, "theory.euf.enabled", "false");
   msat_set_option(d_cfg, "preprocessor.simplification", "0");
-  msat_set_option(d_cfg, "unsat_core_generation", "1");
+
+  if (opts.get_bool("mathsat5-unsat-cores")) {
+    msat_set_option(d_cfg, "unsat_core_generation", "1");
+  }
 
   if (opts.get_bool("mathsat5-generate-api-log")) {
    msat_set_option(d_cfg, "debug.api_call_trace", "2");
