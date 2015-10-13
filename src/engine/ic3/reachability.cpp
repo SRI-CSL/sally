@@ -4,6 +4,7 @@
 #include "utils/trace.h"
 
 #include <vector>
+#include <iostream>
 
 namespace sally {
 namespace ic3 {
