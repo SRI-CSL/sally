@@ -472,6 +472,8 @@ engine::result ic3_engine::search() {
     d_induction_frame_index ++;
     d_induction_obligations.clear();
 
+    MSG(1) << "ic3: Extending trace to " << d_induction_frame_index << std::endl;
+
     d_stats.frame_index->get_value() = d_induction_frame_index;
     d_stats.frame_size->get_value() = 0;
 
