@@ -200,6 +200,12 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
     // Mark all as needed if core was obtained
     if (d_smt->check_inductive_returns_core()) {
       if (core.size() > 0) {
+        // Add to assumption map
+        assert(d_induction_assumptions.find(f) == d_induction_assumptions.end());
+        for (size_t i = 0; i < core.size(); ++ i) {
+          d_induction_assumptions.insert(std::make_pair(f, core[i]));
+        }
+        // Bump the
         double bump = 1.0 / (double) core.size();
         for (size_t i = 0; i < core.size(); ++ i) {
           if (needed) {
@@ -429,6 +435,7 @@ engine::result ic3_engine::search() {
 
     // Clear the frame-specific info
     d_frame_formula_parent_info.clear();
+    d_induction_assumptions.clear();
 
     // If we have unsat core, mark all properties as needed
     if (d_smt->check_inductive_returns_core()) {
@@ -450,6 +457,9 @@ engine::result ic3_engine::search() {
 
     // If we pushed all that's needed, we're done
     if (d_smt->check_inductive_returns_core() && !d_needed_invalid) {
+      if (ctx().get_options().get_bool("ic3-show-invariant")) {
+        d_smt->print_formulas(d_induction_frame, std::cout);
+      }
       return engine::VALID;
     } else if (d_induction_frame.size() == d_induction_obligations_next.size()) {
       if (ctx().get_options().get_bool("ic3-show-invariant")) {
@@ -607,8 +617,14 @@ bool ic3_engine::is_invalid(expr::term_ref f) const {
 void ic3_engine::set_needed(expr::term_ref f) {
   std::set<expr::term_ref>::iterator find = d_needed.find(f);
   if (find == d_needed.end()) {
+    // Add to needed set
     d_needed.insert(f);
     d_stats.frame_needed->get_value() = d_needed.size();
+    // Set any induction assumptions as needed too
+    std::pair<induction_assumptions_map::const_iterator, induction_assumptions_map::const_iterator> ia = d_induction_assumptions.equal_range(f);
+    for (induction_assumptions_map::const_iterator it = ia.first; it != ia.second; ++ it) {
+      set_needed(it->second);
+    }
   }
   if (is_invalid(f)) {
     d_needed_invalid = true;

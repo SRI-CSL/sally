@@ -28,6 +28,7 @@
 #include <vector>
 #include <boost/heap/fibonacci_heap.hpp>
 #include <boost/unordered_map.hpp>
+#include <map>
 #include <iosfwd>
 
 namespace sally {
@@ -247,6 +248,11 @@ class ic3_engine : public engine {
 
   /** Is some needed formula invalid */
   bool d_needed_invalid;
+
+  typedef std::multimap<expr::term_ref, expr::term_ref> induction_assumptions_map;
+
+  /** Map from formulas to their assumptions needed for push */
+  induction_assumptions_map d_induction_assumptions;
 
   /**
    * The formula f has been shown not induction by a concrete counterexample.
