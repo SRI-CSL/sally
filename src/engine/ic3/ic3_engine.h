@@ -55,7 +55,7 @@ class induction_obligation {
 public:
 
   /** Construct the obligation */
-  induction_obligation(expr::term_manager& tm, expr::term_ref P, size_t budget, bool analzye);
+  induction_obligation(expr::term_manager& tm, expr::term_ref P, size_t budget, bool analzye, double score);
 
   /** Get the formula */
   expr::term_ref formula() const;
@@ -77,6 +77,9 @@ public:
 
   /** Bump the internal score (score is capped below at 1) */
   void bump_score(double amount);
+
+  /** Get the score */
+  double get_score() const;
 };
 
 /** Priority queue for obligations (max-heap) */
@@ -139,6 +142,7 @@ class ic3_engine : public engine {
     utils::stat_int* frame_pushed;
     utils::stat_int* frame_needed;
     utils::stat_int* queue_size;
+    utils::stat_int* max_cex_depth;
   } d_stats;
 
 
