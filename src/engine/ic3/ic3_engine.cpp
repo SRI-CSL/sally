@@ -238,6 +238,11 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   if (reachability_budget == 0) { reachability_budget = default_budget; }
   reachability::status reachable = d_reachability.check_reachable(d_induction_frame_index, G, result.model, reachability_budget);
   ind.set_budget(reachability_budget);
+  
+  // If we've exceeded the budget, we reduce the score
+  if (reachability_budget == 0) {
+    bump_induction_obligation(f, -1);
+  }
 
   // If reachable, we're not inductive
   if (reachable == reachability::REACHABLE) {
@@ -269,6 +274,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   // Add to inductino frame
   assert(d_induction_frame.find(learnt) == d_induction_frame.end());
   add_to_induction_frame(learnt);
+  
   // Try to push assumptions next time (unless, already invalid)
   if (!is_invalid(learnt)) {
     enqueue_induction_obligation(induction_obligation(tm(), learnt, default_budget, analyze_cti, ind.get_score()));
@@ -440,7 +446,6 @@ engine::result ic3_engine::search() {
   for(;;) {
 
     // Clear the frame-specific info
-    d_frame_formula_parent_info.clear();
     d_induction_assumptions.clear();
 
     // If we have unsat core, mark all properties as needed
@@ -593,6 +598,7 @@ bool ic3_engine::add_property(expr::term_ref P) {
         add_to_induction_frame(P);
         enqueue_induction_obligation(induction_obligation(tm(), P, 0, true, 0));
       }
+      bump_induction_obligation(P, 1);
       d_properties.insert(P);
       return true;
     } else {
@@ -651,20 +657,6 @@ void ic3_engine::gc_collect(const expr::gc_relocator& gc_reloc) {
 }
 
 void ic3_engine::set_refutes_info(expr::term_ref f, expr::term_ref g, expr::term_ref l) {
-  if (d_frame_formula_parent_info.find(l) != d_frame_formula_parent_info.end()) {
-    std::cerr << "l = " << l << std::endl;
-    std::cerr << "f = " << f << std::endl;
-    std::cerr << "g = " << g << std::endl;
-
-    expr::term_ref_map<frame_formula_parent_info>::const_iterator find = d_frame_formula_parent_info.find(l);
-    std::cerr << "f = " << find->second.parent << std::endl;
-    std::cerr << "g = " << find->second.refutes << std::endl;
-
-    std::cerr << "f_invalid = " << is_invalid(f) << std::endl;
-    std::cerr << "l_invalid = " << is_invalid(l) << std::endl;
-
-    assert(false);
-  }
   d_frame_formula_parent_info[l] = frame_formula_parent_info(f, g);
 }
 
