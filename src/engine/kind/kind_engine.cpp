@@ -109,14 +109,14 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
     switch(r_1) {
     case smt::solver::SAT: {
       // Add the variables, so that the solver can make a model
-      std::vector<expr::term_ref> vars;
       for (size_t i = 0; i <= k; ++ i) {
-        d_trace->get_state_variables(i, vars);
+        const std::vector<expr::term_ref>& state_vars = d_trace->get_state_variables(i);
+        d_solver_1->add_variables(state_vars.begin(), state_vars.end(), smt::solver::CLASS_A);
         if (i < k) {
-          d_trace->get_input_variables(i, vars);
+          const std::vector<expr::term_ref>& input_vars = d_trace->get_input_variables(i);
+          d_solver_1->add_variables(input_vars.begin(), input_vars.end(), smt::solver::CLASS_A);
         }
       }
-      d_solver_1->add_variables(vars.begin(), vars.end(), smt::solver::CLASS_A);
       // Get the model
       expr::model::ref m = d_solver_1->get_model();
       // Add model to trace

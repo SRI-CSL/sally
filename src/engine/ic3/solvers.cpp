@@ -126,13 +126,11 @@ void solvers::ensure_counterexample_solver_depth(size_t k) {
   // Make sure we unrolled the solver variables up to k
   for (; d_counterexample_solver_variables_depth <= k; ++ d_counterexample_solver_variables_depth) {
     // Add state variables
-    std::vector<expr::term_ref> state_variables;
-    d_trace->get_state_variables(d_counterexample_solver_variables_depth, state_variables);
+    const std::vector<expr::term_ref>& state_variables = d_trace->get_state_variables(d_counterexample_solver_variables_depth);
     get_counterexample_solver()->add_variables(state_variables.begin(), state_variables.end(), smt::solver::CLASS_A);
     // Add input variables to get here
     if (d_counterexample_solver_variables_depth > 0) {
-      std::vector<expr::term_ref> input_variables;
-      d_trace->get_input_variables(d_counterexample_solver_variables_depth-1, input_variables);
+      const std::vector<expr::term_ref>& input_variables = d_trace->get_input_variables(d_counterexample_solver_variables_depth-1);
       get_counterexample_solver()->add_variables(input_variables.begin(), input_variables.end(), smt::solver::CLASS_A);
     }
   }
@@ -142,23 +140,6 @@ void solvers::ensure_counterexample_solver_depth(size_t k) {
     expr::term_ref T = d_trace->get_transition_formula(d_transition_system->get_transition_relation(), d_counterexample_solver_depth);
     get_counterexample_solver()->add(T, smt::solver::CLASS_A);
   }
-}
-
-smt::solver* solvers::get_induction_solver() {
-  if (d_induction_solver == 0) {
-    // The variables from the state types
-    const std::vector<expr::term_ref>& x = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_CURRENT);
-    const std::vector<expr::term_ref>& x_next = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_NEXT);
-    const std::vector<expr::term_ref>& input = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_INPUT);
-    // Make the solver
-    d_induction_solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options(), d_ctx.get_statistics());
-    d_induction_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
-    d_induction_solver->add_variables(x_next.begin(), x_next.end(), smt::solver::CLASS_B);
-    d_induction_solver->add_variables(input.begin(), input.end(), smt::solver::CLASS_T);
-    d_transition_relation = d_transition_system->get_transition_relation();
-    d_induction_solver->add(d_transition_relation, smt::solver::CLASS_T);
-  }
-  return d_induction_solver;
 }
 
 smt::solver* solvers::get_initial_solver() {
@@ -351,10 +332,12 @@ expr::term_ref solvers::eq_to_ineq(expr::term_ref G) {
 }
 
 expr::term_ref solvers::generalize_sat(smt::solver* solver) {
+  // Generalize
   std::vector<expr::term_ref> generalization_facts;
   solver->generalize(smt::solver::GENERALIZE_BACKWARD, generalization_facts);
   expr::term_ref G = d_tm.mk_and(generalization_facts);
-  // G = eq_to_ineq(G);
+  // Move variables back to regular state instead of trace state
+  G = d_trace->get_state_formula(0, G);
   return G;
 }
 
@@ -416,41 +399,31 @@ bool solvers::check_inductive_returns_core() const {
 }
 
 
-solvers::query_result solvers::check_inductive(expr::term_ref f, std::vector<expr::term_ref>& core) {
+solvers::query_result solvers::check_inductive(expr::term_ref f) {
+
+  assert(d_induction_solver != 0);
 
   query_result result;
 
   // Push the scope
-  smt::solver* solver = get_induction_solver();
-  smt::solver_scope scope(solver);
+  smt::solver_scope scope(d_induction_solver);
   scope.push();
 
   // Add the formula (moving current -> next)
   expr::term_ref F_not = d_tm.mk_term(expr::TERM_NOT, f);
-  expr::term_ref F_not_next = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, F_not);
-  solver->add(F_not_next, smt::solver::CLASS_B);
+  expr::term_ref F_not_next = d_trace->get_state_formula(F_not, d_induction_solver_depth);
+  d_induction_solver->add(F_not_next, smt::solver::CLASS_B);
 
   // Figure out the result
-  result.result = solver->check();
+  result.result = d_induction_solver->check();
   switch (result.result) {
   case smt::solver::SAT:
     if (d_generate_models_for_queries) {
-      result.model = solver->get_model();
+      result.model = d_induction_solver->get_model();
     }
-    result.generalization = generalize_sat(solver);
+    result.generalization = generalize_sat(d_induction_solver);
     break;
   case smt::solver::UNSAT:
-    if (solver->supports(smt::solver::UNSAT_CORE)) {
-      solver->get_unsat_core(core);
-      // Only keep frame
-      size_t to_keep = 0;
-      for (size_t i = 0; i < core.size(); ++ i) {
-        if (core[i] != F_not_next && core[i] != d_transition_relation) {
-          core[to_keep++] = core[i];
-        }
-      }
-      core.resize(to_keep);
-    }
     break;
   default:
     throw exception("SMT unknown result.");
@@ -490,6 +463,17 @@ void solvers::add_to_reachability_solver(size_t k, expr::term_ref f)  {
   }
 }
 
+void solvers::add_to_induction_solver(expr::term_ref f) {
+  assert(d_induction_solver != 0);
+  for (size_t k = 0; k < d_induction_solver_depth; ++ k) {
+    if (k == 0) {
+      d_induction_solver->add(d_trace->get_state_formula(f, k), smt::solver::CLASS_A);
+    } else {
+      d_induction_solver->add(d_trace->get_state_formula(f, k), smt::solver::CLASS_T);
+    }
+  }
+}
+
 void solvers::new_reachability_frame() {
   // Make sure we have counter-examples space for 0, ..., size
   ensure_counterexample_solver_depth(d_size);
@@ -510,10 +494,44 @@ void solvers::generate_models_for_queries(bool flag) {
   d_generate_models_for_queries = flag;
 }
 
-void solvers::reset_induction_solver() {
+void solvers::reset_induction_solver(size_t depth) {
   // Reset the induction solver
   delete d_induction_solver;
-  d_induction_solver = 0;
+
+  // Transition relation
+  d_transition_relation = d_transition_system->get_transition_relation();
+
+  // The solver
+  d_induction_solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options(), d_ctx.get_statistics());
+  d_induction_solver_depth = depth;
+
+  // Add variables and transition relation
+  for (size_t k = 0; k <= depth; ++ k) {
+
+    // The variables
+    const std::vector<expr::term_ref>& x = d_trace->get_state_variables(k);
+
+    // Add state variables
+    if (k == 0) {
+      // First frame is A
+      const std::vector<expr::term_ref>& x = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_CURRENT);
+      d_induction_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
+    } else if (k < depth) {
+      // Intermediate frames are T
+      d_induction_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_T);
+    } else {
+      // Last frame is B
+      d_induction_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_B);
+    }
+
+    // Add input variables
+    if (k > 0) {
+      const std::vector<expr::term_ref>& input = d_trace->get_input_variables(k-1);
+      d_induction_solver->add_variables(input.begin(), input.end(), smt::solver::CLASS_T);
+      expr::term_ref T = d_trace->get_transition_formula(d_transition_relation, k-1);
+      d_induction_solver->add(T, smt::solver::CLASS_T);
+    }
+  }
 }
 
 void solvers::output_efsmt(expr::term_ref f, expr::term_ref g) const {

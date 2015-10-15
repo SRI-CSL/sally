@@ -98,21 +98,19 @@ ic3_engine::ic3_engine(const system::context& ctx)
 , d_smt(0)
 , d_reachability(ctx)
 , d_induction_frame_index(0)
+, d_induction_frame_depth(0)
 , d_property_invalid(false)
-, d_needed_invalid(false)
 , d_learning_type(LEARN_UNDEFINED)
 {
   d_stats.frame_index = new utils::stat_int("ic3::frame_index", 0);
   d_stats.frame_size = new utils::stat_int("ic3::frame_size", 0);
   d_stats.frame_pushed = new utils::stat_int("ic3::frame_pushed", 0);
-  d_stats.frame_needed = new utils::stat_int("ic3::frame_needed", 0);
   d_stats.queue_size = new utils::stat_int("ic3::queue_size", 0);
   d_stats.max_cex_depth = new utils::stat_int("ic3::max_cex_depth", 0);
   ctx.get_statistics().add(new utils::stat_delimiter());
   ctx.get_statistics().add(d_stats.frame_index);
   ctx.get_statistics().add(d_stats.frame_size);
   ctx.get_statistics().add(d_stats.frame_pushed);
-  ctx.get_statistics().add(d_stats.frame_needed);
   ctx.get_statistics().add(d_stats.queue_size);
   ctx.get_statistics().add(d_stats.max_cex_depth);
 }
@@ -130,13 +128,13 @@ void ic3_engine::reset() {
   d_trace = 0;
   d_induction_frame.clear();
   d_induction_frame_index = 0;
+  d_induction_frame_depth = 0;
   d_induction_obligations.clear();
   d_induction_obligations_next.clear();
   d_induction_obligations_count.clear();
   delete d_smt;
   d_smt = 0;
   d_properties.clear();
-  d_needed.clear();
   d_property_invalid = false;
   d_frame_formula_invalid_info.clear();
   d_frame_formula_parent_info.clear();
@@ -159,7 +157,7 @@ induction_obligation ic3_engine::pop_induction_obligation() {
 void ic3_engine::add_to_induction_frame(expr::term_ref F) {
   assert(d_induction_frame.find(F) == d_induction_frame.end());
   d_induction_frame.insert(F);
-  d_smt->get_induction_solver()->add(F, smt::solver::CLASS_A);
+  d_smt->add_to_induction_solver(F);
   d_stats.frame_size->get_value() = d_induction_frame.size();
 }
 
@@ -186,7 +184,6 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
 
   bool analyze_cti = ind.analyze_cti();
   expr::term_ref f = ind.formula();
-  bool needed = is_needed(f);
 
 
   TRACE("ic3") << "ic3: pushing at " << d_induction_frame_index << ": " << f << std::endl;
@@ -194,8 +191,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   size_t default_budget = d_induction_frame_index + 1;
 
   // Check if inductive
-  std::vector<expr::term_ref> core;
-  solvers::query_result result = d_smt->check_inductive(f, core);
+  solvers::query_result result = d_smt->check_inductive(f);
 
   // If inductive
   if (result.result == smt::solver::UNSAT) {
@@ -203,22 +199,6 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
     // Add to the next frame
     d_induction_obligations_next.push_back(induction_obligation(tm(), f, 0, analyze_cti, ind.get_score() / 2));
     d_stats.frame_pushed->get_value() = d_induction_obligations_next.size();
-    // Mark all as needed if core was obtained
-    if (d_smt->check_inductive_returns_core()) {
-      if (core.size() > 0) {
-        // Add to assumption map
-        assert(d_induction_assumptions.find(f) == d_induction_assumptions.end());
-        for (size_t i = 0; i < core.size(); ++ i) {
-          d_induction_assumptions.insert(std::make_pair(f, core[i]));
-        }
-        // Set needed
-        if (needed) {
-          for (size_t i = 0; i < core.size(); ++ i) {
-            set_needed(core[i]);
-          }
-        }
-      }
-    }
     return INDUCTION_SUCCESS;
   }
 
@@ -445,19 +425,6 @@ engine::result ic3_engine::search() {
   // Push frame by frame */
   for(;;) {
 
-    // Clear the frame-specific info
-    d_induction_assumptions.clear();
-
-    // If we have unsat core, mark all properties as needed
-    if (d_smt->check_inductive_returns_core()) {
-      d_needed.clear();
-      d_needed_invalid = false;
-      std::set<expr::term_ref>::const_iterator prop_it = d_properties.begin();
-      for (; prop_it != d_properties.end(); ++ prop_it) {
-        set_needed(*prop_it);
-      }
-    }
-
     // Push the current induction frame forward
     push_current_frame();
 
@@ -466,13 +433,7 @@ engine::result ic3_engine::search() {
       return engine::INVALID;
     }
 
-    // If we pushed all that's needed, we're done
-    if (d_smt->check_inductive_returns_core() && !d_needed_invalid) {
-      if (ctx().get_options().get_bool("ic3-show-invariant")) {
-        d_smt->print_formulas(d_induction_frame, std::cout);
-      }
-      return engine::VALID;
-    } else if (d_induction_frame.size() == d_induction_obligations_next.size()) {
+    if (d_induction_frame.size() == d_induction_obligations_next.size()) {
       if (ctx().get_options().get_bool("ic3-show-invariant")) {
         d_smt->print_formulas(d_induction_frame, std::cout);
       }
@@ -480,8 +441,9 @@ engine::result ic3_engine::search() {
     }
 
     // Move to the next frame (will also clear induction solver)
-    d_induction_frame_index ++;
+    d_induction_frame_index += d_induction_frame_depth;
     d_induction_obligations.clear();
+    d_smt->reset_induction_solver(d_induction_frame_depth);
 
     MSG(1) << "ic3: Extending trace to " << d_induction_frame_index << std::endl;
 
@@ -495,7 +457,7 @@ engine::result ic3_engine::search() {
 
     // Add formulas to the new frame
     d_induction_frame.clear();
-    d_smt->reset_induction_solver();
+    d_smt->reset_induction_solver(d_induction_frame_depth);
     std::vector<induction_obligation>::const_iterator next_it = d_induction_obligations_next.begin();
     for (; next_it != d_induction_obligations_next.end(); ++ next_it) {
       // Push if not shown invalid
@@ -543,6 +505,10 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 
   // Initialize the reachability solver
   d_reachability.init(d_transition_system, d_smt);
+
+  // Initialize the induction solver
+  d_induction_frame_depth = 1;
+  d_smt->reset_induction_solver(1);
 
   // Add the initial state
   expr::term_ref I = d_transition_system->get_initial_states();
@@ -618,35 +584,11 @@ void ic3_engine::set_invalid(expr::term_ref f, size_t frame) {
   if (d_properties.find(f) != d_properties.end()) {
     d_property_invalid = true;
   }
-  if (is_needed(f)) {
-    d_needed_invalid = true;
-  }
 }
 
 bool ic3_engine::is_invalid(expr::term_ref f) const {
   expr::term_ref_map<size_t>::const_iterator find = d_frame_formula_invalid_info.find(f);
   return (find != d_frame_formula_invalid_info.end());
-}
-
-void ic3_engine::set_needed(expr::term_ref f) {
-  std::set<expr::term_ref>::iterator find = d_needed.find(f);
-  if (find == d_needed.end()) {
-    // Add to needed set
-    d_needed.insert(f);
-    d_stats.frame_needed->get_value() = d_needed.size();
-    // Set any induction assumptions as needed too
-    std::pair<induction_assumptions_map::const_iterator, induction_assumptions_map::const_iterator> ia = d_induction_assumptions.equal_range(f);
-    for (induction_assumptions_map::const_iterator it = ia.first; it != ia.second; ++ it) {
-      set_needed(it->second);
-    }
-  }
-  if (is_invalid(f)) {
-    d_needed_invalid = true;
-  }
-}
-
-bool ic3_engine::is_needed(expr::term_ref f) const {
-  return d_needed.find(f) != d_needed.end();
 }
 
 void ic3_engine::gc_collect(const expr::gc_relocator& gc_reloc) {

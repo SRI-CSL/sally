@@ -140,7 +140,6 @@ class ic3_engine : public engine {
     utils::stat_int* frame_index;
     utils::stat_int* frame_size;
     utils::stat_int* frame_pushed;
-    utils::stat_int* frame_needed;
     utils::stat_int* queue_size;
     utils::stat_int* max_cex_depth;
   } d_stats;
@@ -175,6 +174,9 @@ class ic3_engine : public engine {
   /** The current frame we are trying to push */
   size_t d_induction_frame_index;
 
+  /** THe current induction depth */
+  size_t d_induction_frame_depth;
+
   /** The content of the induction frame */
   formula_set d_induction_frame;
 
@@ -201,12 +203,6 @@ class ic3_engine : public engine {
 
   /** Returns true if formula marked as invalid */
   bool is_invalid(expr::term_ref f) const;
-
-  /** Mark the formula as needed for induction */
-  void set_needed(expr::term_ref f);
-
-  /** Is the formula needed for induction */
-  bool is_needed(expr::term_ref f) const;
 
   /** Queue of induction obligations at the current frame */
   induction_obligation_queue d_induction_obligations;
@@ -244,9 +240,6 @@ class ic3_engine : public engine {
   /** Property components */
   std::set<expr::term_ref> d_properties;
 
-  /** Formulas neded for sucesseful induction */
-  std::set<expr::term_ref> d_needed;
-
   /** Is the property invalid */
   bool d_property_invalid;
 
@@ -254,9 +247,6 @@ class ic3_engine : public engine {
   bool d_needed_invalid;
 
   typedef std::multimap<expr::term_ref, expr::term_ref> induction_assumptions_map;
-
-  /** Map from formulas to their assumptions needed for push */
-  induction_assumptions_map d_induction_assumptions;
 
   /**
    * The formula f has been shown not induction by a concrete counterexample.

@@ -33,14 +33,23 @@ class state_trace : public expr::gc_participant {
   /** The state type */
   const state_type* d_state_type;
 
-  /** Sequence of state variables, per frame */
-  std::vector<expr::term_ref_strong> d_state_variables;
+  /** Sequence of state variables structs, per frame */
+  std::vector<expr::term_ref_strong> d_state_variables_structs;
+
+  /** Sequence of state variables sets, per frame */
+  std::vector< std::vector<expr::term_ref> > d_state_variables;
 
   /** Sequence of input variables, per step */
-  std::vector<expr::term_ref_strong> d_input_variables;
+  std::vector<expr::term_ref_strong> d_input_variables_structs;
 
-  /** Renamings from state variable to frame variables */
-  std::vector<expr::term_manager::substitution_map> d_subst_maps;
+  /** Sequence of input variables sets, per frame */
+  std::vector< std::vector<expr::term_ref> > d_input_variables;
+
+  /** Renaming from state variable to frame variables */
+  std::vector<expr::term_manager::substitution_map> d_subst_maps_state_to_trace;
+
+  /** Renaming from frame variables to state variables */
+  std::vector<expr::term_manager::substitution_map> d_subst_maps_trace_to_state;
 
   /** Full model of the trace */
   expr::model::ref d_model;
@@ -73,17 +82,22 @@ public:
   /**
    * Get the state variables at k.
    */
-  void get_state_variables(size_t k, std::vector<expr::term_ref>& vars);
+  const std::vector<expr::term_ref>& get_state_variables(size_t k);
 
   /**
    * Get the input variables at k.
    */
-  void get_input_variables(size_t k, std::vector<expr::term_ref>& vars);
+  const std::vector<expr::term_ref>& get_input_variables(size_t k);
 
   /**
-   * Given a formula in the state type return a state formula in the k-th step.
+   * Given a formula in the state type, return a state formula in the k-th step.
    */
   expr::term_ref get_state_formula(expr::term_ref sf, size_t k);
+
+  /**
+   * Given a state formula in the k-th step, return a formula in the state type
+   */
+  expr::term_ref get_state_formula(size_t k, expr::term_ref sf);
 
   /**
    * Given a transition formula in the state type return a transition formula

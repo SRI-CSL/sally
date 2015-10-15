@@ -30,7 +30,7 @@ state_trace::state_trace(const state_type* st)
 {}
 
 size_t state_trace::size() const {
-  return d_state_variables.size();
+  return d_state_variables_structs.size();
 }
 
 expr::term_manager& state_trace::tm() const {
@@ -38,47 +38,53 @@ expr::term_manager& state_trace::tm() const {
 }
 
 void state_trace::ensure_variables(size_t k) {
-  assert(d_state_variables.size() == d_input_variables.size());
+  assert(d_state_variables_structs.size() == d_input_variables_structs.size());
   // Ensure we have enough
-  while (d_state_variables.size() <= k) {
+  while (d_state_variables_structs.size() <= k) {
     // State variable
     std::stringstream ss_state;
-    ss_state << "s" << d_state_variables.size();
-    expr::term_ref state_var = tm().mk_variable(ss_state.str(), d_state_type->get_state_type_var());
-    d_state_variables.push_back(expr::term_ref_strong(tm(), state_var));
+    ss_state << "s" << d_state_variables_structs.size();
+    expr::term_ref state_var_struct = tm().mk_variable(ss_state.str(), d_state_type->get_state_type_var());
+    d_state_variables_structs.push_back(expr::term_ref_strong(tm(), state_var_struct));
+    d_state_variables.push_back(std::vector<expr::term_ref>());
+    get_struct_variables(state_var_struct, d_state_variables.back());
     // Input variable
     std::stringstream ss_input;
-    ss_input << "i" << d_input_variables.size();
-    expr::term_ref input_var = tm().mk_variable(ss_input.str(), d_state_type->get_input_type_var());
-    d_input_variables.push_back(expr::term_ref_strong(tm(), input_var));
+    ss_input << "i" << d_input_variables_structs.size();
+    expr::term_ref input_var_struct = tm().mk_variable(ss_input.str(), d_state_type->get_input_type_var());
+    d_input_variables_structs.push_back(expr::term_ref_strong(tm(), input_var_struct));
+    d_input_variables.push_back(std::vector<expr::term_ref>());
+    get_struct_variables(input_var_struct, d_input_variables.back());
 
     // Add a new substitution map
-    d_subst_maps.push_back(expr::term_manager::substitution_map());
-    expr::term_manager::substitution_map& subst = d_subst_maps.back();
+    d_subst_maps_state_to_trace.push_back(expr::term_manager::substitution_map());
+    d_subst_maps_trace_to_state.push_back(expr::term_manager::substitution_map());
+    expr::term_manager::substitution_map& subst_state_to_trace = d_subst_maps_state_to_trace.back();
+    expr::term_manager::substitution_map& subst_trace_to_state = d_subst_maps_trace_to_state.back();
     // Variables of the state type
-    const std::vector<expr::term_ref>& from_vars = d_state_type->get_variables(state_type::STATE_CURRENT);
+    const std::vector<expr::term_ref>& state_vars = d_state_type->get_variables(state_type::STATE_CURRENT);
     // Variable to rename them to (k-the step)
-    std::vector<expr::term_ref> frame_k_vars;
-    get_struct_variables(state_var, frame_k_vars);
-    for (size_t i = 0; i < from_vars.size(); ++ i) {
-      subst[from_vars[i]] = frame_k_vars[i];
+    const std::vector<expr::term_ref>& frame_vars = d_state_variables.back();
+    for (size_t i = 0; i < state_vars.size(); ++ i) {
+      subst_state_to_trace[state_vars[i]] = frame_vars[i];
+      subst_trace_to_state[frame_vars[i]] = state_vars[i];
     }
 
   }
-  assert(d_state_variables.size() > k);
-  assert(d_input_variables.size() > k);
+  assert(d_state_variables_structs.size() > k);
+  assert(d_input_variables_structs.size() > k);
 }
 
 expr::term_ref state_trace::get_state_struct_variable(size_t k) {
   // Return the variable
   ensure_variables(k);
-  return d_state_variables[k];
+  return d_state_variables_structs[k];
 }
 
 expr::term_ref state_trace::get_input_struct_variable(size_t k) {
   // Return the variable
   ensure_variables(k);
-  return d_input_variables[k];
+  return d_input_variables_structs[k];
 }
 
 void state_trace::get_struct_variables(expr::term_ref s, std::vector<expr::term_ref>& out) const {
@@ -89,17 +95,24 @@ void state_trace::get_struct_variables(expr::term_ref s, std::vector<expr::term_
   }
 }
 
-void state_trace::get_state_variables(size_t k, std::vector<expr::term_ref>& vars) {
-  get_struct_variables(get_state_struct_variable(k), vars);
+const std::vector<expr::term_ref>& state_trace::get_state_variables(size_t k) {
+  ensure_variables(k);
+  return d_state_variables[k];
 }
 
-void state_trace::get_input_variables(size_t k, std::vector<expr::term_ref>& vars) {
-  get_struct_variables(get_input_struct_variable(k), vars);
+const std::vector<expr::term_ref>& state_trace::get_input_variables(size_t k) {
+  ensure_variables(k);
+  return d_input_variables[k];
 }
 
 expr::term_ref state_trace::get_state_formula(expr::term_ref sf, size_t k) {
   ensure_variables(k);
-  return tm().substitute_and_cache(sf, d_subst_maps[k]);
+  return tm().substitute_and_cache(sf, d_subst_maps_state_to_trace[k]);
+}
+
+expr::term_ref state_trace::get_state_formula(size_t k, expr::term_ref sf) {
+  ensure_variables(k);
+  return tm().substitute_and_cache(sf, d_subst_maps_trace_to_state[k]);
 }
 
 expr::term_ref state_trace::get_transition_formula(expr::term_ref tf, size_t k) {
@@ -150,12 +163,12 @@ void state_trace::to_stream(std::ostream& out) const {
   const std::vector<expr::term_ref> input_vars = d_state_type->get_variables(state_type::STATE_INPUT);
 
   // Output the values
-  for (size_t k = 0; k < d_state_variables.size(); ++ k) {
+  for (size_t k = 0; k < d_state_variables_structs.size(); ++ k) {
 
     // The state variables
     out << "  (state" << std::endl;
     std::vector<expr::term_ref> state_vars_k;
-    get_struct_variables(d_state_variables[k], state_vars_k);
+    get_struct_variables(d_state_variables_structs[k], state_vars_k);
     assert(state_vars.size() == state_vars_k.size());
     for (size_t i = 0; i < state_vars_k.size(); ++ i) {
       out << "    (" << state_vars[i] << " " << d_model->get_variable_value(state_vars_k[i]) << ")" << std::endl;
@@ -163,10 +176,10 @@ void state_trace::to_stream(std::ostream& out) const {
     out << "  )" << std::endl;
 
     // The input variables (except the last one)
-    if (k + 1 < d_state_variables.size()) {
+    if (k + 1 < d_state_variables_structs.size()) {
       out << "  (input" << std::endl;
       std::vector<expr::term_ref> input_vars_k;
-      get_struct_variables(d_input_variables[k], input_vars_k);
+      get_struct_variables(d_input_variables_structs[k], input_vars_k);
       assert(input_vars.size() == input_vars_k.size());
       for (size_t i = 0; i < input_vars_k.size(); ++ i) {
         out << "    (" << input_vars[i] << " " << d_model->get_variable_value(input_vars_k[i]) << ")" << std::endl;
@@ -186,14 +199,14 @@ void state_trace::to_stream(std::ostream& out) const {
 bool state_trace::is_true_in_frame(size_t frame, expr::term_ref f, expr::model::ref model) {
   // Return
   ensure_variables(frame);
-  return model->is_true(f, d_subst_maps[frame]);
+  return model->is_true(f, d_subst_maps_state_to_trace[frame]);
 }
 
 bool state_trace::is_false_in_frame(size_t frame, expr::term_ref f, expr::model::ref model) {
   // Return
   ensure_variables(frame);
-  assert(frame < d_subst_maps.size());
-  return model->is_false(f, d_subst_maps[frame]);
+  assert(frame < d_subst_maps_state_to_trace.size());
+  return model->is_false(f, d_subst_maps_state_to_trace[frame]);
 }
 
 std::ostream& operator << (std::ostream& out, const state_trace& trace) {
@@ -202,7 +215,7 @@ std::ostream& operator << (std::ostream& out, const state_trace& trace) {
 }
 
 void state_trace::gc_collect(const expr::gc_relocator& gc_reloc) {
-  gc_reloc.reloc(d_state_variables);
+  gc_reloc.reloc(d_state_variables_structs);
 }
 
 }

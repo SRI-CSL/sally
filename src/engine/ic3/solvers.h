@@ -74,6 +74,9 @@ class solvers {
   /** Solver for induction queries */
   smt::solver* d_induction_solver;
 
+  /** Depth of the induction solver */
+  size_t d_induction_solver_depth;
+
   /** Relation used in the induction solver */
   expr::term_ref d_transition_relation;
 
@@ -150,6 +153,9 @@ public:
   /** Add a formula to frame k */
   void add_to_reachability_solver(size_t k, expr::term_ref f);
 
+  /** Add a formula to induction solver */
+  void add_to_induction_solver(expr::term_ref f);
+
   struct query_result {
     /** Result of the query */
     smt::solver::result result;
@@ -165,13 +171,10 @@ public:
   query_result query_at(size_t k, expr::term_ref f, smt::solver::formula_class f_class);
 
   /** Check if f is inductive */
-  query_result check_inductive(expr::term_ref f, std::vector<expr::term_ref>& core);
-
-  /** Returns the induction solver */
-  smt::solver* get_induction_solver();
+  query_result check_inductive(expr::term_ref f);
 
   /** Reset induction solver */
-  void reset_induction_solver();
+  void reset_induction_solver(size_t depth);
 
   /** Returns true if inductive checks produce unsat cores */
   bool check_inductive_returns_core() const;
