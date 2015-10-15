@@ -20,6 +20,18 @@ namespace ic3 {
 
 class reachability : public expr::gc_participant {
 
+public:
+
+  /** Status of reachability checks */
+  enum status {
+    REACHABLE,
+    UNREACHABLE,
+    BUDGET_EXCEEDED
+  };
+
+
+private:
+
   /** The term manager */
   const expr::term_manager& d_tm;
 
@@ -67,17 +79,15 @@ class reachability : public expr::gc_participant {
    */
   solvers::query_result check_one_step_reachable(size_t k, expr::term_ref F);
 
+  /**
+   * Check if f is reachable at k, assuming f is unreachable in < k steps.
+   */
+  status check_reachable(size_t k, expr::term_ref f, expr::model::ref f_model, size_t& budget);
+
 public:
 
   /** Construct the reachability checker */
   reachability(const system::context& ctx);
-
-  /** Status of reachability checks */
-  enum status {
-    REACHABLE,
-    UNREACHABLE,
-    BUDGET_EXCEEDED
-  };
 
   /** Initialize the reachability engine */
   void init(const system::transition_system* transition_system, solvers* smt_solvers);
@@ -96,9 +106,9 @@ public:
   void add_valid_up_to(size_t k, expr::term_ref F);
 
   /**
-   * Check if f is reachable at frame k, assuming f is unreachable in < k steps.
+   * Check if f is reachable at any frame start..end, assuming f is unreachable in < start steps.
    */
-  status check_reachable(size_t k, expr::term_ref f, expr::model::ref f_model, size_t& budget);
+  status check_reachable(size_t start, size_t end, expr::term_ref f, expr::model::ref f_model, size_t& budget);
 
   /**
    * Return the counterexample if last query was reachable.

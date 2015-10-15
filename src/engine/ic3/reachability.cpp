@@ -69,6 +69,30 @@ public:
   expr::model::ref model() const { return d_P_model; }
 };
 
+reachability::status reachability::check_reachable(size_t start, size_t end, expr::term_ref f, expr::model::ref f_model, size_t& budget) {
+  assert(budget > 0);
+  assert(start == end);
+  status result = UNREACHABLE;
+  for (size_t k = start; k <= end; ++ k) {
+    // Check reachability at k
+    result = check_reachable(k, f, f_model, budget);
+    // Check result of the current one
+    switch (result) {
+    case REACHABLE:
+      return REACHABLE;
+    case UNREACHABLE:
+      break;
+    case BUDGET_EXCEEDED:
+      return BUDGET_EXCEEDED;
+    }
+    // Did we exceed the budget for the next call
+    if (k < end && budget == 0) {
+      return BUDGET_EXCEEDED;
+    }
+  }
+
+  return UNREACHABLE;
+}
 
 reachability::status reachability::check_reachable(size_t k, expr::term_ref f, expr::model::ref f_model, size_t& budget) {
 

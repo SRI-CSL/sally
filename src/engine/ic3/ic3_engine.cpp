@@ -204,7 +204,11 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   // Check if G is reachable (give a budget enough for frame length fails)
   size_t reachability_budget = ind.get_budget();
   if (reachability_budget == 0) { reachability_budget = default_budget; }
-  reachability::status reachable = d_reachability.check_reachable(d_induction_frame_index, G, result.model, reachability_budget);
+  assert(d_induction_frame_index + 1 >= d_induction_frame_depth);
+  assert(d_induction_frame_depth > 0);
+  size_t start = (d_induction_frame_index + 1) - d_induction_frame_depth;
+  size_t end = d_induction_frame_index;
+  reachability::status reachable = d_reachability.check_reachable(start, end, G, result.model, reachability_budget);
   ind.set_budget(reachability_budget);
   
   // If we've exceeded the budget, we reduce the score

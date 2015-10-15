@@ -536,6 +536,7 @@ void solvers::reset_induction_solver(size_t depth) {
 
 void solvers::output_efsmt(expr::term_ref f, expr::term_ref g) const {
 
+  assert(false); // TODO: not current with the changes to induction solver
   assert(!f.is_null());
   assert(!g.is_null());
 
