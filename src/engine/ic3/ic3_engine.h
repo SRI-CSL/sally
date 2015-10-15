@@ -47,15 +47,13 @@ class induction_obligation {
   expr::term_ref d_P;
   /** The available budget */
   size_t d_budget;
-  /** Should we analyze induction failure */
-  bool d_analyze;
   /** Score of the obligation */
   double d_score;
 
 public:
 
   /** Construct the obligation */
-  induction_obligation(expr::term_manager& tm, expr::term_ref P, size_t budget, bool analzye, double score);
+  induction_obligation(expr::term_manager& tm, expr::term_ref P, size_t budget, double score);
 
   /** Get the formula */
   expr::term_ref formula() const;
@@ -65,9 +63,6 @@ public:
 
   /** Add to used budget */
   void set_budget(size_t size);
-
-  /** Should we anlyze the induction failure */
-  bool analyze_cti() const;
 
   /** Compare for equality */
   bool operator == (const induction_obligation& o) const;
@@ -242,9 +237,6 @@ class ic3_engine : public engine {
 
   /** Is the property invalid */
   bool d_property_invalid;
-
-  /** Is some needed formula invalid */
-  bool d_needed_invalid;
 
   typedef std::multimap<expr::term_ref, expr::term_ref> induction_assumptions_map;
 

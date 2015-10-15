@@ -37,10 +37,9 @@
 namespace sally {
 namespace ic3 {
 
-induction_obligation::induction_obligation(expr::term_manager& tm, expr::term_ref P, size_t budget, bool analyze, double score)
+induction_obligation::induction_obligation(expr::term_manager& tm, expr::term_ref P, size_t budget, double score)
 : d_P(P)
 , d_budget(budget)
-, d_analyze(analyze)
 , d_score(score)
 {
 }
@@ -76,10 +75,6 @@ bool induction_obligation::operator < (const induction_obligation& o) const {
   }
   // Break ties
   return formula() > o.formula();
-}
-
-bool induction_obligation::analyze_cti() const {
-  return d_analyze;
 }
 
 size_t induction_obligation::get_budget() const {
@@ -182,22 +177,20 @@ void ic3_engine::bump_induction_obligation(expr::term_ref f, double amount) {
 
 ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation& ind) {
 
-  bool analyze_cti = ind.analyze_cti();
-  expr::term_ref f = ind.formula();
+  expr::term_ref F = ind.formula();
 
-
-  TRACE("ic3") << "ic3: pushing at " << d_induction_frame_index << ": " << f << std::endl;
+  TRACE("ic3") << "ic3: pushing at " << d_induction_frame_index << ": " << F << std::endl;
 
   size_t default_budget = d_induction_frame_index + 1;
 
   // Check if inductive
-  solvers::query_result result = d_smt->check_inductive(f);
+  solvers::query_result result = d_smt->check_inductive(F);
 
   // If inductive
   if (result.result == smt::solver::UNSAT) {
-    TRACE("ic3") << "ic3: pushing at " << d_induction_frame_index << ": " << f << " is inductive" << std::endl;
+    TRACE("ic3") << "ic3: pushing at " << d_induction_frame_index << ": " << F << " is inductive" << std::endl;
     // Add to the next frame
-    d_induction_obligations_next.push_back(induction_obligation(tm(), f, 0, analyze_cti, ind.get_score() / 2));
+    d_induction_obligations_next.push_back(induction_obligation(tm(), F, 0, ind.get_score() / 2));
     d_stats.frame_pushed->get_value() = d_induction_obligations_next.size();
     return INDUCTION_SUCCESS;
   }
@@ -205,12 +198,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   expr::term_ref G = result.generalization;
   TRACE("ic3::generalization") << "ic3: generalization " << G << std::endl;
   if (output::trace_tag_is_enabled("ic3::check-learnt")) {
-    d_smt->output_efsmt(tm().mk_term(expr::TERM_NOT, f), G);
-  }
-
-  // If we're not analyzing the CTI, we're done
-  if (!analyze_cti) {
-    return INDUCTION_INCONCLUSIVE;
+    d_smt->output_efsmt(tm().mk_term(expr::TERM_NOT, F), G);
   }
 
   // Check if G is reachable (give a budget enough for frame length fails)
@@ -221,7 +209,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   
   // If we've exceeded the budget, we reduce the score
   if (reachability_budget == 0) {
-    bump_induction_obligation(f, -1);
+    bump_induction_obligation(F, -1);
   }
 
   // If reachable, we're not inductive
@@ -257,8 +245,8 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   
   // Try to push assumptions next time (unless, already invalid)
   if (!is_invalid(learnt)) {
-    enqueue_induction_obligation(induction_obligation(tm(), learnt, default_budget, analyze_cti, ind.get_score()));
-    set_refutes_info(f, G, learnt);
+    enqueue_induction_obligation(induction_obligation(tm(), learnt, default_budget, ind.get_score()));
+    set_refutes_info(F, G, learnt);
   }
 
   return INDUCTION_RETRY;
@@ -543,7 +531,7 @@ void ic3_engine::add_initial_states(expr::term_ref I) {
     if (d_induction_frame.find(I) == d_induction_frame.end()) {
       d_reachability.add_to_frame(0, I);
       add_to_induction_frame(I);
-      enqueue_induction_obligation(induction_obligation(tm(), I, 0, true, 0));
+      enqueue_induction_obligation(induction_obligation(tm(), I, 0, 0));
     }
   }
 }
@@ -562,7 +550,7 @@ bool ic3_engine::add_property(expr::term_ref P) {
       if (d_induction_frame.find(P) == d_induction_frame.end()) {
         d_reachability.add_to_frame(0, P);
         add_to_induction_frame(P);
-        enqueue_induction_obligation(induction_obligation(tm(), P, 0, true, 0));
+        enqueue_induction_obligation(induction_obligation(tm(), P, 0, 0));
       }
       bump_induction_obligation(P, 1);
       d_properties.insert(P);
