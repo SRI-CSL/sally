@@ -41,28 +41,17 @@ class solvers;
  * depend on the context. It could be that we're trying to reach P at
  * frame k. Or, we could be trying to prove P is inductive at frame k.
  */
-class induction_obligation {
+struct induction_obligation {
 
   /** The formula in question */
-  expr::term_ref d_P;
+  expr::term_ref formula;
   /** The available budget */
-  size_t d_budget;
+  size_t budget;
   /** Score of the obligation */
-  double d_score;
-
-public:
+  double score;
 
   /** Construct the obligation */
   induction_obligation(expr::term_manager& tm, expr::term_ref P, size_t budget, double score);
-
-  /** Get the formula */
-  expr::term_ref formula() const;
-
-  /** Return the used budget */
-  size_t get_budget() const;
-
-  /** Add to used budget */
-  void set_budget(size_t size);
 
   /** Compare for equality */
   bool operator == (const induction_obligation& o) const;
@@ -73,8 +62,6 @@ public:
   /** Bump the internal score (score is capped below at 1) */
   void bump_score(double amount);
 
-  /** Get the score */
-  double get_score() const;
 };
 
 /** Priority queue for obligations (max-heap) */

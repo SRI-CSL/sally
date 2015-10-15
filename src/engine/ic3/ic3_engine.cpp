@@ -38,51 +38,34 @@ namespace sally {
 namespace ic3 {
 
 induction_obligation::induction_obligation(expr::term_manager& tm, expr::term_ref P, size_t budget, double score)
-: d_P(P)
-, d_budget(budget)
-, d_score(score)
-{
-}
-
-expr::term_ref induction_obligation::formula() const {
-  return d_P;
-}
+: formula(P)
+, budget(budget)
+, score(score)
+{}
 
 bool induction_obligation::operator == (const induction_obligation& o) const {
-  return d_P == o.d_P;
+  return formula == o.formula;
 }
 
 void induction_obligation::bump_score(double amount) {
-  if (d_score + amount >= 0) {
-    d_score += amount;
+  if (score + amount >= 0) {
+    score += amount;
   } else {
-    d_score = 0;
+    score = 0;
   }
-}
-
-double induction_obligation::get_score() const {
-  return d_score;
 }
 
 bool induction_obligation::operator < (const induction_obligation& o) const {
   // Larger score wins
-  if (d_score != o.d_score) {
-    return d_score < o.d_score;
+  if (score != o.score) {
+    return score < o.score;
   }
   // Larger budget wins
-  if (get_budget() != o.get_budget()) {
-    return get_budget() < o.get_budget();
+  if (budget != o.budget) {
+    return budget < o.budget;
   }
   // Break ties
-  return formula() > o.formula();
-}
-
-size_t induction_obligation::get_budget() const {
-  return d_budget;
-}
-
-void induction_obligation::set_budget(size_t size) {
-  d_budget = size;
+  return formula > o.formula;
 }
 
 ic3_engine::ic3_engine(const system::context& ctx)
@@ -144,7 +127,7 @@ induction_obligation ic3_engine::pop_induction_obligation() {
   assert(d_induction_obligations.size() > 0);
   induction_obligation ind = d_induction_obligations.top();
   d_induction_obligations.pop();
-  d_induction_obligations_handles.erase(ind.formula());
+  d_induction_obligations_handles.erase(ind.formula);
   d_stats.queue_size->get_value() = d_induction_obligations.size();
   return ind;
 }
@@ -157,10 +140,10 @@ void ic3_engine::add_to_induction_frame(expr::term_ref F) {
 }
 
 void ic3_engine::enqueue_induction_obligation(const induction_obligation& ind) {
-  assert(d_induction_obligations_handles.find(ind.formula()) == d_induction_obligations_handles.end());
-  assert(d_induction_frame.find(ind.formula()) != d_induction_frame.end());
+  assert(d_induction_obligations_handles.find(ind.formula) == d_induction_obligations_handles.end());
+  assert(d_induction_frame.find(ind.formula) != d_induction_frame.end());
   induction_obligation_queue::handle_type h = d_induction_obligations.push(ind);
-  d_induction_obligations_handles[ind.formula()] = h;
+  d_induction_obligations_handles[ind.formula] = h;
   d_stats.queue_size->get_value() = d_induction_obligations.size();
 }
 
@@ -177,7 +160,7 @@ void ic3_engine::bump_induction_obligation(expr::term_ref f, double amount) {
 
 ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation& ind) {
 
-  expr::term_ref F = ind.formula();
+  expr::term_ref F = ind.formula;
 
   TRACE("ic3") << "ic3: pushing at " << d_induction_frame_index << ": " << F << std::endl;
 
@@ -190,7 +173,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   if (result.result == smt::solver::UNSAT) {
     TRACE("ic3") << "ic3: pushing at " << d_induction_frame_index << ": " << F << " is inductive" << std::endl;
     // Add to the next frame
-    d_induction_obligations_next.push_back(induction_obligation(tm(), F, 0, ind.get_score() / 2));
+    d_induction_obligations_next.push_back(induction_obligation(tm(), F, 0, ind.score / 2));
     d_stats.frame_pushed->get_value() = d_induction_obligations_next.size();
     return INDUCTION_SUCCESS;
   }
@@ -202,14 +185,14 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   }
 
   // Check if G is reachable (give a budget enough for frame length fails)
-  size_t reachability_budget = ind.get_budget();
+  size_t reachability_budget = ind.budget;
   if (reachability_budget == 0) { reachability_budget = default_budget; }
   assert(d_induction_frame_index + 1 >= d_induction_frame_depth);
   assert(d_induction_frame_depth > 0);
   size_t start = (d_induction_frame_index + 1) - d_induction_frame_depth;
   size_t end = d_induction_frame_index;
   reachability::status reachable = d_reachability.check_reachable(start, end, G, result.model, reachability_budget);
-  ind.set_budget(reachability_budget);
+  ind.budget = reachability_budget;
   
   // If we've exceeded the budget, we reduce the score
   if (reachability_budget == 0) {
@@ -249,7 +232,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   
   // Try to push assumptions next time (unless, already invalid)
   if (!is_invalid(learnt)) {
-    enqueue_induction_obligation(induction_obligation(tm(), learnt, default_budget, ind.get_score()));
+    enqueue_induction_obligation(induction_obligation(tm(), learnt, default_budget, ind.score));
     set_refutes_info(F, G, learnt);
   }
 
@@ -361,7 +344,7 @@ void ic3_engine::push_current_frame() {
     induction_obligation ind = pop_induction_obligation();
 
     // If formula is marked as invalid, skip it
-    if (is_invalid(ind.formula())) {
+    if (is_invalid(ind.formula)) {
       continue;
     }
 
@@ -379,9 +362,9 @@ void ic3_engine::push_current_frame() {
       break;
     case INDUCTION_FAIL:
       // Not inductive, mark it
-      set_invalid(ind.formula(), d_induction_frame_index + 1);
+      set_invalid(ind.formula, d_induction_frame_index + 1);
       // Try to extend the counter-example further
-      extend_induction_failure(ind.formula());
+      extend_induction_failure(ind.formula);
       break;
     case INDUCTION_INCONCLUSIVE:
       break;
@@ -453,8 +436,8 @@ engine::result ic3_engine::search() {
     std::vector<induction_obligation>::const_iterator next_it = d_induction_obligations_next.begin();
     for (; next_it != d_induction_obligations_next.end(); ++ next_it) {
       // Push if not shown invalid
-      if (!is_invalid(next_it->formula())) {
-        add_to_induction_frame(next_it->formula());
+      if (!is_invalid(next_it->formula)) {
+        add_to_induction_frame(next_it->formula);
         enqueue_induction_obligation(*next_it);
       }
     }
