@@ -37,6 +37,7 @@ struct ic3_engine_info {
         ("ic3-max", value<unsigned>()->default_value(0), "Maximal frame to consider.")
         ("ic3-add-backward", "Add learnts to previous frames in reachability checks.")
         ("ic3-dont-extend", "Don't attempt to extend induction counter-examples.")
+        ("ic3-use-initial-state", "Use initial state as induction basis")
         ;
   }
 

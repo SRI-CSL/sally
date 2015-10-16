@@ -77,6 +77,7 @@ ic3_engine::ic3_engine(const system::context& ctx)
 , d_reachability(ctx)
 , d_induction_frame_index(0)
 , d_induction_frame_depth(0)
+, d_induction_frame_index_next(0)
 , d_property_invalid(false)
 , d_learning_type(LEARN_UNDEFINED)
 {
@@ -400,7 +401,9 @@ void ic3_engine::push_current_frame() {
       const reachability::cex_type& cex = d_reachability.get_cex();
       assert(cex.size() > 0);
       assert(cex.size() - 1 <= d_induction_frame_index);
-      set_invalid(ind.formula, cex.size() - 1 + d_induction_frame_depth);
+      size_t cex_frame = cex.size() - 1 + d_induction_frame_depth;
+      set_invalid(ind.formula, cex_frame);
+      d_induction_frame_index_next = cex_frame;
       // Try to extend the counter-example further
       extend_induction_failure(ind.formula);
       break;
@@ -437,7 +440,7 @@ engine::result ic3_engine::search() {
     }
 
     // Move to the next frame (will also clear induction solver)
-    d_induction_frame_index += d_induction_frame_depth;
+    d_induction_frame_index = d_induction_frame_index_next;
     d_induction_obligations.clear();
 
     // Induction induction frame is valid up to d_induction_frame, so we can do
@@ -472,8 +475,11 @@ engine::result ic3_engine::search() {
         enqueue_induction_obligation(*next_it);
       }
     }
+
+    // Next frame and safe position
     d_induction_obligations_next.clear();
     d_stats.frame_pushed->get_value() = 0;
+    d_induction_frame_index_next = d_induction_frame_index + d_induction_frame_depth;
 
     // Do garbage collection
     d_smt->gc();
@@ -514,11 +520,14 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   // Initialize the induction solver
   d_induction_frame_index = 0;
   d_induction_frame_depth = 1;
+  d_induction_frame_index_next = 1;
   d_smt->reset_induction_solver(1);
 
   // Add the initial state
-  expr::term_ref I = d_transition_system->get_initial_states();
-  add_initial_states(I);
+  if (ctx().get_options().get_bool("ic3-use-initial-state")) {
+    expr::term_ref I = d_transition_system->get_initial_states();
+    add_initial_states(I);
+  }
 
   // Add the property we're trying to prove (if not already invalid at frame 0)
   bool ok = add_property(d_property->get_formula());

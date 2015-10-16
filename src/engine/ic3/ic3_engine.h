@@ -196,6 +196,9 @@ class ic3_engine : public engine {
   /** Set of obligations for the next frame */
   std::vector<induction_obligation> d_induction_obligations_next;
 
+  /** Next frame it's safe to muve to */
+  size_t d_induction_frame_index_next;
+
   /** Count of obligations per frame */
   std::vector<size_t> d_induction_obligations_count;
 
