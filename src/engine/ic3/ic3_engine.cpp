@@ -467,6 +467,7 @@ engine::result ic3_engine::search() {
         if (ctx().get_options().get_bool("ic3-add-backward")) {
           d_reachability.add_valid_up_to(d_induction_frame_index, next_it->formula);
         }
+        assert(d_smt->query_at_init(tm().mk_term(expr::TERM_NOT, next_it->formula)) == smt::solver::UNSAT);
         add_to_induction_frame(next_it->formula);
         enqueue_induction_obligation(*next_it);
       }
