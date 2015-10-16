@@ -414,6 +414,95 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
   return learnt;
 }
 
+expr::term_ref solvers::get_frame_variable(size_t k) {
+  while (d_frame_variables.size() <= k) {
+    std::stringstream ss;
+    ss << "frame_" << k;
+    expr::term_ref var = d_tm.mk_variable(ss.str(), d_tm.boolean_type());
+    d_frame_variables.push_back(var);
+  }
+  return d_frame_variables[k];
+}
+
+void solvers::gc_collect(const expr::gc_relocator& gc_reloc) {
+  gc_reloc.reloc(d_frame_variables);
+}
+
+void solvers::add_to_reachability_solver(size_t k, expr::term_ref f)  {
+
+  assert(k > 0);
+  assert(k < d_size);
+
+  // Add appropriately
+  if (d_ctx.get_options().get_bool("ic3-single-solver")) {
+    // Add te enabling variable and the implication to enable the assertion
+    expr::term_ref assertion = d_tm.mk_term(expr::TERM_IMPLIES, get_frame_variable(k), f);
+    smt::solver* solver = get_reachability_solver();
+    solver->add(assertion, smt::solver::CLASS_A);
+  } else {
+    // Add directly
+    smt::solver* solver = get_reachability_solver(k);
+    solver->add(f, smt::solver::CLASS_A);
+  }
+}
+
+void solvers::reset_induction_solver(size_t depth) {
+  // Reset the induction solver
+  delete d_induction_solver;
+
+  // Transition relation
+  d_transition_relation = d_transition_system->get_transition_relation();
+
+  // The solver
+  d_induction_solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options(), d_ctx.get_statistics());
+  d_induction_solver_depth = depth;
+
+  // Add variables and transition relation
+  for (size_t k = 0; k <= depth; ++ k) {
+
+    // The variables
+    const std::vector<expr::term_ref>& x = d_trace->get_state_variables(k);
+
+    // Add state variables
+    if (k == 0) {
+      // First frame is A
+      const std::vector<expr::term_ref>& x_state = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_CURRENT);
+      d_induction_solver->add_variables(x_state.begin(), x_state.end(), smt::solver::CLASS_A);
+    } else if (k < depth) {
+      // Intermediate frames are T
+      d_induction_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_T);
+    } else {
+      // Last frame is B
+      d_induction_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_B);
+    }
+
+    // Add input variables
+    if (k > 0) {
+      const std::vector<expr::term_ref>& input = d_trace->get_input_variables(k-1);
+      d_induction_solver->add_variables(input.begin(), input.end(), smt::solver::CLASS_T);
+      // Formula T(x_{k-1}, x_k)
+      expr::term_ref T = d_trace->get_transition_formula(d_transition_relation, k-1);
+      // If transitioning from initial state, move to state vars
+      if (k == 1) {
+        T = d_trace->get_state_formula(0, T);
+      }
+      d_induction_solver->add(T, smt::solver::CLASS_T);
+    }
+  }
+}
+
+
+void solvers::add_to_induction_solver(expr::term_ref f) {
+  assert(d_induction_solver != 0);
+  for (size_t k = 0; k < d_induction_solver_depth; ++ k) {
+    if (k == 0) {
+      d_induction_solver->add(f, smt::solver::CLASS_A);
+    } else {
+      d_induction_solver->add(d_trace->get_state_formula(f, k), smt::solver::CLASS_T);
+    }
+  }
+}
+
 solvers::query_result solvers::check_inductive(expr::term_ref f) {
 
   assert(d_induction_solver != 0);
@@ -447,49 +536,6 @@ solvers::query_result solvers::check_inductive(expr::term_ref f) {
   return result;
 }
 
-expr::term_ref solvers::get_frame_variable(size_t k) {
-  while (d_frame_variables.size() <= k) {
-    std::stringstream ss;
-    ss << "frame_" << k;
-    expr::term_ref var = d_tm.mk_variable(ss.str(), d_tm.boolean_type());
-    d_frame_variables.push_back(var);
-  }
-  return d_frame_variables[k];
-}
-
-void solvers::gc_collect(const expr::gc_relocator& gc_reloc) {
-  gc_reloc.reloc(d_frame_variables);
-}
-
-void solvers::add_to_reachability_solver(size_t k, expr::term_ref f)  {
-
-  assert(k > 0);
-  assert(k < d_size);
-
-  // Add appropriately
-  if (d_ctx.get_options().get_bool("ic3-single-solver")) {
-    // Add te enabling variable and the implication to enable the assertion
-    expr::term_ref assertion = d_tm.mk_term(expr::TERM_IMPLIES, get_frame_variable(k), f);
-    smt::solver* solver = get_reachability_solver();
-    solver->add(assertion, smt::solver::CLASS_A);
-  } else {
-    // Add directly
-    smt::solver* solver = get_reachability_solver(k);
-    solver->add(f, smt::solver::CLASS_A);
-  }
-}
-
-void solvers::add_to_induction_solver(expr::term_ref f) {
-  assert(d_induction_solver != 0);
-  for (size_t k = 0; k < d_induction_solver_depth; ++ k) {
-    if (k == 0) {
-      d_induction_solver->add(d_trace->get_state_formula(f, k), smt::solver::CLASS_A);
-    } else {
-      d_induction_solver->add(d_trace->get_state_formula(f, k), smt::solver::CLASS_T);
-    }
-  }
-}
-
 void solvers::new_reachability_frame() {
   // Make sure we have counter-examples space for 0, ..., size
   ensure_counterexample_solver_depth(d_size);
@@ -508,46 +554,6 @@ size_t solvers::size() {
 
 void solvers::generate_models_for_queries(bool flag) {
   d_generate_models_for_queries = flag;
-}
-
-void solvers::reset_induction_solver(size_t depth) {
-  // Reset the induction solver
-  delete d_induction_solver;
-
-  // Transition relation
-  d_transition_relation = d_transition_system->get_transition_relation();
-
-  // The solver
-  d_induction_solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options(), d_ctx.get_statistics());
-  d_induction_solver_depth = depth;
-
-  // Add variables and transition relation
-  for (size_t k = 0; k <= depth; ++ k) {
-
-    // The variables
-    const std::vector<expr::term_ref>& x = d_trace->get_state_variables(k);
-
-    // Add state variables
-    if (k == 0) {
-      // First frame is A
-      const std::vector<expr::term_ref>& x = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_CURRENT);
-      d_induction_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
-    } else if (k < depth) {
-      // Intermediate frames are T
-      d_induction_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_T);
-    } else {
-      // Last frame is B
-      d_induction_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_B);
-    }
-
-    // Add input variables
-    if (k > 0) {
-      const std::vector<expr::term_ref>& input = d_trace->get_input_variables(k-1);
-      d_induction_solver->add_variables(input.begin(), input.end(), smt::solver::CLASS_T);
-      expr::term_ref T = d_trace->get_transition_formula(d_transition_relation, k-1);
-      d_induction_solver->add(T, smt::solver::CLASS_T);
-    }
-  }
 }
 
 void solvers::output_efsmt(expr::term_ref f, expr::term_ref g) const {

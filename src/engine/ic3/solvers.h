@@ -153,9 +153,6 @@ public:
   /** Add a formula to frame k */
   void add_to_reachability_solver(size_t k, expr::term_ref f);
 
-  /** Add a formula to induction solver */
-  void add_to_induction_solver(expr::term_ref f);
-
   struct query_result {
     /** Result of the query */
     smt::solver::result result;
@@ -173,14 +170,24 @@ public:
   /** Checks formula f for satisfiability at initial frame. */
   smt::solver::result query_at_init(expr::term_ref f);
 
-  /** Check if f is inductive */
-  query_result check_inductive(expr::term_ref f);
-
   /**
    * Reset induction solver so that it has given depth. Depth is the number of
    * transitions. So, if you'd like to try k-induction, you need to do depth k + 1.
+   * The solver will have depth frames and all formulas will be added to frames
+   * < depth.
    */
   void reset_induction_solver(size_t depth);
+
+  /**
+   * Add a formula to induction solver. Formulas will be added to frames < depth.
+   */
+  void add_to_induction_solver(expr::term_ref f);
+
+  /**
+   * Check if f is inductive, i.e. !f is added at frame depth and check for
+   * satisfiability.
+   */
+  query_result check_inductive(expr::term_ref f);
 
   /** Learn forward to refute G at k from k-1 and initial state using reachability solvers */
   expr::term_ref learn_forward(size_t k, expr::term_ref G);

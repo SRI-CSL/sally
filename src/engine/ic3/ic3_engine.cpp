@@ -187,14 +187,26 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   }
 
   //
-  // We know that F is true 0...k. If we reach G at frame j <= k, that means
-  // that F is false at j + induction_depth. Since we know what F is true <= k,
-  // we therefore know that G is not reachable for any j + induction_depth <= k,
+  // We know that F is true 0...k. If the minimal reachable j for G is at frame j,
+  // that means that F is false at j + induction_depth. Since we know what F is true <= k,
+  // we therefore know that G is not reachable at any j + induction_depth <= k,
   // i.e. we need to look at j = k - induction_depth + 1 ... k.
   //
   // If induction_depth = k + 1 (i.e. full depth), we're asking ig G is reachable
   // at 0, so we can't assume that all 0 frame facts are reachable.
   //
+
+  //                                  !F
+  //                         depth     |
+  //       cex          ****************
+  // *******************       |
+  // .......................................................
+  //                   G       |
+  // !G!G          !G!G|       |
+  // FFFFFFFFFFFFFFFFFFFFFFFFFFF
+  //                   |       |
+  //                   j       k
+
 
   // Check if G is reachable (give a budget enough for frame length fails)
   size_t reachability_budget = ind.budget;
@@ -202,6 +214,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   assert(d_induction_frame_index + 1 >= d_induction_frame_depth);
   assert(d_induction_frame_depth > 0);
   size_t start = (d_induction_frame_index + 1) - d_induction_frame_depth;
+  assert(start == 0);
   size_t end = d_induction_frame_index;
   reachability::status reachable = d_reachability.check_reachable(start, end, G, result.model, reachability_budget);
   ind.budget = reachability_budget;
@@ -238,7 +251,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
     }
   }
 
-  // Add to induction frame
+  // Add to induction frame. If we are at frame 0
   assert(d_induction_frame.find(learnt) == d_induction_frame.end());
   add_to_induction_frame(learnt);
 
@@ -478,7 +491,6 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 
   // Initialize
   result r = UNKNOWN;
-  d_induction_frame_index = 0;
 
   // Reset the engine
   reset();
@@ -499,6 +511,7 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   d_reachability.init(d_transition_system, d_smt);
 
   // Initialize the induction solver
+  d_induction_frame_index = 0;
   d_induction_frame_depth = 1;
   d_smt->reset_induction_solver(1);
 
