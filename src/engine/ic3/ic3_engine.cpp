@@ -215,7 +215,6 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   assert(d_induction_frame_index + 1 >= d_induction_frame_depth);
   assert(d_induction_frame_depth > 0);
   size_t start = (d_induction_frame_index + 1) - d_induction_frame_depth;
-  assert(start == 0);
   size_t end = d_induction_frame_index;
   reachability::status reachable = d_reachability.check_reachable(start, end, G, result.model, reachability_budget);
   ind.budget = reachability_budget;
@@ -446,6 +445,12 @@ engine::result ic3_engine::search() {
     // Induction induction frame is valid up to d_induction_frame, so we can do
     // induction of depth one more
     d_induction_frame_depth = d_induction_frame_index + 1;
+    // Check that it wasn't passed in as an option
+    if (ctx().get_options().get_unsigned("ic3-induction-max") > 0) {
+      if (ctx().get_options().get_unsigned("ic3-induction-max") < d_induction_frame_depth) {
+        d_induction_frame_depth = ctx().get_options().get_unsigned("ic3-induction-max");
+      }
+    }
     d_smt->reset_induction_solver(d_induction_frame_depth);
 
     MSG(1) << "ic3: Extending trace to " << d_induction_frame_index << " with induction depth " << d_induction_frame_depth <<
@@ -456,7 +461,7 @@ engine::result ic3_engine::search() {
     d_stats.frame_size->get_value() = 0;
 
     // If exceeded number of frames
-    if (d_induction_frame_index == ctx().get_options().get_unsigned("ic3-max")) {
+    if (ctx().get_options().get_unsigned("ic3-max") > 0 && d_induction_frame_index >= ctx().get_options().get_unsigned("ic3-max")) {
       return engine::INTERRUPTED;
     }
 
@@ -483,11 +488,6 @@ engine::result ic3_engine::search() {
 
     // Do garbage collection
     d_smt->gc();
-
-    // Restart if asked
-    if (ctx().get_options().get_bool("ic3-enable-restarts")) {
-      return engine::UNKNOWN;
-    }
   }
 
   // Didn't prove or disprove, so unknown
