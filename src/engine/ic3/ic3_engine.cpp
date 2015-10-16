@@ -164,7 +164,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
 
   TRACE("ic3") << "ic3: pushing at " << d_induction_frame_index << ": " << F << std::endl;
 
-  size_t default_budget = d_induction_frame_index + 1;
+  size_t default_budget = d_induction_frame_index*d_induction_frame_index + 1;
 
   // Check if inductive
   solvers::query_result result = d_smt->check_inductive(F);
@@ -183,6 +183,16 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   if (output::trace_tag_is_enabled("ic3::check-learnt")) {
     d_smt->output_efsmt(tm().mk_term(expr::TERM_NOT, F), G);
   }
+
+  //
+  // We know that F is true 0...k. If we reach G at frame j <= k, that means
+  // that F is false at j + induction_depth. Since we know what F is true <= k,
+  // we therefore know that G is not reachable for any j + induction_depth <= k,
+  // i.e. we need to look at j = k - induction_depth + 1 ... k.
+  //
+  // If induction_depth = k + 1 (i.e. full depth), we're asking ig G is reachable
+  // at 0, so we can't assume that all 0 frame facts are reachable.
+  //
 
   // Check if G is reachable (give a budget enough for frame length fails)
   size_t reachability_budget = ind.budget;
@@ -516,7 +526,6 @@ void ic3_engine::add_initial_states(expr::term_ref I) {
     }
   } else {
     if (d_induction_frame.find(I) == d_induction_frame.end()) {
-      d_reachability.add_to_frame(0, I);
       add_to_induction_frame(I);
       enqueue_induction_obligation(induction_obligation(tm(), I, 0, 0));
     }
@@ -532,8 +541,8 @@ bool ic3_engine::add_property(expr::term_ref P) {
     }
     return true;
   } else {
-    solvers::query_result result = d_smt->query_at(0, tm().mk_term(expr::TERM_NOT, P), smt::solver::CLASS_A);
-    if (result.result == smt::solver::UNSAT) {
+    smt::solver::result result = d_smt->query_at_init(tm().mk_term(expr::TERM_NOT, P));
+    if (result == smt::solver::UNSAT) {
       if (d_induction_frame.find(P) == d_induction_frame.end()) {
         d_reachability.add_to_frame(0, P);
         add_to_induction_frame(P);

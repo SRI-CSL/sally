@@ -106,19 +106,23 @@ void solvers::init_reachability_solver(size_t k) {
   assert(!d_ctx.get_options().get_bool("ic3-single-solver"));
   assert(k < d_size);
 
-  // The variables from the state types
-  const std::vector<expr::term_ref>& x = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_CURRENT);
-  const std::vector<expr::term_ref>& x_next = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_NEXT);
-  const std::vector<expr::term_ref>& input = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_INPUT);
+  if (d_reachability_solvers.size() <= k) {
 
-  // A solver per frame
-  while (d_reachability_solvers.size() <= k) {
-    smt::solver* solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options(), d_ctx.get_statistics());
-    d_reachability_solvers.push_back(solver);
-    solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
-    solver->add_variables(x_next.begin(), x_next.end(), smt::solver::CLASS_B);
-    solver->add_variables(input.begin(), input.end(), smt::solver::CLASS_T);
-    solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_T);
+    // The variables from the state types
+    const std::vector<expr::term_ref>& x = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_CURRENT);
+    const std::vector<expr::term_ref>& x_next = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_NEXT);
+    const std::vector<expr::term_ref>& input = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_INPUT);
+
+    // A solver per frame
+    while (d_reachability_solvers.size() <= k) {
+      smt::solver* solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options(), d_ctx.get_statistics());
+      d_reachability_solvers.push_back(solver);
+      solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
+      solver->add_variables(x_next.begin(), x_next.end(), smt::solver::CLASS_B);
+      solver->add_variables(input.begin(), input.end(), smt::solver::CLASS_T);
+      // Add transition relation
+      solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_T);
+    }
   }
 }
 
@@ -248,7 +252,18 @@ solvers::query_result::query_result()
 {
 }
 
-solvers::query_result solvers::query_at(size_t k, expr::term_ref f, smt::solver::formula_class f_class) {
+smt::solver::result solvers::query_at_init(expr::term_ref f) {
+  smt::solver* solver = get_initial_solver();
+  smt::solver_scope scope(solver);
+  scope.push();
+
+  query_result result;
+
+  solver->add(f, smt::solver::CLASS_A);
+  return solver->check();
+}
+
+solvers::query_result solvers::query_with_transition_at(size_t k, expr::term_ref f, smt::solver::formula_class f_class) {
 
   smt::solver* solver = 0;
   query_result result;
@@ -347,57 +362,51 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
 
   assert(k > 0);
 
-  // The solvers we'll be using
-  smt::solver* I1_solver = 0;
-  if (d_ctx.get_options().get_bool("ic3-single-solver")) {
-    I1_solver = get_reachability_solver();
-  } else {
-    I1_solver = get_reachability_solver(k-1);
-  }
-  smt::solver* I2_solver = get_initial_solver();
-
-  // If we don't have interpolation, just learn not G
-  if (!I1_solver->supports(smt::solver::INTERPOLATION)) {
+  // Get the interpolant I2 for I => I2, I2 and G unsat
+  smt::solver* I_solver = get_initial_solver();
+  if (!I_solver->supports(smt::solver::INTERPOLATION)) {
     return d_tm.mk_term(expr::TERM_NOT, G);
   }
 
-  // Get the interpolant I1 for: (R_{k-1} and T => I1, I1 and G unsat
-  I1_solver->push();
+  I_solver->push();
+  I_solver->add(G, smt::solver::CLASS_B);
+  smt::solver::result I_result = I_solver->check();
+  unused_var(I_result);
+  assert(I_result == smt::solver::UNSAT);
+  expr::term_ref I_I = I_solver->interpolate();
+  I_solver->pop();
+
+  TRACE("ic3") << "I_I: " << I_I << std::endl;
+
+  // Transition solver
+  smt::solver* T_solver = 0;
   if (d_ctx.get_options().get_bool("ic3-single-solver")) {
-    assert_frame_selection(k-1, I1_solver);
+    T_solver = get_reachability_solver();
+  } else {
+    T_solver = get_reachability_solver(k-1);
+  }
+
+  // Get the interpolant T_I for: (R_{k-1} and T => T_I, T_I and G unsat
+  T_solver->push();
+  if (d_ctx.get_options().get_bool("ic3-single-solver")) {
+    assert_frame_selection(k-1, T_solver);
   }
   expr::term_ref G_next = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, G);
-  I1_solver->add(G_next, smt::solver::CLASS_B);
-  smt::solver::result I1_result = I1_solver->check();
-  unused_var(I1_result);
-  assert(I1_result == smt::solver::UNSAT);
-  expr::term_ref I1 = I1_solver->interpolate();
-  I1 = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_NEXT, system::state_type::STATE_CURRENT, I1);
-  I1_solver->pop();
+  T_solver->add(G_next, smt::solver::CLASS_B);
+  smt::solver::result T_result = T_solver->check();
+  unused_var(T_result);
+  assert(T_result == smt::solver::UNSAT);
+  expr::term_ref T_I = T_solver->interpolate();
+  T_I = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_NEXT, system::state_type::STATE_CURRENT, T_I);
+  T_solver->pop();
 
-  TRACE("ic3") << "I1: " << I1 << std::endl;
-
-  // Get the interpolant I2 for I => I2, I2 and G unsat
-  I2_solver->push();
-  I2_solver->add(G, smt::solver::CLASS_B);
-  smt::solver::result I2_result = I2_solver->check();
-  unused_var(I2_result);
-  assert(I2_result == smt::solver::UNSAT);
-  expr::term_ref I2 = I2_solver->interpolate();
-  I2_solver->pop();
-
-  TRACE("ic3") << "I2: " << I2 << std::endl;
+  TRACE("ic3") << "T_I: " << T_I << std::endl;
 
   // Result is the disjunction of the two
-  expr::term_ref learnt = d_tm.mk_term(expr::TERM_OR, I1, I2);
+  expr::term_ref learnt = d_tm.mk_term(expr::TERM_OR, T_I, I_I);
 
   return learnt;
 }
-
-bool solvers::check_inductive_returns_core() const {
-  return d_induction_solver->supports(smt::solver::UNSAT_CORE);
-}
-
 
 solvers::query_result solvers::check_inductive(expr::term_ref f) {
 

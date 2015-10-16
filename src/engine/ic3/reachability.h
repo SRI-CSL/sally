@@ -106,7 +106,14 @@ public:
   void add_valid_up_to(size_t k, expr::term_ref F);
 
   /**
-   * Check if f is reachable at any frame start..end, assuming f is unreachable in < start steps.
+   * Check if f is reachable at any frame start, ..., end, assuming f is unreachable
+   * in < start steps.
+   *
+   * It returns unreachable, one can use learn_froward to learn something true
+   * 0 ... end, that refutes f.
+   *
+   * If it returns reachable, the counter-example generalizations are stored in
+   * d_cex (of lenght start <= l <= end) and can be obtained with get_cex().
    */
   status check_reachable(size_t start, size_t end, expr::term_ref f, expr::model::ref f_model, size_t& budget);
 

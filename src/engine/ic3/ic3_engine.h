@@ -225,8 +225,6 @@ class ic3_engine : public engine {
   /** Is the property invalid */
   bool d_property_invalid;
 
-  typedef std::multimap<expr::term_ref, expr::term_ref> induction_assumptions_map;
-
   /**
    * The formula f has been shown not induction by a concrete counterexample.
    * The counterexample is recorded in C: d_counterexample. Try to extend it

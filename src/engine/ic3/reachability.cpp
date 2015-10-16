@@ -38,7 +38,7 @@ solvers::query_result reachability::check_one_step_reachable(size_t k, expr::ter
   expr::term_ref F_next = state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, F);
 
   // Query
-  return d_smt->query_at(k-1, F_next, smt::solver::CLASS_B);
+  return d_smt->query_with_transition_at(k-1, F_next, smt::solver::CLASS_B);
 }
 
 
@@ -101,6 +101,21 @@ reachability::status reachability::check_reachable(size_t k, expr::term_ref f, e
   assert(budget > 0);
   ensure_frame(k);
 
+  // Special case for k = 0
+  if (k == 0) {
+    smt::solver::result result = d_smt->query_at_init(f);
+    switch (result) {
+    case smt::solver::UNSAT:
+      return UNREACHABLE;
+    case smt::solver::SAT:
+      d_cex.clear();
+      d_cex.push_front(f);
+      return REACHABLE;
+    default:
+      assert(false);
+    }
+  }
+
   // Queue of reachability obligations
   std::vector<reachability_obligation> reachability_obligations;
   reachability_obligations.push_back(reachability_obligation(k, f, f_model));
@@ -115,9 +130,9 @@ reachability::status reachability::check_reachable(size_t k, expr::term_ref f, e
     // If we're at 0 frame, we're reachable: anything passed in is consistent
     // part of the abstraction
     if (reach.frame() == 0) {
-      // We're reachable, mark it
+      // We're reachable since we got here by going back to I, mark it
       reachable = true;
-      // Remember the counterexample and notify the analyzer
+      // Remember the counterexample
       d_cex.clear();
       for (size_t i = 0; i < reachability_obligations.size(); ++ i) {
         d_cex.push_front(reachability_obligations[i].formula());
@@ -171,8 +186,12 @@ void reachability::ensure_frame(size_t k) {
   while (d_frame_content.size() <= k) {
     // Add the empty frame content
     d_frame_content.push_back(formula_set());
-    // Solvers new frame
     d_smt->new_reachability_frame();
+    // If first frame, add initial states
+    if (d_frame_content.size() == 1) {
+      d_frame_content.back().insert(d_transition_system->get_initial_states());
+      d_smt->add_to_reachability_solver(0, d_transition_system->get_initial_states());
+    }
   }
 }
 

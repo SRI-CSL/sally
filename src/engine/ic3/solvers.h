@@ -92,6 +92,9 @@ class solvers {
   /** Boolean variable (enabling the frame) */
   std::vector<expr::term_ref> d_frame_variables;
 
+  /** Returns the induction solver */
+  smt::solver* get_initial_solver();
+
   /** Initialize the reachability solver for frame k */
   void init_reachability_solver(size_t k);
 
@@ -100,9 +103,6 @@ class solvers {
 
   /** Get the enabling varibale of frame k */
   expr::term_ref get_frame_variable(size_t k);
-
-  /** Returns the induction solver */
-  smt::solver* get_initial_solver();
 
   /** Returns the unique reachability solver */
   smt::solver* get_reachability_solver();
@@ -168,16 +168,16 @@ public:
   };
 
   /** Checks formula f for satisfiability at frame k using the reachability solvers and returns the generalization. */
-  query_result query_at(size_t k, expr::term_ref f, smt::solver::formula_class f_class);
+  query_result query_with_transition_at(size_t k, expr::term_ref f, smt::solver::formula_class f_class);
+
+  /** Checks formula f for satisfiability at initial frame. */
+  smt::solver::result query_at_init(expr::term_ref f);
 
   /** Check if f is inductive */
   query_result check_inductive(expr::term_ref f);
 
   /** Reset induction solver */
   void reset_induction_solver(size_t depth);
-
-  /** Returns true if inductive checks produce unsat cores */
-  bool check_inductive_returns_core() const;
 
   /** Learn forward to refute G at k from k-1 and initial state using reachability solvers */
   expr::term_ref learn_forward(size_t k, expr::term_ref G);
