@@ -241,8 +241,6 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   // Add to induction frame
   assert(d_induction_frame.find(learnt) == d_induction_frame.end());
   add_to_induction_frame(learnt);
-  
-  // TODO: maybe also add to reachability frames
 
   // Try to push assumptions next time (unless, already invalid)
   if (!is_invalid(learnt)) {
@@ -461,6 +459,10 @@ engine::result ic3_engine::search() {
     for (; next_it != d_induction_obligations_next.end(); ++ next_it) {
       // Push if not shown invalid
       if (!is_invalid(next_it->formula)) {
+        // Formula is valid up to induction frame, so we add it to reachability
+        if (ctx().get_options().get_bool("ic3-add-backward")) {
+          d_reachability.add_valid_up_to(d_induction_frame_depth, next_it->formula);
+        }
         add_to_induction_frame(next_it->formula);
         enqueue_induction_obligation(*next_it);
       }

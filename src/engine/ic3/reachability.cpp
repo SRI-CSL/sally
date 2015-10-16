@@ -206,7 +206,6 @@ void reachability::add_valid_up_to(size_t k, expr::term_ref F) {
   TRACE("ic3") << "ic3: adding at " << k << ": " << F << std::endl;
   ensure_frame(k);
   assert(k > 0);
-  assert(k < d_frame_content.size());
 
   // Add to all frames from 1..k (not adding to 0, initial states need no refinement)
   int i;
