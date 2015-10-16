@@ -194,11 +194,6 @@ void reachability::ensure_frame(size_t k) {
     // Add the empty frame content
     d_frame_content.push_back(formula_set());
     d_smt->new_reachability_frame();
-    // If first frame, add initial states
-    if (d_frame_content.size() == 1) {
-      d_frame_content.back().insert(d_transition_system->get_initial_states());
-      d_smt->add_to_reachability_solver(0, d_transition_system->get_initial_states());
-    }
   }
 }
 

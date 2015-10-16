@@ -257,14 +257,15 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
 
   assert(cex.size() > 0);
   //                                  !F
-  //                        depth      |
+  //                         depth     |
   //       cex          ****************
-  // *******************
+  // *******************       |      |
   // .......................................................
-  //                   G
-  // !G!G          !G!G
+  //                   G       |      |
+  // !G!G          !G!G        |      |
   // FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
-  //
+  //                           |
+  //                         frame
 
   // We have a counter-example to inductiveness of f at frame cex_depth + induction_size
   // and cex d_counterexample has its generalization at the back.
@@ -272,12 +273,11 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
 
   // Solver for checking
   smt::solver_scope solver_scope;
-  d_smt->ensure_counterexample_solver_depth(d_induction_frame_index+1); // Depth needed
+  d_smt->ensure_counterexample_solver_depth(d_induction_frame_index+1); // Smalleet depth needed
   d_smt->get_counterexample_solver(solver_scope);
   solver_scope.push();
   smt::solver* solver = solver_scope.get_solver();
 
-  // Sync the counterexample solver to be frame index depth
   assert(cex.size() - 1 <= d_smt->get_counterexample_solver_depth());
 
   // Assert all the generalizations
@@ -429,7 +429,7 @@ engine::result ic3_engine::search() {
 
     // Induction induction frame is valid up to d_induction_frame, so we can do
     // induction of depth one more
-    d_induction_frame_depth = d_induction_frame_index;
+    d_induction_frame_depth = d_induction_frame_index + 1;
     d_smt->reset_induction_solver(d_induction_frame_depth);
 
     MSG(1) << "ic3: Extending trace to " << d_induction_frame_index << " with induction depth " << d_induction_frame_depth <<
@@ -446,14 +446,13 @@ engine::result ic3_engine::search() {
 
     // Add formulas to the new frame
     d_induction_frame.clear();
-    d_smt->reset_induction_solver(d_induction_frame_depth);
     std::vector<induction_obligation>::const_iterator next_it = d_induction_obligations_next.begin();
     for (; next_it != d_induction_obligations_next.end(); ++ next_it) {
       // Push if not shown invalid
       if (!is_invalid(next_it->formula)) {
         // Formula is valid up to induction frame, so we add it to reachability
         if (ctx().get_options().get_bool("ic3-add-backward")) {
-          d_reachability.add_valid_up_to(d_induction_frame_depth, next_it->formula);
+          d_reachability.add_valid_up_to(d_induction_frame_index, next_it->formula);
         }
         add_to_induction_frame(next_it->formula);
         enqueue_induction_obligation(*next_it);
@@ -552,7 +551,6 @@ bool ic3_engine::add_property(expr::term_ref P) {
     smt::solver::result result = d_smt->query_at_init(tm().mk_term(expr::TERM_NOT, P));
     if (result == smt::solver::UNSAT) {
       if (d_induction_frame.find(P) == d_induction_frame.end()) {
-        d_reachability.add_to_frame(0, P);
         add_to_induction_frame(P);
         enqueue_induction_obligation(induction_obligation(tm(), P, 0, 0));
       }

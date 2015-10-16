@@ -122,6 +122,9 @@ void solvers::init_reachability_solver(size_t k) {
       solver->add_variables(input.begin(), input.end(), smt::solver::CLASS_T);
       // Add transition relation
       solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_T);
+      if (d_reachability_solvers.size() == 1) {
+        solver->add(d_transition_system->get_initial_states(), smt::solver::CLASS_A);
+      }
     }
   }
 }
@@ -360,8 +363,6 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
 
   TRACE("ic3") << "learning forward to refute: " << G << std::endl;
 
-  assert(k > 0);
-
   // Get the interpolant I2 for I => I2, I2 and G unsat
   smt::solver* I_solver = get_initial_solver();
   if (!I_solver->supports(smt::solver::INTERPOLATION)) {
@@ -377,6 +378,11 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
   I_solver->pop();
 
   TRACE("ic3") << "I_I: " << I_I << std::endl;
+
+  if (k == 0) {
+    // If refuting at 0, it's just I
+    return I_I;
+  }
 
   // Transition solver
   smt::solver* T_solver = 0;
@@ -457,6 +463,7 @@ void solvers::gc_collect(const expr::gc_relocator& gc_reloc) {
 
 void solvers::add_to_reachability_solver(size_t k, expr::term_ref f)  {
 
+  assert(k > 0);
   assert(k < d_size);
 
   // Add appropriately

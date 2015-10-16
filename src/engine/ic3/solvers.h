@@ -176,7 +176,10 @@ public:
   /** Check if f is inductive */
   query_result check_inductive(expr::term_ref f);
 
-  /** Reset induction solver */
+  /**
+   * Reset induction solver so that it has given depth. Depth is the number of
+   * transitions. So, if you'd like to try k-induction, you need to do depth k + 1.
+   */
   void reset_induction_solver(size_t depth);
 
   /** Learn forward to refute G at k from k-1 and initial state using reachability solvers */
