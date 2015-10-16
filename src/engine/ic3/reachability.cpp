@@ -72,7 +72,6 @@ public:
 reachability::status reachability::check_reachable(size_t start, size_t end, expr::term_ref f, expr::model::ref f_model, size_t& budget) {
   assert(budget > 0);
   assert(start <= end);
-  assert(d_transition_system->get_state_type()->is_state_formula(f));
 
   status result = UNREACHABLE;
 
@@ -222,7 +221,6 @@ void reachability::add_valid_up_to(size_t k, expr::term_ref F) {
 void reachability::add_to_frame(size_t k, expr::term_ref f) {
   ensure_frame(k);
   assert(d_frame_content[k].find(f) == d_frame_content[k].end());
-  assert(d_transition_system->get_state_type()->is_state_formula(f));
 
   // Add to solvers
   d_smt->add_to_reachability_solver(k, f);

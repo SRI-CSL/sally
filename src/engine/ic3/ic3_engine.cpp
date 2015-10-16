@@ -524,7 +524,7 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   d_smt->reset_induction_solver(1);
 
   // Add the initial state
-  if (ctx().get_options().get_bool("ic3-use-initial-state")) {
+  if (!ctx().get_options().get_bool("ic3-no-initial-state")) {
     expr::term_ref I = d_transition_system->get_initial_states();
     add_initial_states(I);
   }
