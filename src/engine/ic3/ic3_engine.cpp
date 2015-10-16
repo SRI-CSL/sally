@@ -426,13 +426,14 @@ engine::result ic3_engine::search() {
     // Move to the next frame (will also clear induction solver)
     d_induction_frame_index += d_induction_frame_depth;
     d_induction_obligations.clear();
-    d_smt->reset_induction_solver(d_induction_frame_depth);
 
     // Induction induction frame is valid up to d_induction_frame, so we can do
     // induction of depth one more
-    d_induction_frame_depth = d_induction_frame_index + 1;
+    d_induction_frame_depth = d_induction_frame_index;
+    d_smt->reset_induction_solver(d_induction_frame_depth);
 
-    MSG(1) << "ic3: Extending trace to " << d_induction_frame_index << " with induction depth " << d_induction_frame_depth << std::endl;
+    MSG(1) << "ic3: Extending trace to " << d_induction_frame_index << " with induction depth " << d_induction_frame_depth <<
+        " (" << d_induction_obligations_next.size() << "/" << d_induction_frame.size() << ")" << std::endl;
 
     d_stats.frame_index->get_value() = d_induction_frame_index;
     d_stats.induction_depth->get_value() = d_induction_frame_depth;
