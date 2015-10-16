@@ -81,12 +81,14 @@ ic3_engine::ic3_engine(const system::context& ctx)
 , d_learning_type(LEARN_UNDEFINED)
 {
   d_stats.frame_index = new utils::stat_int("ic3::frame_index", 0);
+  d_stats.induction_depth = new utils::stat_int("ic3::induction_depth", 0);
   d_stats.frame_size = new utils::stat_int("ic3::frame_size", 0);
   d_stats.frame_pushed = new utils::stat_int("ic3::frame_pushed", 0);
   d_stats.queue_size = new utils::stat_int("ic3::queue_size", 0);
   d_stats.max_cex_depth = new utils::stat_int("ic3::max_cex_depth", 0);
   ctx.get_statistics().add(new utils::stat_delimiter());
   ctx.get_statistics().add(d_stats.frame_index);
+  ctx.get_statistics().add(d_stats.induction_depth);
   ctx.get_statistics().add(d_stats.frame_size);
   ctx.get_statistics().add(d_stats.frame_pushed);
   ctx.get_statistics().add(d_stats.queue_size);
@@ -236,10 +238,12 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
     }
   }
 
-  // Add to inductino frame
+  // Add to induction frame
   assert(d_induction_frame.find(learnt) == d_induction_frame.end());
   add_to_induction_frame(learnt);
   
+  // TODO: maybe also add to reachability frames
+
   // Try to push assumptions next time (unless, already invalid)
   if (!is_invalid(learnt)) {
     enqueue_induction_obligation(induction_obligation(tm(), learnt, default_budget, ind.score));
@@ -254,10 +258,19 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
   const std::deque<expr::term_ref>& cex = d_reachability.get_cex();
 
   assert(cex.size() > 0);
+  //                                  !F
+  //                        depth      |
+  //       cex          ****************
+  // *******************
+  // .......................................................
+  //                   G
+  // !G!G          !G!G
+  // FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+  //
 
-  // We have a counter-example to inductiveness of f at at pushing frame
-  // and d_counterexample has its generalization at the back.
-  assert(cex.size() == d_induction_frame_index + 1);
+  // We have a counter-example to inductiveness of f at frame cex_depth + induction_size
+  // and cex d_counterexample has its generalization at the back.
+  assert(cex.size() - 1 + d_induction_frame_depth > d_induction_frame_index);
 
   // Solver for checking
   smt::solver_scope solver_scope;
@@ -266,7 +279,7 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
   smt::solver* solver = solver_scope.get_solver();
 
   // Sync the counterexample solver
-  d_smt->ensure_counterexample_solver_depth(d_induction_frame_index);
+  d_smt->ensure_counterexample_solver_depth(cex.size() + d_induction_frame_depth);
 
   // Assert all the generalizations
   size_t k = 0;
@@ -276,8 +289,10 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
     solver->add(G_k, smt::solver::CLASS_A);
   }
 
+  // Move to where f is false
+  k = cex.size() - 1 + d_induction_frame_depth;
+
   // Assert f at next frame
-  assert(k == d_induction_frame_index + 1);
   d_smt->ensure_counterexample_solver_depth(k);
   solver->add(d_trace->get_state_formula(tm().mk_term(expr::TERM_NOT, f), k), smt::solver::CLASS_A);
 
@@ -287,12 +302,8 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
   expr::model::ref model = solver->get_model();
   d_trace->set_model(model);
 
-  if (ai()) {
-    ai()->notify_reachable(d_trace);
-  }
-
   // Try to extend it
-  for (;; ++ k) {
+  for (;;) {
 
     // We know there is a counterexample to induction of f: 0, ..., k-1, with f
     // being false at k. We try to extend it to falsify the reason we
@@ -316,6 +327,7 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
     }
 
     // Try to extend
+    k = k + get_refutes_depth(f);
     f = get_parent(f);
 
     // If invalid already, done
@@ -323,9 +335,9 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
       break;
     }
 
-    // Check at frame k + 1
-    d_smt->ensure_counterexample_solver_depth(k+1);
-    solver->add(d_trace->get_state_formula(tm().mk_term(expr::TERM_NOT, f), k+1), smt::solver::CLASS_A);
+    // Check at frame of the parent
+    d_smt->ensure_counterexample_solver_depth(k);
+    solver->add(d_trace->get_state_formula(tm().mk_term(expr::TERM_NOT, f), k), smt::solver::CLASS_A);
 
     // If not a generalization we need to check
     r = solver->check();
@@ -336,12 +348,9 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
     }
 
     // We're sat (either by knowing, or by checking), so we extend further
-    set_invalid(f, k+1);
+    set_invalid(f, k);
     model = solver->get_model();
     d_trace->set_model(model);
-    if (ai()) {
-      ai()->notify_reachable(d_trace);
-    }
   }
 }
 
@@ -430,9 +439,14 @@ engine::result ic3_engine::search() {
     d_induction_obligations.clear();
     d_smt->reset_induction_solver(d_induction_frame_depth);
 
-    MSG(1) << "ic3: Extending trace to " << d_induction_frame_index << std::endl;
+    // Induction induction frame is valid up to d_induction_frame, so we can do
+    // induction of depth one more
+    d_induction_frame_depth = d_induction_frame_index + 1;
+
+    MSG(1) << "ic3: Extending trace to " << d_induction_frame_index << " with induction depth " << d_induction_frame_depth << std::endl;
 
     d_stats.frame_index->get_value() = d_induction_frame_index;
+    d_stats.induction_depth->get_value() = d_induction_frame_depth;
     d_stats.frame_size->get_value() = 0;
 
     // If exceeded number of frames
@@ -583,13 +597,19 @@ void ic3_engine::gc_collect(const expr::gc_relocator& gc_reloc) {
 }
 
 void ic3_engine::set_refutes_info(expr::term_ref f, expr::term_ref g, expr::term_ref l) {
-  d_frame_formula_parent_info[l] = frame_formula_parent_info(f, g);
+  d_frame_formula_parent_info[l] = frame_formula_parent_info(f, g, d_induction_frame_depth);
 }
 
 expr::term_ref ic3_engine::get_refutes(expr::term_ref l) const {
   assert(has_parent(l));
   expr::term_ref_map<frame_formula_parent_info>::const_iterator find = d_frame_formula_parent_info.find(l);
   return find->second.refutes;
+}
+
+size_t ic3_engine::get_refutes_depth(expr::term_ref l) const {
+  assert(has_parent(l));
+  expr::term_ref_map<frame_formula_parent_info>::const_iterator find = d_frame_formula_parent_info.find(l);
+  return find->second.depth;
 }
 
 expr::term_ref ic3_engine::get_parent(expr::term_ref l) const {

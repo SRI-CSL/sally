@@ -71,8 +71,10 @@ public:
 
 reachability::status reachability::check_reachable(size_t start, size_t end, expr::term_ref f, expr::model::ref f_model, size_t& budget) {
   assert(budget > 0);
-  assert(start == end);
+  assert(start <= end);
+
   status result = UNREACHABLE;
+
   for (size_t k = start; k <= end; ++ k) {
     // Check reachability at k
     result = check_reachable(k, f, f_model, budget);

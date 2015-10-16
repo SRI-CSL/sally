@@ -92,10 +92,12 @@ struct frame_formula_parent_info {
   expr::term_ref parent;
   /** This formula was introduced to eliminate this counter-example generalization */
   expr::term_ref refutes;
+  /** How much depth > 0 */
+  size_t depth;
 
-  frame_formula_parent_info() {}
-  frame_formula_parent_info(expr::term_ref parent, expr::term_ref refutes)
-  : parent(parent), refutes(refutes) {}
+  frame_formula_parent_info(): depth(0) {}
+  frame_formula_parent_info(expr::term_ref parent, expr::term_ref refutes, size_t depth)
+  : parent(parent), refutes(refutes), depth(depth) {}
 };
 
 class ic3_engine : public engine {
@@ -120,6 +122,7 @@ class ic3_engine : public engine {
   /** IC3 statistics */
   struct stats {
     utils::stat_int* frame_index;
+    utils::stat_int* induction_depth;
     utils::stat_int* frame_size;
     utils::stat_int* frame_pushed;
     utils::stat_int* queue_size;
@@ -133,11 +136,6 @@ class ic3_engine : public engine {
    * of the state variables (k-1)-th frame.
    */
   solvers::query_result check_one_step_reachable(size_t k, expr::term_ref f);
-
-  /**
-   * Check if the formula or any of its parents is marked as invalid.
-   */
-  bool formula_or_parent_is_invalid(expr::term_ref f);
 
   enum induction_result {
     // Formula is inductive
@@ -173,6 +171,9 @@ class ic3_engine : public engine {
 
   /** Get the parent of l */
   expr::term_ref get_parent(expr::term_ref l) const;
+
+  /** Get the depth of refutation */
+  size_t get_refutes_depth(expr::term_ref l) const;
 
   /** Does l have a parent */
   bool has_parent(expr::term_ref l) const;
