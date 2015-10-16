@@ -108,8 +108,10 @@ reachability::status reachability::check_reachable(size_t k, expr::term_ref f, e
     smt::solver::result result = d_smt->query_at_init(f);
     switch (result) {
     case smt::solver::UNSAT:
+      TRACE("ic3") << "ic3: checking reachability at " << k << ": unreachable" << std::endl;
       return UNREACHABLE;
     case smt::solver::SAT:
+      TRACE("ic3") << "ic3: checking reachability at " << k << ": reachable" << std::endl;
       d_cex.clear();
       d_cex.push_front(f);
       return REACHABLE;
@@ -163,6 +165,7 @@ reachability::status reachability::check_reachable(size_t k, expr::term_ref f, e
       // Use the budget unless we succeeded
       budget --;
       if (budget == 0 && !reachability_obligations.empty()) {
+        TRACE("ic3") << "ic3: checking reachability at " << k << ": budget exceeded" << std::endl;
         return BUDGET_EXCEEDED;
       }
     } else {
@@ -175,9 +178,11 @@ reachability::status reachability::check_reachable(size_t k, expr::term_ref f, e
 
   // All discharged, so it's not reachable
   if (reachable) {
+    TRACE("ic3") << "ic3: checking reachability at " << k << ": reachable" << std::endl;
     d_stats.reachable->get_value() ++;
     return REACHABLE;
   } else {
+    TRACE("ic3") << "ic3: checking reachability at " << k << ": unreachable" << std::endl;
     d_stats.unreachable->get_value() ++;
     return UNREACHABLE;
   }

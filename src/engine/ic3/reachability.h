@@ -29,6 +29,8 @@ public:
     BUDGET_EXCEEDED
   };
 
+  /** Type of reachability cex */
+  typedef std::deque<expr::term_ref> cex_type;
 
 private:
 
@@ -43,8 +45,6 @@ private:
 
   /** Solvers we're using */
   solvers* d_smt;
-
-  typedef std::deque<expr::term_ref> cex_type;
 
   /**
    * A counter-example, if any, to the current induction check. The queue is

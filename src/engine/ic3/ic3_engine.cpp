@@ -253,7 +253,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
 
 void ic3_engine::extend_induction_failure(expr::term_ref f) {
 
-  const std::deque<expr::term_ref>& cex = d_reachability.get_cex();
+  const reachability::cex_type& cex = d_reachability.get_cex();
 
   assert(cex.size() > 0);
   //                                  !F
@@ -272,12 +272,13 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
 
   // Solver for checking
   smt::solver_scope solver_scope;
+  d_smt->ensure_counterexample_solver_depth(d_induction_frame_index+1); // Depth needed
   d_smt->get_counterexample_solver(solver_scope);
   solver_scope.push();
   smt::solver* solver = solver_scope.get_solver();
 
-  // Sync the counterexample solver
-  d_smt->ensure_counterexample_solver_depth(cex.size() + d_induction_frame_depth);
+  // Sync the counterexample solver to be frame index depth
+  assert(cex.size() - 1 <= d_smt->get_counterexample_solver_depth());
 
   // Assert all the generalizations
   size_t k = 0;
@@ -299,6 +300,10 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
   assert(r == smt::solver::SAT);
   expr::model::ref model = solver->get_model();
   d_trace->set_model(model);
+
+  if (ctx().get_options().get_bool("ic3-dont-extend")) {
+    return;
+  }
 
   // Try to extend it
   for (;;) {
@@ -377,12 +382,16 @@ void ic3_engine::push_current_frame() {
     case INDUCTION_SUCCESS:
       // Boss
       break;
-    case INDUCTION_FAIL:
+    case INDUCTION_FAIL: {
       // Not inductive, mark it
-      set_invalid(ind.formula, d_induction_frame_index + 1);
+      const reachability::cex_type& cex = d_reachability.get_cex();
+      assert(cex.size() > 0);
+      assert(cex.size() - 1 <= d_induction_frame_index);
+      set_invalid(ind.formula, cex.size() - 1 + d_induction_frame_depth);
       // Try to extend the counter-example further
       extend_induction_failure(ind.formula);
       break;
+    }
     case INDUCTION_INCONCLUSIVE:
       break;
     }
@@ -390,25 +399,7 @@ void ic3_engine::push_current_frame() {
 
   // Dump dependency graph if asked
   if (ctx().get_options().get_bool("ic3-dump-dependencies")) {
-    std::stringstream ss;
-    ss << "dependency." << d_induction_frame_index << ".dot";
-    std::ofstream output(ss.str().c_str());
-
-    output << "digraph G {" << std::endl;
-
-    // Output relationships
-    expr::term_ref_map<frame_formula_parent_info>::const_iterator it = d_frame_formula_parent_info.begin();
-    expr::term_ref_map<frame_formula_parent_info>::const_iterator it_end = d_frame_formula_parent_info.end();
-    for (; it != it_end; ++ it) {
-      expr::term_ref learnt = it->first;
-      expr::term_ref parent = it->second.parent;
-      if (is_invalid(learnt)) {
-        output << tm().id_of(learnt) << " [color = red];" << std::endl;
-      }
-      output << tm().id_of(learnt) << "->" << tm().id_of(parent) << ";" << std::endl;
-    }
-
-    output << "}" << std::endl;
+    dump_dependencies();
   }
 }
 
@@ -624,6 +615,28 @@ bool ic3_engine::has_parent(expr::term_ref l) const {
   expr::term_ref_map<frame_formula_parent_info>::const_iterator find = d_frame_formula_parent_info.find(l);
   if (find == d_frame_formula_parent_info.end()) { return false; }
   return !find->second.parent.is_null();
+}
+
+void ic3_engine::dump_dependencies() const {
+  std::stringstream ss;
+  ss << "dependency." << d_induction_frame_index << ".dot";
+  std::ofstream output(ss.str().c_str());
+
+  output << "digraph G {" << std::endl;
+
+  // Output relationships
+  expr::term_ref_map<frame_formula_parent_info>::const_iterator it = d_frame_formula_parent_info.begin();
+  expr::term_ref_map<frame_formula_parent_info>::const_iterator it_end = d_frame_formula_parent_info.end();
+  for (; it != it_end; ++ it) {
+    expr::term_ref learnt = it->first;
+    expr::term_ref parent = it->second.parent;
+    if (is_invalid(learnt)) {
+      output << tm().id_of(learnt) << " [color = red];" << std::endl;
+    }
+    output << tm().id_of(learnt) << "->" << tm().id_of(parent) << ";" << std::endl;
+  }
+
+  output << "}" << std::endl;
 }
 
 

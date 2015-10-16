@@ -261,6 +261,9 @@ class ic3_engine : public engine {
   /** Type of learning to use */
   learning_type d_learning_type;
 
+  /** Debug stuff */
+  void dump_dependencies() const;
+
 public:
 
   ic3_engine(const system::context& ctx);
