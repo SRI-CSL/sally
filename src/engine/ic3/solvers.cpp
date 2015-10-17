@@ -489,8 +489,6 @@ void solvers::reset_induction_solver(size_t depth) {
       d_induction_solver->add(T, smt::solver::CLASS_T);
     }
   }
-
-  assert(d_induction_solver->check() == smt::solver::SAT);
 }
 
 
@@ -503,7 +501,6 @@ void solvers::add_to_induction_solver(expr::term_ref f) {
       d_induction_solver->add(d_trace->get_state_formula(f, k), smt::solver::CLASS_T);
     }
   }
-  assert(d_induction_solver->check() == smt::solver::SAT);
 }
 
 solvers::query_result solvers::check_inductive(expr::term_ref f) {

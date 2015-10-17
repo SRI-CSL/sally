@@ -402,7 +402,7 @@ void ic3_engine::push_current_frame() {
       assert(cex.size() - 1 <= d_induction_frame_index);
       size_t cex_frame = cex.size() - 1 + d_induction_frame_depth;
       set_invalid(ind.formula, cex_frame);
-      d_induction_frame_index_next = cex_frame;
+      d_induction_frame_index_next = std::min(d_induction_frame_index_next, cex_frame);
       // Try to extend the counter-example further
       extend_induction_failure(ind.formula);
       break;
