@@ -37,10 +37,11 @@
 namespace sally {
 namespace ic3 {
 
-induction_obligation::induction_obligation(expr::term_manager& tm, expr::term_ref P, size_t budget, double score)
+induction_obligation::induction_obligation(expr::term_manager& tm, expr::term_ref P, size_t budget, double score, size_t breadth)
 : formula(P)
 , budget(budget)
 , score(score)
+, breadth(breadth)
 {}
 
 bool induction_obligation::operator == (const induction_obligation& o) const {
@@ -56,6 +57,10 @@ void induction_obligation::bump_score(double amount) {
 }
 
 bool induction_obligation::operator < (const induction_obligation& o) const {
+  // Smaller bredth wins
+  if (breadth != o.breadth) {
+    return breadth > o.breadth;
+  }
   // Larger score wins
   if (score != o.score) {
     return score < o.score;
@@ -176,7 +181,7 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   if (result.result == smt::solver::UNSAT) {
     TRACE("ic3") << "ic3: pushing at " << d_induction_frame_index << ": " << F << " is inductive" << std::endl;
     // Add to the next frame
-    d_induction_obligations_next.push_back(induction_obligation(tm(), F, 0, ind.score / 2));
+    d_induction_obligations_next.push_back(induction_obligation(tm(), F, 0, ind.score / 2, 0));
     d_stats.frame_pushed->get_value() = d_induction_obligations_next.size();
     return INDUCTION_SUCCESS;
   }
@@ -254,10 +259,11 @@ ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation&
   // Add to induction frame. If we are at frame 0
   assert(d_induction_frame.find(learnt) == d_induction_frame.end());
   add_to_induction_frame(learnt);
+  ind.breadth ++;
 
   // Try to push assumptions next time (unless, already invalid)
   if (!is_invalid(learnt)) {
-    enqueue_induction_obligation(induction_obligation(tm(), learnt, default_budget, ind.score));
+    enqueue_induction_obligation(induction_obligation(tm(), learnt, default_budget, ind.score, 0));
     set_refutes_info(F, G, learnt);
   }
 
@@ -469,15 +475,19 @@ engine::result ic3_engine::search() {
     d_induction_frame.clear();
     std::vector<induction_obligation>::const_iterator next_it = d_induction_obligations_next.begin();
     for (; next_it != d_induction_obligations_next.end(); ++ next_it) {
+      // The formula
+      expr::term_ref F = next_it->formula;
       // Push if not shown invalid
-      if (!is_invalid(next_it->formula)) {
+      if (!is_invalid(F)) {
         // Formula is valid up to induction frame, so we add it to reachability
         if (ctx().get_options().get_bool("ic3-add-backward")) {
-          d_reachability.add_valid_up_to(d_induction_frame_index, next_it->formula);
+          d_reachability.add_valid_up_to(d_induction_frame_index, F);
         }
-        assert(d_smt->query_at_init(tm().mk_term(expr::TERM_NOT, next_it->formula)) == smt::solver::UNSAT);
-        add_to_induction_frame(next_it->formula);
-        enqueue_induction_obligation(*next_it);
+        // Keep properties and induction roots
+        if (d_properties.find(F) != d_properties.end() || next_it->breadth == 0) {
+          add_to_induction_frame(next_it->formula);
+          enqueue_induction_obligation(*next_it);
+        }
       }
     }
 
@@ -557,7 +567,7 @@ void ic3_engine::add_initial_states(expr::term_ref I) {
   } else {
     if (d_induction_frame.find(I) == d_induction_frame.end()) {
       add_to_induction_frame(I);
-      enqueue_induction_obligation(induction_obligation(tm(), I, 0, 0));
+      enqueue_induction_obligation(induction_obligation(tm(), I, 0, 0, 0));
     }
   }
 }
@@ -575,7 +585,7 @@ bool ic3_engine::add_property(expr::term_ref P) {
     if (result == smt::solver::UNSAT) {
       if (d_induction_frame.find(P) == d_induction_frame.end()) {
         add_to_induction_frame(P);
-        enqueue_induction_obligation(induction_obligation(tm(), P, 0, 0));
+        enqueue_induction_obligation(induction_obligation(tm(), P, 0, 0, 0));
       }
       bump_induction_obligation(P, 1);
       d_properties.insert(P);

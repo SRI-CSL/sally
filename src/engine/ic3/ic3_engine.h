@@ -49,9 +49,11 @@ struct induction_obligation {
   size_t budget;
   /** Score of the obligation */
   double score;
+  /** Depth of inductive reasoning */
+  size_t breadth;
 
   /** Construct the obligation */
-  induction_obligation(expr::term_manager& tm, expr::term_ref P, size_t budget, double score);
+  induction_obligation(expr::term_manager& tm, expr::term_ref P, size_t budget, double score, size_t breadth);
 
   /** Compare for equality */
   bool operator == (const induction_obligation& o) const;
