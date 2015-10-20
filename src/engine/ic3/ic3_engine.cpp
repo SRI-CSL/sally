@@ -445,6 +445,8 @@ engine::result ic3_engine::search() {
     }
 
     // Move to the next frame (will also clear induction solver)
+    size_t step = d_induction_frame_index_next - d_induction_frame_index;
+    assert(step > 0);
     d_induction_frame_index = d_induction_frame_index_next;
     d_induction_obligations.clear();
 
@@ -483,10 +485,12 @@ engine::result ic3_engine::search() {
         if (ctx().get_options().get_bool("ic3-add-backward")) {
           d_reachability.add_valid_up_to(d_induction_frame_index, F);
         }
-        // Keep properties and induction roots
-        if (d_properties.find(F) != d_properties.end() || next_it->breadth == 0) {
-          add_to_induction_frame(next_it->formula);
-          enqueue_induction_obligation(*next_it);
+        add_to_induction_frame(next_it->formula);
+        enqueue_induction_obligation(*next_it);
+      } else {
+        // Formula is valid up to just before induction frame, so we add it to reachability
+        if (step > 1 && ctx().get_options().get_bool("ic3-add-backward")) {
+          d_reachability.add_valid_up_to(d_induction_frame_index-1, F);
         }
       }
     }
