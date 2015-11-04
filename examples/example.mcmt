@@ -67,7 +67,7 @@ next.initial_states
 (query T2 (and (<= x 19) (<= y 19)))
 
 ;; State type with inputs 
-(define state_type_with_inputs
+(define-state-type state_type_with_inputs
   ((x Real) (y Real))
   ((d Real)) 
 )
