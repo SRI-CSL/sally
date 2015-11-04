@@ -1,0 +1,71 @@
+
+;; PC: TYPE = {sleeping, trying, critical};
+(define-constant sleeping 0)
+(define-constant trying 1)
+(define-constant critical 2)
+
+;; State type
+(define-state-type state_type (
+  (pc1 Real)
+  (pc2 Real)
+  (x1 Bool)
+  (x2 Bool)
+))
+
+;; Initial states
+(define-states initial_states state_type
+  (and (= pc1 sleeping) (= pc2 sleeping))
+)
+
+;; Transition
+(define-transition transition state_type
+        (let ((cs!13 (= x2' x2))
+              (cs!14 (= x2' x1))
+              (cs!15 (= x1' x1))
+              (cs!16 (= x1' (not x2)))
+              (cs!17 (= pc2 sleeping))
+              (cs!18 (= pc1 sleeping)))
+          (or
+            (and
+              (or
+                (and cs!18 (= pc1' trying) cs!16)
+                (and
+                  (= pc1 trying)
+                  (or cs!17 (= x1 x2))
+                  (= pc1' critical)
+                  cs!15)
+                (and (= pc1 critical) (= pc1' sleeping) cs!16))
+              cs!13
+              (= pc2' pc2))
+            (and
+              (or
+                (and cs!17 (= pc2' trying) cs!14)
+                (and
+                  (= pc2 trying)
+                  (or cs!18 (= x2 (not x1)))
+                  (= pc2' critical)
+                  cs!13)
+                (and (= pc2 critical) (= pc2' sleeping) cs!14))
+              cs!15
+              (= pc1' pc1))))
+)
+
+
+;; Transition system
+(define-transition-system T state_type
+  initial_states
+  transition
+)
+
+;; Assumptions: pc1, pc2: PC = {sleeping, trying, critical};
+(assume T
+  (and
+   (or (= pc1 sleeping) (= pc1 trying) (= pc1 critical))
+   (or (= pc2 sleeping) (= pc2 trying) (= pc2 critical))
+  )
+)
+
+;; Query
+(query T
+    (or (/= pc1 critical) (/= pc2 critical))
+)
