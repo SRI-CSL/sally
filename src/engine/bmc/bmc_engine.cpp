@@ -68,8 +68,7 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
   for (size_t k = 0; k <= bmc_max; ++ k) {
 
     // Add the variables to the solver
-    std::vector<expr::term_ref> state_vars;
-    d_trace->get_state_variables(k, state_vars);
+    const std::vector<expr::term_ref>& state_vars = d_trace->get_state_variables(k);
     d_solver->add_variables(state_vars.begin(), state_vars.end(), smt::solver::CLASS_A);
 
     // Check the current unrolling
@@ -106,10 +105,8 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
 
     // Unroll once more
     d_solver->add(d_trace->get_transition_formula(transition_formula, k), smt::solver::CLASS_A);
-    std::vector<expr::term_ref> input_vars;
-    d_trace->get_input_variables(k, input_vars);
+    const std::vector<expr::term_ref>& input_vars = d_trace->get_input_variables(k);
     d_solver->add_variables(input_vars.begin(), input_vars.end(), smt::solver::CLASS_A);
-
   }
 
   return UNKNOWN;

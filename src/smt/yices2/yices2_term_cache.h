@@ -86,11 +86,11 @@ public:
   /** Create a new cache */
   yices2_term_cache(expr::term_manager& tm);
 
-  /**
-   * Set the term cache from t -> t_yices. If t_yices doesn't exist in the
-   * cache already, add the map t_yices -> t.
-   */
+  /** Set the term cache from t -> t_yices. */
   void set_term_cache(expr::term_ref t, term_t t_yices);
+
+  /** Set the term cache from t_yices -> t. */
+  void set_term_cache(term_t t_yices, expr::term_ref t);
 
   /** Returns the yices term associated with t, or NULL_TERM otherwise */
   term_t get_term_cache(expr::term_ref t) const;

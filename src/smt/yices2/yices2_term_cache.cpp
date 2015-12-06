@@ -39,17 +39,49 @@ yices2_term_cache::yices2_term_cache(expr::term_manager& tm)
 yices2_term_cache::tm_to_cache_map yices2_term_cache::s_tm_to_cache_map;
 
 void yices2_term_cache::set_term_cache(expr::term_ref t, term_t t_yices) {
-  bool added = false;
-  if (d_term_to_yices_cache.find(t) == d_term_to_yices_cache.end()) {
-    d_term_to_yices_cache[t] = t_yices;
-    added = true;
+  assert(d_term_to_yices_cache.find(t) == d_term_to_yices_cache.end());
+  d_term_to_yices_cache[t] = t_yices;
+  // If a variable, remember it
+  if (d_tm.term_of(t).op() == expr::VARIABLE) {
+    d_permanent_terms.push_back(t);
+    d_permanent_terms_yices.push_back(t_yices);
+  } else {
+    // Mark cache as dirty
+    d_cache_is_clean = false;
   }
-  if (d_yices_to_term_cache.find(t_yices) == d_yices_to_term_cache.end()) {
-    d_yices_to_term_cache[t_yices] = t;
-    added = true;
+
+  // If enabled, check the term transformations by producing a series of
+  // smt2 queries. To check run the contrib/smt2_to_yices.sh script and then
+  // run on yices.
+  if (output::trace_tag_is_enabled("yices2::terms")) {
+    static size_t k = 0;
+    std::stringstream ss;
+    ss << "yices2_term_query_" << std::setfill('0') << std::setw(5) << k++ << ".smt2";
+    std::ofstream query(ss.str().c_str());
+    output::set_term_manager(query, &d_tm);
+    output::set_output_language(query, output::MCMT);
+
+    // Prelude
+    // Get the term variables
+    std::vector<expr::term_ref> vars;
+    d_tm.get_variables(t, vars);
+    for (size_t i = 0; i < vars.size(); ++ i) {
+      query << "(declare-fun " << vars[i] << " () " << d_tm.type_of(vars[i]) << ")" << std::endl;
+    }
+
+    // Check the representation
+    char* repr = yices_term_to_string(t_yices, UINT32_MAX, UINT32_MAX, 0);
+    query << "(assert (not (= " << repr << " " << t << ")))" << std::endl;
+    yices_free_string(repr);
+
+    query << "(check-sat)" << std::endl;
+    d_tm.set_name_transformer(0);
   }
-  unused_var(added);
-  assert(added);
+}
+
+void yices2_term_cache::set_term_cache(term_t t_yices, expr::term_ref t) {
+  assert(d_yices_to_term_cache.find(t_yices) == d_yices_to_term_cache.end());
+  d_yices_to_term_cache[t_yices] = t;
   // If a variable, remember it
   if (d_tm.term_of(t).op() == expr::VARIABLE) {
     d_permanent_terms.push_back(t);

@@ -118,11 +118,6 @@ void y2m5::interpolate(std::vector<expr::term_ref>& out) {
   if (d_last_mathsat5_result == UNKNOWN) {
     d_last_mathsat5_result = d_mathsat5->check();
   }
-  if (d_last_mathsat5_result != UNSAT) {
-    // Check the model for correctness
-    d_mathsat5->check_model();
-  }
-  assert(d_last_mathsat5_result == UNSAT);
   d_mathsat5->interpolate(out);
 }
 

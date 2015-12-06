@@ -22,7 +22,7 @@
 
 namespace sally {
 
-options::options(const boost::program_options::variables_map& options)
+options::options(boost::program_options::variables_map& options)
 : d_options(&options)
 , d_my_options(0)
 {}
@@ -49,8 +49,17 @@ unsigned options::get_unsigned(std::string opt) const {
   return d_options->at(opt).as<unsigned>();
 }
 
+void options::set_unsigned(std::string opt, unsigned value) {
+  d_options->at(opt).as<unsigned>() = value;
+}
+
+
 int options::get_int(std::string opt) const {
   return d_options->at(opt).as<int>();
+}
+
+void options::set_int(std::string opt, int value) {
+  d_options->at(opt).as<int>() = value;
 }
 
 bool options::get_bool(std::string opt) const {

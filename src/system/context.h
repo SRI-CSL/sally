@@ -42,7 +42,7 @@ class context {
 public:
 
   /** Construct the parser state */
-  context(expr::term_manager& tm, const options& opts, utils::statistics& stats);
+  context(expr::term_manager& tm, options& opts, utils::statistics& stats);
 
   /** Returns the term manager for the parser */
   expr::term_manager& tm() const { return d_term_manager; }
@@ -98,7 +98,7 @@ public:
   bool has_transition_system(std::string id) const;
 
   /** Get the command line options */
-  const options& get_options() const;
+  options& get_options() const;
 
   /** Get the statistics */
   utils::statistics& get_statistics() const;
@@ -151,7 +151,7 @@ private:
   std::map<const state_type*, id_set> d_state_types_to_transition_systems;
 
   /** Various options */
-  const options& d_options;
+  options& d_options;
 
   /** Statistics manager */
   utils::statistics& d_stats;

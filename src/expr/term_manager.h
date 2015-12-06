@@ -269,6 +269,9 @@ public:
   /** Replaces terms from t that appear in the map. */
   term_ref substitute(term_ref t, const substitution_map& subst);
 
+  /** Replaces terms from t that appear in the map. */
+  term_ref substitute_and_cache(term_ref t, substitution_map& subst);
+
   /** Get the current name transformer */
   const utils::name_transformer* get_name_transformer() const;
 

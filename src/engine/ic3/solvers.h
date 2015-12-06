@@ -68,8 +68,14 @@ class solvers {
   /** Solver for reachability queries when in single-solver mode */
   smt::solver* d_reachability_solver;
 
-  /** Solver for induction queries when in single-solver mode */
+  /** Solver for initial state queries */
+  smt::solver* d_initial_solver;
+
+  /** Solver for induction queries */
   smt::solver* d_induction_solver;
+
+  /** Depth of the induction solver */
+  size_t d_induction_solver_depth;
 
   /** Relation used in the induction solver */
   expr::term_ref d_transition_relation;
@@ -86,6 +92,9 @@ class solvers {
   /** Boolean variable (enabling the frame) */
   std::vector<expr::term_ref> d_frame_variables;
 
+  /** Returns the induction solver */
+  smt::solver* get_initial_solver();
+
   /** Initialize the reachability solver for frame k */
   void init_reachability_solver(size_t k);
 
@@ -94,9 +103,6 @@ class solvers {
 
   /** Get the enabling varibale of frame k */
   expr::term_ref get_frame_variable(size_t k);
-
-  /** Returns the induction solver */
-  smt::solver* get_induction_solver();
 
   /** Returns the unique reachability solver */
   smt::solver* get_reachability_solver();
@@ -136,7 +142,7 @@ public:
   ~solvers();
 
   /** Mark a new frame */
-  void new_frame();
+  void new_reachability_frame();
 
   /** Get number of frames */
   size_t size();
@@ -145,7 +151,7 @@ public:
   void reset(const std::vector<formula_set>& frames);
 
   /** Add a formula to frame k */
-  void add(size_t k, expr::term_ref f);
+  void add_to_reachability_solver(size_t k, expr::term_ref f);
 
   struct query_result {
     /** Result of the query */
@@ -159,15 +165,31 @@ public:
   };
 
   /** Checks formula f for satisfiability at frame k using the reachability solvers and returns the generalization. */
-  query_result query_at(size_t k, expr::term_ref f, smt::solver::formula_class f_class);
+  query_result query_with_transition_at(size_t k, expr::term_ref f, smt::solver::formula_class f_class);
 
-  /** Check if f is inductive */
-  query_result check_inductive(expr::term_ref f, std::vector<expr::term_ref>& core);
+  /** Checks formula f for satisfiability at initial frame. */
+  smt::solver::result query_at_init(expr::term_ref f);
 
-  /** Returns true if inductive checks produce unsat cores */
-  bool check_inductive_returns_core() const;
+  /**
+   * Reset induction solver so that it has given depth. Depth is the number of
+   * transitions. So, if you'd like to try k-induction, you need to do depth k + 1.
+   * The solver will have depth frames and all formulas will be added to frames
+   * < depth.
+   */
+  void reset_induction_solver(size_t depth);
 
-  /** Learn forward to refute G at k from k-1 using reachability solvers */
+  /**
+   * Add a formula to induction solver. Formulas will be added to frames < depth.
+   */
+  void add_to_induction_solver(expr::term_ref f);
+
+  /**
+   * Check if f is inductive, i.e. !f is added at frame depth and check for
+   * satisfiability.
+   */
+  query_result check_inductive(expr::term_ref f);
+
+  /** Learn forward to refute G at k from k-1 and initial state using reachability solvers */
   expr::term_ref learn_forward(size_t k, expr::term_ref G);
 
   /** Returns the counterexample solver */
@@ -190,6 +212,13 @@ public:
 
   /** Rewrite equalitites to inequalities */
   expr::term_ref eq_to_ineq(expr::term_ref G);
+
+  /** Output EFSMT problem */
+  void output_efsmt(expr::term_ref f, expr::term_ref g) const;
+
+  /** Print formulas */
+  void print_formulas(const formula_set& set, std::ostream& out) const;
+
 };
 
 

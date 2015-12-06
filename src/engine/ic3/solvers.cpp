@@ -21,8 +21,8 @@
 #include "smt/factory.h"
 #include "utils/trace.h"
 
-
 #include <iostream>
+#include <fstream>
 
 #define unused_var(x) { (void)x; }
 
@@ -36,6 +36,7 @@ solvers::solvers(const system::context& ctx, const system::transition_system* tr
 , d_size(0)
 , d_trace(trace)
 , d_reachability_solver(0)
+, d_initial_solver(0)
 , d_induction_solver(0)
 , d_counterexample_solver(0)
 , d_counterexample_solver_depth(0)
@@ -46,6 +47,7 @@ solvers::solvers(const system::context& ctx, const system::transition_system* tr
 
 solvers::~solvers() {
   delete d_reachability_solver;
+  delete d_initial_solver;
   delete d_induction_solver;
   delete d_counterexample_solver;
   for (size_t k = 0; k < d_reachability_solvers.size(); ++ k) {
@@ -72,6 +74,10 @@ void solvers::reset(const std::vector<solvers::formula_set>& frames) {
     d_reachability_solvers.clear();
   }
 
+  // Clear the initial solver
+  delete d_initial_solver;
+  d_initial_solver = 0;
+
   // Clear the induction solver
   delete d_induction_solver;
   d_induction_solver = 0;
@@ -90,7 +96,7 @@ void solvers::reset(const std::vector<solvers::formula_set>& frames) {
     // Add the content again
     formula_set::const_iterator it = frames[k].begin();
     for (; it != frames[k].end(); ++ it) {
-      add(k, *it);
+      add_to_reachability_solver(k, *it);
     }
   }
 }
@@ -100,19 +106,26 @@ void solvers::init_reachability_solver(size_t k) {
   assert(!d_ctx.get_options().get_bool("ic3-single-solver"));
   assert(k < d_size);
 
-  // The variables from the state types
-  const std::vector<expr::term_ref>& x = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_CURRENT);
-  const std::vector<expr::term_ref>& x_next = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_NEXT);
-  const std::vector<expr::term_ref>& input = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_INPUT);
+  if (d_reachability_solvers.size() <= k) {
 
-  // A solver per frame
-  while (d_reachability_solvers.size() <= k) {
-    smt::solver* solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options(), d_ctx.get_statistics());
-    d_reachability_solvers.push_back(solver);
-    solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
-    solver->add_variables(x_next.begin(), x_next.end(), smt::solver::CLASS_B);
-    solver->add_variables(input.begin(), input.end(), smt::solver::CLASS_T);
-    solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_T);
+    // The variables from the state types
+    const std::vector<expr::term_ref>& x = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_CURRENT);
+    const std::vector<expr::term_ref>& x_next = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_NEXT);
+    const std::vector<expr::term_ref>& input = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_INPUT);
+
+    // A solver per frame
+    while (d_reachability_solvers.size() <= k) {
+      smt::solver* solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options(), d_ctx.get_statistics());
+      d_reachability_solvers.push_back(solver);
+      solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
+      solver->add_variables(x_next.begin(), x_next.end(), smt::solver::CLASS_B);
+      solver->add_variables(input.begin(), input.end(), smt::solver::CLASS_T);
+      // Add transition relation
+      solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_T);
+      if (d_reachability_solvers.size() == 1) {
+        solver->add(d_transition_system->get_initial_states(), smt::solver::CLASS_A);
+      }
+    }
   }
 }
 
@@ -120,13 +133,11 @@ void solvers::ensure_counterexample_solver_depth(size_t k) {
   // Make sure we unrolled the solver variables up to k
   for (; d_counterexample_solver_variables_depth <= k; ++ d_counterexample_solver_variables_depth) {
     // Add state variables
-    std::vector<expr::term_ref> state_variables;
-    d_trace->get_state_variables(d_counterexample_solver_variables_depth, state_variables);
+    const std::vector<expr::term_ref>& state_variables = d_trace->get_state_variables(d_counterexample_solver_variables_depth);
     get_counterexample_solver()->add_variables(state_variables.begin(), state_variables.end(), smt::solver::CLASS_A);
     // Add input variables to get here
     if (d_counterexample_solver_variables_depth > 0) {
-      std::vector<expr::term_ref> input_variables;
-      d_trace->get_input_variables(d_counterexample_solver_variables_depth-1, input_variables);
+      const std::vector<expr::term_ref>& input_variables = d_trace->get_input_variables(d_counterexample_solver_variables_depth-1);
       get_counterexample_solver()->add_variables(input_variables.begin(), input_variables.end(), smt::solver::CLASS_A);
     }
   }
@@ -138,22 +149,18 @@ void solvers::ensure_counterexample_solver_depth(size_t k) {
   }
 }
 
-smt::solver* solvers::get_induction_solver() {
-  if (d_induction_solver == 0) {
+smt::solver* solvers::get_initial_solver() {
+  if (d_initial_solver == 0) {
     // The variables from the state types
     const std::vector<expr::term_ref>& x = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_CURRENT);
-    const std::vector<expr::term_ref>& x_next = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_NEXT);
-    const std::vector<expr::term_ref>& input = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_INPUT);
     // Make the solver
-    d_induction_solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options(), d_ctx.get_statistics());
-    d_induction_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
-    d_induction_solver->add_variables(x_next.begin(), x_next.end(), smt::solver::CLASS_B);
-    d_induction_solver->add_variables(input.begin(), input.end(), smt::solver::CLASS_T);
-    d_transition_relation = d_transition_system->get_transition_relation();
-    d_induction_solver->add(d_transition_relation, smt::solver::CLASS_T);
+    d_initial_solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options(), d_ctx.get_statistics());
+    d_initial_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
+    d_initial_solver->add(d_transition_system->get_initial_states(), smt::solver::CLASS_A);
   }
-  return d_induction_solver;
+  return d_initial_solver;
 }
+
 
 smt::solver* solvers::get_reachability_solver() {
   assert(d_ctx.get_options().get_bool("ic3-single-solver"));
@@ -211,6 +218,9 @@ void solvers::gc() {
   if (d_counterexample_solver) {
     d_counterexample_solver->gc();
   }
+  if (d_initial_solver) {
+    d_initial_solver->gc();
+  }
   if (d_induction_solver) {
     d_induction_solver->gc();
   }
@@ -245,7 +255,18 @@ solvers::query_result::query_result()
 {
 }
 
-solvers::query_result solvers::query_at(size_t k, expr::term_ref f, smt::solver::formula_class f_class) {
+smt::solver::result solvers::query_at_init(expr::term_ref f) {
+  smt::solver* solver = get_initial_solver();
+  smt::solver_scope scope(solver);
+  scope.push();
+
+  query_result result;
+
+  solver->add(f, smt::solver::CLASS_A);
+  return solver->check();
+}
+
+solvers::query_result solvers::query_with_transition_at(size_t k, expr::term_ref f, smt::solver::formula_class f_class) {
 
   smt::solver* solver = 0;
   query_result result;
@@ -329,10 +350,12 @@ expr::term_ref solvers::eq_to_ineq(expr::term_ref G) {
 }
 
 expr::term_ref solvers::generalize_sat(smt::solver* solver) {
+  // Generalize
   std::vector<expr::term_ref> generalization_facts;
   solver->generalize(smt::solver::GENERALIZE_BACKWARD, generalization_facts);
   expr::term_ref G = d_tm.mk_and(generalization_facts);
-  // G = eq_to_ineq(G);
+  // Move variables back to regular state instead of trace state
+  G = d_trace->get_state_formula(0, G);
   return G;
 }
 
@@ -340,108 +363,55 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
 
   TRACE("ic3") << "learning forward to refute: " << G << std::endl;
 
-  assert(k > 0);
-
-  // The solvers we'll be using
-  smt::solver* I1_solver = 0;
-  smt::solver* I2_solver = 0;
-
-  if (d_ctx.get_options().get_bool("ic3-single-solver")) {
-    I1_solver = get_reachability_solver();
-    I2_solver = get_reachability_solver();
-  } else {
-    I1_solver = get_reachability_solver(k-1);
-    I2_solver = get_reachability_solver(0);
-  }
-
-  // If we don't have interpolation, just learn not G
-  if (!I1_solver->supports(smt::solver::INTERPOLATION)) {
+  // Get the interpolant I2 for I => I2, I2 and G unsat
+  smt::solver* I_solver = get_initial_solver();
+  if (!I_solver->supports(smt::solver::INTERPOLATION)) {
     return d_tm.mk_term(expr::TERM_NOT, G);
   }
 
-  // Get the interpolant I1 for: (R_{k-1} and T => I1, I1 and G unsat
-  I1_solver->push();
+  I_solver->push();
+  I_solver->add(G, smt::solver::CLASS_B);
+  smt::solver::result I_result = I_solver->check();
+  unused_var(I_result);
+  assert(I_result == smt::solver::UNSAT);
+  expr::term_ref I_I = I_solver->interpolate();
+  I_solver->pop();
+
+  TRACE("ic3") << "I_I: " << I_I << std::endl;
+
+  if (k == 0) {
+    // If refuting at 0, it's just I
+    return I_I;
+  }
+
+  // Transition solver
+  smt::solver* T_solver = 0;
   if (d_ctx.get_options().get_bool("ic3-single-solver")) {
-    assert_frame_selection(k-1, I1_solver);
+    T_solver = get_reachability_solver();
+  } else {
+    T_solver = get_reachability_solver(k-1);
+  }
+
+  // Get the interpolant T_I for: (R_{k-1} and T => T_I, T_I and G unsat
+  T_solver->push();
+  if (d_ctx.get_options().get_bool("ic3-single-solver")) {
+    assert_frame_selection(k-1, T_solver);
   }
   expr::term_ref G_next = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, G);
-  I1_solver->add(G_next, smt::solver::CLASS_B);
-  smt::solver::result I1_result = I1_solver->check();
-  unused_var(I1_result);
-  assert(I1_result == smt::solver::UNSAT);
-  expr::term_ref I1 = I1_solver->interpolate();
-  I1 = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_NEXT, system::state_type::STATE_CURRENT, I1);
-  I1_solver->pop();
+  T_solver->add(G_next, smt::solver::CLASS_B);
+  smt::solver::result T_result = T_solver->check();
+  unused_var(T_result);
+  assert(T_result == smt::solver::UNSAT);
+  expr::term_ref T_I = T_solver->interpolate();
+  T_I = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_NEXT, system::state_type::STATE_CURRENT, T_I);
+  T_solver->pop();
 
-  TRACE("ic3") << "I1: " << I1 << std::endl;
-
-  // Get the interpolant I2 for I => I2, I2 and G unsat
-  I2_solver->push();
-  if (d_ctx.get_options().get_bool("ic3-single-solver")) {
-    assert_frame_selection(0, I2_solver);
-  }
-  I2_solver->add(G, smt::solver::CLASS_B);
-  smt::solver::result I2_result = I2_solver->check();
-  unused_var(I2_result);
-  assert(I2_result == smt::solver::UNSAT);
-  expr::term_ref I2 = I2_solver->interpolate();
-  I2_solver->pop();
-
-  TRACE("ic3") << "I2: " << I2 << std::endl;
+  TRACE("ic3") << "T_I: " << T_I << std::endl;
 
   // Result is the disjunction of the two
-  expr::term_ref learnt = d_tm.mk_term(expr::TERM_OR, I1, I2);
+  expr::term_ref learnt = d_tm.mk_term(expr::TERM_OR, T_I, I_I);
 
   return learnt;
-}
-
-bool solvers::check_inductive_returns_core() const {
-  return d_induction_solver->supports(smt::solver::UNSAT_CORE);
-}
-
-
-solvers::query_result solvers::check_inductive(expr::term_ref f, std::vector<expr::term_ref>& core) {
-
-  query_result result;
-
-  // Push the scope
-  smt::solver* solver = get_induction_solver();
-  smt::solver_scope scope(solver);
-  scope.push();
-
-  // Add the formula (moving current -> next)
-  expr::term_ref F_not = d_tm.mk_term(expr::TERM_NOT, f);
-  expr::term_ref F_not_next = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, F_not);
-  solver->add(F_not_next, smt::solver::CLASS_B);
-
-  // Figure out the result
-  result.result = solver->check();
-  switch (result.result) {
-  case smt::solver::SAT:
-    if (d_generate_models_for_queries) {
-      result.model = solver->get_model();
-    }
-    result.generalization = generalize_sat(solver);
-    break;
-  case smt::solver::UNSAT:
-    if (solver->supports(smt::solver::UNSAT_CORE)) {
-      solver->get_unsat_core(core);
-      // Only keep frame
-      size_t to_keep = 0;
-      for (size_t i = 0; i < core.size(); ++ i) {
-        if (core[i] != F_not_next && core[i] != d_transition_relation) {
-          assert(d_transition_system->get_state_type()->is_state_formula(core[i]));
-          core[to_keep++] = core[i];
-        }
-      }
-      core.resize(to_keep);
-    }
-    break;
-  default:
-    throw exception("SMT unknown result.");
-  }
-
-  return result;
 }
 
 expr::term_ref solvers::get_frame_variable(size_t k) {
@@ -458,8 +428,9 @@ void solvers::gc_collect(const expr::gc_relocator& gc_reloc) {
   gc_reloc.reloc(d_frame_variables);
 }
 
-void solvers::add(size_t k, expr::term_ref f)  {
+void solvers::add_to_reachability_solver(size_t k, expr::term_ref f)  {
 
+  assert(k > 0);
   assert(k < d_size);
 
   // Add appropriately
@@ -473,14 +444,99 @@ void solvers::add(size_t k, expr::term_ref f)  {
     smt::solver* solver = get_reachability_solver(k);
     solver->add(f, smt::solver::CLASS_A);
   }
+}
 
-  // If at induction frame, add to induction solver
-  if (k + 1 == d_size) {
-    get_induction_solver()->add(f, smt::solver::CLASS_A);
+void solvers::reset_induction_solver(size_t depth) {
+  // Reset the induction solver
+  delete d_induction_solver;
+
+  // Transition relation
+  d_transition_relation = d_transition_system->get_transition_relation();
+
+  // The solver
+  d_induction_solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options(), d_ctx.get_statistics());
+  d_induction_solver_depth = depth;
+
+  // Add variables and transition relation
+  for (size_t k = 0; k <= depth; ++ k) {
+
+    // The variables
+    const std::vector<expr::term_ref>& x = d_trace->get_state_variables(k);
+
+    // Add state variables
+    if (k == 0) {
+      // First frame is A
+      const std::vector<expr::term_ref>& x_state = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_CURRENT);
+      d_induction_solver->add_variables(x_state.begin(), x_state.end(), smt::solver::CLASS_A);
+    } else if (k < depth) {
+      // Intermediate frames are T
+      d_induction_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_T);
+    } else {
+      // Last frame is B
+      d_induction_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_B);
+    }
+
+    // Add input variables
+    if (k > 0) {
+      const std::vector<expr::term_ref>& input = d_trace->get_input_variables(k-1);
+      d_induction_solver->add_variables(input.begin(), input.end(), smt::solver::CLASS_T);
+      // Formula T(x_{k-1}, x_k)
+      expr::term_ref T = d_trace->get_transition_formula(d_transition_relation, k-1);
+      // If transitioning from initial state, move to state vars
+      if (k == 1) {
+        T = d_trace->get_state_formula(0, T);
+      }
+      d_induction_solver->add(T, smt::solver::CLASS_T);
+    }
   }
 }
 
-void solvers::new_frame() {
+
+void solvers::add_to_induction_solver(expr::term_ref f) {
+  assert(d_induction_solver != 0);
+  for (size_t k = 0; k < d_induction_solver_depth; ++ k) {
+    if (k == 0) {
+      d_induction_solver->add(f, smt::solver::CLASS_A);
+    } else {
+      d_induction_solver->add(d_trace->get_state_formula(f, k), smt::solver::CLASS_T);
+    }
+  }
+}
+
+solvers::query_result solvers::check_inductive(expr::term_ref f) {
+
+  assert(d_induction_solver != 0);
+
+  query_result result;
+
+  // Push the scope
+  smt::solver_scope scope(d_induction_solver);
+  scope.push();
+
+  // Add the formula (moving current -> next)
+  expr::term_ref F_not = d_tm.mk_term(expr::TERM_NOT, f);
+  expr::term_ref F_not_next = d_trace->get_state_formula(F_not, d_induction_solver_depth);
+  d_induction_solver->add(F_not_next, smt::solver::CLASS_B);
+
+  // Figure out the result
+  result.result = d_induction_solver->check();
+  switch (result.result) {
+  case smt::solver::SAT:
+    if (d_generate_models_for_queries) {
+      result.model = d_induction_solver->get_model();
+    }
+    result.generalization = generalize_sat(d_induction_solver);
+    break;
+  case smt::solver::UNSAT:
+    break;
+  default:
+    throw exception("SMT unknown result.");
+  }
+
+  return result;
+}
+
+void solvers::new_reachability_frame() {
   // Make sure we have counter-examples space for 0, ..., size
   ensure_counterexample_solver_depth(d_size);
   // Add the frame selection variable if needed
@@ -490,9 +546,6 @@ void solvers::new_frame() {
   }
   // Increase the size
   d_size ++;
-  // Reset the induction solver
-  delete d_induction_solver;
-  d_induction_solver = 0;
 }
 
 size_t solvers::size() {
@@ -501,6 +554,84 @@ size_t solvers::size() {
 
 void solvers::generate_models_for_queries(bool flag) {
   d_generate_models_for_queries = flag;
+}
+
+void solvers::output_efsmt(expr::term_ref f, expr::term_ref g) const {
+
+  assert(false); // TODO: not current with the changes to induction solver
+  assert(!f.is_null());
+  assert(!g.is_null());
+
+  static size_t i = 0;
+
+  // we have
+  //  \forall x G(x) => \exists x' T(x, x') and f is valid
+  //  G(x) and \forall y not (T(x, x') and f') is unsat
+
+  std::stringstream ss;
+  ss << "ic3_gen_check_" << i++ << ".smt2";
+  std::ofstream out(ss.str().c_str());
+
+  out << expr::set_tm(d_tm);
+
+  const utils::name_transformer* old_transformer = d_tm.get_name_transformer();
+  smt::smt2_name_transformer name_transformer;
+  d_tm.set_name_transformer(&name_transformer);
+
+  out << "(set-logic LRA)" << std::endl;
+  out << "(set-info :smt-lib-version 2.0)" << std::endl;
+  out << "(set-info :status unsat)" << std::endl;
+  out << std::endl;
+
+  const system::state_type* state_type = d_transition_system->get_state_type();
+
+  const std::vector<expr::term_ref>& state_vars = state_type->get_variables(system::state_type::STATE_CURRENT);
+  const std::vector<expr::term_ref>& input_vars = state_type->get_variables(system::state_type::STATE_INPUT);
+  const std::vector<expr::term_ref>& next_vars = state_type->get_variables(system::state_type::STATE_NEXT);
+
+  for (size_t i = 0; i < state_vars.size(); ++ i) {
+    expr::term_ref variable = state_vars[i];
+    out << "(declare-fun " << variable << " () " << d_tm.type_of(variable) << ")" << std::endl;
+  }
+
+  out << std::endl;
+  out << ";; generalization" << std::endl;
+  out << "(assert " << g << ")" << std::endl;
+
+  out << std::endl;
+  out << "(assert (forall (";
+  for (size_t i = 0; i < input_vars.size(); ++ i) {
+    expr::term_ref variable = input_vars[i];
+    if (i) out << " ";
+    out << "(";
+    out << variable << " " << d_tm.type_of(variable);
+    out << ")";
+  }
+  for (size_t i = 0; i < next_vars.size(); ++ i) {
+    expr::term_ref variable = next_vars[i];
+    out << " (";
+    out << variable << " " << d_tm.type_of(variable);
+    out << ")";
+  }
+  out << ")" << std::endl; // end forall variables
+  out << "(not (and" << std::endl;
+  out << "  " << d_transition_system->get_transition_relation() << std::endl;
+  out << "  " << state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, f) << std::endl;
+  out << "))" << std::endl; // end negation and and
+
+  out << "))" << std::endl; // end forall
+
+  out << std::endl;
+  out << "(check-sat)" << std::endl;
+
+  d_tm.set_name_transformer(old_transformer);
+}
+
+void solvers::print_formulas(const formula_set& set, std::ostream& out) const {
+  formula_set::const_iterator it = set.begin();
+  for (; it != set.end(); ++ it) {
+    out << *it << std::endl;
+  }
 }
 
 }
