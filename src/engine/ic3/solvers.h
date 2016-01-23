@@ -178,16 +178,26 @@ public:
    */
   void reset_induction_solver(size_t depth);
 
+  enum induction_assertion_type {
+    // First frame
+    INDUCTION_FIRST,
+    // Intermediate frames
+    INDUCTION_INTERMEDIATE
+  };
+
   /**
    * Add a formula to induction solver. Formulas will be added to frames < depth.
    */
-  void add_to_induction_solver(expr::term_ref f);
+  void add_to_induction_solver(expr::term_ref f, induction_assertion_type type);
 
   /**
    * Check if f is inductive, i.e. !f is added at frame depth and check for
    * satisfiability.
    */
   query_result check_inductive(expr::term_ref f);
+
+  /** Interpolate induction (i.e. A && !F' is unsat), get I => F'*/
+  expr::term_ref interpolate_induction(expr::term_ref F);
 
   /** Learn forward to refute G at k from k-1 and initial state using reachability solvers */
   expr::term_ref learn_forward(size_t k, expr::term_ref G);

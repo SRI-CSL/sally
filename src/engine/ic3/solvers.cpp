@@ -492,14 +492,19 @@ void solvers::reset_induction_solver(size_t depth) {
 }
 
 
-void solvers::add_to_induction_solver(expr::term_ref f) {
+void solvers::add_to_induction_solver(expr::term_ref f, induction_assertion_type type) {
   assert(d_induction_solver != 0);
-  for (size_t k = 0; k < d_induction_solver_depth; ++ k) {
-    if (k == 0) {
-      d_induction_solver->add(f, smt::solver::CLASS_A);
-    } else {
+  switch (type) {
+  case INDUCTION_FIRST:
+    d_induction_solver->add(f, smt::solver::CLASS_A);
+    break;
+  case INDUCTION_INTERMEDIATE:
+    for (size_t k = 1; k < d_induction_solver_depth; ++ k) {
       d_induction_solver->add(d_trace->get_state_formula(f, k), smt::solver::CLASS_T);
     }
+    break;
+  default:
+    assert(false);
   }
 }
 
@@ -534,6 +539,24 @@ solvers::query_result solvers::check_inductive(expr::term_ref f) {
   }
 
   return result;
+}
+
+expr::term_ref solvers::interpolate_induction(expr::term_ref F) {
+  assert(d_induction_solver != 0);
+
+  // Push the scope
+  smt::solver_scope scope(d_induction_solver);
+  scope.push();
+
+  // Add the formula (moving current -> next)
+  expr::term_ref F_not = d_tm.mk_term(expr::TERM_NOT, F);
+  expr::term_ref F_not_next = d_trace->get_state_formula(F_not, d_induction_solver_depth);
+  d_induction_solver->add(F_not_next, smt::solver::CLASS_B);
+
+  // Figure out the result
+  smt::solver::result result = d_induction_solver->check();
+  assert(result == smt::solver::UNSAT);
+  return d_induction_solver->interpolate();
 }
 
 void solvers::new_reachability_frame() {

@@ -43,17 +43,17 @@ class solvers;
  */
 struct induction_obligation {
 
-  /** The formula in question */
-  expr::term_ref formula;
-  /** The available budget */
-  size_t budget;
+  /** The formula thar refutes the counter-example */
+  expr::term_ref F_fwd;
+  /** The counter-example generalization */
+  expr::term_ref F_cex;
+  /** Depth to the real counter-example */
+  size_t d;
   /** Score of the obligation */
   double score;
-  /** Depth of inductive reasoning */
-  size_t breadth;
 
   /** Construct the obligation */
-  induction_obligation(expr::term_manager& tm, expr::term_ref P, size_t budget, double score, size_t breadth);
+  induction_obligation(expr::term_manager& tm, expr::term_ref F_fwd, expr::term_ref F_cex, size_t d, double score);
 
   /** Compare for equality */
   bool operator == (const induction_obligation& o) const;
@@ -205,7 +205,7 @@ class ic3_engine : public engine {
   std::vector<size_t> d_induction_obligations_count;
 
   /** Add to induction frame and solver */
-  void add_to_induction_frame(expr::term_ref F);
+  void add_to_induction_frame(expr::term_ref F, solvers::induction_assertion_type type);
 
   /** Get the next induction obligations */
   induction_obligation pop_induction_obligation();
