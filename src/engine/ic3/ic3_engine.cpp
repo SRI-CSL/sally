@@ -343,11 +343,6 @@ void ic3_engine::push_current_frame() {
     // Pick a formula to try and prove inductive, i.e. that F_k & P & T => P'
     induction_obligation ind = pop_induction_obligation();
 
-    // If formula is marked as invalid, skip it
-    if (is_invalid(ind.formula)) {
-      continue;
-    }
-
     // Push the formula forward if it's inductive at the frame
     induction_result ind_result = push_if_inductive(ind);
 
@@ -360,18 +355,9 @@ void ic3_engine::push_current_frame() {
     case INDUCTION_SUCCESS:
       // Boss
       break;
-    case INDUCTION_FAIL: {
-      // Not inductive, mark it
-      const reachability::cex_type& cex = d_reachability.get_cex();
-      assert(cex.size() > 0);
-      assert(cex.size() - 1 <= d_induction_frame_index);
-      size_t cex_frame = cex.size() - 1 + d_induction_frame_depth;
-      set_invalid(ind.formula, cex_frame);
-      d_induction_frame_index_next = std::min(d_induction_frame_index_next, cex_frame);
-      // Try to extend the counter-example further
-      extend_induction_failure(ind.formula);
+    case INDUCTION_FAIL:
+      // Failure, it's marked
       break;
-    }
     case INDUCTION_INCONCLUSIVE:
       break;
     }
@@ -427,9 +413,11 @@ engine::result ic3_engine::search() {
     std::vector<induction_obligation>::const_iterator next_it = d_induction_obligations_next.begin();
     for (; next_it != d_induction_obligations_next.end(); ++ next_it) {
       // The formula
-      expr::term_ref F = next_it->formula;
-      add_to_induction_frame(F);
+      expr::term_ref to_assert = tm().mk_term(expr::TERM_NOT, next_it->F_cex);
+      add_to_induction_frame(to_assert, solvers::INDUCTION_FIRST);
+      add_to_induction_frame(to_assert, solvers::INDUCTION_INTERMEDIATE);
       enqueue_induction_obligation(*next_it);
+      d_induction_frame.insert(next_it->F_fwd);
     }
 
     // Next frame and safe position
@@ -493,20 +481,6 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   return r;
 }
 
-void ic3_engine::add_initial_states(expr::term_ref I) {
-  if (tm().term_of(I).op() == expr::TERM_AND) {
-    size_t size = tm().term_of(I).size();
-    for (size_t i = 0; i < size; ++ i) {
-      add_initial_states(tm().term_of(I)[i]);
-    }
-  } else {
-    if (d_induction_frame.find(I) == d_induction_frame.end()) {
-      add_to_induction_frame(I);
-      enqueue_induction_obligation(induction_obligation(tm(), I, 0, 0, 0));
-    }
-  }
-}
-
 bool ic3_engine::add_property(expr::term_ref P) {
   if (tm().term_of(P).op() == expr::TERM_AND) {
     size_t size = tm().term_of(P).size();
@@ -519,8 +493,9 @@ bool ic3_engine::add_property(expr::term_ref P) {
     smt::solver::result result = d_smt->query_at_init(tm().mk_term(expr::TERM_NOT, P));
     if (result == smt::solver::UNSAT) {
       if (d_induction_frame.find(P) == d_induction_frame.end()) {
-        add_to_induction_frame(P);
-        enqueue_induction_obligation(induction_obligation(tm(), P, 0, 0, 0));
+        add_to_induction_frame(P, solvers::INDUCTION_FIRST);
+        add_to_induction_frame(P, solvers::INDUCTION_INTERMEDIATE);
+        enqueue_induction_obligation(induction_obligation(tm(), P, tm().mk_term(expr::TERM_NOT, P), 0, 0));
       }
       bump_induction_obligation(P, 1);
       d_properties.insert(P);
