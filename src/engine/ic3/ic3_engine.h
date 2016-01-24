@@ -49,8 +49,6 @@ struct induction_obligation {
   expr::term_ref F_cex;
   /** Depth to the real counter-example */
   size_t d;
-  /** Number of children */
-  size_t children;
   /** Score of the obligation */
   double score;
 

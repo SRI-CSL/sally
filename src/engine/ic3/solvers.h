@@ -192,12 +192,12 @@ public:
 
   /**
    * Check if f is inductive, i.e. !f is added at frame depth and check for
-   * satisfiability. If add assumptions is true, we assert
+   * satisfiability.
    */
-  query_result check_inductive(expr::term_ref f, bool add_assumptions);
+  query_result check_inductive(expr::term_ref f, expr::term_ref assumption);
 
   /** Interpolate induction (i.e. A && !F' is unsat), get I => F'*/
-  expr::term_ref interpolate_induction(expr::term_ref F, bool add_assumptions);
+  expr::term_ref interpolate_induction(expr::term_ref f, expr::term_ref assumption);
 
   /** Learn forward to refute G at k from k-1 and initial state using reachability solvers */
   expr::term_ref learn_forward(size_t k, expr::term_ref G);

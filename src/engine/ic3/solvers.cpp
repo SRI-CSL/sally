@@ -508,7 +508,7 @@ void solvers::add_to_induction_solver(expr::term_ref f, induction_assertion_type
   }
 }
 
-solvers::query_result solvers::check_inductive(expr::term_ref f, bool add_assumptions) {
+solvers::query_result solvers::check_inductive(expr::term_ref f, expr::term_ref assumption) {
 
   assert(d_induction_solver != 0);
 
@@ -518,9 +518,9 @@ solvers::query_result solvers::check_inductive(expr::term_ref f, bool add_assump
   smt::solver_scope scope(d_induction_solver);
   scope.push();
 
-  if (add_assumptions) {
-    add_to_induction_solver(f, INDUCTION_FIRST);
-    add_to_induction_solver(f, INDUCTION_INTERMEDIATE);
+  if (!assumption.is_null()) {
+    add_to_induction_solver(assumption, INDUCTION_FIRST);
+    add_to_induction_solver(assumption, INDUCTION_INTERMEDIATE);
   }
 
   // Add the formula (moving current -> next)
@@ -546,16 +546,16 @@ solvers::query_result solvers::check_inductive(expr::term_ref f, bool add_assump
   return result;
 }
 
-expr::term_ref solvers::interpolate_induction(expr::term_ref F, bool add_assumptions) {
+expr::term_ref solvers::interpolate_induction(expr::term_ref F, expr::term_ref assumption) {
   assert(d_induction_solver != 0);
 
   // Push the scope
   smt::solver_scope scope(d_induction_solver);
   scope.push();
 
-  if (add_assumptions) {
-    add_to_induction_solver(F, INDUCTION_FIRST);
-    add_to_induction_solver(F, INDUCTION_INTERMEDIATE);
+  if (!assumption.is_null()) {
+    add_to_induction_solver(assumption, INDUCTION_FIRST);
+    add_to_induction_solver(assumption, INDUCTION_INTERMEDIATE);
   }
 
   // Add the formula (moving current -> next)
