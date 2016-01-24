@@ -137,9 +137,11 @@ induction_obligation ic3_engine::pop_induction_obligation() {
 }
 
 void ic3_engine::add_to_induction_frame(expr::term_ref F, solvers::induction_assertion_type type) {
-  assert(d_induction_frame.find(F) == d_induction_frame.end());
   if (type == solvers::INDUCTION_FIRST) {
+    assert(d_induction_frame.find(F) == d_induction_frame.end());
     d_induction_frame.insert(F);
+  } else {
+    assert(d_induction_frame.find(F) != d_induction_frame.end());
   }
   d_smt->add_to_induction_solver(F, type);
   d_stats.frame_size->get_value() = d_induction_frame.size();
@@ -147,7 +149,7 @@ void ic3_engine::add_to_induction_frame(expr::term_ref F, solvers::induction_ass
 
 void ic3_engine::enqueue_induction_obligation(const induction_obligation& ind) {
   assert(d_induction_obligations_handles.find(ind.F_cex) == d_induction_obligations_handles.end());
-  assert(d_induction_frame.find(ind.F_cex) != d_induction_frame.end());
+  assert(d_induction_frame.find(ind.F_fwd) != d_induction_frame.end());
   induction_obligation_queue::handle_type h = d_induction_obligations.push(ind);
   d_induction_obligations_handles[ind.F_cex] = h;
   d_stats.queue_size->get_value() = d_induction_obligations.size();
@@ -164,68 +166,76 @@ void ic3_engine::bump_induction_obligation(expr::term_ref f, double amount) {
   d_induction_obligations.update(h);
 }
 
-ic3_engine::induction_result ic3_engine::push_if_inductive(induction_obligation& ind) {
+ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& ind) {
 
+  // F_cex => !F_fwd, F_wd leads to a counter-example in d steps
   expr::term_ref F_cex = ind.F_cex;
   expr::term_ref F_fwd = ind.F_fwd;
   size_t d = ind.d;
 
-  TRACE("ic3") << "ic3: pushing F_cex at " << d_induction_frame_index << ": " << F_cex << std::endl;
+  TRACE("ic3") << "ic3: Trying F_cex at " << d_induction_frame_index << ": " << F_cex << std::endl;
 
-  // Check if inductive
+  // Check if F_cex is inductive. If not then, if it can be reached, we can find a counter-example.
   expr::term_ref F_cex_not = tm().mk_term(expr::TERM_NOT, F_cex);
   solvers::query_result cex_result = d_smt->check_inductive(F_cex_not);
 
-  // If counter-example is inductive
+  // If counter-example is inductive, we can push it forward, potentially F_fwd instead
   if (cex_result.result == smt::solver::UNSAT) {
-    TRACE("ic3") << "ic3: pushing F_fwd at " << d_induction_frame_index << ": " << F_fwd << std::endl;
+    TRACE("ic3") << "ic3: Trying F_fwd at " << d_induction_frame_index << ": " << F_fwd << std::endl;
     // Counter-example is inductive, try to push the learnt
     solvers::query_result fwd_result = d_smt->check_inductive(F_fwd);
-    if (fwd_result.result != smt::solver::UNSAT) {
-      // The current refutation is too strong, refine and replace it
+    if (fwd_result.result == smt::solver::SAT) {
+      // We can not push the forward learnt, but we can refine it and push the replacement
       expr::term_ref I_ind = d_smt->interpolate_induction(F_cex_not);
       d_induction_frame.erase(F_fwd);
       F_fwd = tm().mk_term(expr::TERM_OR, F_fwd, I_ind);
       d_induction_frame.insert(F_fwd);
     }
-    // Push the it
-    d_induction_obligations_next.push_back(induction_obligation(tm(), F_fwd, F_cex, d, 0));
+    // It's pushed so add it to induction assumptions
     d_smt->add_to_induction_solver(F_fwd, solvers::INDUCTION_FIRST);
     d_smt->add_to_induction_solver(F_fwd, solvers::INDUCTION_INTERMEDIATE);
+    // Add it to set of pushed facts
+    d_induction_obligations_next.push_back(induction_obligation(tm(), F_fwd, F_cex, d, 0));
+    // Update stats
     d_stats.frame_pushed->get_value() = d_induction_obligations_next.size();
+    // We're done
     return INDUCTION_SUCCESS;
   }
 
-  // Counter-example is not inductive
+  // Counter-example is not inductive, if we can reach it we found a real conter-example
   expr::term_ref G = cex_result.generalization;
-  TRACE("ic3::generalization") << "ic3: generalization " << G << std::endl;
+  TRACE("ic3::generalization") << "ic3: F_cex generalization " << G << std::endl;
 
-  // Check if G is reachable (give a budget enough for frame length fails)
+  // Check if G is reachable. We know that F_cex is not reachable up to induction frame index.
+  // This means that G can not be reachable for frames <= frame_index - induction_depth. But
+  // we check the other ones.
   size_t start = (d_induction_frame_index + 1) - d_induction_frame_depth;
   size_t end = d_induction_frame_index;
   reachability::status reachable = d_reachability.check_reachable(start, end, G, cex_result.model);
   
-  // If reachable, we're not inductive
+  // If reachable, then G leads to F_cex, and F_cex leads to !P
   if (reachable == reachability::REACHABLE) {
     d_property_invalid = true;
     return INDUCTION_FAIL;
   }
 
-  // Basic thing to learn is the generalization
+  // We're not reachable, so G_not holds up to current frame index
   expr::term_ref G_not = tm().mk_term(expr::TERM_NOT, G);
   TRACE("ic3") << "ic3: backward learnt: " << G_not << std::endl;
 
-  // Learn forward that refutes G
+  // Learn something forward that refutes G
   expr::term_ref learnt = d_smt->learn_forward(d_induction_frame_index, G);
   TRACE("ic3") << "ic3: forward learnt: " << learnt << std::endl;
 
-  // Add to induction frame
+  // Add to counter-example to induction frame
   add_to_induction_frame(G_not, solvers::INDUCTION_FIRST);
+  // Add the learnt fact to the frame we're trying to push
   d_induction_frame.insert(learnt);
 
   // Enqueue to retry
   enqueue_induction_obligation(induction_obligation(tm(), learnt, G, d + d_induction_frame_depth, 0));
 
+  // We try again with newly learnt facts
   return INDUCTION_RETRY;
 }
 
@@ -343,8 +353,13 @@ void ic3_engine::push_current_frame() {
     // Pick a formula to try and prove inductive, i.e. that F_k & P & T => P'
     induction_obligation ind = pop_induction_obligation();
 
+    // We can skip the obligations with d > induction_depth
+    if (ind.d >= d_induction_frame_depth) {
+      continue;
+    }
+
     // Push the formula forward if it's inductive at the frame
-    induction_result ind_result = push_if_inductive(ind);
+    induction_result ind_result = push_obligation(ind);
 
     // See what happened
     switch (ind_result) {
@@ -353,19 +368,13 @@ void ic3_engine::push_current_frame() {
       enqueue_induction_obligation(ind);
       break;
     case INDUCTION_SUCCESS:
-      // Boss
+      // Boss, we're done with this one
       break;
     case INDUCTION_FAIL:
       // Failure, it's marked
-      break;
-    case INDUCTION_INCONCLUSIVE:
+      assert(d_property_invalid);
       break;
     }
-  }
-
-  // Dump dependency graph if asked
-  if (ctx().get_options().get_bool("ic3-dump-dependencies")) {
-    dump_dependencies();
   }
 }
 
@@ -373,6 +382,9 @@ engine::result ic3_engine::search() {
 
   // Push frame by frame */
   for(;;) {
+
+
+    MSG(1) << "ic3: working on induction frame " << d_induction_frame_index << " with induction depth " << d_induction_frame_depth << std::endl;
 
     // Push the current induction frame forward
     push_current_frame();
@@ -382,6 +394,9 @@ engine::result ic3_engine::search() {
       return engine::INVALID;
     }
 
+    MSG(1) << "ic3: pushed " << d_induction_obligations_next.size() << " of " << d_induction_frame.size() << std::endl;
+
+    // If we pushed everything, we're done
     if (d_induction_frame.size() == d_induction_obligations_next.size()) {
       if (ctx().get_options().get_bool("ic3-show-invariant")) {
         d_smt->print_formulas(d_induction_frame, std::cout);
@@ -389,24 +404,22 @@ engine::result ic3_engine::search() {
       return engine::VALID;
     }
 
-    // Clear induction obligations
+    // Clear induction obligations queue and the frame
     d_induction_obligations.clear();
-
-    // Depth of induction
-    d_induction_frame_depth = d_induction_frame_index + 1;
-    d_smt->reset_induction_solver(d_induction_frame_depth);
-
-    MSG(1) << "ic3: Extending trace to " << d_induction_frame_index << " with induction depth " << d_induction_frame_depth <<
-        " (" << d_induction_obligations_next.size() << "/" << d_induction_frame.size() << ")" << std::endl;
-
-    d_stats.frame_index->get_value() = d_induction_frame_index;
-    d_stats.induction_depth->get_value() = d_induction_frame_depth;
+    d_induction_frame.clear();
     d_stats.frame_size->get_value() = 0;
 
     // If exceeded number of frames
     if (ctx().get_options().get_unsigned("ic3-max") > 0 && d_induction_frame_index >= ctx().get_options().get_unsigned("ic3-max")) {
       return engine::INTERRUPTED;
     }
+
+    // Next frame position
+    d_induction_frame_index += d_induction_frame_depth;
+
+    // Set depth of induction
+    d_induction_frame_depth = d_induction_frame_index + 1;
+    d_smt->reset_induction_solver(d_induction_frame_depth);
 
     // Add formulas to the new frame
     d_induction_frame.clear();
@@ -420,10 +433,13 @@ engine::result ic3_engine::search() {
       d_induction_frame.insert(next_it->F_fwd);
     }
 
-    // Next frame and safe position
+    // Clear next frame info
     d_induction_obligations_next.clear();
     d_stats.frame_pushed->get_value() = 0;
-    d_induction_frame_index_next = d_induction_frame_index + d_induction_frame_depth;
+
+    // Update stats
+    d_stats.frame_index->get_value() = d_induction_frame_index;
+    d_stats.induction_depth->get_value() = d_induction_frame_depth;
 
     // Do garbage collection
     d_smt->gc();
@@ -493,11 +509,12 @@ bool ic3_engine::add_property(expr::term_ref P) {
     smt::solver::result result = d_smt->query_at_init(tm().mk_term(expr::TERM_NOT, P));
     if (result == smt::solver::UNSAT) {
       if (d_induction_frame.find(P) == d_induction_frame.end()) {
+        // Add to induction frame, we know it holds at 0
+        assert(d_induction_frame_depth == 1);
         add_to_induction_frame(P, solvers::INDUCTION_FIRST);
         add_to_induction_frame(P, solvers::INDUCTION_INTERMEDIATE);
         enqueue_induction_obligation(induction_obligation(tm(), P, tm().mk_term(expr::TERM_NOT, P), 0, 0));
       }
-      bump_induction_obligation(P, 1);
       d_properties.insert(P);
       return true;
     } else {

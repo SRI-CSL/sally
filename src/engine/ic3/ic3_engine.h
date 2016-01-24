@@ -142,16 +142,14 @@ class ic3_engine : public engine {
   enum induction_result {
     // Formula is inductive
     INDUCTION_SUCCESS,
-    // Formula is not inductive with counter-example)
+    // Formula is not inductive with counter-example
     INDUCTION_FAIL,
-    // Formula is not directly inductive but the check decided to give up
-    INDUCTION_INCONCLUSIVE,
     // Formula was not proven inductive, but new facts were added so we can try again
     INDUCTION_RETRY
   };
 
   /** Push the formula forward if its inductive. Returns true if inductive. */
-  induction_result push_if_inductive(induction_obligation& o);
+  induction_result push_obligation(induction_obligation& o);
 
   /** The current frame we are trying to push */
   size_t d_induction_frame_index;
