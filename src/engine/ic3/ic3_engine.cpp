@@ -57,9 +57,9 @@ void induction_obligation::bump_score(double amount) {
 }
 
 bool induction_obligation::operator < (const induction_obligation& o) const {
-  // Deeper wins
+  // Shallow wins
   if (d != o.d) {
-    return d < o.d;
+    return d > o.d;
   }
   // Larger score wins
   if (score != o.score) {
@@ -198,11 +198,12 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
     return INDUCTION_FAIL;
   }
 
-  // We're not reachable, so G_not holds up to current frame index
+  // G is not reachable, so !G holds up to current frame index
   expr::term_ref F_cex = result.generalization;
   TRACE("ic3") << "ic3: new F_cex: " << F_cex << std::endl;
 
   // Learn something forward that refutes G
+  // We know that G_not is not satisfiable
   expr::term_ref F_fwd = d_smt->learn_forward(d_induction_frame_index, F_cex);
   TRACE("ic3") << "ic3: new F_fwd: " << F_fwd << std::endl;
 

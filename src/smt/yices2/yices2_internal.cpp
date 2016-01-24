@@ -1019,6 +1019,9 @@ void yices2_internal::generalize(smt::solver::generalization_type type, expr::mo
     break;
   }
 
+  // Get yices model from model
+  model_t* yices_model = get_yices_model(m);
+
   if (output::trace_tag_is_enabled("yices2::gen")) {
     std::cerr << "assertions:" << std::endl;
     for (size_t i = 0; i < assertions_size; ++ i) {
@@ -1030,16 +1033,19 @@ void yices2_internal::generalize(smt::solver::generalization_type type, expr::mo
       std::cerr << i << ": ";
       yices_pp_term(stderr, variables[i], 80, 100, 0);
     }
+    std::cerr << "model: ";
+    yices_pp_model(stderr, yices_model, 80, 100, 0);
   }
 
-  // Get yices model from model
-  model_t* yices_model = get_yices_model(m);
   // Generalize
   term_vector_t G_y;
   yices_init_term_vector(&G_y);
   int32_t ret = yices_generalize_model_array(yices_model, assertions_size, assertions, variables_size, variables, YICES_GEN_DEFAULT, &G_y);
   if (ret < 0) {
-    throw exception("Generalization failed in Yices.");
+    std::stringstream ss;
+    char* error = yices_error_string();
+    ss << "Yices error (generalization): " << error;
+    throw exception(ss.str());
   }
 
   for (size_t i = 0; i < G_y.size; ++ i) {

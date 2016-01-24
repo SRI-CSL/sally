@@ -570,12 +570,17 @@ solvers::query_result solvers::check_inductive_model(expr::model::ref m, expr::t
   assert(d_induction_solver != 0);
   assert(d_induction_generalizer != 0);
 
-  solvers::query_result result;;
+  solvers::query_result result;
+
 
   expr::term_ref f_next = d_trace->get_state_formula(f, d_induction_solver_depth);
   if (m->is_true(f_next)) {
     result.model = m;
     result.result = smt::solver::SAT;
+
+    smt::solver_scope scope(d_induction_generalizer);
+    scope.push();
+    d_induction_generalizer->add(f_next, smt::solver::CLASS_B);
     result.generalization = generalize_sat(d_induction_generalizer, m);
   } else {
     result.result = smt::solver::UNSAT;
