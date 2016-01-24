@@ -300,9 +300,8 @@ engine::result ic3_engine::search() {
     for (; next_it != d_induction_obligations_next.end(); ++ next_it) {
       // The formula
       assert(d_induction_frame.find(*next_it) == d_induction_frame.end());
-      expr::term_ref to_assert = tm().mk_term(expr::TERM_NOT, next_it->F_cex);
-      d_smt->add_to_induction_solver(to_assert, solvers::INDUCTION_FIRST);
-      d_smt->add_to_induction_solver(to_assert, solvers::INDUCTION_INTERMEDIATE);
+      d_smt->add_to_induction_solver(next_it->F_fwd, solvers::INDUCTION_FIRST);
+      d_smt->add_to_induction_solver(next_it->F_fwd, solvers::INDUCTION_INTERMEDIATE);
       d_induction_frame.insert(*next_it);
       d_stats.frame_size->get_value() = d_induction_frame.size();
       enqueue_induction_obligation(*next_it);
