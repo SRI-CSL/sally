@@ -938,14 +938,14 @@ void yices2_internal::generalize(smt::solver::generalization_type type, std::vec
   assert(!d_assertions.empty());
 
   // Get the model
-  model_t* m = yices_get_model(d_ctx, true);
-
+  expr::model::ref m = get_model();
 
   if (output::trace_tag_is_enabled("yices2")) {
-    std::cerr << "model:" << std::endl;
-    yices_pp_model(stderr, m, 80, 100, 0);
+    std::cerr << "model:" << (*m) << std::endl;
   }
 
+  // Generalize with the current model
+  generalize(type, m, projection_out);
 }
 
 void yices2_internal::generalize(smt::solver::generalization_type type, expr::model::ref m, std::vector<expr::term_ref>& projection_out) {

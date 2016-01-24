@@ -39,6 +39,7 @@ solvers::solvers(const system::context& ctx, const system::transition_system* tr
 , d_initial_solver(0)
 , d_induction_solver(0)
 , d_induction_generalizer(0)
+, d_induction_solver_depth(0)
 , d_counterexample_solver(0)
 , d_counterexample_solver_depth(0)
 , d_counterexample_solver_variables_depth(0)
@@ -177,8 +178,7 @@ smt::solver* solvers::get_reachability_solver() {
     d_reachability_solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options(), d_ctx.get_statistics());
     d_reachability_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
     d_reachability_solver->add_variables(x_next.begin(), x_next.end(), smt::solver::CLASS_B);
-    d_induction_solver->add_variables(input.begin(), input.end(), smt::solver::CLASS_T);
-    d_induction_generalizer->add_variables(input.begin(), input.end(), smt::solver::CLASS_T);
+    d_reachability_solver->add_variables(input.begin(), input.end(), smt::solver::CLASS_T);
     d_reachability_solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_T);
   }
   return d_reachability_solver;
