@@ -227,10 +227,18 @@ public:
   void output_efsmt(expr::term_ref f, expr::term_ref g) const;
 
   /** Print formulas */
-  void print_formulas(const formula_set& set, std::ostream& out) const;
+  template<typename container>
+  void print_formulas(const container& set, std::ostream& out) const;
 
 };
 
+template <typename container>
+void solvers::print_formulas(const container& set, std::ostream& out) const {
+  typename container::const_iterator it = set.begin();
+  for (; it != set.end(); ++ it) {
+    out << *it << std::endl;
+  }
+}
 
 }
 }

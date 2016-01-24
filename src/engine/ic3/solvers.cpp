@@ -650,12 +650,5 @@ void solvers::output_efsmt(expr::term_ref f, expr::term_ref g) const {
   d_tm.set_name_transformer(old_transformer);
 }
 
-void solvers::print_formulas(const formula_set& set, std::ostream& out) const {
-  formula_set::const_iterator it = set.begin();
-  for (; it != set.end(); ++ it) {
-    out << *it << std::endl;
-  }
-}
-
 }
 }

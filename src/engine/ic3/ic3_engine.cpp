@@ -69,6 +69,11 @@ bool induction_obligation::operator < (const induction_obligation& o) const {
   return F_cex > o.F_cex;
 }
 
+std::ostream& operator << (std::ostream& out, const induction_obligation& ind) {
+  out << ind.F_fwd;
+  return out;
+}
+
 ic3_engine::ic3_engine(const system::context& ctx)
 : engine(ctx)
 , d_transition_system(0)
@@ -136,20 +141,9 @@ induction_obligation ic3_engine::pop_induction_obligation() {
   return ind;
 }
 
-void ic3_engine::add_to_induction_frame(expr::term_ref F, solvers::induction_assertion_type type) {
-  if (type == solvers::INDUCTION_FIRST) {
-    assert(d_induction_frame.find(F) == d_induction_frame.end());
-    d_induction_frame.insert(F);
-  } else {
-    assert(d_induction_frame.find(F) != d_induction_frame.end());
-  }
-  d_smt->add_to_induction_solver(F, type);
-  d_stats.frame_size->get_value() = d_induction_frame.size();
-}
-
 void ic3_engine::enqueue_induction_obligation(const induction_obligation& ind) {
   assert(d_induction_obligations_handles.find(ind.F_cex) == d_induction_obligations_handles.end());
-  assert(d_induction_frame.find(ind.F_fwd) != d_induction_frame.end());
+  assert(d_induction_frame.find(ind) != d_induction_frame.end());
   induction_obligation_queue::handle_type h = d_induction_obligations.push(ind);
   d_induction_obligations_handles[ind.F_cex] = h;
   d_stats.queue_size->get_value() = d_induction_obligations.size();
@@ -187,11 +181,12 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
     if (fwd_result.result == smt::solver::SAT) {
       // We can not push the forward learnt, but we can refine it and push the replacement
       expr::term_ref I_ind = d_smt->interpolate_induction(F_cex_not);
-      d_induction_frame.erase(F_fwd);
-      F_fwd = tm().mk_term(expr::TERM_OR, F_fwd, I_ind);
-      d_induction_frame.insert(F_fwd);
+      d_induction_frame.erase(ind);
+      F_fwd = ind.F_fwd = tm().mk_term(expr::TERM_OR, F_fwd, I_ind);
+      d_induction_frame.insert(ind);
     }
     // It's pushed so add it to induction assumptions
+    assert(d_induction_frame.find(ind) != d_induction_frame.end());
     d_smt->add_to_induction_solver(F_fwd, solvers::INDUCTION_FIRST);
     d_smt->add_to_induction_solver(F_fwd, solvers::INDUCTION_INTERMEDIATE);
     // Add it to set of pushed facts
@@ -228,12 +223,12 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
   TRACE("ic3") << "ic3: forward learnt: " << learnt << std::endl;
 
   // Add to counter-example to induction frame
-  add_to_induction_frame(G_not, solvers::INDUCTION_FIRST);
-  // Add the learnt fact to the frame we're trying to push
-  d_induction_frame.insert(learnt);
-
-  // Enqueue to retry
-  enqueue_induction_obligation(induction_obligation(tm(), learnt, G, d + d_induction_frame_depth, 0));
+  induction_obligation new_ind(tm(), learnt, G, d + d_induction_frame_depth, 0);
+  // Add to induction assertion (but NOT to intermediate)
+  assert(d_induction_frame.find(new_ind) == d_induction_frame.end());
+  d_induction_frame.insert(new_ind);
+  d_smt->add_to_induction_solver(G_not, solvers::INDUCTION_FIRST);
+  enqueue_induction_obligation(new_ind);
 
   // We try again with newly learnt facts
   return INDUCTION_RETRY;
@@ -427,10 +422,11 @@ engine::result ic3_engine::search() {
     for (; next_it != d_induction_obligations_next.end(); ++ next_it) {
       // The formula
       expr::term_ref to_assert = tm().mk_term(expr::TERM_NOT, next_it->F_cex);
-      add_to_induction_frame(to_assert, solvers::INDUCTION_FIRST);
-      add_to_induction_frame(to_assert, solvers::INDUCTION_INTERMEDIATE);
+      assert(d_induction_frame.find(*next_it) == d_induction_frame.end());
+      d_smt->add_to_induction_solver(to_assert, solvers::INDUCTION_FIRST);
+      d_smt->add_to_induction_solver(to_assert, solvers::INDUCTION_INTERMEDIATE);
       enqueue_induction_obligation(*next_it);
-      d_induction_frame.insert(next_it->F_fwd);
+      d_induction_frame.insert(*next_it);
     }
 
     // Clear next frame info
@@ -508,12 +504,13 @@ bool ic3_engine::add_property(expr::term_ref P) {
   } else {
     smt::solver::result result = d_smt->query_at_init(tm().mk_term(expr::TERM_NOT, P));
     if (result == smt::solver::UNSAT) {
-      if (d_induction_frame.find(P) == d_induction_frame.end()) {
+      induction_obligation ind(tm(), P, tm().mk_term(expr::TERM_NOT, P), 0, 0);
+      if (d_induction_frame.find(ind) == d_induction_frame.end()) {
         // Add to induction frame, we know it holds at 0
         assert(d_induction_frame_depth == 1);
-        add_to_induction_frame(P, solvers::INDUCTION_FIRST);
-        add_to_induction_frame(P, solvers::INDUCTION_INTERMEDIATE);
-        enqueue_induction_obligation(induction_obligation(tm(), P, tm().mk_term(expr::TERM_NOT, P), 0, 0));
+        d_induction_frame.insert(ind);
+        d_smt->add_to_induction_solver(P, solvers::INDUCTION_FIRST);
+        enqueue_induction_obligation(ind);
       }
       d_properties.insert(P);
       return true;

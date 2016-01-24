@@ -66,6 +66,8 @@ struct induction_obligation {
 
 };
 
+std::ostream& operator << (std::ostream& out, const induction_obligation& ind);
+
 /** Priority queue for obligations (max-heap) */
 typedef boost::heap::fibonacci_heap<induction_obligation> induction_obligation_queue;
 
@@ -158,7 +160,8 @@ class ic3_engine : public engine {
   size_t d_induction_frame_depth;
 
   /** The content of the induction frame */
-  formula_set d_induction_frame;
+  typedef std::set<induction_obligation> induction_frame_type;
+  induction_frame_type d_induction_frame;
 
   /** Map from frame formulas to information about them */
   expr::term_ref_map<frame_formula_parent_info> d_frame_formula_parent_info;
@@ -201,9 +204,6 @@ class ic3_engine : public engine {
 
   /** Count of obligations per frame */
   std::vector<size_t> d_induction_obligations_count;
-
-  /** Add to induction frame and solver */
-  void add_to_induction_frame(expr::term_ref F, solvers::induction_assertion_type type);
 
   /** Get the next induction obligations */
   induction_obligation pop_induction_obligation();
