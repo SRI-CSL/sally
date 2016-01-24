@@ -425,8 +425,8 @@ engine::result ic3_engine::search() {
       assert(d_induction_frame.find(*next_it) == d_induction_frame.end());
       d_smt->add_to_induction_solver(to_assert, solvers::INDUCTION_FIRST);
       d_smt->add_to_induction_solver(to_assert, solvers::INDUCTION_INTERMEDIATE);
-      enqueue_induction_obligation(*next_it);
       d_induction_frame.insert(*next_it);
+      enqueue_induction_obligation(*next_it);
     }
 
     // Clear next frame info
