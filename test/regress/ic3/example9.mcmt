@@ -20,6 +20,6 @@
 )
 
 ;; Query (any state formula over state_type)
-(query T (not (= x 50)))
+(query T (not (= x 1000)))
 
 

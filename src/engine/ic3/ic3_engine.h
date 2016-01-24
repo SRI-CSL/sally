@@ -66,10 +66,14 @@ struct induction_obligation {
 
 };
 
+struct induction_obligation_cmp {
+  bool operator() (const induction_obligation& ind1, const induction_obligation& ind2) const;
+};
+
 std::ostream& operator << (std::ostream& out, const induction_obligation& ind);
 
 /** Priority queue for obligations (max-heap) */
-typedef boost::heap::fibonacci_heap<induction_obligation> induction_obligation_queue;
+typedef boost::heap::fibonacci_heap<induction_obligation, boost::heap::compare<induction_obligation_cmp> > induction_obligation_queue;
 
 /**
  * Information on formulas. A formula is found in a frame because it refutes a
