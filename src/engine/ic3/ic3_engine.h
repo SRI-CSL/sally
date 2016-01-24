@@ -49,6 +49,8 @@ struct induction_obligation {
   expr::term_ref F_cex;
   /** Depth to the real counter-example */
   size_t d;
+  /** Number of children */
+  size_t children;
   /** Score of the obligation */
   double score;
 
@@ -197,7 +199,7 @@ class ic3_engine : public engine {
   induction_obligation_queue d_induction_obligations;
 
   /** Map from formulas to their positions in the queue */
-  expr::term_ref_hash_map<induction_obligation_queue::handle_type> d_induction_obligations_handles;
+  std::map<induction_obligation, induction_obligation_queue::handle_type> d_induction_obligations_handles;
 
   /** Set of obligations for the next frame */
   std::vector<induction_obligation> d_induction_obligations_next;
@@ -212,7 +214,7 @@ class ic3_engine : public engine {
   void enqueue_induction_obligation(const induction_obligation& ind);
 
   /** Bump the score of the obligation */
-  void bump_induction_obligation(expr::term_ref ind, double amount);
+  void bump_induction_obligation(const induction_obligation& ind, double amount);
 
   /** Returns the frame variable */
   expr::term_ref get_frame_variable(size_t i);
@@ -221,7 +223,7 @@ class ic3_engine : public engine {
   bool add_property(expr::term_ref P);
 
   /** Add the initial states to 0 frame */
-  void add_initial_states(expr::term_ref I);
+  void add_initial_states(expr::term_ref I, expr::term_ref P);
 
   /** Property components */
   std::set<expr::term_ref> d_properties;

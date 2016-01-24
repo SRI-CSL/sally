@@ -508,7 +508,7 @@ void solvers::add_to_induction_solver(expr::term_ref f, induction_assertion_type
   }
 }
 
-solvers::query_result solvers::check_inductive(expr::term_ref f) {
+solvers::query_result solvers::check_inductive(expr::term_ref f, bool add_assumptions) {
 
   assert(d_induction_solver != 0);
 
@@ -517,6 +517,11 @@ solvers::query_result solvers::check_inductive(expr::term_ref f) {
   // Push the scope
   smt::solver_scope scope(d_induction_solver);
   scope.push();
+
+  if (add_assumptions) {
+    add_to_induction_solver(f, INDUCTION_FIRST);
+    add_to_induction_solver(f, INDUCTION_INTERMEDIATE);
+  }
 
   // Add the formula (moving current -> next)
   expr::term_ref F_not = d_tm.mk_term(expr::TERM_NOT, f);
@@ -541,12 +546,17 @@ solvers::query_result solvers::check_inductive(expr::term_ref f) {
   return result;
 }
 
-expr::term_ref solvers::interpolate_induction(expr::term_ref F) {
+expr::term_ref solvers::interpolate_induction(expr::term_ref F, bool add_assumptions) {
   assert(d_induction_solver != 0);
 
   // Push the scope
   smt::solver_scope scope(d_induction_solver);
   scope.push();
+
+  if (add_assumptions) {
+    add_to_induction_solver(F, INDUCTION_FIRST);
+    add_to_induction_solver(F, INDUCTION_INTERMEDIATE);
+  }
 
   // Add the formula (moving current -> next)
   expr::term_ref F_not = d_tm.mk_term(expr::TERM_NOT, F);
@@ -556,7 +566,8 @@ expr::term_ref solvers::interpolate_induction(expr::term_ref F) {
   // Figure out the result
   smt::solver::result result = d_induction_solver->check();
   assert(result == smt::solver::UNSAT);
-  return d_induction_solver->interpolate();
+  expr::term_ref I = d_induction_solver->interpolate();
+  return d_trace->get_state_formula(d_induction_solver_depth, I);
 }
 
 void solvers::new_reachability_frame() {
