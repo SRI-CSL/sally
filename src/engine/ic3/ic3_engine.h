@@ -166,33 +166,6 @@ class ic3_engine : public engine {
   typedef std::set<induction_obligation> induction_frame_type;
   induction_frame_type d_induction_frame;
 
-  /** Map from frame formulas to information about them */
-  expr::term_ref_map<frame_formula_parent_info> d_frame_formula_parent_info;
-
-  /** Sets the refutation info */
-  void set_refutes_info(expr::term_ref f, expr::term_ref g, expr::term_ref l);
-
-  /** Get the formula l refutes */
-  expr::term_ref get_refutes(expr::term_ref l) const;
-
-  /** Get the parent of l */
-  expr::term_ref get_parent(expr::term_ref l) const;
-
-  /** Get the depth of refutation */
-  size_t get_refutes_depth(expr::term_ref l) const;
-
-  /** Does l have a parent */
-  bool has_parent(expr::term_ref l) const;
-
-  /** Map from formulas to frame where its invalid */
-  expr::term_ref_map<size_t> d_frame_formula_invalid_info;
-
-  /** Mark the formula as invalid (not necessarily in the current frame) */
-  void set_invalid(expr::term_ref f, size_t frame);
-
-  /** Returns true if formula marked as invalid */
-  bool is_invalid(expr::term_ref f) const;
-
   /** Queue of induction obligations at the current frame */
   induction_obligation_queue d_induction_obligations;
 

@@ -731,9 +731,76 @@ expr::bitvector bitvector_from_int32(size_t size, int32_t* value) {
   return bv;
 }
 
-expr::model::ref yices2_internal::get_model(const std::set<expr::term_ref>& x_variables, const std::set<expr::term_ref>& T_variables, const std::set<expr::term_ref>& y_variables) {
+model_t* yices2_internal::get_yices_model(expr::model::ref m) {
+
+  // Get the variables
+  std::vector<expr::term_ref> variables;
+  bool class_A_used = false;
+  bool class_B_used = false;
+  bool class_T_used = false;
+  for (size_t i = 0; i < d_assertion_classes.size(); ++ i) {
+    switch (d_assertion_classes[i]) {
+    case solver::CLASS_A:
+      class_A_used = true;
+      break;
+    case solver::CLASS_B:
+      class_B_used = true;
+      break;
+    case solver::CLASS_T:
+      class_A_used = true;
+      class_B_used = true;
+      class_T_used = true;
+      break;
+    default:
+      assert(false);
+    }
+  }
+
+  if (class_A_used) {
+    variables.insert(variables.end(), d_A_variables.begin(), d_A_variables.end());
+  }
+  if (class_B_used) {
+    variables.insert(variables.end(), d_B_variables.begin(), d_B_variables.end());
+  }
+  if (class_T_used) {
+    variables.insert(variables.end(), d_T_variables.begin(), d_T_variables.end());
+  }
+
+  uint32_t n = variables.size();
+  term_t* yices_variables = (term_t*) malloc(sizeof(term_t)*n);
+  term_t* yices_values = (term_t*) malloc(sizeof(term_t)*n);
+
+  size_t i;
+  for (i = 0; i < variables.size(); ++ i) {
+    yices_variables[i] = to_yices2_term(variables[i]);
+    expr::value value = m->get_variable_value(variables[i]);
+    if (value.is_bool()) {
+      // Boolean value
+      yices_values[i] = value.get_bool() ? yices_true() : yices_false();
+    } else if (value.is_rational()) {
+      // Rational value
+      yices_values[i] = yices_mpq(value.get_rational().mpq().get_mpq_t());
+    } else if (value.is_bitvector()) {
+      // Bit-vector value
+      yices_values[i] = yices_bvconst_mpz(value.get_bitvector().size(), value.get_bitvector().mpz().get_mpz_t());
+    } else {
+      assert(false);
+    }
+  }
+
+  model_t* yices_model = yices_model_from_map(n, yices_variables, yices_values);
+
+  free(yices_variables);
+  free(yices_values);
+
+  return yices_model;
+}
+
+
+
+expr::model::ref yices2_internal::get_model() {
   assert(d_last_check_status == STATUS_SAT);
-  assert(x_variables.size() > 0 || y_variables.size() > 0);
+  assert(d_A_variables.size() > 0 || d_B_variables.size() > 0);
 
   // Clear any data already there
   expr::model::ref m = new expr::model(d_tm, false);
@@ -769,13 +836,13 @@ expr::model::ref yices2_internal::get_model(const std::set<expr::term_ref>& x_va
   }
 
   if (class_A_used) {
-    variables.insert(variables.end(), x_variables.begin(), x_variables.end());
+    variables.insert(variables.end(), d_A_variables.begin(), d_A_variables.end());
   }
   if (class_B_used) {
-    variables.insert(variables.end(), y_variables.begin(), y_variables.end());
+    variables.insert(variables.end(), d_B_variables.begin(), d_B_variables.end());
   }
   if (class_T_used) {
-    variables.insert(variables.end(), T_variables.begin(), T_variables.end());
+    variables.insert(variables.end(), d_T_variables.begin(), d_T_variables.end());
   }
 
   // See which variables we have to reason about
@@ -873,10 +940,17 @@ void yices2_internal::generalize(smt::solver::generalization_type type, std::vec
   // Get the model
   model_t* m = yices_get_model(d_ctx, true);
 
+
   if (output::trace_tag_is_enabled("yices2")) {
     std::cerr << "model:" << std::endl;
     yices_pp_model(stderr, m, 80, 100, 0);
   }
+
+}
+
+void yices2_internal::generalize(smt::solver::generalization_type type, expr::model::ref m, std::vector<expr::term_ref>& projection_out) {
+
+  assert(!d_assertions.empty());
 
   // When we generalize backward we eliminate from T and B
   // When we generalize forward we eliminate from A and T
@@ -958,16 +1032,18 @@ void yices2_internal::generalize(smt::solver::generalization_type type, std::vec
     }
   }
 
+  // Get yices model from model
+  model_t* yices_model = get_yices_model(m);
   // Generalize
   term_vector_t G_y;
   yices_init_term_vector(&G_y);
-  int32_t ret = yices_generalize_model_array(m, assertions_size, assertions, variables_size, variables, YICES_GEN_DEFAULT, &G_y);
+  int32_t ret = yices_generalize_model_array(yices_model, assertions_size, assertions, variables_size, variables, YICES_GEN_DEFAULT, &G_y);
   if (ret < 0) {
     throw exception("Generalization failed in Yices.");
   }
 
   for (size_t i = 0; i < G_y.size; ++ i) {
-    assert(yices_formula_true_in_model(m, G_y.data[i]));
+    assert(yices_formula_true_in_model(yices_model, G_y.data[i]));
     expr::term_ref t_i = to_term(G_y.data[i]);
     projection_out.push_back(t_i);
   }
@@ -1000,7 +1076,7 @@ void yices2_internal::generalize(smt::solver::generalization_type type, std::vec
   // Free temps
   delete[] variables;
   delete[] assertions;
-  yices_free_model(m);
+  yices_free_model(yices_model);
 }
 
 void yices2_internal::gc() {

@@ -74,6 +74,9 @@ class solvers {
   /** Solver for induction queries */
   smt::solver* d_induction_solver;
 
+  /** Solver for induction generalization */
+  smt::solver* d_induction_generalizer;
+
   /** Depth of the induction solver */
   size_t d_induction_solver_depth;
 
@@ -98,8 +101,11 @@ class solvers {
   /** Initialize the reachability solver for frame k */
   void init_reachability_solver(size_t k);
 
-  /** Generalize the SAT result at k */
+  /** Generalize the SAT result */
   expr::term_ref generalize_sat(smt::solver* solver);
+
+  /** Generalize the given model that satisfies assertions */
+  expr::term_ref generalize_sat(smt::solver* solver, expr::model::ref m);
 
   /** Get the enabling varibale of frame k */
   expr::term_ref get_frame_variable(size_t k);
@@ -194,10 +200,13 @@ public:
    * Check if f is inductive, i.e. !f is added at frame depth and check for
    * satisfiability.
    */
-  query_result check_inductive(expr::term_ref f, expr::term_ref assumption);
+  query_result check_inductive(expr::term_ref f);
 
-  /** Interpolate induction (i.e. A && !F' is unsat), get I => F'*/
-  expr::term_ref interpolate_induction(expr::term_ref f, expr::term_ref assumption);
+  /**
+   * Check if the given model from induction check satisfies f at frame depth.
+   * If yes, returns generalization.
+   */
+  query_result check_inductive_model(expr::model::ref m, expr::term_ref f);
 
   /** Learn forward to refute G at k from k-1 and initial state using reachability solvers */
   expr::term_ref learn_forward(size_t k, expr::term_ref G);

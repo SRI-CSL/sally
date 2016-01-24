@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "expr/term_manager.h"
+#include "expr/model.h"
 #include "smt/solver.h"
 
 namespace sally {
@@ -132,7 +133,10 @@ public:
   solver::result check();
 
   /** Returns the model */
-  expr::model::ref get_model(const std::set<expr::term_ref>& x_variables, const std::set<expr::term_ref>& T_variables, const std::set<expr::term_ref>& y_variables);
+  expr::model::ref get_model();
+
+  /** Returns yices model from sally model */
+  model_t* get_yices_model(expr::model::ref m);
 
   /** Push the context */
   void push();
@@ -142,6 +146,9 @@ public:
 
   /** Return the generalization */
   void generalize(smt::solver::generalization_type type, std::vector<expr::term_ref>& projection_out);
+
+  /** Return the generalization */
+  void generalize(smt::solver::generalization_type type, expr::model::ref, std::vector<expr::term_ref>& projection_out);
 
   /** Returns the instance id */
   size_t instance() const { return d_instance; }

@@ -38,6 +38,7 @@ solvers::solvers(const system::context& ctx, const system::transition_system* tr
 , d_reachability_solver(0)
 , d_initial_solver(0)
 , d_induction_solver(0)
+, d_induction_generalizer(0)
 , d_counterexample_solver(0)
 , d_counterexample_solver_depth(0)
 , d_counterexample_solver_variables_depth(0)
@@ -49,6 +50,7 @@ solvers::~solvers() {
   delete d_reachability_solver;
   delete d_initial_solver;
   delete d_induction_solver;
+  delete d_induction_generalizer;
   delete d_counterexample_solver;
   for (size_t k = 0; k < d_reachability_solvers.size(); ++ k) {
     delete d_reachability_solvers[k];
@@ -81,6 +83,8 @@ void solvers::reset(const std::vector<solvers::formula_set>& frames) {
   // Clear the induction solver
   delete d_induction_solver;
   d_induction_solver = 0;
+  delete d_induction_generalizer;
+  d_induction_generalizer = 0;
 
   // Reset the counterexample solver
   delete d_counterexample_solver;
@@ -174,6 +178,7 @@ smt::solver* solvers::get_reachability_solver() {
     d_reachability_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
     d_reachability_solver->add_variables(x_next.begin(), x_next.end(), smt::solver::CLASS_B);
     d_induction_solver->add_variables(input.begin(), input.end(), smt::solver::CLASS_T);
+    d_induction_generalizer->add_variables(input.begin(), input.end(), smt::solver::CLASS_T);
     d_reachability_solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_T);
   }
   return d_reachability_solver;
@@ -223,6 +228,9 @@ void solvers::gc() {
   }
   if (d_induction_solver) {
     d_induction_solver->gc();
+  }
+  if (d_induction_generalizer) {
+    d_induction_generalizer->gc();
   }
   if (d_reachability_solver) {
     d_reachability_solver->gc();
@@ -359,6 +367,16 @@ expr::term_ref solvers::generalize_sat(smt::solver* solver) {
   return G;
 }
 
+expr::term_ref solvers::generalize_sat(smt::solver* solver, expr::model::ref m) {
+  // Generalize
+  std::vector<expr::term_ref> generalization_facts;
+  solver->generalize(smt::solver::GENERALIZE_BACKWARD, m, generalization_facts);
+  expr::term_ref G = d_tm.mk_and(generalization_facts);
+  // Move variables back to regular state instead of trace state
+  G = d_trace->get_state_formula(0, G);
+  return G;
+}
+
 expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
 
   TRACE("ic3") << "learning forward to refute: " << G << std::endl;
@@ -449,12 +467,14 @@ void solvers::add_to_reachability_solver(size_t k, expr::term_ref f)  {
 void solvers::reset_induction_solver(size_t depth) {
   // Reset the induction solver
   delete d_induction_solver;
+  delete d_induction_generalizer;
 
   // Transition relation
   d_transition_relation = d_transition_system->get_transition_relation();
 
   // The solver
   d_induction_solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options(), d_ctx.get_statistics());
+  d_induction_generalizer = smt::factory::mk_default_solver(d_tm, d_ctx.get_options(), d_ctx.get_statistics());
   d_induction_solver_depth = depth;
 
   // Add variables and transition relation
@@ -468,18 +488,22 @@ void solvers::reset_induction_solver(size_t depth) {
       // First frame is A
       const std::vector<expr::term_ref>& x_state = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_CURRENT);
       d_induction_solver->add_variables(x_state.begin(), x_state.end(), smt::solver::CLASS_A);
+      d_induction_generalizer->add_variables(x_state.begin(), x_state.end(), smt::solver::CLASS_A);
     } else if (k < depth) {
       // Intermediate frames are T
       d_induction_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_T);
+      d_induction_generalizer->add_variables(x.begin(), x.end(), smt::solver::CLASS_T);
     } else {
       // Last frame is B
       d_induction_solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_B);
+      d_induction_generalizer->add_variables(x.begin(), x.end(), smt::solver::CLASS_B);
     }
 
     // Add input variables
     if (k > 0) {
       const std::vector<expr::term_ref>& input = d_trace->get_input_variables(k-1);
       d_induction_solver->add_variables(input.begin(), input.end(), smt::solver::CLASS_T);
+      d_induction_generalizer->add_variables(input.begin(), input.end(), smt::solver::CLASS_T);
       // Formula T(x_{k-1}, x_k)
       expr::term_ref T = d_trace->get_transition_formula(d_transition_relation, k-1);
       // If transitioning from initial state, move to state vars
@@ -487,6 +511,7 @@ void solvers::reset_induction_solver(size_t depth) {
         T = d_trace->get_state_formula(0, T);
       }
       d_induction_solver->add(T, smt::solver::CLASS_T);
+      d_induction_generalizer->add(T, smt::solver::CLASS_T);
     }
   }
 }
@@ -494,6 +519,7 @@ void solvers::reset_induction_solver(size_t depth) {
 
 void solvers::add_to_induction_solver(expr::term_ref f, induction_assertion_type type) {
   assert(d_induction_solver != 0);
+  assert(d_induction_generalizer != 0);
   switch (type) {
   case INDUCTION_FIRST:
     d_induction_solver->add(f, smt::solver::CLASS_A);
@@ -508,20 +534,16 @@ void solvers::add_to_induction_solver(expr::term_ref f, induction_assertion_type
   }
 }
 
-solvers::query_result solvers::check_inductive(expr::term_ref f, expr::term_ref assumption) {
+solvers::query_result solvers::check_inductive(expr::term_ref f) {
 
   assert(d_induction_solver != 0);
+  assert(d_induction_generalizer != 0);
 
   query_result result;
 
   // Push the scope
   smt::solver_scope scope(d_induction_solver);
   scope.push();
-
-  if (!assumption.is_null()) {
-    add_to_induction_solver(assumption, INDUCTION_FIRST);
-    add_to_induction_solver(assumption, INDUCTION_INTERMEDIATE);
-  }
 
   // Add the formula (moving current -> next)
   expr::term_ref F_not = d_tm.mk_term(expr::TERM_NOT, f);
@@ -532,9 +554,7 @@ solvers::query_result solvers::check_inductive(expr::term_ref f, expr::term_ref 
   result.result = d_induction_solver->check();
   switch (result.result) {
   case smt::solver::SAT:
-    if (d_generate_models_for_queries) {
-      result.model = d_induction_solver->get_model();
-    }
+    result.model = d_induction_solver->get_model();
     result.generalization = generalize_sat(d_induction_solver);
     break;
   case smt::solver::UNSAT:
@@ -546,28 +566,22 @@ solvers::query_result solvers::check_inductive(expr::term_ref f, expr::term_ref 
   return result;
 }
 
-expr::term_ref solvers::interpolate_induction(expr::term_ref F, expr::term_ref assumption) {
+solvers::query_result solvers::check_inductive_model(expr::model::ref m, expr::term_ref f) {
   assert(d_induction_solver != 0);
+  assert(d_induction_generalizer != 0);
 
-  // Push the scope
-  smt::solver_scope scope(d_induction_solver);
-  scope.push();
+  solvers::query_result result;;
 
-  if (!assumption.is_null()) {
-    add_to_induction_solver(assumption, INDUCTION_FIRST);
-    add_to_induction_solver(assumption, INDUCTION_INTERMEDIATE);
+  expr::term_ref f_next = d_trace->get_state_formula(f, d_induction_solver_depth);
+  if (m->is_true(f_next)) {
+    result.model = m;
+    result.result = smt::solver::SAT;
+    result.generalization = generalize_sat(d_induction_generalizer, m);
+  } else {
+    result.result = smt::solver::UNSAT;
   }
 
-  // Add the formula (moving current -> next)
-  expr::term_ref F_not = d_tm.mk_term(expr::TERM_NOT, F);
-  expr::term_ref F_not_next = d_trace->get_state_formula(F_not, d_induction_solver_depth);
-  d_induction_solver->add(F_not_next, smt::solver::CLASS_B);
-
-  // Figure out the result
-  smt::solver::result result = d_induction_solver->check();
-  assert(result == smt::solver::UNSAT);
-  expr::term_ref I = d_induction_solver->interpolate();
-  return d_trace->get_state_formula(d_induction_solver_depth, I);
+  return result;
 }
 
 void solvers::new_reachability_frame() {
