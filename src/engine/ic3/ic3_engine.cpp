@@ -57,9 +57,9 @@ void induction_obligation::bump_score(double amount) {
 }
 
 bool induction_obligation::operator < (const induction_obligation& o) const {
-  // Smaller depth wins
+  // Deeper wins
   if (d != o.d) {
-    return d > o.d;
+    return d < o.d;
   }
   // Larger score wins
   if (score != o.score) {
@@ -83,7 +83,7 @@ ic3_engine::ic3_engine(const system::context& ctx)
 , d_reachability(ctx)
 , d_induction_frame_index(0)
 , d_induction_frame_depth(0)
-, d_induction_frame_index_next(0)
+, d_induction_cutoff(0)
 , d_property_invalid(false)
 , d_learning_type(LEARN_UNDEFINED)
 {
@@ -116,6 +116,7 @@ void ic3_engine::reset() {
   d_induction_frame.clear();
   d_induction_frame_index = 0;
   d_induction_frame_depth = 0;
+  d_induction_cutoff = 1;
   d_induction_obligations.clear();
   d_induction_obligations_next.clear();
   d_induction_obligations_count.clear();
@@ -190,14 +191,31 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
     d_smt->add_to_induction_solver(F_fwd, solvers::INDUCTION_FIRST);
     d_smt->add_to_induction_solver(F_fwd, solvers::INDUCTION_INTERMEDIATE);
     // Add it to set of pushed facts
-    d_induction_obligations_next.push_back(induction_obligation(tm(), F_fwd, F_cex, d, 0));
+    d_induction_obligations_next.push_back(ind);
     // Update stats
     d_stats.frame_pushed->get_value() = d_induction_obligations_next.size();
     // We're done
     return INDUCTION_SUCCESS;
   }
 
-  // Counter-example is not inductive, if we can reach it we found a real conter-example
+  // If we couldn't push, and we are over the treshold, just assert it.
+  if (ind.d > d_induction_cutoff) {
+    d_smt->add_to_induction_solver(F_fwd, solvers::INDUCTION_FIRST);
+    d_smt->add_to_induction_solver(F_fwd, solvers::INDUCTION_INTERMEDIATE);
+    // See if we can push now that it's asserted
+    solvers::query_result fwd_result = d_smt->check_inductive(F_fwd);
+    if (fwd_result.result == smt::solver::UNSAT) {
+      // Add it to set of pushed facts
+      d_induction_obligations_next.push_back(ind);
+      // Update stats
+      d_stats.frame_pushed->get_value() = d_induction_obligations_next.size();
+      return INDUCTION_SUCCESS;
+    } else {
+      return INDUCTION_FAIL;
+    }
+  }
+
+  // Counter-example is not inductive, if we can reach it we found a real counter-example
   expr::term_ref G = cex_result.generalization;
   TRACE("ic3::generalization") << "ic3: F_cex generalization " << G << std::endl;
 
@@ -223,11 +241,12 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
   TRACE("ic3") << "ic3: forward learnt: " << learnt << std::endl;
 
   // Add to counter-example to induction frame
-  induction_obligation new_ind(tm(), learnt, G, d + d_induction_frame_depth, 0);
+  induction_obligation new_ind(tm(), learnt, G, d_induction_frame_depth + d, 0);
   // Add to induction assertion (but NOT to intermediate)
   assert(d_induction_frame.find(new_ind) == d_induction_frame.end());
   d_induction_frame.insert(new_ind);
   d_smt->add_to_induction_solver(G_not, solvers::INDUCTION_FIRST);
+  d_smt->add_to_induction_solver(G_not, solvers::INDUCTION_INTERMEDIATE);
   enqueue_induction_obligation(new_ind);
 
   // We try again with newly learnt facts
@@ -348,11 +367,6 @@ void ic3_engine::push_current_frame() {
     // Pick a formula to try and prove inductive, i.e. that F_k & P & T => P'
     induction_obligation ind = pop_induction_obligation();
 
-    // We can skip the obligations with d > induction_depth
-    if (ind.d >= d_induction_frame_depth) {
-      continue;
-    }
-
     // Push the formula forward if it's inductive at the frame
     induction_result ind_result = push_obligation(ind);
 
@@ -366,8 +380,8 @@ void ic3_engine::push_current_frame() {
       // Boss, we're done with this one
       break;
     case INDUCTION_FAIL:
-      // Failure, it's marked
-      assert(d_property_invalid);
+      // Failure, we didn't push, either counter-example found, or we couldn't push
+      // and decided not to try again
       break;
     }
   }
@@ -378,8 +392,7 @@ engine::result ic3_engine::search() {
   // Push frame by frame */
   for(;;) {
 
-
-    MSG(1) << "ic3: working on induction frame " << d_induction_frame_index << " with induction depth " << d_induction_frame_depth << std::endl;
+    MSG(1) << "ic3: working on induction frame " << d_induction_frame_index << " with induction depth " << d_induction_frame_depth << " and cutoff " << d_induction_cutoff << std::endl;
 
     // Push the current induction frame forward
     push_current_frame();
@@ -415,6 +428,9 @@ engine::result ic3_engine::search() {
     // Set depth of induction
     d_induction_frame_depth = d_induction_frame_index + 1;
     d_smt->reset_induction_solver(d_induction_frame_depth);
+
+    // Set the cutoff
+    d_induction_cutoff = d_induction_frame_index + d_induction_frame_depth;
 
     // Add formulas to the new frame
     d_induction_frame.clear();
@@ -471,7 +487,7 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   // Initialize the induction solver
   d_induction_frame_index = 0;
   d_induction_frame_depth = 1;
-  d_induction_frame_index_next = 1;
+  d_induction_cutoff = 1;
   d_smt->reset_induction_solver(1);
 
   // Add the property we're trying to prove (if not already invalid at frame 0)
