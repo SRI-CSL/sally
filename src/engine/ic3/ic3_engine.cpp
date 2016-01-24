@@ -183,7 +183,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
 
   // We can actually reach the counterexample of induction from G, so we check if
   // it's reachable.
-  TRACE("ic3::generalization") << "ic3: F_cex generalization " << result.generalization << std::endl;
+  TRACE("ic3") << "ic3: F_cex generalization " << result.generalization << std::endl;
 
   // Check if G is reachable. We know that F_cex is not reachable up to induction frame index.
   // This means that G can be reached at index i, then F_cex is reachable at i + induction_depth.
@@ -199,11 +199,11 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
   }
 
   // We're not reachable, so G_not holds up to current frame index
-  expr::term_ref F_cex = tm().mk_term(expr::TERM_NOT, result.generalization);
+  expr::term_ref F_cex = result.generalization;
   TRACE("ic3") << "ic3: new F_cex: " << F_cex << std::endl;
 
   // Learn something forward that refutes G
-  expr::term_ref F_fwd= d_smt->learn_forward(d_induction_frame_index, F_cex);
+  expr::term_ref F_fwd = d_smt->learn_forward(d_induction_frame_index, F_cex);
   TRACE("ic3") << "ic3: new F_fwd: " << F_fwd << std::endl;
 
   // Add to counter-example to induction frame
@@ -253,6 +253,9 @@ engine::result ic3_engine::search() {
   // Push frame by frame */
   for(;;) {
 
+    // Set the cutoff
+    d_induction_cutoff = std::numeric_limits<size_t>::max(); // d_induction_frame_depth;
+
     MSG(1) << "ic3: working on induction frame " << d_induction_frame_index << " with induction depth " << d_induction_frame_depth << " and cutoff " << d_induction_cutoff << std::endl;
 
     // Push the current induction frame forward
@@ -284,14 +287,11 @@ engine::result ic3_engine::search() {
     }
 
     // Next frame position
-    d_induction_frame_index += d_induction_frame_depth;
+    d_induction_frame_index ++;
 
     // Set depth of induction
     d_induction_frame_depth = d_induction_frame_index + 1;
     d_smt->reset_induction_solver(d_induction_frame_depth);
-
-    // Set the cutoff
-    d_induction_cutoff = d_induction_frame_depth;
 
     // Add formulas to the new frame
     d_induction_frame.clear();
