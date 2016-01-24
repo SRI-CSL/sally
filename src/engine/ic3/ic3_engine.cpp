@@ -229,6 +229,11 @@ void ic3_engine::push_current_frame() {
     // Pick a formula to try and prove inductive, i.e. that F_k & P & T => P'
     induction_obligation ind = pop_induction_obligation();
 
+    // If more than cutoff, just break
+    if (ind.d >= d_induction_cutoff) {
+      continue;
+    }
+
     // Push the formula forward if it's inductive at the frame
     induction_result ind_result = push_obligation(ind);
 
@@ -255,7 +260,8 @@ engine::result ic3_engine::search() {
   for(;;) {
 
     // Set the cutoff
-    d_induction_cutoff = std::numeric_limits<size_t>::max(); // d_induction_frame_depth;
+    d_induction_cutoff = std::numeric_limits<size_t>::max();
+    // d_induction_cutoff = d_induction_frame_idnex + d_induction_frame_depth;
 
     MSG(1) << "ic3: working on induction frame " << d_induction_frame_index << " with induction depth " << d_induction_frame_depth << " and cutoff " << d_induction_cutoff << std::endl;
 
@@ -291,7 +297,10 @@ engine::result ic3_engine::search() {
     d_induction_frame_index ++;
 
     // Set depth of induction
-    d_induction_frame_depth = d_induction_frame_index + 1;
+    d_induction_frame_depth ++;
+    if (ctx().get_options().get_unsigned("ic3-induction-max") != 0 && d_induction_frame_depth > ctx().get_options().get_unsigned("ic3-induction-max")) {
+      d_induction_frame_depth = ctx().get_options().get_unsigned("ic3-induction-max");
+    }
     d_smt->reset_induction_solver(d_induction_frame_depth);
 
     // Add formulas to the new frame
