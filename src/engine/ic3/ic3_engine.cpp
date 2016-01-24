@@ -390,6 +390,7 @@ void ic3_engine::add_initial_states(expr::term_ref I, expr::term_ref P) {
       assert(d_induction_frame_depth == 1);
       d_induction_frame.insert(ind);
       d_stats.frame_size->get_value() = d_induction_frame.size();
+      d_smt->add_to_induction_solver(I, solvers::INDUCTION_FIRST);
       enqueue_induction_obligation(ind);
     }
   }
