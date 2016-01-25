@@ -160,38 +160,31 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
   TRACE("ic3") << "ic3: Trying F_fwd at " << d_induction_frame_index << ": " << ind.F_fwd << std::endl;
 
   // Check if F_cex is inductive. If not then, if it can be reached, we can find a counter-example.
-  expr::term_ref F_cex_not = tm().mk_term(expr::TERM_NOT, ind.F_cex);
-  solvers::query_result result = d_smt->check_inductive(F_cex_not);
+  solvers::query_result result = d_smt->check_inductive(ind.F_fwd);
 
-  if (result.result == smt::solver::UNSAT) {
-    // If UNSAT we can might be able to push the induction obligation
-    if (F_cex_not != ind.F_fwd) {
-      result = d_smt->check_inductive(ind.F_fwd);
-    }
+  // If UNSAT we can push it
+  if (result.result == smt::solver::UNSAT) {    
     // It's pushed so add it to induction assumptions
-    if (result.result == smt::solver::UNSAT) {
-      assert(d_induction_frame.find(ind) != d_induction_frame.end());
-      TRACE("ic3") << "ic3: pushed " << ind.F_fwd << std::endl;
-      // Add it to set of pushed facts
-      d_induction_obligations_next.push_back(ind);
-      // Update stats
-      d_stats.frame_pushed->get_value() = d_induction_obligations_next.size();
-      // We're done
-      return INDUCTION_SUCCESS;
-    } else {
-      // Can't push, and cex not reachable, fail
-      return INDUCTION_FAIL;
-    }
+    assert(d_induction_frame.find(ind) != d_induction_frame.end());
+    TRACE("ic3") << "ic3: pushed " << ind.F_fwd << std::endl;
+    // Add it to set of pushed facts
+    d_induction_obligations_next.push_back(ind);
+    // Update stats
+    d_stats.frame_pushed->get_value() = d_induction_obligations_next.size();
+    // We're done
+    return INDUCTION_SUCCESS;
   }
 
   // We have a model for
   //
-  //   F F ..... F !CEX
+  //   F F ..... F !F
   //
   // If the model satisfies CEX in the last state, we try to extend the
   // counter-example, otherwise, we fail the push.
   result = d_smt->check_inductive_model(result.model, ind.F_cex);
-  assert (result.result == smt::solver::SAT);
+  if (result.result == smt::solver::UNSAT) {
+    return INDUCTION_FAIL;
+  }
 
   // We can actually reach the counterexample of induction from G, so we check if
   // it's reachable.
@@ -230,7 +223,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
   enqueue_induction_obligation(new_ind);
 
   if (d_learning_type != LEARN_FORWARD) {
-    F_cex_not = tm().mk_term(expr::TERM_NOT, F_cex);
+    expr::term_ref F_cex_not = tm().mk_term(expr::TERM_NOT, F_cex);
     if (F_cex_not != F_fwd) {
       // Add to counter-example to induction frame
       induction_obligation new_ind(tm(), F_cex_not, F_cex, d_induction_frame_depth + ind.d, /* initial score */ 0);
@@ -238,8 +231,6 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
       assert(d_induction_frame.find(new_ind) == d_induction_frame.end());
       d_induction_frame.insert(new_ind);
       d_stats.frame_size->get_value() = d_induction_frame.size();
-      d_smt->add_to_induction_solver(F_fwd, solvers::INDUCTION_FIRST);
-      d_smt->add_to_induction_solver(F_fwd, solvers::INDUCTION_INTERMEDIATE);
       enqueue_induction_obligation(new_ind);
     }
   }
@@ -293,7 +284,7 @@ engine::result ic3_engine::search() {
 
     // Set the cutoff
     d_induction_cutoff = std::numeric_limits<size_t>::max();
-    // d_induction_cutoff = d_induction_frame_idnex + d_induction_frame_depth;
+    // d_induction_cutoff = 2*d_induction_frame_index + 1;
 
     MSG(1) << "ic3: working on induction frame " << d_induction_frame_index << " with induction depth " << d_induction_frame_depth << " and cutoff " << d_induction_cutoff << std::endl;
 
