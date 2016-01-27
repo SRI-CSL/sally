@@ -163,6 +163,9 @@ class ic3_engine : public engine {
   /** The current induction depth */
   size_t d_induction_frame_depth;
 
+  /** How many times we've used the current depth */
+  size_t d_induction_frame_depth_count;
+
   /** Cutoff for the counter-examples */
   size_t d_induction_cutoff;
 

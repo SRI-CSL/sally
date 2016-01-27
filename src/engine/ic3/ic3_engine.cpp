@@ -91,6 +91,7 @@ ic3_engine::ic3_engine(const system::context& ctx)
 , d_reachability(ctx)
 , d_induction_frame_index(0)
 , d_induction_frame_depth(0)
+, d_induction_frame_depth_count(0)
 , d_induction_cutoff(0)
 , d_property_invalid(false)
 , d_learning_type(LEARN_UNDEFINED)
@@ -124,6 +125,7 @@ void ic3_engine::reset() {
   d_induction_frame.clear();
   d_induction_frame_index = 0;
   d_induction_frame_depth = 0;
+  d_induction_frame_depth_count = 0;
   d_induction_cutoff = 1;
   d_induction_obligations.clear();
   d_induction_obligations_next.clear();
@@ -226,7 +228,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
     expr::term_ref F_cex_not = tm().mk_term(expr::TERM_NOT, F_cex);
     if (F_cex_not != F_fwd) {
       // Add to counter-example to induction frame
-      induction_obligation new_ind(tm(), F_cex_not, F_cex, d_induction_frame_depth + ind.d, /* initial score */ 0);
+      induction_obligation new_ind(tm(), F_cex_not, F_cex, d_induction_frame_depth + ind.d, /* initial score */ ind.score/2);
       // Add to induction assertion (but NOT to intermediate)
       assert(d_induction_frame.find(new_ind) == d_induction_frame.end());
       d_induction_frame.insert(new_ind);
@@ -236,9 +238,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
   }
 
   // Decrease the score of the obligation
-  if (ind.d > 0) {
-    ind.bump_score(-1/ind.d);
-  }
+  ind.bump_score(-1/d_induction_frame_depth);
 
   // We try again with newly learnt facts that eliminate the counter-example we found
   return INDUCTION_RETRY;
@@ -286,9 +286,10 @@ engine::result ic3_engine::search() {
     d_induction_cutoff = std::numeric_limits<size_t>::max();
     // d_induction_cutoff = 2*d_induction_frame_index + 1;
 
-    MSG(1) << "ic3: working on induction frame " << d_induction_frame_index << " with induction depth " << d_induction_frame_depth << " and cutoff " << d_induction_cutoff << std::endl;
+    MSG(1) << "ic3: working on induction frame " << d_induction_frame_index << " (" << d_induction_frame.size() << ") with induction depth " << d_induction_frame_depth << " and cutoff " << d_induction_cutoff << std::endl;
 
     // Push the current induction frame forward
+    size_t previous_frame_size = d_induction_frame.size();
     push_current_frame();
 
     // If we've disproved the property, we're done
@@ -306,6 +307,11 @@ engine::result ic3_engine::search() {
       return engine::VALID;
     }
 
+    // Set depth of induction for next time
+    if (previous_frame_size < d_induction_frame.size()) {
+      d_induction_frame_depth ++;
+    }
+
     // Clear induction obligations queue and the frame
     d_induction_obligations.clear();
     d_induction_frame.clear();
@@ -319,8 +325,6 @@ engine::result ic3_engine::search() {
     // Next frame position
     d_induction_frame_index ++;
 
-    // Set depth of induction
-    d_induction_frame_depth ++;
     if (ctx().get_options().get_unsigned("ic3-induction-max") != 0 && d_induction_frame_depth > ctx().get_options().get_unsigned("ic3-induction-max")) {
       d_induction_frame_depth = ctx().get_options().get_unsigned("ic3-induction-max");
     }
@@ -412,20 +416,13 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 }
 
 void ic3_engine::add_initial_states(expr::term_ref I, expr::term_ref P) {
-  if (tm().term_of(I).op() == expr::TERM_AND) {
-    size_t size = tm().term_of(I).size();
-    for (size_t i = 0; i < size; ++ i) {
-      add_initial_states(tm().term_of(I)[i], P);
-    }
-  } else {
-    induction_obligation ind(tm(), I, tm().mk_term(expr::TERM_NOT, P), /* cex depth */ 0, /* score */ 0);
-    if (d_induction_frame.find(ind) == d_induction_frame.end()) {
-      assert(d_induction_frame_depth == 1);
-      d_induction_frame.insert(ind);
-      d_stats.frame_size->get_value() = d_induction_frame.size();
-      d_smt->add_to_induction_solver(I, solvers::INDUCTION_FIRST);
-      enqueue_induction_obligation(ind);
-    }
+  induction_obligation ind(tm(), I, tm().mk_term(expr::TERM_NOT, P), /* cex depth */ 0, /* score */ 0);
+  if (d_induction_frame.find(ind) == d_induction_frame.end()) {
+    assert(d_induction_frame_depth == 1);
+    d_induction_frame.insert(ind);
+    d_stats.frame_size->get_value() = d_induction_frame.size();
+    d_smt->add_to_induction_solver(I, solvers::INDUCTION_FIRST);
+    enqueue_induction_obligation(ind);
   }
 }
 
