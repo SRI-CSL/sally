@@ -29,7 +29,6 @@
 #include <boost/heap/fibonacci_heap.hpp>
 #include <boost/unordered_map.hpp>
 #include <map>
-#include <queue> 
 #include <iosfwd>
 
 namespace sally {
@@ -74,8 +73,7 @@ struct induction_obligation_cmp {
 std::ostream& operator << (std::ostream& out, const induction_obligation& ind);
 
 /** Priority queue for obligations (max-heap) */
-//typedef boost::heap::fibonacci_heap<induction_obligation, boost::heap::compare<induction_obligation_cmp> > induction_obligation_queue;
-typedef std::queue<induction_obligation> induction_obligation_queue;
+typedef boost::heap::fibonacci_heap<induction_obligation, boost::heap::compare<induction_obligation_cmp> > induction_obligation_queue;
 
 /**
  * Information on formulas. A formula is found in a frame because it refutes a
@@ -177,6 +175,9 @@ class ic3_engine : public engine {
 
   /** Queue of induction obligations at the current frame */
   induction_obligation_queue d_induction_obligations;
+
+  /** Map from formulas to their positions in the queue */
+  std::map<induction_obligation, induction_obligation_queue::handle_type> d_induction_obligations_handles;
 
   /** Set of obligations for the next frame */
   std::vector<induction_obligation> d_induction_obligations_next;
