@@ -251,7 +251,23 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
   if (reachable.r == reachability::REACHABLE) {
     // Current obligation is false at reach + k. So we can move to at most
     // reach + k next time;
-    d_induction_frame_next_index = std::min(d_induction_frame_next_index, reachable.k + d_induction_frame_depth);
+    //
+    // This particular CTI is reachable in k + depth. There might be others that
+    // are shorter than this.
+
+    // Find out the smallest index where F_fwd is falsified
+    start = d_induction_frame_index + 1;
+    end = std::min(d_induction_frame_next_index, reachable.k + d_induction_frame_depth);
+    reachable = d_reachability.check_reachable(start, end, F_fwd_not, expr::model::ref());
+    assert(reachable.r == reachability::REACHABLE);
+    d_induction_frame_next_index = std::min(d_induction_frame_next_index, reachable.k);
+
+    // Check if cex might be reachable
+    reachable = d_reachability.check_reachable(reachable.k, reachable.k, ind.F_cex, expr::model::ref());
+    if (reachable.r == reachability::REACHABLE) {
+      d_property_invalid = true;
+      return INDUCTION_FAIL;
+    }
 
     // We're sure that this is not a counter-example, it's just CTI. Add the
     // most precise obligation to make sure we check the CEX also. (keep score)
