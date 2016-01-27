@@ -228,16 +228,13 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
   expr::term_ref F_cex = result.generalization;
   TRACE("ic3") << "ic3: new F_cex: " << F_cex << std::endl;
 
-  // We have to learn :(, decrease the score
-  ind.score *= 0.9;
-
   // Learn something forward that refutes G
   // We know that G_not is not satisfiable
   expr::term_ref F_fwd = d_smt->learn_forward(d_induction_frame_index, F_cex);
   TRACE("ic3") << "ic3: new F_fwd: " << F_fwd << std::endl;
 
   // Add to counter-example to induction frame
-  induction_obligation new_ind(tm(), F_fwd, F_cex, d_induction_frame_depth + ind.d, ind.score);
+  induction_obligation new_ind(tm(), F_fwd, F_cex, d_induction_frame_depth + ind.d, ind.d);
   // Add to induction assertion (but NOT to intermediate)
   assert(d_induction_frame.find(new_ind) == d_induction_frame.end());
   d_induction_frame.insert(new_ind);
@@ -245,6 +242,9 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
   d_smt->add_to_induction_solver(F_fwd, solvers::INDUCTION_FIRST);
   d_smt->add_to_induction_solver(F_fwd, solvers::INDUCTION_INTERMEDIATE);
   enqueue_induction_obligation(new_ind);
+
+  // We have to learn :(, decrease the score
+  ind.score *= 0.9;
 
   // We try again with newly learnt facts that eliminate the counter-example we found
   return INDUCTION_RETRY;
