@@ -51,9 +51,11 @@ struct induction_obligation {
   size_t d;
   /** Score of the obligation */
   double score;
+  /** How many times has this obligation been refined */
+  size_t refined;
 
   /** Construct the obligation */
-  induction_obligation(expr::term_manager& tm, expr::term_ref F_fwd, expr::term_ref F_cex, size_t d, double score);
+  induction_obligation(expr::term_manager& tm, expr::term_ref F_fwd, expr::term_ref F_cex, size_t d, double score, size_t refined = 0);
 
   /** Compare for equality */
   bool operator == (const induction_obligation& o) const;
@@ -181,6 +183,9 @@ class ic3_engine : public engine {
 
   /** Set of obligations for the next frame */
   std::vector<induction_obligation> d_induction_obligations_next;
+
+  /** Where are the obligations valid */
+  size_t d_induction_frame_next_index;
 
   /** Count of obligations per frame */
   std::vector<size_t> d_induction_obligations_count;

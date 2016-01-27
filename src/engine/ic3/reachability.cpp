@@ -72,21 +72,21 @@ public:
 reachability::status reachability::check_reachable(size_t start, size_t end, expr::term_ref f, expr::model::ref f_model) {
   assert(start <= end);
 
-  status result = UNREACHABLE;
+  status result;
 
-  for (size_t k = start; k <= end; ++ k) {
+  for (result.k = start; result.k <= end; ++ result.k) {
     // Check reachability at k
-    result = check_reachable(k, f, f_model);
+    result.r = check_reachable(result.k, f, f_model);
     // Check result of the current one
-    if (result == REACHABLE) {
-      return REACHABLE;
+    if (result.r == REACHABLE) {
+      break;
     }
   }
 
-  return UNREACHABLE;
+  return result;
 }
 
-reachability::status reachability::check_reachable(size_t k, expr::term_ref f, expr::model::ref f_model) {
+reachability::result reachability::check_reachable(size_t k, expr::term_ref f, expr::model::ref f_model) {
 
   TRACE("ic3") << "ic3: checking reachability at " << k << std::endl;
 

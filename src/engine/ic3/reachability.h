@@ -23,10 +23,18 @@ class reachability : public expr::gc_participant {
 public:
 
   /** Status of reachability checks */
-  enum status {
+  enum result {
     REACHABLE,
     UNREACHABLE
   };
+
+  struct status {
+    // The result
+    result r;
+    // The frame where reachable, if any
+    size_t k;
+  };
+
 
   /** Type of reachability cex */
   typedef std::deque<expr::term_ref> cex_type;
@@ -81,7 +89,7 @@ private:
   /**
    * Check if f is reachable at k, assuming f is unreachable in < k steps.
    */
-  status check_reachable(size_t k, expr::term_ref f, expr::model::ref f_model);
+  result check_reachable(size_t k, expr::term_ref f, expr::model::ref f_model);
 
 public:
 
