@@ -43,7 +43,7 @@ bool induction_obligation_cmp::operator() (const induction_obligation& ind1, con
     return ind1.score < ind2.score;
   }
   if (ind1.d != ind2.d) {
-    return ind1.d < ind2.d;
+    return ind1.d > ind2.d;
   }
   if (ind1.F_cex < ind2.F_cex) {
     return ind1.F_cex < ind2.F_cex;
@@ -171,10 +171,14 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
     TRACE("ic3") << "ic3: pushed " << ind.F_fwd << std::endl;
     // Add it to set of pushed facts
     d_induction_obligations_next.push_back(ind);
-    // Update stats
     d_stats.frame_pushed->get_value() = d_induction_obligations_next.size();
     // We're done
     return INDUCTION_SUCCESS;
+  }
+
+  // If more than cutoff, just break
+  if (ind.d >= d_induction_cutoff) {
+    return INDUCTION_FAIL;
   }
 
   // We have a model for
@@ -185,7 +189,22 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
   // counter-example, otherwise, we fail the push.
   result = d_smt->check_inductive_model(result.model, ind.F_cex);
   if (result.result == smt::solver::UNSAT) {
-    return INDUCTION_FAIL;
+    // Maybe it's still possible to reach CEX
+    expr::term_ref F_cex_not = tm().mk_term(expr::TERM_NOT, ind.F_cex);
+    result = d_smt->check_inductive(F_cex_not);
+    if (result.result == smt::solver::UNSAT) {
+      // Add to counter-example to induction frame
+      induction_obligation new_ind(tm(), F_cex_not, ind.F_cex, ind.d, ind.score);
+      // Add to induction assertion (but NOT to intermediate)
+      assert(d_induction_frame.find(new_ind) == d_induction_frame.end());
+      d_induction_frame.insert(new_ind);
+      // Add it to set of pushed facts
+      d_induction_obligations_next.push_back(new_ind);
+      d_stats.frame_size->get_value() = d_induction_frame.size();
+      // We don't add to queue, since we pushed it already
+      return INDUCTION_FAIL;
+    }
+    // If we're here we can reach CEX, so we go down
   }
 
   // We can actually reach the counterexample of induction from G, so we check if
@@ -209,13 +228,16 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
   expr::term_ref F_cex = result.generalization;
   TRACE("ic3") << "ic3: new F_cex: " << F_cex << std::endl;
 
+  // We have to learn :(, decrease the score
+  ind.score *= 0.9;
+
   // Learn something forward that refutes G
   // We know that G_not is not satisfiable
   expr::term_ref F_fwd = d_smt->learn_forward(d_induction_frame_index, F_cex);
   TRACE("ic3") << "ic3: new F_fwd: " << F_fwd << std::endl;
 
   // Add to counter-example to induction frame
-  induction_obligation new_ind(tm(), F_fwd, F_cex, d_induction_frame_depth + ind.d, /* initial score */ 0);
+  induction_obligation new_ind(tm(), F_fwd, F_cex, d_induction_frame_depth + ind.d, ind.score);
   // Add to induction assertion (but NOT to intermediate)
   assert(d_induction_frame.find(new_ind) == d_induction_frame.end());
   d_induction_frame.insert(new_ind);
@@ -223,22 +245,6 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
   d_smt->add_to_induction_solver(F_fwd, solvers::INDUCTION_FIRST);
   d_smt->add_to_induction_solver(F_fwd, solvers::INDUCTION_INTERMEDIATE);
   enqueue_induction_obligation(new_ind);
-
-  if (d_learning_type != LEARN_FORWARD) {
-    expr::term_ref F_cex_not = tm().mk_term(expr::TERM_NOT, F_cex);
-    if (F_cex_not != F_fwd) {
-      // Add to counter-example to induction frame
-      induction_obligation new_ind(tm(), F_cex_not, F_cex, d_induction_frame_depth + ind.d, /* initial score */ ind.score/2);
-      // Add to induction assertion (but NOT to intermediate)
-      assert(d_induction_frame.find(new_ind) == d_induction_frame.end());
-      d_induction_frame.insert(new_ind);
-      d_stats.frame_size->get_value() = d_induction_frame.size();
-      enqueue_induction_obligation(new_ind);
-    }
-  }
-
-  // Decrease the score of the obligation
-  ind.bump_score(-1/d_induction_frame_depth);
 
   // We try again with newly learnt facts that eliminate the counter-example we found
   return INDUCTION_RETRY;
@@ -251,11 +257,6 @@ void ic3_engine::push_current_frame() {
 
     // Pick a formula to try and prove inductive, i.e. that F_k & P & T => P'
     induction_obligation ind = pop_induction_obligation();
-
-    // If more than cutoff, just break
-    if (ind.d >= d_induction_cutoff) {
-      continue;
-    }
 
     // Push the formula forward if it's inductive at the frame
     induction_result ind_result = push_obligation(ind);
@@ -284,7 +285,7 @@ engine::result ic3_engine::search() {
 
     // Set the cutoff
     d_induction_cutoff = std::numeric_limits<size_t>::max();
-    // d_induction_cutoff = 2*d_induction_frame_index + 1;
+    // d_induction_cutoff = d_induction_frame_index + d_induction_frame_depth;
 
     MSG(1) << "ic3: working on induction frame " << d_induction_frame_index << " (" << d_induction_frame.size() << ") with induction depth " << d_induction_frame_depth << " and cutoff " << d_induction_cutoff << std::endl;
 
@@ -336,7 +337,7 @@ engine::result ic3_engine::search() {
     for (; next_it != d_induction_obligations_next.end(); ++ next_it) {
       // The formula
       induction_obligation ind = *next_it;
-      ind.bump_score(1); // We prefer deeper ones
+      ind.score = ind.score /2 + 1; // We prefer deeper ones
       assert(d_induction_frame.find(ind) == d_induction_frame.end());
       d_smt->add_to_induction_solver(ind.F_fwd, solvers::INDUCTION_FIRST);
       d_smt->add_to_induction_solver(ind.F_fwd, solvers::INDUCTION_INTERMEDIATE);
@@ -427,17 +428,17 @@ void ic3_engine::add_initial_states(expr::term_ref I, expr::term_ref P) {
 }
 
 bool ic3_engine::add_property(expr::term_ref P) {
-  if (tm().term_of(P).op() == expr::TERM_AND) {
-    size_t size = tm().term_of(P).size();
-    for (size_t i = 0; i < size; ++ i) {
-      bool ok = add_property(tm().term_of(P)[i]);
-      if (!ok) return false;
-    }
-    return true;
-  } else {
+//  if (tm().term_of(P).op() == expr::TERM_AND) {
+//    size_t size = tm().term_of(P).size();
+//    for (size_t i = 0; i < size; ++ i) {
+//      bool ok = add_property(tm().term_of(P)[i]);
+//      if (!ok) return false;
+//    }
+//    return true;
+//  } else {
     smt::solver::result result = d_smt->query_at_init(tm().mk_term(expr::TERM_NOT, P));
     if (result == smt::solver::UNSAT) {
-      induction_obligation ind(tm(), P, tm().mk_term(expr::TERM_NOT, P), /* cex depth */ 0, /* score */ 0);
+      induction_obligation ind(tm(), P, tm().mk_term(expr::TERM_NOT, P), /* cex depth */ 0, /* score */ 1);
       if (d_induction_frame.find(ind) == d_induction_frame.end()) {
         // Add to induction frame, we know it holds at 0
         assert(d_induction_frame_depth == 1);
@@ -451,7 +452,7 @@ bool ic3_engine::add_property(expr::term_ref P) {
     } else {
       return false;
     }
-  }
+//  }
 }
 
 const system::state_trace* ic3_engine::get_trace() {
