@@ -263,15 +263,20 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
     d_induction_frame_next_index = std::min(d_induction_frame_next_index, reachable.k);
 
     // Check if cex might be reachable
-    reachable = d_reachability.check_reachable(reachable.k, reachable.k, ind.F_cex, expr::model::ref());
-    if (reachable.r == reachability::REACHABLE) {
+    reachability::status cex_reachable = d_reachability.check_reachable(reachable.k, reachable.k, ind.F_cex, expr::model::ref());
+    if (cex_reachable.r == reachability::REACHABLE) {
       d_property_invalid = true;
       return INDUCTION_FAIL;
     }
+    assert(reachable.k > d_induction_frame_index);
+
+    // New fwd
+    expr::term_ref F_fwd = d_smt->learn_forward(reachable.k, ind.F_cex);
+    TRACE("ic3") << "ic3: new F_fwd: " << F_fwd << std::endl;
 
     // We're sure that this is not a counter-example, it's just CTI. Add the
     // most precise obligation to make sure we check the CEX also. (keep score)
-    induction_obligation new_ind(tm(), F_cex_not, ind.F_cex, ind.d, ind.score);
+    induction_obligation new_ind(tm(), F_fwd, ind.F_cex, ind.d, ind.score);
     assert(d_induction_frame.find(new_ind) == d_induction_frame.end());
     d_induction_frame.insert(new_ind);
     d_stats.frame_size->get_value() = d_induction_frame.size();
