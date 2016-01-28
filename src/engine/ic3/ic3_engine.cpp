@@ -186,6 +186,9 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
     return INDUCTION_FAIL;
   }
 
+  expr::term_ref F_fwd_not = tm().mk_term(expr::TERM_NOT, ind.F_fwd);
+  expr::term_ref F_cex_not = tm().mk_term(expr::TERM_NOT, ind.F_cex);
+
   // We have a model for
   //
   //   F F ..... F !F
@@ -193,6 +196,9 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
   // If the model satisfies CEX in the last state, we try to extend the
   // counter-example, otherwise, we fail the push.
   solvers::query_result cex_result = d_smt->check_inductive_model(fwd_result.model, ind.F_cex);
+  if (cex_result.result == smt::solver::UNSAT) {
+    cex_result = d_smt->check_inductive(F_cex_not);
+  }
   if (cex_result.result == smt::solver::SAT) {
     // We can actually reach the counterexample of induction from G, so we check if
     // it's reachable.
@@ -229,16 +235,14 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
     d_smt->add_to_induction_solver(F_fwd, solvers::INDUCTION_INTERMEDIATE);
     enqueue_induction_obligation(new_ind);
 
+    // We have to learn :(, decrease the score, let others go for a change
+    ind.score *= 0.99;
+
     // Now, retry
     return INDUCTION_RETRY;
   }
 
-  // We have to learn :(, decrease the score
-  ind.score *= 0.99;
-
   // So we have a model of !F_fwf && !F_cex
-  expr::term_ref F_fwd_not = tm().mk_term(expr::TERM_NOT, ind.F_fwd);
-  expr::term_ref F_cex_not = tm().mk_term(expr::TERM_NOT, ind.F_cex);
   expr::term_ref CTI = tm().mk_term(expr::TERM_AND, F_fwd_not, F_cex_not);
   solvers::query_result cti_result = d_smt->check_inductive_model(fwd_result.model, CTI);
   assert(cti_result.result == smt::solver::SAT);
@@ -249,7 +253,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
   reachability::status reachable = d_reachability.check_reachable(start, end, cti_result.generalization, cti_result.model);
 
   if (reachable.r == reachability::REACHABLE) {
-    // Current obligation is false at reach + k. So we can move to at most
+    // Current obligation is false at reach + depth. So we can move to at most
     // reach + k next time;
     //
     // This particular CTI is reachable in k + depth. There might be others that
@@ -257,31 +261,23 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
 
     // Find out the smallest index where F_fwd is falsified
     start = d_induction_frame_index + 1;
-    end = std::min(d_induction_frame_next_index, reachable.k + d_induction_frame_depth);
+    end = std::min(reachable.k + d_induction_frame_depth, d_induction_frame_next_index);
     reachable = d_reachability.check_reachable(start, end, F_fwd_not, expr::model::ref());
-    assert(reachable.r == reachability::REACHABLE);
-    d_induction_frame_next_index = std::min(d_induction_frame_next_index, reachable.k);
-
-    // Check if cex might be reachable
-    reachability::status cex_reachable = d_reachability.check_reachable(reachable.k, reachable.k, ind.F_cex, expr::model::ref());
-    if (cex_reachable.r == reachability::REACHABLE) {
-      d_property_invalid = true;
-      return INDUCTION_FAIL;
+    if (reachable.r == reachability::REACHABLE) {
+      // We have to adapt the next index
+      d_induction_frame_next_index = reachable.k;
     }
-    assert(reachable.k > d_induction_frame_index);
 
-    // New fwd
-    expr::term_ref F_fwd = d_smt->learn_forward(reachable.k, ind.F_cex);
-    TRACE("ic3") << "ic3: new F_fwd: " << F_fwd << std::endl;
-
-    // We're sure that this is not a counter-example, it's just CTI. Add the
-    // most precise obligation to make sure we check the CEX also. (keep score)
-    induction_obligation new_ind(tm(), F_fwd, ind.F_cex, ind.d, ind.score);
+    // We know that CEX is not reachable (FULL CHECK ABOVE), otherwise we wouldn't be here.
+    // Therefore !CEX is k-inductive modulo current assumptions and we can just push it
+    induction_obligation new_ind(tm(), F_cex_not, ind.F_cex, ind.d, ind.score);
     assert(d_induction_frame.find(new_ind) == d_induction_frame.end());
     d_induction_frame.insert(new_ind);
     d_stats.frame_size->get_value() = d_induction_frame.size();
     // No need to assert anything, we already have F_fwd => !F_cex
-    enqueue_induction_obligation(new_ind);
+    // Also, just add to next
+    d_induction_obligations_next.push_back(new_ind);
+    d_stats.frame_pushed->get_value() = d_induction_obligations_next.size();
 
     // Current obligation has failed, we know it will become invalid
     return INDUCTION_FAIL;
@@ -297,7 +293,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
 
   // We know what F_fwd removes the CTI, and F_fwd => !CEX, so we can add it
   d_induction_frame.erase(ind);
-  ind = induction_obligation(tm(), F_fwd, ind.F_cex, ind.d, ind.score*1.01, ind.refined + 1);
+  ind = induction_obligation(tm(), F_fwd, ind.F_cex, ind.d, ind.score*0.99, ind.refined + 1);
   d_induction_frame.insert(ind);
 
   // Current obligation has failed, but we replaced it
@@ -342,6 +338,7 @@ engine::result ic3_engine::search() {
     // d_induction_cutoff = d_induction_frame_index + d_induction_frame_depth;
 
     // Set how far we can go
+    // d_induction_frame_next_index = d_induction_frame_index + 1;
     d_induction_frame_next_index = d_induction_frame_index + d_induction_frame_depth;
 
     MSG(1) << "ic3: working on induction frame " << d_induction_frame_index << " (" << d_induction_frame.size() << ") with induction depth " << d_induction_frame_depth << " and cutoff " << d_induction_cutoff << std::endl;
