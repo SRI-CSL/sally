@@ -227,7 +227,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
     TRACE("ic3") << "ic3: new F_fwd: " << F_fwd << std::endl;
 
     // Add to counter-example to induction frame
-    induction_obligation new_ind(tm(), F_fwd, F_cex, d_induction_frame_depth + ind.d, ind.score);
+    induction_obligation new_ind(tm(), F_fwd, F_cex, d_induction_frame_depth + ind.d, 1);
     assert(d_induction_frame.find(new_ind) == d_induction_frame.end());
     d_induction_frame.insert(new_ind);
     d_stats.frame_size->get_value() = d_induction_frame.size();
@@ -262,10 +262,14 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
     // Find out the smallest index where F_fwd is falsified
     start = d_induction_frame_index + 1;
     end = std::min(reachable.k + d_induction_frame_depth, d_induction_frame_next_index);
-    reachable = d_reachability.check_reachable(start, end, F_fwd_not, expr::model::ref());
-    if (reachable.r == reachability::REACHABLE) {
-      // We have to adapt the next index
-      d_induction_frame_next_index = reachable.k;
+    if (start < end) {
+      reachable = d_reachability.check_reachable(start, end, F_fwd_not, expr::model::ref());
+      if (reachable.r == reachability::REACHABLE) {
+        // We have to adapt the next index
+        d_induction_frame_next_index = reachable.k;
+      }
+    } else {
+      d_induction_frame_next_index = end;
     }
 
     // We know that CEX is not reachable (FULL CHECK ABOVE), otherwise we wouldn't be here.
