@@ -243,8 +243,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
   }
 
   // So we have a model of !F_fwf && !F_cex
-  expr::term_ref CTI = tm().mk_term(expr::TERM_AND, F_fwd_not, F_cex_not);
-  solvers::query_result cti_result = d_smt->check_inductive_model(fwd_result.model, CTI);
+  solvers::query_result cti_result = d_smt->check_inductive_model(fwd_result.model, F_fwd_not);
   assert(cti_result.result == smt::solver::SAT);
 
   // Check if it's reachable
@@ -368,7 +367,7 @@ engine::result ic3_engine::search() {
 
     // Set depth of induction for next time
     if (previous_frame_size < d_induction_frame.size()) {
-      d_induction_frame_depth ++;
+      d_induction_frame_depth = d_induction_frame_next_index + 1;
     }
 
     // Clear induction obligations queue and the frame
