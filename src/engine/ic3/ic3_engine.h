@@ -205,9 +205,6 @@ class ic3_engine : public engine {
   /** Add property to 0 frame, returns true if not immediately refuted */
   bool add_property(expr::term_ref P);
 
-  /** Add the initial states to 0 frame */
-  void add_initial_states(expr::term_ref I, expr::term_ref P);
-
   /** Property components */
   std::set<expr::term_ref> d_properties;
 

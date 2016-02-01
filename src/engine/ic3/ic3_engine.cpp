@@ -448,12 +448,6 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   d_induction_cutoff = 1;
   d_smt->reset_induction_solver(1);
 
-  // Add the initial state
-  if (!ctx().get_options().get_bool("ic3-no-initial-state")) {
-    expr::term_ref I = d_transition_system->get_initial_states();
-    add_initial_states(I, d_property->get_formula());
-  }
-
   // Add the property we're trying to prove (if not already invalid at frame 0)
   bool ok = add_property(d_property->get_formula());
   if (!ok) {
@@ -471,17 +465,6 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   MSG(1) << "ic3: search done: " << r << std::endl;
 
   return r;
-}
-
-void ic3_engine::add_initial_states(expr::term_ref I, expr::term_ref P) {
-  induction_obligation ind(tm(), I, tm().mk_term(expr::TERM_NOT, P), /* cex depth */ 0, /* score */ 0);
-  if (d_induction_frame.find(ind) == d_induction_frame.end()) {
-    assert(d_induction_frame_depth == 1);
-    d_induction_frame.insert(ind);
-    d_stats.frame_size->get_value() = d_induction_frame.size();
-    d_smt->add_to_induction_solver(I, solvers::INDUCTION_FIRST);
-    enqueue_induction_obligation(ind);
-  }
 }
 
 bool ic3_engine::add_property(expr::term_ref P) {
