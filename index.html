@@ -32,8 +32,6 @@
 systems. It is research software under development so the features and the 
 input language may change rapidly.   </p>
 
-<p>The project is supported by NASA contract NNX14AI05A.</p>
-
 <h2>
 <a id="prerequisites" class="anchor" href="#prerequisites" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Prerequisites</h2>
 
@@ -81,13 +79,13 @@ make check</pre></div>
 <h3>
 <a id="input-language" class="anchor" href="#input-language" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Input Language</h3>
 
-<h4>
-<a id="transition-system-definition" class="anchor" href="#transition-system-definition" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Transition System Definition</h4>
-
 <p>Sally takes as input a simple description of transition systems based on the 
 SMT2 language. A transition system consists of a description of the state type, 
 a formula describing the initial states of the system, and a formula describing 
 the transitions from the current to the next state of the system.</p>
+
+<h4>
+<a id="state-types" class="anchor" href="#state-types" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>State Types</h4>
 
 <p>State type is a list of variables that are part of the state, together with
 their types.</p>
@@ -98,8 +96,21 @@ their types.</p>
   ((x Real) (y Real))
 )</pre></div>
 
+<p>Sometimes it is useful to model systems that take inputs that are not part of the system state. Such inputs can be defined by using the more general form of state type definition.</p>
+
+<div class="highlight highlight-source-lisp"><pre><span class="pl-c">;; State type with inputs </span>
+(define-state-type state_type_with_inputs
+  ((x Real) (y Real))
+  ((d Real)) 
+)</pre></div>
+
+<p>Above, the variable <code>d</code> is such an input. These input variables can only be referenced in transition formulas, by using the <code>input</code> namespace.</p>
+
 <p>With a defined state type, we can define sets of states and transitions over the
 state type.</p>
+
+<h4>
+<a id="state-formulas" class="anchor" href="#state-formulas" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>State Formulas</h4>
 
 <p>We can describe a set of states with a state formula over the state type. A 
 state formula is a first-order formula over the variables of the state type, 
@@ -120,6 +131,9 @@ over the same state type.</p>
 (define-states initial_states my_state_type
   (<span class="pl-k">and</span> x_is_zero (= y <span class="pl-c1">0</span>))
 )</pre></div>
+
+<h4>
+<a id="state-transitions" class="anchor" href="#state-transitions" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>State Transitions</h4>
 
 <p>We can describe allowed state transitions by a first-order formula over the 
 current (state) and next variables of the state type. We use the prefix
@@ -148,6 +162,9 @@ previously defined transitions over the same type can be used directly. </p>
   ) 
 )</pre></div>
 
+<h4>
+<a id="transition-systems" class="anchor" href="#transition-systems" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Transition Systems</h4>
+
 <p>We can define a state transition system by defining the state type, the initial
 states of the system and the transitions that the system can make.</p>
 
@@ -166,6 +183,14 @@ states of the system and the transitions that the system can make.</p>
    initial_states
    <span class="pl-c">;; Transitions </span>
    transition
+)
+
+<span class="pl-c">;; Transition system with inputs </span>
+(define-transition-system T3 state_type_with_inputs
+  (<span class="pl-k">and</span> (= x <span class="pl-c1">0</span>) (= y <span class="pl-c1">0</span>))
+  (<span class="pl-k">and</span> (= next.x (+ state.x input.d))
+   (= next.y (+ state.y input.d))
+  )
 )</pre></div>
 
 <h4>
@@ -191,7 +216,12 @@ exceed 20. </p>
 <span class="pl-c">;; Check whether x, y &lt;= 19</span>
 (query T2 (<span class="pl-k">and</span> (&lt;= x <span class="pl-c1">19</span>) (&lt;= y <span class="pl-c1">19</span>)))</pre></div>
 
-<p>The example above is available in <code>examples/example.mcmt</code>.</p>
+<p>In the system <code>T3</code>, the variables <code>x</code> and <code>y</code> should always be equal.</p>
+
+<div class="highlight highlight-source-lisp"><pre><span class="pl-c">;; Check whether we're always the same </span>
+(query T3 (= x y))</pre></div>
+
+<p>The full example above is available in <code>examples/example.mcmt</code>.</p>
 
 <h3>
 <a id="usage" class="anchor" href="#usage" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Usage</h3>
@@ -207,15 +237,16 @@ follows</p>
 unknown
 unknown
 unknown
+unknown
 unknown</pre></div>
 
 <ul>
 <li>Checking the property with BMC with a bigger bound and showing any 
-counter-example traces</li>
+counter-example traces
+&gt; sally --engine bmc --bmc-max 20 --show-trace examples/example.mcmt</li>
 </ul>
 
-<div class="highlight highlight-source-shell"><pre><span class="pl-k">&gt;</span> sally --engine bmc --bmc-max 20 --show-trace examples/example.mcmt
-unknown
+<div class="highlight highlight-source-shell"><pre>unknown
 unknown
 unknown
 invalid
@@ -224,7 +255,8 @@ invalid
   (frame (x 1) (y 1))
   ...
   (frame (x 20) (y 20))
-)</pre></div>
+)
+unknown</pre></div>
 
 <ul>
 <li>Checking the properties with the k-induction engine</li>
@@ -234,12 +266,14 @@ invalid
 valid
 valid
 unknown
-unknown 
+unknown
+valid
 <span class="pl-k">&gt;</span> sally --engine kind --kind-max 20 examples/example.mcmt 
 valid
 valid
 unknown
-invalid</pre></div>
+invalid
+valid</pre></div>
 
 <ul>
 <li>Checking the properties with the ic3 engine using the combination of yices2
@@ -250,7 +284,8 @@ and MathSAT5 as the reasoning engine</li>
 valid
 valid
 valid
-invalid</pre></div>
+invalid
+valid</pre></div>
         </section>
 
         <aside id="sidebar">
