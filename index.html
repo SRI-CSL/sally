@@ -1,72 +1,302 @@
 <!DOCTYPE html>
 <html>
-
   <head>
     <meta charset='utf-8'>
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <meta name="description" content="Sally : Sally is a model checker for infinite-state systems.">
-
-    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
-
-    <title>Sally</title>
+    <link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-dark.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <title>Sally by SRI-CSL</title>
   </head>
 
   <body>
+    <div id="container">
+      <div class="inner">
 
-    <!-- HEADER -->
-    <div id="header_wrap" class="outer">
-        <header class="inner">
-          <a id="forkme_banner" href="https://github.com/SRI-CSL/sally">View on GitHub</a>
-
-          <h1 id="project_title">Sally</h1>
-          <h2 id="project_tagline">Sally is a model checker for infinite-state systems.</h2>
-
-            <section id="downloads">
-              <a class="zip_download_link" href="https://github.com/SRI-CSL/sally/zipball/master">Download this project as a .zip file</a>
-              <a class="tar_download_link" href="https://github.com/SRI-CSL/sally/tarball/master">Download this project as a tar.gz file</a>
-            </section>
+        <header>
+          <h1>Sally</h1>
+          <h2>A model checker for infinite-state systems.</h2>
         </header>
+
+        <section id="downloads" class="clearfix">
+          <a href="https://github.com/SRI-CSL/sally/zipball/master" id="download-zip" class="button"><span>Download .zip</span></a>
+          <a href="https://github.com/SRI-CSL/sally/tarball/master" id="download-tar-gz" class="button"><span>Download .tar.gz</span></a>
+          <a href="https://github.com/SRI-CSL/sally" id="view-on-github" class="button"><span>View on GitHub</span></a>
+        </section>
+
+        <hr>
+
+        <section id="main_content">
+          <h1>
+<a id="sally" class="anchor" href="#sally" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Sally</h1>
+
+<p>Sally is a model checker for infinite state systems described as transition 
+systems. It is research software under development so the features and the 
+input language may change rapidly.   </p>
+
+<p>The project is supported by NASA contract NNX14AI05A.</p>
+
+<h2>
+<a id="prerequisites" class="anchor" href="#prerequisites" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Prerequisites</h2>
+
+<p>In order to compile Sally you will need the following</p>
+
+<ul>
+<li>
+<p>A reasonable c++ compiler such as g++ or clang</p>
+
+<pre><code>sudo apt-get install g++
+</code></pre>
+</li>
+<li>
+<p>The CMake build system </p>
+
+<pre><code>sudo apt-get install cmake
+</code></pre>
+</li>
+<li>
+<p>The GMP library</p>
+
+<pre><code>sudo apt-get install libgmp-dev
+</code></pre>
+</li>
+<li>
+<p>Some Boost libraries</p>
+
+<pre><code>sudo apt-get install libboost-program-options-dev libboost-iostreams-dev libboost-test-dev libboost-thread-dev libboost-system-dev
+</code></pre>
+</li>
+<li>
+<p>A working Java runtime </p>
+
+<pre><code>sudo apt-get install default-jre
+</code></pre>
+</li>
+</ul>
+
+<h2>
+<a id="how-to-compile" class="anchor" href="#how-to-compile" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>How to Compile</h2>
+
+<p>If you have Yices2 installed in the $YD directory, meaning that there are 
+$YD/include and $YD/lib directories with Yices2 headers and libraries, then
+configure and build with </p>
+
+<pre><code>cd build
+cmake .. -DYICES2_HOME=$YD
+make
+make check
+</code></pre>
+
+<p>If you have MathSAT5 installed in the $MD directory, meaning that there are 
+$MD/include and $MD/lib directories with MathSAT5 headers and libraries, then 
+configure and build with</p>
+
+<pre><code>cd build
+cmake .. -DMATHSAT5_HOME=$MD
+make
+make check
+</code></pre>
+
+<p>Of course, you can use both Yices2 and MathSAT by adding both options to 
+cmake as expected.</p>
+
+<p>To compile sally in debug mode then configure and build with</p>
+
+<pre><code>cd build
+cmake .. -DCMAKE_BUILD_TYPE=Debug
+make
+make check
+</code></pre>
+
+<h3>
+<a id="input-language" class="anchor" href="#input-language" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Input Language</h3>
+
+<h4>
+<a id="transition-system-definition" class="anchor" href="#transition-system-definition" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Transition System Definition</h4>
+
+<p>Sally takes as input a simple description of transition systems based on the 
+SMT2 language. A transition system consists of a description of the state type, 
+a formula describing the initial states of the system, and a formula describing 
+the transitions from the current to the next state of the system.</p>
+
+<p>State type is a list of variables that are part of the state, together with
+their types.</p>
+
+<div class="highlight highlight-source-lisp"><pre><span class="pl-c">;; A definition of a state type called "my_state_type" with variables</span>
+<span class="pl-c">;; x and y of type Real. </span>
+(define-state-type my_state_type 
+  ((x Real) (y Real))
+)</pre></div>
+
+<p>With a defined state type, we can define sets of states and transitions over the
+state type.</p>
+
+<p>We can describe a set of states with a state formula over the state type. A 
+state formula is a first-order formula over the variables of the state type, 
+written in SMT2 format.</p>
+
+<div class="highlight highlight-source-lisp"><pre><span class="pl-c">;; Definition of a set of states "x_is_zero" capturing all states </span>
+<span class="pl-c">;; over the state type "my_state_type" where x is 0.</span>
+(define-states x_is_zero my_state_type
+  (= x <span class="pl-c1">0</span>)
+)</pre></div>
+
+<p>Once a state formula has been defined it can be reused in other state formulas
+over the same state type.</p>
+
+<div class="highlight highlight-source-lisp"><pre><span class="pl-c">;; A definition of a set of states "initial_states" over </span>
+<span class="pl-c">;; "my_state_type" by a state formula. These are all states where </span>
+<span class="pl-c">;; both x and y are 0.</span>
+(define-states initial_states my_state_type
+  (<span class="pl-k">and</span> x_is_zero (= y <span class="pl-c1">0</span>))
+)</pre></div>
+
+<p>We can describe allowed state transitions by a first-order formula over the 
+current (state) and next variables of the state type. We use the prefix
+<code>state</code> to denote current variables, and the prefix <code>next</code> to denote the 
+variables in the next state. Previously defined state formulas over the same
+state type can be used as if they were variables (state or next). Similarly, 
+previously defined transitions over the same type can be used directly. </p>
+
+<div class="highlight highlight-source-lisp"><pre><span class="pl-c">;; Definition of a transition where the next value of x is the </span>
+<span class="pl-c">;; current value + 1.</span>
+(define-transition inc_x my_state_type
+  (= next.x (+ state.x <span class="pl-c1">1</span>))
+)   
+
+<span class="pl-c">;; Definition of a transition that increases both x and y</span>
+(define-transition inc_x_and_y my_state_type
+  (<span class="pl-k">and</span> inc_x (= next.y (+ state.y <span class="pl-c1">1</span>)))
+)
+
+<span class="pl-c">;; Definition of a transition that increases x and y if not </span>
+<span class="pl-c">;; exceeding 100, or goes back to the state with x = y = 0</span>
+(define-transition transition my_state_type
+  (<span class="pl-k">or</span> 
+    (<span class="pl-k">and</span> (&lt; state.x <span class="pl-c1">100</span>) inc_x_and_y)
+    next.initial_states
+  ) 
+)</pre></div>
+
+<p>We can define a state transition system by defining the state type, the initial
+states of the system and the transitions that the system can make.</p>
+
+<div class="highlight highlight-source-lisp"><pre><span class="pl-c">;; Directly define a simple counter system that increases x and y</span>
+(define-transition-system T1 my_state_type
+  <span class="pl-c">;; Initial states </span>
+  (<span class="pl-k">and</span> (= x <span class="pl-c1">0</span>) (= y <span class="pl-c1">0</span>))
+  <span class="pl-c">;; Transition </span>
+  (<span class="pl-k">and</span> (= next.x (+ state.x <span class="pl-c1">1</span>)) (= next.y (+ state.y <span class="pl-c1">1</span>)))
+)
+
+<span class="pl-c">;; Define a counter system that can reset to 0 by reusing defined</span>
+<span class="pl-c">;; formulas </span>
+(define-transition-system T2 my_state_type
+   <span class="pl-c">;; Initial states</span>
+   initial_states
+   <span class="pl-c">;; Transitions </span>
+   transition
+)</pre></div>
+
+<h4>
+<a id="queries" class="anchor" href="#queries" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Queries</h4>
+
+<p>A query asks a question whether a state property is true in the given transition 
+system. For example, in the system <code>T1</code>, it is clear that we the 
+variables <code>x</code> and <code>y</code> will always be equal and non-negative. We can check 
+these with the following queries.</p>
+
+<div class="highlight highlight-source-lisp"><pre><span class="pl-c">;; Check whether x = y in T1</span>
+(query T1 (= x y))
+
+<span class="pl-c">;; Check whether x, y &gt;= 0</span>
+(query T1 (<span class="pl-k">and</span> (&gt;= x <span class="pl-c1">0</span>) (&gt;= y <span class="pl-c1">0</span>)))</pre></div>
+
+<p>In the system <code>T2</code>, it should hold that both <code>x</code> and <code>y</code> will never 
+exceed 20. </p>
+
+<div class="highlight highlight-source-lisp"><pre><span class="pl-c">;; Check whether x, y &lt;= 20</span>
+(query T2 (<span class="pl-k">and</span> (&lt;= x <span class="pl-c1">20</span>) (&lt;= y <span class="pl-c1">20</span>)))
+
+<span class="pl-c">;; Check whether x, y &lt;= 19</span>
+(query T2 (<span class="pl-k">and</span> (&lt;= x <span class="pl-c1">19</span>) (&lt;= y <span class="pl-c1">19</span>)))</pre></div>
+
+<p>The example above is available in <code>examples/example.mcmt</code>.</p>
+
+<h3>
+<a id="usage" class="anchor" href="#usage" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Usage</h3>
+
+<p>To see the full set of options run <code>sally -h</code>. Some typical examples are as 
+follows</p>
+
+<ul>
+<li>
+<p>Checking the properties with the bounded model-checking (BMC) engine</p>
+
+<pre><code>&gt; sally --engine bmc examples/example.mcmt
+unknown
+unknown
+unknown
+unknown
+</code></pre>
+</li>
+<li>
+<p>Checking the property with BMC with a bigger bound and showing any 
+counter-example traces</p>
+
+<pre><code>&gt; sally --engine bmc --bmc-max 20 --show-trace examples/example.mcmt
+unknown
+unknown
+unknown
+invalid
+(trace 
+  (frame (x 0) (y 0))
+  (frame (x 1) (y 1))
+  ...
+  (frame (x 20) (y 20))
+)
+</code></pre>
+</li>
+<li>
+<p>Checking the properties with the k-induction engine</p>
+
+<pre><code>&gt; sally --engine kind examples/example.mcmt
+valid
+valid
+unknown
+unknown 
+&gt; sally --engine kind --kind-max 20 examples/example.mcmt 
+valid
+valid
+unknown
+invalid
+</code></pre>
+</li>
+<li>
+<p>Checking the properties with the ic3 engine using the combination of yices2
+and MathSAT5 as the reasoning engine</p>
+
+<pre><code>  &gt; sally --engine ic3 --solver y2m5 examples/example.mcmt 
+  valid
+  valid
+  valid
+  invalid
+</code></pre>
+</li>
+</ul>
+        </section>
+
+        <footer>
+          Sally is maintained by <a href="https://github.com/SRI-CSL">SRI-CSL</a><br>
+          This page was generated by <a href="https://pages.github.com">GitHub Pages</a>. Tactile theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.
+        </footer>
+
+        
+      </div>
     </div>
-
-    <!-- MAIN CONTENT -->
-    <div id="main_content_wrap" class="outer">
-      <section id="main_content" class="inner">
-        <h3>
-<a id="welcome-to-github-pages" class="anchor" href="#welcome-to-github-pages" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Welcome to GitHub Pages.</h3>
-
-<p>This automatic page generator is the easiest way to create beautiful pages for all of your projects. Author your page content here <a href="https://guides.github.com/features/mastering-markdown/">using GitHub Flavored Markdown</a>, select a template crafted by a designer, and publish. After your page is generated, you can check out the new <code>gh-pages</code> branch locally. If you’re using GitHub Desktop, simply sync your repository and you’ll see the new branch.</p>
-
-<h3>
-<a id="designer-templates" class="anchor" href="#designer-templates" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Designer Templates</h3>
-
-<p>We’ve crafted some handsome templates for you to use. Go ahead and click 'Continue to layouts' to browse through them. You can easily go back to edit your page before publishing. After publishing your page, you can revisit the page generator and switch to another theme. Your Page content will be preserved.</p>
-
-<h3>
-<a id="creating-pages-manually" class="anchor" href="#creating-pages-manually" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Creating pages manually</h3>
-
-<p>If you prefer to not use the automatic generator, push a branch named <code>gh-pages</code> to your repository to create a page manually. In addition to supporting regular HTML content, GitHub Pages support Jekyll, a simple, blog aware static site generator. Jekyll makes it easy to create site-wide headers and footers without having to copy them across every page. It also offers intelligent blog support and other advanced templating features.</p>
-
-<h3>
-<a id="authors-and-contributors" class="anchor" href="#authors-and-contributors" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Authors and Contributors</h3>
-
-<p>You can <a href="https://github.com/blog/821" class="user-mention">@mention</a> a GitHub username to generate a link to their profile. The resulting <code>&lt;a&gt;</code> element will link to the contributor’s GitHub Profile. For example: In 2007, Chris Wanstrath (<a href="https://github.com/defunkt" class="user-mention">@defunkt</a>), PJ Hyett (<a href="https://github.com/pjhyett" class="user-mention">@pjhyett</a>), and Tom Preston-Werner (<a href="https://github.com/mojombo" class="user-mention">@mojombo</a>) founded GitHub.</p>
-
-<h3>
-<a id="support-or-contact" class="anchor" href="#support-or-contact" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Support or Contact</h3>
-
-<p>Having trouble with Pages? Check out our <a href="https://help.github.com/pages">documentation</a> or <a href="https://github.com/contact">contact support</a> and we’ll help you sort it out.</p>
-      </section>
-    </div>
-
-    <!-- FOOTER  -->
-    <div id="footer_wrap" class="outer">
-      <footer class="inner">
-        <p class="copyright">Sally maintained by <a href="https://github.com/SRI-CSL">SRI-CSL</a></p>
-        <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
-      </footer>
-    </div>
-
-    
-
   </body>
 </html>
