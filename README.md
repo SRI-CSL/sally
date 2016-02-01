@@ -13,13 +13,13 @@ The project is supported by NASA contract NNX14AI05A.
 ## Prerequisites
 
 In order to compile Sally you will need a reasonable c++ compiler such as g++ or clang, the cmake build system, the GMP library, some boost libraries, and a working Java runtime (for parser generation). On Ubuntu-like systems, the following should cover it:
-
-    sudo apt-get install g++
-    sudo apt-get install cmake
-    sudo apt-get install libgmp-dev
-    sudo apt-get install libboost-program-options-dev libboost-iostreams-dev libboost-test-dev libboost-thread-dev libboost-system-dev
-    sudo apt-get install default-jre
-
+```bash
+sudo apt-get install g++
+sudo apt-get install cmake
+sudo apt-get install libgmp-dev
+sudo apt-get install libboost-program-options-dev libboost-iostreams-dev libboost-test-dev libboost-thread-dev libboost-system-dev
+sudo apt-get install default-jre
+```
 In addition, Sally needs an SMT solver for reasoning about the systems. It currently supports [Yices2](http://yices.csl.sri.com/) and [MathSAT5](http://mathsat.fbk.eu/), and for best results we recommend using both of them. 
 
 ## How to Compile
@@ -27,30 +27,31 @@ In addition, Sally needs an SMT solver for reasoning about the systems. It curre
 If you have Yices2 installed in the $YD directory, meaning that there are 
 $YD/include and $YD/lib directories with Yices2 headers and libraries, then
 configure and build with 
-
-    cd build
-    cmake .. -DYICES2_HOME=$YD
-    make
-    make check
-
+```bash
+cd build
+cmake .. -DYICES2_HOME=$YD
+make
+make check
+```
 If you have MathSAT5 installed in the $MD directory, meaning that there are 
 $MD/include and $MD/lib directories with MathSAT5 headers and libraries, then 
 configure and build with
-
-    cd build
-    cmake .. -DMATHSAT5_HOME=$MD
-    make
-    make check
-   
+```bash
+cd build
+cmake .. -DMATHSAT5_HOME=$MD
+make
+make check
+```
 Of course, you can use both Yices2 and MathSAT by adding both options to 
 cmake as expected.
 
 To compile sally in debug mode then configure and build with
-
-    cd build
-    cmake .. -DCMAKE_BUILD_TYPE=Debug
-    make
-    make check
+```bash
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Debug
+make
+make check
+```
 
 ### Input Language
 
