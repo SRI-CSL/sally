@@ -39,12 +39,11 @@ input language may change rapidly.   </p>
 
 <p>In order to compile Sally you will need a reasonable c++ compiler such as g++ or clang, the cmake build system, the GMP library, some boost libraries, and a working Java runtime (for parser generation). On Ubuntu-like systems, the following should cover it:</p>
 
-<pre><code>sudo apt-get install g++
+<div class="highlight highlight-source-shell"><pre>sudo apt-get install g++
 sudo apt-get install cmake
 sudo apt-get install libgmp-dev
 sudo apt-get install libboost-program-options-dev libboost-iostreams-dev libboost-test-dev libboost-thread-dev libboost-system-dev
-sudo apt-get install default-jre
-</code></pre>
+sudo apt-get install default-jre</pre></div>
 
 <p>In addition, Sally needs an SMT solver for reasoning about the systems. It currently supports <a href="http://yices.csl.sri.com/">Yices2</a> and <a href="http://mathsat.fbk.eu/">MathSAT5</a>, and for best results we recommend using both of them. </p>
 
@@ -55,32 +54,29 @@ sudo apt-get install default-jre
 $YD/include and $YD/lib directories with Yices2 headers and libraries, then
 configure and build with </p>
 
-<pre><code>cd build
-cmake .. -DYICES2_HOME=$YD
+<div class="highlight highlight-source-shell"><pre><span class="pl-c1">cd</span> build
+cmake .. -DYICES2_HOME=<span class="pl-smi">$YD</span>
 make
-make check
-</code></pre>
+make check</pre></div>
 
 <p>If you have MathSAT5 installed in the $MD directory, meaning that there are 
 $MD/include and $MD/lib directories with MathSAT5 headers and libraries, then 
 configure and build with</p>
 
-<pre><code>cd build
-cmake .. -DMATHSAT5_HOME=$MD
+<div class="highlight highlight-source-shell"><pre><span class="pl-c1">cd</span> build
+cmake .. -DMATHSAT5_HOME=<span class="pl-smi">$MD</span>
 make
-make check
-</code></pre>
+make check</pre></div>
 
 <p>Of course, you can use both Yices2 and MathSAT by adding both options to 
 cmake as expected.</p>
 
 <p>To compile sally in debug mode then configure and build with</p>
 
-<pre><code>cd build
+<div class="highlight highlight-source-shell"><pre><span class="pl-c1">cd</span> build
 cmake .. -DCMAKE_BUILD_TYPE=Debug
 make
-make check
-</code></pre>
+make check</pre></div>
 
 <h3>
 <a id="input-language" class="anchor" href="#input-language" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Input Language</h3>
