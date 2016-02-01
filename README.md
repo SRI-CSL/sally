@@ -55,12 +55,12 @@ make check
 
 ### Input Language
 
-#### Transition System Definition 
-
 Sally takes as input a simple description of transition systems based on the 
 SMT2 language. A transition system consists of a description of the state type, 
 a formula describing the initial states of the system, and a formula describing 
 the transitions from the current to the next state of the system.
+
+#### State Types
 
 State type is a list of variables that are part of the state, together with
 their types.
@@ -71,8 +71,20 @@ their types.
   ((x Real) (y Real))
 )
 ```
+Sometimes it is useful to model systems that take inputs that are not part of the system state. Such inputs can be defined by using the more general form of state type definition.
+```lisp
+;; State type with inputs 
+(define-state-type state_type_with_inputs
+  ((x Real) (y Real))
+  ((d Real)) 
+)
+```
+Above, the variable ``d`` is such an input. These input variables can only be referenced in transition formulas, by using the ``input`` namespace.
+
 With a defined state type, we can define sets of states and transitions over the
 state type.
+
+#### State Formulas
 
 We can describe a set of states with a state formula over the state type. A 
 state formula is a first-order formula over the variables of the state type, 
@@ -94,6 +106,9 @@ over the same state type.
   (and x_is_zero (= y 0))
 )
 ```   
+
+#### State Transitions
+
 We can describe allowed state transitions by a first-order formula over the 
 current (state) and next variables of the state type. We use the prefix
 ``state`` to denote current variables, and the prefix ``next`` to denote the 
@@ -121,6 +136,9 @@ previously defined transitions over the same type can be used directly.
   ) 
 )
 ```
+
+#### Transition Systems
+
 We can define a state transition system by defining the state type, the initial
 states of the system and the transitions that the system can make.
 ```lisp
@@ -140,20 +158,7 @@ states of the system and the transitions that the system can make.
    ;; Transitions 
    transition
 )
-```
 
-#### Input Variables
-
-Sometimes it is useful to model systems that take inputs that are not part of the system state. Such inputs can be defined by using the more general form of state type definition.
-```lisp
-;; State type with inputs 
-(define-state-type state_type_with_inputs
-  ((x Real) (y Real))
-  ((d Real)) 
-)
-```
-Above, the variable ``d`` is such an input. These input variables can only be referenced in transition formulas, by using the ``input`` namespace.
-```lisp
 ;; Transition system with inputs 
 (define-transition-system T3 state_type_with_inputs
   (and (= x 0) (= y 0))
