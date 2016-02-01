@@ -12,32 +12,15 @@ The project is supported by NASA contract NNX14AI05A.
 
 ## Prerequisites
 
-In order to compile Sally you will need the following
+In order to compile Sally you will need a reasonable c++ compiler such as g++ or clang, the cmake build system, the GMP library, some boost libraries, and a working Java runtime (for parser generation). On Ubuntu-like systems, the following should cover it:
 
-* A reasonable c++ compiler such as g++ or clang
-    ```
     sudo apt-get install g++
-    ```
-    
-* The CMake build system 
-    ```
     sudo apt-get install cmake
-    ```
-
-* The GMP library
-    ```
     sudo apt-get install libgmp-dev
-    ```
-    
-* Some Boost libraries
-    ```
     sudo apt-get install libboost-program-options-dev libboost-iostreams-dev libboost-test-dev libboost-thread-dev libboost-system-dev
-    ```
-    
-* A working Java runtime 
-    ```
     sudo apt-get install default-jre
-    ```
+
+In addition, Sally needs an SMT solver for reasoning about the systems. It currently supports [Yices2](http://yices.csl.sri.com/) and [MathSAT5](http://mathsat.fbk.eu/), and for best results we recommend using both of them. 
 
 ## How to Compile
 
@@ -148,7 +131,7 @@ states of the system and the transitions that the system can make.
   (and (= next.x (+ state.x 1)) (= next.y (+ state.y 1)))
 )
     
-;; Define a counter system that can reset to 0 by reusing defined
+;; Define the counter system that can reset to 0 by reusing defined
 ;; formulas 
 (define-transition-system T2 my_state_type
    ;; Initial states
@@ -190,50 +173,50 @@ To see the full set of options run ``sally -h``. Some typical examples are as
 follows
 
 * Checking the properties with the bounded model-checking (BMC) engine
-    ```
-    > sally --engine bmc examples/example.mcmt
-    unknown
-    unknown
-    unknown
-    unknown
-    ```
+```bash
+> sally --engine bmc examples/example.mcmt
+unknown
+unknown
+unknown
+unknown
+```
     
 * Checking the property with BMC with a bigger bound and showing any 
 counter-example traces
-    ```
-    > sally --engine bmc --bmc-max 20 --show-trace examples/example.mcmt
-    unknown
-    unknown
-    unknown
-    invalid
-    (trace 
-      (frame (x 0) (y 0))
-      (frame (x 1) (y 1))
-      ...
-      (frame (x 20) (y 20))
-    )
-    ```
+```bash
+> sally --engine bmc --bmc-max 20 --show-trace examples/example.mcmt
+unknown
+unknown
+unknown
+invalid
+(trace 
+  (frame (x 0) (y 0))
+  (frame (x 1) (y 1))
+  ...
+  (frame (x 20) (y 20))
+)
+```
     
 * Checking the properties with the k-induction engine
-    ```
-    > sally --engine kind examples/example.mcmt
-    valid
-    valid
-    unknown
-    unknown 
-    > sally --engine kind --kind-max 20 examples/example.mcmt 
-    valid
-    valid
-    unknown
-    invalid
-    ```
+```bash
+> sally --engine kind examples/example.mcmt
+valid
+valid
+unknown
+unknown 
+> sally --engine kind --kind-max 20 examples/example.mcmt 
+valid
+valid
+unknown
+invalid
+```
     
 * Checking the properties with the ic3 engine using the combination of yices2
   and MathSAT5 as the reasoning engine
-    ```
-    > sally --engine ic3 --solver y2m5 examples/example.mcmt 
-    valid
-    valid
-    valid
-    invalid
-    ```
+```bash
+> sally --engine ic3 --solver y2m5 examples/example.mcmt 
+valid
+valid
+valid
+invalid
+```
