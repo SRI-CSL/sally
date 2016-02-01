@@ -142,6 +142,27 @@ states of the system and the transitions that the system can make.
 )
 ```
 
+#### Input Variables
+
+Sometimes it is useful to model systems that take inputs that are not part of the system state. Such inputs can be defined by using the more general form of state type definition.
+```lisp
+;; State type with inputs 
+(define-state-type state_type_with_inputs
+  ((x Real) (y Real))
+  ((d Real)) 
+)
+```
+Above, the variable ``d`` is such an input. These input variables can only be referenced in transition formulas, by using the ``input`` namespace.
+```lisp
+;; Transition system with inputs 
+(define-transition-system T3 state_type_with_inputs
+  (and (= x 0) (= y 0))
+  (and (= next.x (+ state.x input.d))
+   (= next.y (+ state.y input.d))
+  )
+)
+```
+
 #### Queries
 
 A query asks a question whether a state property is true in the given transition 
@@ -166,7 +187,13 @@ exceed 20.
 (query T2 (and (<= x 19) (<= y 19)))
 ```
 
-The example above is available in ``examples/example.mcmt``.
+In the system ``T3``, the variables ``x`` and ``y`` should always be equal.
+```lisp
+;; Check whether we're always the same 
+(query T3 (= x y))
+```
+
+The full example above is available in ``examples/example.mcmt``.
     
 ### Usage 
 
@@ -180,12 +207,13 @@ unknown
 unknown
 unknown
 unknown
+unknown
 ```
     
 * Checking the property with BMC with a bigger bound and showing any 
 counter-example traces
-```bash
 > sally --engine bmc --bmc-max 20 --show-trace examples/example.mcmt
+```bash
 unknown
 unknown
 unknown
@@ -196,6 +224,7 @@ invalid
   ...
   (frame (x 20) (y 20))
 )
+unknown
 ```
     
 * Checking the properties with the k-induction engine
@@ -204,12 +233,14 @@ invalid
 valid
 valid
 unknown
-unknown 
+unknown
+valid
 > sally --engine kind --kind-max 20 examples/example.mcmt 
 valid
 valid
 unknown
 invalid
+valid
 ```
     
 * Checking the properties with the ic3 engine using the combination of yices2
@@ -220,4 +251,5 @@ valid
 valid
 valid
 invalid
+valid
 ```
