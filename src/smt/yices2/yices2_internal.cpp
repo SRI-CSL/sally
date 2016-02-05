@@ -344,7 +344,6 @@ term_t yices2_internal::to_yices2_term(expr::term_ref ref) {
   case expr::VARIABLE:
     result = yices_new_uninterpreted_term(to_yices2_type(t[0]));
     yices_set_term_name(result, d_tm.get_variable_name(t).c_str());
-    d_conversion_cache->set_term_cache(result, ref);
     break;
   case expr::CONST_BOOL:
     result = d_tm.get_boolean_constant(t) ? yices_true() : yices_false();
@@ -1097,18 +1096,35 @@ void yices2_internal::get_assertions(std::set<expr::term_ref>& out) const {
 
 void yices2_internal::add_variable(expr::term_ref var, smt::solver::variable_class f_class) {
 
+  switch (f_class) {
+  case smt::solver::CLASS_A:
+    assert(d_A_variables_set.find(var) == d_A_variables_set.end());
+    break;
+  case smt::solver::CLASS_B:
+    assert(d_B_variables_set.find(var) == d_B_variables_set.end());
+    break;
+  case smt::solver::CLASS_T:
+    assert(d_T_variables_set.find(var) == d_T_variables_set.end());
+    break;
+  default:
+    assert(false);
+  }
+
   // Convert to yices2 early
   to_yices2_term(var);
 
   switch (f_class) {
   case smt::solver::CLASS_A:
     d_A_variables.push_back(var);
+    d_A_variables_set.insert(var);
     break;
   case smt::solver::CLASS_B:
     d_B_variables.push_back(var);
+    d_B_variables_set.insert(var);
     break;
   case smt::solver::CLASS_T:
     d_T_variables.push_back(var);
+    d_T_variables_set.insert(var);
     break;
   default:
     assert(false);

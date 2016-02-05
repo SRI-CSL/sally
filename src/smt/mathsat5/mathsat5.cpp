@@ -536,7 +536,6 @@ msat_term mathsat5_internal::to_mathsat5_term(expr::term_ref ref) {
     result = msat_make_constant(d_env, var);
     // Remember, for model construction
     d_variables.push_back(ref);
-    d_term_cache->set_term_cache(result, ref);
     break;
   }
   case expr::CONST_BOOL:

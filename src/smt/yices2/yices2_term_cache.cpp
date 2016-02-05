@@ -39,12 +39,13 @@ yices2_term_cache::yices2_term_cache(expr::term_manager& tm)
 yices2_term_cache::tm_to_cache_map yices2_term_cache::s_tm_to_cache_map;
 
 void yices2_term_cache::set_term_cache(expr::term_ref t, term_t t_yices) {
-  assert(d_term_to_yices_cache.find(t) == d_term_to_yices_cache.end());
+  assert (d_term_to_yices_cache.find(t) == d_term_to_yices_cache.end());
   d_term_to_yices_cache[t] = t_yices;
   // If a variable, remember it
   if (d_tm.term_of(t).op() == expr::VARIABLE) {
     d_permanent_terms.push_back(t);
     d_permanent_terms_yices.push_back(t_yices);
+    d_yices_to_term_cache[t_yices] = t;
   } else {
     // Mark cache as dirty
     d_cache_is_clean = false;
@@ -86,6 +87,7 @@ void yices2_term_cache::set_term_cache(term_t t_yices, expr::term_ref t) {
   if (d_tm.term_of(t).op() == expr::VARIABLE) {
     d_permanent_terms.push_back(t);
     d_permanent_terms_yices.push_back(t_yices);
+    d_term_to_yices_cache[t] = t_yices;
   } else {
     // Mark cache as dirty
     d_cache_is_clean = false;
@@ -141,7 +143,7 @@ expr::term_ref yices2_term_cache::get_term_cache(term_t t) const {
 void yices2_term_cache::clear() {
   d_cache_is_clean = true;
   d_term_to_yices_cache.clear();
-  d_term_to_yices_cache.clear();
+  d_yices_to_term_cache.clear();
   d_permanent_terms.clear();
   d_permanent_terms_yices.clear();
 }

@@ -66,12 +66,15 @@ class yices2_internal {
 
   /** A variables */
   std::vector<expr::term_ref> d_A_variables;
+  std::set<expr::term_ref> d_A_variables_set;
 
   /** B variables */
   std::vector<expr::term_ref> d_B_variables;
+  std::set<expr::term_ref> d_B_variables_set;
 
   /** T variables */
   std::vector<expr::term_ref> d_T_variables;
+  std::set<expr::term_ref> d_T_variables_set;
 
   /** Term conversion cache */
   yices2_term_cache* d_conversion_cache;
