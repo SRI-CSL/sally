@@ -1,11 +1,11 @@
-(define-state-type st ((x Real) (y Real)))
+(define-state-type st ((x Real) (y Real) (|||z| Real)))
 
 (define-states sf_01 st
   (= x 0)
 )
 
 (define-states sf_02 st
-  (and (= x 1) sf_01)
+  (and (= x 1) sf_01 (= |z| z))
 )
 
 (define-states sf_03 st sf_02)
@@ -15,7 +15,7 @@
 )
 
 (define-transition t_02 st
-  (or (= next.x state.y) t_01)
+  (or (= next.x state.y) t_01 (= next.|z| |next|.z))
 )
 
 (define-transition-system s_02 st sf_01 (or t_01 t_02))
