@@ -298,6 +298,9 @@ void term::to_stream_smt_with_let(std::ostream& out, term_manager& tm, const exp
 
 #define SMT_REF_OUT(ref) tm.term_of(ref).to_stream_smt_without_let(out, tm, let_cache);
 
+static inline
+bool isalnum_not(char c) { return !isalnum(c); }
+
 void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const expr_let_cache& let_cache, bool use_cache) const {
 
   // The internals
@@ -338,6 +341,10 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
   case VARIABLE: {
     std::string name = tm_internal.payload_of<std::string>(*this);
     name = tm_internal.name_normalize(name);
+    // Escape if needed
+    if (find_if(name.begin(), name.end(), isalnum_not) != name.end()) {
+      name = "|" + name + "|";
+    }
     if (size() == 1) {
       out << name;
     } else {
