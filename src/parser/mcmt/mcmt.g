@@ -282,6 +282,7 @@ symbol[std::string& id, parser::mcmt_object obj_type, bool declared]
   : SYMBOL ('\'' { STATE->lsal_extensions() }? { is_next = true; })? { 
   	    id = STATE->token_text($SYMBOL);
         if (is_next) { id = "next." + id; }
+        id.erase(std::remove(id.begin(), id.end(), '|'), id.end());
         STATE->ensure_declared(id, obj_type, declared);
     }
   ;
@@ -352,11 +353,10 @@ COMMENT
 WHITESPACE
   : (' ' | '\t' | '\f' | '\r' | '\n')+ { SKIP(); }
   ;
-  
+
 /** Matches a symbol. */
 SYMBOL
-  : ALPHA (ALPHA | DIGIT | '_' | '@' | '.' | '!' | '%' )*
-  | '|' (~'|')* '|'
+  : (ALPHA | ('|' (~'|')* '|')) (ALPHA | ('|' (~'|')* '|') | DIGIT | '_' | '@' | '.' | '!' | '%' )* 
   ;
 
 /** Matches a letter. */

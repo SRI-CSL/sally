@@ -12,71 +12,55 @@ The project is supported by NASA contract NNX14AI05A.
 
 ## Prerequisites
 
-In order to compile Sally you will need the following
-
-* A reasonable c++ compiler such as g++ or clang
-    ```
-    sudo apt-get install g++
-    ```
-    
-* The CMake build system 
-    ```
-    sudo apt-get install cmake
-    ```
-
-* The GMP library
-    ```
-    sudo apt-get install libgmp-dev
-    ```
-    
-* Some Boost libraries
-    ```
-    sudo apt-get install libboost-program-options-dev libboost-iostreams-dev libboost-test-dev libboost-thread-dev libboost-system-dev
-    ```
-    
-* A working Java runtime 
-    ```
-    sudo apt-get install default-jre
-    ```
+In order to compile Sally you will need a reasonable c++ compiler such as g++ or clang, the cmake build system, the GMP library, some boost libraries, and a working Java runtime (for parser generation). On Ubuntu-like systems, the following should cover it:
+```bash
+sudo apt-get install g++
+sudo apt-get install cmake
+sudo apt-get install libgmp-dev
+sudo apt-get install libboost-program-options-dev libboost-iostreams-dev libboost-test-dev libboost-thread-dev libboost-system-dev
+sudo apt-get install default-jre
+```
+In addition, Sally needs an SMT solver for reasoning about the systems. It currently supports [Yices2](http://yices.csl.sri.com/) and [MathSAT5](http://mathsat.fbk.eu/), and for best results we recommend using both of them. 
 
 ## How to Compile
 
 If you have Yices2 installed in the $YD directory, meaning that there are 
 $YD/include and $YD/lib directories with Yices2 headers and libraries, then
 configure and build with 
-
-    cd build
-    cmake .. -DYICES2_HOME=$YD
-    make
-    make check
-
+```bash
+cd build
+cmake .. -DYICES2_HOME=$YD
+make
+make check
+```
 If you have MathSAT5 installed in the $MD directory, meaning that there are 
 $MD/include and $MD/lib directories with MathSAT5 headers and libraries, then 
 configure and build with
-
-    cd build
-    cmake .. -DMATHSAT5_HOME=$MD
-    make
-    make check
-   
+```bash
+cd build
+cmake .. -DMATHSAT5_HOME=$MD
+make
+make check
+```
 Of course, you can use both Yices2 and MathSAT by adding both options to 
 cmake as expected.
 
 To compile sally in debug mode then configure and build with
-
-    cd build
-    cmake .. -DCMAKE_BUILD_TYPE=Debug
-    make
-    make check
+```bash
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Debug
+make
+make check
+```
 
 ### Input Language
-
-#### Transition System Definition 
 
 Sally takes as input a simple description of transition systems based on the 
 SMT2 language. A transition system consists of a description of the state type, 
 a formula describing the initial states of the system, and a formula describing 
 the transitions from the current to the next state of the system.
+
+#### State Types
 
 State type is a list of variables that are part of the state, together with
 their types.
@@ -87,8 +71,20 @@ their types.
   ((x Real) (y Real))
 )
 ```
+Sometimes it is useful to model systems that take inputs that are not part of the system state. Such inputs can be defined by using the more general form of state type definition.
+```lisp
+;; State type with inputs 
+(define-state-type state_type_with_inputs
+  ((x Real) (y Real))
+  ((d Real)) 
+)
+```
+Above, the variable ``d`` is such an input. These input variables can only be referenced in transition formulas, by using the ``input`` namespace.
+
 With a defined state type, we can define sets of states and transitions over the
 state type.
+
+#### State Formulas
 
 We can describe a set of states with a state formula over the state type. A 
 state formula is a first-order formula over the variables of the state type, 
@@ -110,6 +106,9 @@ over the same state type.
   (and x_is_zero (= y 0))
 )
 ```   
+
+#### State Transitions
+
 We can describe allowed state transitions by a first-order formula over the 
 current (state) and next variables of the state type. We use the prefix
 ``state`` to denote current variables, and the prefix ``next`` to denote the 
@@ -137,6 +136,9 @@ previously defined transitions over the same type can be used directly.
   ) 
 )
 ```
+
+#### Transition Systems
+
 We can define a state transition system by defining the state type, the initial
 states of the system and the transitions that the system can make.
 ```lisp
@@ -148,13 +150,21 @@ states of the system and the transitions that the system can make.
   (and (= next.x (+ state.x 1)) (= next.y (+ state.y 1)))
 )
     
-;; Define a counter system that can reset to 0 by reusing defined
+;; Define the counter system that can reset to 0 by reusing defined
 ;; formulas 
 (define-transition-system T2 my_state_type
    ;; Initial states
    initial_states
    ;; Transitions 
    transition
+)
+
+;; Transition system with inputs 
+(define-transition-system T3 state_type_with_inputs
+  (and (= x 0) (= y 0))
+  (and (= next.x (+ state.x input.d))
+   (= next.y (+ state.y input.d))
+  )
 )
 ```
 
@@ -182,7 +192,13 @@ exceed 20.
 (query T2 (and (<= x 19) (<= y 19)))
 ```
 
-The example above is available in ``examples/example.mcmt``.
+In the system ``T3``, the variables ``x`` and ``y`` should always be equal.
+```lisp
+;; Check whether we're always the same 
+(query T3 (= x y))
+```
+
+The full example above is available in ``examples/example.mcmt``.
     
 ### Usage 
 
@@ -190,50 +206,55 @@ To see the full set of options run ``sally -h``. Some typical examples are as
 follows
 
 * Checking the properties with the bounded model-checking (BMC) engine
-    ```
-    > sally --engine bmc examples/example.mcmt
-    unknown
-    unknown
-    unknown
-    unknown
-    ```
+```bash
+> sally --engine bmc examples/example.mcmt
+unknown
+unknown
+unknown
+unknown
+unknown
+```
     
 * Checking the property with BMC with a bigger bound and showing any 
 counter-example traces
-    ```
-    > sally --engine bmc --bmc-max 20 --show-trace examples/example.mcmt
-    unknown
-    unknown
-    unknown
-    invalid
-    (trace 
-      (frame (x 0) (y 0))
-      (frame (x 1) (y 1))
-      ...
-      (frame (x 20) (y 20))
-    )
-    ```
+> sally --engine bmc --bmc-max 20 --show-trace examples/example.mcmt
+```bash
+unknown
+unknown
+unknown
+invalid
+(trace 
+  (frame (x 0) (y 0))
+  (frame (x 1) (y 1))
+  ...
+  (frame (x 20) (y 20))
+)
+unknown
+```
     
 * Checking the properties with the k-induction engine
-    ```
-    > sally --engine kind examples/example.mcmt
-    valid
-    valid
-    unknown
-    unknown 
-    > sally --engine kind --kind-max 20 examples/example.mcmt 
-    valid
-    valid
-    unknown
-    invalid
-    ```
+```bash
+> sally --engine kind examples/example.mcmt
+valid
+valid
+unknown
+unknown
+valid
+> sally --engine kind --kind-max 20 examples/example.mcmt 
+valid
+valid
+unknown
+invalid
+valid
+```
     
 * Checking the properties with the ic3 engine using the combination of yices2
   and MathSAT5 as the reasoning engine
-    ```
-    > sally --engine ic3 --solver y2m5 examples/example.mcmt 
-    valid
-    valid
-    valid
-    invalid
-    ```
+```bash
+> sally --engine ic3 --solver y2m5 examples/example.mcmt 
+valid
+valid
+valid
+invalid
+valid
+```
