@@ -23,6 +23,7 @@
 #include "expr/rational.h"
 #include "expr/bitvector.h"
 #include "utils/allocator_types.h"
+#include "utils/string.h"
 
 namespace sally {
 namespace expr {
@@ -172,7 +173,7 @@ struct term_op_traits<CONST_BITVECTOR> {
  */
 template<>
 struct term_op_traits<VARIABLE> {
-  typedef std::string payload_type;
+  typedef utils::string payload_type;
 };
 
 /**
@@ -180,7 +181,7 @@ struct term_op_traits<VARIABLE> {
  */
 template<>
 struct term_op_traits<CONST_STRING> {
-  typedef std::string payload_type;
+  typedef utils::string payload_type;
 };
 
 }

@@ -19,6 +19,7 @@
 #pragma once
 
 #include <string>
+#include "utils/string.h"
 
 namespace sally {
 namespace utils {
@@ -64,6 +65,15 @@ struct hash<std::string> {
   }
 };
 
+/** String hash. */
+template<>
+struct hash<utils::string> {
+  size_t operator()(utils::string value) const {
+    sequence_hash seq;
+    seq.add(value.begin(), value.end());
+    return seq.get();
+  }
+};
 
 }
 }

@@ -19,8 +19,10 @@
 #include "expr/term_manager.h"
 #include "expr/term_manager_internal.h"
 #include "utils/trace.h"
+#include "utils/string.h"
 #include "expr/gc_participant.h"
 #include "expr/gc_relocator.h"
+
 
 #include <string>
 #include <iostream>
@@ -172,7 +174,7 @@ std::string term_manager::get_variable_name(term_ref t_ref) const {
 
 std::string term_manager::get_variable_name(const term& t) const {
   assert(t.op() == VARIABLE);
-  std::string name = d_tm->payload_of<std::string>(t);
+  std::string name(d_tm->payload_of<utils::string>(t).c_str());
   return d_tm->name_normalize(name);
 }
 
@@ -222,7 +224,7 @@ bitvector_extract term_manager::get_bitvector_extract(const term& t) const {
 
 std::string term_manager::get_string_constant(const term& t) const {
   assert(t.op() == CONST_STRING);
-  return d_tm->payload_of<std::string>(t);
+  return d_tm->payload_of<utils::string>(t).c_str();
 }
 
 term_ref term_manager::mk_struct_type(const std::vector<std::string>& names, const std::vector<term_ref>& types) {
