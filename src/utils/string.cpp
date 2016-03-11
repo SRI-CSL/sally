@@ -95,7 +95,9 @@ const char* string::c_str() const {
 
 
 void string::to_stream(std::ostream& out) const {
-  out << d_data;
+  if (d_data) {
+    out << d_data;
+  }
 }
 
 std::ostream& operator << (std::ostream& out, const string& s) {
