@@ -82,7 +82,11 @@ const char* string::end() const {
 
 
 size_t string::size() const {
-  return strlen(d_data);
+  if (d_data) {
+    return strlen(d_data);
+  } else {
+    return 0;
+  }
 }
 
 char string::operator[] (size_t i) const {
