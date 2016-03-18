@@ -1,0 +1,65 @@
+approx: CONTEXT =
+BEGIN
+STATUS: TYPE = { Good, SymmetricOmissive, AsymmetricOmissive, SymmetricTransmissive, AsymmetricTransmissive };
+
+N: NATURAL = 5;
+
+TAU: NATURAL = 1;
+
+PID: TYPE = [1 .. N];
+
+DATA: TYPE = REAL;
+
+missing: DATA = 0;
+
+sort_and_filter(v: ARRAY PID OF DATA, n: [0 .. N], p: ARRAY PID OF PID): BOOLEAN =
+  (((FORALL (i: PID): ((i > n) <=> (v[p[i]] = missing))) AND (FORALL (i: PID): (((i < n) AND (i < N)) => (v[p[i]] <= v[p[(i + 1)]])))) AND (FORALL (i, j: PID): ((p[i] = p[j]) => (i = j))));
+
+midval(a: DATA, b: DATA): DATA =
+  ((a + b) / 2);
+
+vote(v: ARRAY PID OF DATA, n: [0 .. N], p: ARRAY PID OF PID): DATA =
+  IF (n > TAU) THEN midval(v[p[(TAU + 1)]], v[p[(n - TAU)]]) ELSE missing ENDIF;
+
+all_good(s: ARRAY PID OF STATUS): BOOLEAN =
+  (FORALL (i: PID): (s[i] = Good));
+
+scenario1(s: ARRAY PID OF STATUS): BOOLEAN =
+  (((s[1] = SymmetricTransmissive) AND (s[2] = AsymmetricOmissive)) AND (FORALL (i: PID): ((i > 2) => (s[i] = Good))));
+
+scenario2(s: ARRAY PID OF STATUS): BOOLEAN =
+  (((s[1] = AsymmetricTransmissive) AND (s[2] = AsymmetricOmissive)) AND (FORALL (i: PID): ((i > 2) => (s[i] = Good))));
+
+initial_delta: { x: REAL | (x > 0) };
+
+approx: MODULE =
+BEGIN
+ OUTPUT
+  v: ARRAY PID OF DATA,
+  c: ARRAY PID OF ARRAY PID OF DATA,
+  p: ARRAY PID OF ARRAY PID OF PID,
+  n: ARRAY PID OF [0 .. N],
+  status: ARRAY PID OF STATUS,
+  round: INTEGER,
+  delta: REAL
+ INITIALIZATION
+  delta = initial_delta;
+  v IN { a : ARRAY PID OF DATA | ((FORALL (i: PID): (a[i] > 0)) AND (FORALL (i, j: PID): ((a[i] - a[j]) <= initial_delta))) };
+  p = [[i: PID] [[j: PID] j]];
+  round = 0;
+  status IN { s : ARRAY PID OF STATUS | all_good(s) };
+ TRANSITION
+  round' = (round + 1);
+  status' = status;
+  c' IN { x : ARRAY PID OF ARRAY PID OF DATA | ((((FORALL (i: PID): ((status[i] = Good) => (FORALL (j: PID): (x[j][i] = v[i])))) AND (FORALL (i: PID): ((status[i] = SymmetricOmissive) => (FORALL (j: PID): (x[j][i] = missing))))) AND (FORALL (i: PID): ((status[i] = AsymmetricOmissive) => (FORALL (j: PID): ((x[j][i] = missing) OR (x[j][i] = v[i])))))) AND (FORALL (i: PID): ((status[i] = SymmetricTransmissive) => (FORALL (j, k: PID): (x[j][i] = x[k][i]))))) };
+  n' IN { x : ARRAY PID OF [0 .. N] | true };
+  p' IN { x : ARRAY PID OF ARRAY PID OF PID | (FORALL (i: PID): sort_and_filter(c'[i], n'[i], x[i])) };
+  v' IN { x : ARRAY PID OF DATA | (FORALL (i: PID): (x[i] = vote(c'[i], n'[i], p'[i]))) };
+  delta' = (delta / 2);
+END;
+
+sanity: LEMMA approx |- G((FORALL (i: PID): (v[i] /= missing)));
+
+convergence: LEMMA approx |- G((FORALL (i, j: PID): ((v[i] - v[j]) <= delta)));
+
+END
