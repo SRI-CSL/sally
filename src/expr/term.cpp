@@ -22,6 +22,7 @@
 #include "utils/allocator.h"
 #include "utils/output.h"
 #include "utils/exception.h"
+#include "utils/string.h"
 
 #include <iomanip>
 #include <cassert>
@@ -298,6 +299,9 @@ void term::to_stream_smt_with_let(std::ostream& out, term_manager& tm, const exp
 
 #define SMT_REF_OUT(ref) tm.term_of(ref).to_stream_smt_without_let(out, tm, let_cache);
 
+static inline
+bool isalnum_not(char c) { return !isalnum(c); }
+
 void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const expr_let_cache& let_cache, bool use_cache) const {
 
   // The internals
@@ -336,8 +340,12 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
     break;
   }
   case VARIABLE: {
-    std::string name = tm_internal.payload_of<std::string>(*this);
+    std::string name(tm_internal.payload_of<utils::string>(*this).c_str());
     name = tm_internal.name_normalize(name);
+    // Escape if needed
+    if (find_if(name.begin(), name.end(), isalnum_not) != name.end()) {
+      name = "|" + name + "|";
+    }
     if (size() == 1) {
       out << name;
     } else {
@@ -440,7 +448,7 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
     out << tm_internal.payload_of<bitvector>(*this);
     break;
   case CONST_STRING:
-    out << tm_internal.payload_of<std::string>(*this);
+    out << tm_internal.payload_of<utils::string>(*this);
     break;
   default:
     assert(false);
@@ -515,7 +523,7 @@ void term::to_stream_nuxmv_without_let(std::ostream& out, term_manager& tm, cons
     break;
   }
   case VARIABLE: {
-    std::string name = tm_internal.payload_of<std::string>(*this);
+    std::string name(tm_internal.payload_of<utils::string>(*this).c_str());
     name = tm_internal.name_normalize(name);
     if (size() == 1) {
       out << name;
@@ -702,7 +710,7 @@ void term::to_stream_nuxmv_without_let(std::ostream& out, term_manager& tm, cons
     out << tm_internal.payload_of<bitvector>(*this);
     break;
   case CONST_STRING:
-    out << tm_internal.payload_of<std::string>(*this);
+    out << tm_internal.payload_of<utils::string>(*this);
     break;
   default:
     assert(false);

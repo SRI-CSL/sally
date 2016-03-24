@@ -1,6 +1,6 @@
 ;; State type
 (define-state-type state_type (
-  (x Real) 
+  (|first variable| Real) 
   (y Real)
   (n Real)
 ))
@@ -8,7 +8,7 @@
 ;; Initial states 
 (define-states initial_states state_type
   (and 
-    (= x 0)
+    (= |first variable| 0)
     (= y n)
     (> n 0)
   )
@@ -18,8 +18,8 @@
 (define-transition transition state_type
   ;; Implicit variables next, state
   (and 
-    (= next.x (ite (<= state.y 0) 0 (+ state.x 1)))
-    (= next.y (ite (<= state.y 0) state.x (- state.y 1)))
+    (= next.|first variable| (ite (<= state.y 0) 0 (+ state.|first variable| 1)))
+    (= next.y (ite (<= state.y 0) state.|first variable| (- state.y 1)))
     (= next.n state.n)
   )  
 )
@@ -32,5 +32,5 @@
 )
 
 ;; Query
-(query T (= (+ x y) n))
+(query T (= (+ |first variable| y) n))
 
