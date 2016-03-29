@@ -64,12 +64,23 @@ public:
   void to_stream(std::ostream& out) const;
 };
 
-class antlr_parser_interface;
+class internal_parser_interface;
 
 enum input_language {
   INPUT_MCMT,
   INPUT_BTOR,
-  INPUT_SAL
+  INPUT_SAL,
+  INPUT_AIGER
+};
+
+/** Internal parser interface. */
+class internal_parser_interface {
+public:
+ virtual ~internal_parser_interface() {};
+ virtual command* parse_command() = 0;
+ virtual int get_current_parser_line() const = 0;
+ virtual int get_current_parser_position() const = 0;
+ virtual std::string get_filename() const = 0;
 };
 
 /**
@@ -78,7 +89,7 @@ enum input_language {
 class parser {
 
   /** Internal parser data. */
-  antlr_parser_interface* d_internal;
+  internal_parser_interface* d_internal;
 
 public:
 

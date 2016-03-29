@@ -45,7 +45,7 @@ struct antlr_parser_traits<INPUT_BTOR> {
 
 };
 
-antlr_parser_interface* new_btor_parser(const system::context& ctx, const char* filename) {
+internal_parser_interface* new_btor_parser(const system::context& ctx, const char* filename) {
   return new antlr_parser<INPUT_BTOR>(ctx, filename);
 }
 

@@ -44,7 +44,7 @@ struct antlr_parser_traits<INPUT_SAL> {
   }
 };
 
-antlr_parser_interface* new_sal_parser(const system::context& ctx, const char* filename) {
+internal_parser_interface* new_sal_parser(const system::context& ctx, const char* filename) {
   return new antlr_parser<INPUT_SAL>(ctx, filename);
 }
 

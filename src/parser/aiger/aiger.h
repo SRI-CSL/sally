@@ -16,15 +16,14 @@
  * along with sally.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
-#include "system/context.h"
-#include "parser/antlr_parser.h"
+#include "parser/parser.h"
 
 namespace sally {
 namespace parser {
 
-internal_parser_interface* new_btor_parser(const system::context& ctx, const char* filename);
+internal_parser_interface* new_aiger_parser(const system::context& ctx, const char* filename);
 
 }
 }
+
+

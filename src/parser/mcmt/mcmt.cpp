@@ -44,7 +44,7 @@ struct antlr_parser_traits<INPUT_MCMT> {
   }
 };
 
-antlr_parser_interface* new_mcmt_parser(const system::context& ctx, const char* filename) {
+internal_parser_interface* new_mcmt_parser(const system::context& ctx, const char* filename) {
   return new antlr_parser<INPUT_MCMT>(ctx, filename);
 }
 
