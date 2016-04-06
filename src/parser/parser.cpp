@@ -119,7 +119,7 @@ input_language parser::guess_language(std::string filename) {
     if (extension == "sal") {
       return INPUT_SAL;
     }
-    if (extension == "aag") {
+    if (extension == "aig") {
       return INPUT_AIGER;
     }
     return INPUT_MCMT;

@@ -234,14 +234,10 @@ aiger_parser::aiger_parser(const system::context& ctx, const char* filename)
   // Define initial states
   expr::term_ref initial_state = d_tm.mk_and(initial_state_formulas);
   system::state_formula* initial_state_formula = new system::state_formula(d_tm, state_type, initial_state);
-  command* define_initial = new define_states_command("aiger_init", initial_state_formula);
-  all_commands->push_back(define_initial);
 
   // Define transition
   expr::term_ref transition = d_tm.mk_and(transition_formulas);
   system::transition_formula* transition_formula = new system::transition_formula(d_tm, state_type, transition);
-  command* define_transition = new define_transition_command("aiger_transition", transition_formula);
-  all_commands->push_back(define_transition);
 
   // Define system
   system::transition_system* aiger_system = new system::transition_system(state_type, initial_state_formula, transition_formula);
