@@ -54,9 +54,6 @@ class aiger_parser : public internal_parser_interface {
   /** Map from aiger terms to terms */
   aiger_to_term_map d_aiger_to_term_map;
 
-  /** Map from term to aiger ids */
-  term_to_aiger_map d_term_to_aiger_map;
-
   /** Set the cache t_aiger -> t (for both negated and not negated) */
   void set_cache(aiger_id_type t_aiger, expr::term_ref t);
 
@@ -75,30 +72,16 @@ public:
 
 };
 
-// Negate the term (don't do double negation)
-expr::term_ref negate(expr::term_manager& tm, expr::term_ref t) {
-  const expr::term& term = tm.term_of(t);
-  if (term.op() == expr::TERM_NOT) {
-    return term[0];
-  } else {
-    return tm.mk_term(expr::TERM_NOT, t);
-  }
-}
-
 void aiger_parser::set_cache(aiger_id_type t_aiger, expr::term_ref t) {
+
   assert(d_aiger_to_term_map.find(t_aiger) == d_aiger_to_term_map.end());
-  assert(d_term_to_aiger_map.find(t) == d_term_to_aiger_map.end());
 
   // Cache negated t also
-  expr::term_ref t_not = negate(d_tm, t);
+  expr::term_ref t_not = d_tm.mk_term(expr::TERM_NOT, t);
 
   // aiger -> term
   d_aiger_to_term_map[t_aiger] = t;
   d_aiger_to_term_map[aiger_not(t_aiger)] = t_not;
-
-  // term -> aiger
-  d_term_to_aiger_map[t] = t_aiger;
-  d_term_to_aiger_map[t_not] = aiger_not(t_aiger);
 }
 
 expr::term_ref aiger_parser::aiger_to_term(aiger_id_type t_aiger) {
@@ -110,6 +93,7 @@ expr::term_ref aiger_parser::aiger_to_term(aiger_id_type t_aiger) {
   }
 
   aiger_id_type t_aiger_unsigned = aiger_strip(t_aiger);
+  assert(d_aiger_to_term_map.find(t_aiger_unsigned) == d_aiger_to_term_map.end());
 
   // Variables already in cache
   assert(aiger_is_input(d_aiger, t_aiger_unsigned) == 0);
@@ -149,13 +133,20 @@ aiger_parser::aiger_parser(const system::context& ctx, const char* filename)
   }
   d_aiger = a;
 
+  // Check that we can handle it
+  if (a->num_constraints > 0) {
+    throw parser_exception("aiger unsupported: num_constraints > 0");
+  }
+  if (a->num_fairness > 0) {
+    throw parser_exception("aiger unsupported: num_fairness > 0");
+  }
+  if (a->num_justice > 0) {
+    throw parser_exception("aiger unsupported: num_justice > 0");
+  }
+
   // Add true and false to the cache
-  expr::term_ref t_true = d_tm.mk_boolean_constant(true);
-  expr::term_ref t_false = d_tm.mk_boolean_constant(false);
-  d_aiger_to_term_map[aiger_true] = t_true;
-  d_aiger_to_term_map[aiger_false] = t_false;
-  d_term_to_aiger_map[t_true] = aiger_true;
-  d_term_to_aiger_map[t_false] = aiger_false;
+  d_aiger_to_term_map[aiger_true] = d_tm.mk_boolean_constant(true);
+  d_aiger_to_term_map[aiger_false] = d_tm.mk_boolean_constant(false);
 
   // The commands will be put here
   sequence_command* all_commands = new sequence_command();
@@ -165,52 +156,55 @@ aiger_parser::aiger_parser(const system::context& ctx, const char* filename)
   // * latches are sally state variables
   // * output are sally properties
 
-  // Create the input variables
-  std::vector<std::string> input_names;
-  std::vector<expr::term_ref> input_types;
+  // Create the input and state variables
+  std::vector<std::string> input_names, state_names;
+  std::vector<aiger_id_type> input_aiger_ids, state_aiger_ids;
+  std::vector<expr::term_ref> input_types, state_types;
+  // Aiger doesn't really distinguish between state and input, properties can
+  // include input variables, so we make everything state
   for (size_t i = 0; i < a->num_inputs; ++ i) {
     if (a->inputs[i].name != 0) {
-      input_names.push_back(a->inputs[i].name);
+      state_names.push_back(a->inputs[i].name);
     } else {
       std::stringstream ss;
-      ss << "i" << i;
-      input_names.push_back(ss.str());
+      ss << "i" << a->inputs[i].lit;
+      state_names.push_back(ss.str());
     }
-    input_types.push_back(d_tm.boolean_type());
+    state_types.push_back(d_tm.boolean_type());
+    state_aiger_ids.push_back(a->inputs[i].lit);
   }
 
-  // Create the state types
-  std::vector<std::string> state_names;
-  std::vector<expr::term_ref> state_types;
   for (size_t i = 0; i < a->num_latches; ++ i) {
     if (a->latches[i].name != 0) {
       state_names.push_back(a->latches[i].name);
     } else {
       std::stringstream ss;
-      ss << "l" << i;
+      ss << "l" << a->latches[i].lit;
       state_names.push_back(ss.str());
     }
     state_types.push_back(d_tm.boolean_type());
+    state_aiger_ids.push_back(a->latches[i].lit);
   }
 
   // Make the state type
   expr::term_ref input_type_ref = d_tm.mk_struct_type(input_names, input_types);
   expr::term_ref state_type_ref = d_tm.mk_struct_type(state_names, state_types);
-  system::state_type* state_type = new system::state_type("aiger_state_type", d_tm, state_type_ref, input_type_ref);
-  command* state_type_declare = new declare_state_type_command("aiger_state_type", state_type);
+  system::state_type* state_type = new system::state_type("aig", d_tm, state_type_ref, input_type_ref);
+  command* state_type_declare = new declare_state_type_command("aig", state_type);
+  all_commands->push_back(state_type_declare);
 
   // Get the variables
   const std::vector<expr::term_ref>& input_vars = state_type->get_variables(system::state_type::STATE_INPUT);
   const std::vector<expr::term_ref>& state_vars = state_type->get_variables(system::state_type::STATE_CURRENT);
-  assert(input_vars.size() == a->num_inputs);
-  assert(state_vars.size() == a->num_latches);
+  assert(input_vars.size() == input_aiger_ids.size());
+  assert(state_vars.size() == state_aiger_ids.size());
 
   // Add to cache
-  for (size_t i = 0; i < a->num_inputs; ++ i) {
-    set_cache(a->inputs[i].lit, input_vars[i]);
+  for (size_t i = 0; i < input_aiger_ids.size(); ++ i) {
+    set_cache(input_aiger_ids[i], input_vars[i]);
   }
-  for (size_t i = 0; i < a->num_latches; ++ i) {
-    set_cache(a->latches[i].lit, state_vars[i]);
+  for (size_t i = 0; i < state_aiger_ids.size(); ++ i) {
+    set_cache(state_aiger_ids[i], state_vars[i]);
   }
 
   // We have all variables and constants in the cache now. We can construct
@@ -220,15 +214,19 @@ aiger_parser::aiger_parser(const system::context& ctx, const char* filename)
   std::vector<expr::term_ref> initial_state_formulas;
   std::vector<expr::term_ref> transition_formulas;
   for (size_t i = 0; i < a->num_latches; ++ i) {
-    // Reset = init
-    initial_state_formulas.push_back(aiger_to_term(a->latches[i].reset));
+    // The latch (var)
+    expr::term_ref var = aiger_to_term(a->latches[i].lit);
+    expr::term_ref next_var = state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, var);
+    // From aiger doc:  Latches are always assumed to be initialized to zero.
+    // but, reset is available, so i'll take that one
+    expr::term_ref init_value = aiger_to_term(a->latches[i].reset);
+    expr::term_ref init_eq = d_tm.mk_term(expr::TERM_EQ, var, init_value);
+    initial_state_formulas.push_back(init_eq);
     // Transition
     assert(aiger_sign(a->latches[i].lit) == 0);
-    expr::term_ref var = aiger_to_term(a->latches[i].lit);
     expr::term_ref next_value = aiger_to_term(a->latches[i].next);
-    expr::term_ref next_var = state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, var);
-    expr::term_ref eq = d_tm.mk_term(expr::TERM_EQ, next_var, next_value);
-    transition_formulas.push_back(eq);
+    expr::term_ref next_eq = d_tm.mk_term(expr::TERM_EQ, next_var, next_value);
+    transition_formulas.push_back(next_eq);
   }
 
   // Define initial states
@@ -241,19 +239,18 @@ aiger_parser::aiger_parser(const system::context& ctx, const char* filename)
 
   // Define system
   system::transition_system* aiger_system = new system::transition_system(state_type, initial_state_formula, transition_formula);
-  command* define_system = new define_transition_system_command("aiger_system", aiger_system);
+  command* define_system = new define_transition_system_command("system", aiger_system);
   all_commands->push_back(define_system);
   
   // Get the properties
   for (size_t i = 0; i < a->num_outputs; ++ i) {
     expr::term_ref p_i = aiger_to_term(a->outputs[i].lit);
     system::state_formula *p = new system::state_formula(d_tm, state_type, p_i);
-    command* query = new query_command(ctx, "aiger_system", p);
+    command* query = new query_command(ctx, "system", p);
     all_commands->push_back(query);
   }
 
   // Construct the final command
-  all_commands->push_back(state_type_declare);
   d_command = all_commands;
 
   // Delete aiger
@@ -284,7 +281,7 @@ std::string aiger_parser::get_filename() const {
 
 
 internal_parser_interface* new_aiger_parser(const system::context& ctx, const char* filename) {
-  return 0;
+  return new aiger_parser(ctx, filename);
 }
 
 }
