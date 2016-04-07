@@ -13,7 +13,7 @@ clean:
 	$(RM) salparse2.ml salparse2.mli sallex.ml
 	$(RM) parse
 
-parse: sal_ast.cmx salparse2.cmx sallex.cmx parse.cmx
+parse: sal_ast.cmx salparse2.cmx sallex.cmx sal2lisp.cmx lisp_ast.cmx parse.cmx
 	$(OCAMLOPT) $^ -o $@
 
 %.cmo: %.ml
@@ -36,6 +36,6 @@ parse: sal_ast.cmx salparse2.cmx sallex.cmx parse.cmx
 
 include .depend
 
-.depend: sallex.ml salparse2.ml salparse2.mli
+.depend: sallex.ml salparse2.ml salparse2.mli sal2lisp.ml lisp_ast.ml
 	$(OCAMLDEP) -native *.ml *.mli > $@
 

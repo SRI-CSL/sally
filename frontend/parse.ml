@@ -10,5 +10,6 @@ let ch =
 ;;
 
 let ctx = Sallex.parse ch in
-  Sal_ast.print_context stdout ctx
+	let lispy = Sal2lisp.sal_context_to_lisp ctx in
+	List.iter (Lisp_ast.print_query stdout) lispy
 
