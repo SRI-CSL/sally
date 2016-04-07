@@ -244,7 +244,8 @@ aiger_parser::aiger_parser(const system::context& ctx, const char* filename)
   
   // Get the properties
   for (size_t i = 0; i < a->num_outputs; ++ i) {
-    expr::term_ref p_i = aiger_to_term(a->outputs[i].lit);
+    expr::term_ref bad_i = aiger_to_term(a->outputs[i].lit);
+    expr::term_ref p_i = d_tm.mk_term(expr::TERM_NOT, bad_i);
     system::state_formula *p = new system::state_formula(d_tm, state_type, p_i);
     command* query = new query_command(ctx, "system", p);
     all_commands->push_back(query);
