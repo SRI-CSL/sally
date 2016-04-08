@@ -6,7 +6,7 @@ add_library(expr
   bitvector.cpp
   value.cpp
   term_manager_internal.cpp 
-  term_manager.cpp 
+  term_manager.cpp
   model.cpp
   gc_participant.cpp
   gc_relocator.cpp

@@ -17,6 +17,7 @@
  */
 
 #include "expr/model.h"
+#include "expr/term_visitor.h"
 #include "utils/exception.h"
 #include "utils/trace.h"
 
@@ -165,28 +166,70 @@ value model::get_term_value(expr::term_ref t, const expr::term_manager::substitu
   return get_term_value_internal(t, var_renaming, cache);
 }
 
-value model::get_term_value_internal(expr::term_ref t, const expr::term_manager::substitution_map& var_renaming, term_to_value_map& cache) const {
+class evaluation_visitor {
 
-  TRACE("expr::model") << "get_term_value_internal(" << t << ")" << std::endl;
+  term_manager& d_tm;
+  const expr::term_manager::substitution_map& d_var_renaming;
+  model::term_to_value_map& d_cache;
+  const model& d_model;
 
-  // If a variable and not in the model, we don't know how to evaluate
-  expr::term_op op = d_tm.term_of(t).op();
-  if (op == expr::VARIABLE) {
-    return get_variable_value(t, var_renaming);
-  } else {
-    // Proper term, we have to evaluate, if not in the cache already
-    const_iterator find = cache.find(t);
-    if (find != cache.end()) {
-      TRACE("expr::model") << "get_term_value_internal(" << t << ") => " << find->second << std::endl;
-      return find->second;
+  value d_true;
+  value d_false;
+
+  std::vector<value> children_values;
+
+public:
+
+  evaluation_visitor(expr::term_manager& tm, const expr::term_manager::substitution_map& var_renaming, model::term_to_value_map& cache, const model& model)
+  : d_tm(tm)
+  , d_var_renaming(var_renaming)
+  , d_cache(cache)
+  , d_model(model)
+  , d_true(true)
+  , d_false(false)
+  {}
+
+  ~evaluation_visitor() {}
+
+  // We visit only nodes that have not been evaluated yet, i.e. terms not in
+  // the cache yet
+  visitor_match_result match(term_ref t) {
+    term_op op = d_tm.term_of(t).op();
+    if (d_cache.find(t) == d_cache.end()) {
+      // Visit children then this node
+      if (op == VARIABLE) {
+        // Don't go into the variable children (types)
+        return VISIT_AND_BREAK;
+      } else {
+        return VISIT_AND_CONTINUE;
+      }
+    } else {
+      // Don't visit children or this node
+      return DONT_VISIT_AND_BREAK;
+    }
+  }
+
+  void visit(term_ref t) {
+
+    const term& t_term = d_tm.term_of(t);
+    size_t t_size = t_term.size();
+    term_op op = t_term.op();
+
+    // Variables have children (type) but we don't want to evaluate them */
+    if (op == VARIABLE) {
+       d_cache[t] = d_model.get_variable_value(t, d_var_renaming);
+       return;
     }
 
+    // At this point, children have values, so we can evaluate
     // Not cached, evaluate children
-    size_t t_size = d_tm.term_of(t).size();
-    std::vector<value> children_values;
+    children_values.clear();
+
     for (size_t i = 0; i < t_size; ++ i) {
       expr::term_ref child = d_tm.term_of(t)[i];
-      children_values.push_back(get_term_value_internal(child, var_renaming, cache));
+      model::term_to_value_map::const_iterator find = d_cache.find(child);
+      assert(find != d_cache.end());
+      children_values.push_back(find->second);
     }
 
     // Now, compute the value
@@ -201,7 +244,7 @@ value model::get_term_value_internal(expr::term_ref t, const expr::term_manager:
         v = children_values[2];
       }
       break;
-      // Equality
+    // Equality
     case TERM_EQ:
       if (!children_values[0].is_null() && !children_values[1].is_null()) {
         v = value(children_values[0] == children_values[1]);
@@ -209,7 +252,7 @@ value model::get_term_value_internal(expr::term_ref t, const expr::term_manager:
       break;
     // Boolean terms
     case CONST_BOOL:
-      v = d_tm.get_boolean_constant(d_tm.term_of(t));
+      v = d_tm.get_boolean_constant(t_term);
       break;
     case TERM_AND:
       v = d_true;
@@ -334,10 +377,16 @@ value model::get_term_value_internal(expr::term_ref t, const expr::term_manager:
     TRACE("expr::model") << "get_term_value_internal(" << t << ") => " << v << std::endl;
 
     // Remember the cache
-    cache[t] = v;
-
-    return v;
+    d_cache[t] = v;
   }
+};
+
+
+value model::get_term_value_internal(expr::term_ref t, const expr::term_manager::substitution_map& var_renaming, term_to_value_map& cache) const {
+  evaluation_visitor visitor(d_tm, var_renaming, cache, *this);
+  term_visit_topological<evaluation_visitor> visit_topological(d_tm, visitor);
+  visit_topological.run(t);
+  return cache[t];
 }
 
 bool model::is_true(expr::term_ref f) const {
