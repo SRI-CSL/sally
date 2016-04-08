@@ -22,6 +22,7 @@
 #include "smt/yices2/yices2_term_cache.h"
 #include "utils/trace.h"
 #include "expr/gc_relocator.h"
+#include "expr/term_visitor.h"
 #include "utils/output.h"
 
 #include <iostream>
@@ -326,108 +327,142 @@ type_t yices2_internal::to_yices2_type(expr::term_ref ref) {
   return result;
 }
 
-term_t yices2_internal::to_yices2_term(expr::term_ref ref) {
+class to_yices_visitor {
 
-  term_t result = NULL_TERM;
+  expr::term_manager& d_tm;
 
-  // Check the term has been translated already
-  result = d_conversion_cache->get_term_cache(ref);
-  if (result != NULL_TERM) {
-    return result;
-  }
+  yices2_internal& d_yices;
+  yices2_term_cache& d_conversion_cache;
 
-  // The term
-  const expr::term& t = d_tm.term_of(ref);
-  expr::term_op t_op = t.op();
+public:
 
-  switch (t_op) {
-  case expr::VARIABLE:
-    result = yices_new_uninterpreted_term(to_yices2_type(t[0]));
-    yices_set_term_name(result, d_tm.get_variable_name(t).c_str());
-    break;
-  case expr::CONST_BOOL:
-    result = d_tm.get_boolean_constant(t) ? yices_true() : yices_false();
-    break;
-  case expr::CONST_RATIONAL:
-    result = yices_mpq(d_tm.get_rational_constant(t).mpq().get_mpq_t());
-    break;
-  case expr::CONST_BITVECTOR: {
-    expr::bitvector bv = d_tm.get_bitvector_constant(t);
-    result = yices_bvconst_mpz(bv.size(), bv.mpz().get_mpz_t());
-    break;
-  }
-  case expr::TERM_ITE:
-  case expr::TERM_EQ:
-  case expr::TERM_AND:
-  case expr::TERM_OR:
-  case expr::TERM_NOT:
-  case expr::TERM_IMPLIES:
-  case expr::TERM_XOR:
-  case expr::TERM_ADD:
-  case expr::TERM_SUB:
-  case expr::TERM_MUL:
-  case expr::TERM_DIV:
-  case expr::TERM_LEQ:
-  case expr::TERM_LT:
-  case expr::TERM_GEQ:
-  case expr::TERM_GT:
-  case expr::TERM_BV_ADD:
-  case expr::TERM_BV_SUB:
-  case expr::TERM_BV_MUL:
-  case expr::TERM_BV_UDIV: // NOTE: semantics of division is x/0 = 111...111
-  case expr::TERM_BV_SDIV:
-  case expr::TERM_BV_UREM:
-  case expr::TERM_BV_SREM:
-  case expr::TERM_BV_SMOD:
-  case expr::TERM_BV_XOR:
-  case expr::TERM_BV_SHL:
-  case expr::TERM_BV_LSHR:
-  case expr::TERM_BV_ASHR:
-  case expr::TERM_BV_NOT:
-  case expr::TERM_BV_AND:
-  case expr::TERM_BV_OR:
-  case expr::TERM_BV_NAND:
-  case expr::TERM_BV_NOR:
-  case expr::TERM_BV_XNOR:
-  case expr::TERM_BV_CONCAT:
-  case expr::TERM_BV_ULEQ:
-  case expr::TERM_BV_SLEQ:
-  case expr::TERM_BV_ULT:
-  case expr::TERM_BV_SLT:
-  case expr::TERM_BV_UGEQ:
-  case expr::TERM_BV_SGEQ:
-  case expr::TERM_BV_UGT:
-  case expr::TERM_BV_SGT:
-  {
-    size_t size = t.size();
-    assert(size > 0);
-    term_t children[size];
-    for (size_t i = 0; i < size; ++ i) {
-      children[i] = to_yices2_term(t[i]);
+  to_yices_visitor(expr::term_manager& tm, yices2_internal& yices, yices2_term_cache& cache)
+  : d_tm(tm)
+  , d_yices(yices)
+  , d_conversion_cache(cache)
+  {}
+
+  // We visit all regular nodes
+  // the cache yet
+  expr::visitor_match_result match(expr::term_ref t) {
+    // Anything already in the cache should not be visited
+    if (d_conversion_cache.get_term_cache(t) != NULL_TERM) {
+      return expr::DONT_VISIT_AND_BREAK;
     }
-    result = mk_yices2_term(t.op(), size, children);
-    break;
-  }
-  case expr::TERM_BV_EXTRACT: {
-    const expr::bitvector_extract& extract = d_tm.get_bitvector_extract(t);
-    term_t child = to_yices2_term(t[0]);
-    result = yices_bvextract(child, extract.low, extract.high);
-    break;
-  }
-  default:
-    assert(false);
+    // Otherwise, visit any meaningful children
+    expr::term_op op = d_tm.term_of(t).op();
+    if (op == expr::VARIABLE) {
+      // Don't go into the variable children (types)
+      return expr::VISIT_AND_BREAK;
+    } else {
+      return expr::VISIT_AND_CONTINUE;
+    }
   }
 
-  if (result < 0) {
-    std::stringstream ss;
-    char* error = yices_error_string();
-    ss << "Yices error (term creation): " << error;
-    throw exception(ss.str());
+  void visit(expr::term_ref ref) {
+    // At this point all the children are in the conversion cache
+    term_t result = NULL_TERM;
+
+    // The term
+    const expr::term& t = d_tm.term_of(ref);
+    expr::term_op t_op = t.op();
+
+    switch (t_op) {
+    case expr::VARIABLE:
+      result = yices_new_uninterpreted_term(d_yices.to_yices2_type(t[0]));
+      yices_set_term_name(result, d_tm.get_variable_name(t).c_str());
+      break;
+    case expr::CONST_BOOL:
+      result = d_tm.get_boolean_constant(t) ? yices_true() : yices_false();
+      break;
+    case expr::CONST_RATIONAL:
+      result = yices_mpq(d_tm.get_rational_constant(t).mpq().get_mpq_t());
+      break;
+    case expr::CONST_BITVECTOR: {
+      expr::bitvector bv = d_tm.get_bitvector_constant(t);
+      result = yices_bvconst_mpz(bv.size(), bv.mpz().get_mpz_t());
+      break;
+    }
+    case expr::TERM_ITE:
+    case expr::TERM_EQ:
+    case expr::TERM_AND:
+    case expr::TERM_OR:
+    case expr::TERM_NOT:
+    case expr::TERM_IMPLIES:
+    case expr::TERM_XOR:
+    case expr::TERM_ADD:
+    case expr::TERM_SUB:
+    case expr::TERM_MUL:
+    case expr::TERM_DIV:
+    case expr::TERM_LEQ:
+    case expr::TERM_LT:
+    case expr::TERM_GEQ:
+    case expr::TERM_GT:
+    case expr::TERM_BV_ADD:
+    case expr::TERM_BV_SUB:
+    case expr::TERM_BV_MUL:
+    case expr::TERM_BV_UDIV: // NOTE: semantics of division is x/0 = 111...111
+    case expr::TERM_BV_SDIV:
+    case expr::TERM_BV_UREM:
+    case expr::TERM_BV_SREM:
+    case expr::TERM_BV_SMOD:
+    case expr::TERM_BV_XOR:
+    case expr::TERM_BV_SHL:
+    case expr::TERM_BV_LSHR:
+    case expr::TERM_BV_ASHR:
+    case expr::TERM_BV_NOT:
+    case expr::TERM_BV_AND:
+    case expr::TERM_BV_OR:
+    case expr::TERM_BV_NAND:
+    case expr::TERM_BV_NOR:
+    case expr::TERM_BV_XNOR:
+    case expr::TERM_BV_CONCAT:
+    case expr::TERM_BV_ULEQ:
+    case expr::TERM_BV_SLEQ:
+    case expr::TERM_BV_ULT:
+    case expr::TERM_BV_SLT:
+    case expr::TERM_BV_UGEQ:
+    case expr::TERM_BV_SGEQ:
+    case expr::TERM_BV_UGT:
+    case expr::TERM_BV_SGT:
+    {
+      size_t size = t.size();
+      assert(size > 0);
+      term_t children[size];
+      for (size_t i = 0; i < size; ++ i) {
+        children[i] = d_conversion_cache.get_term_cache(t[i]);
+      }
+      result = d_yices.mk_yices2_term(t.op(), size, children);
+      break;
+    }
+    case expr::TERM_BV_EXTRACT: {
+      const expr::bitvector_extract& extract = d_tm.get_bitvector_extract(t);
+      term_t child = d_conversion_cache.get_term_cache(t[0]);
+      result = yices_bvextract(child, extract.low, extract.high);
+      break;
+    }
+    default:
+      assert(false);
+    }
+
+    if (result < 0) {
+      std::stringstream ss;
+      char* error = yices_error_string();
+      ss << "Yices error (term creation): " << error;
+      throw exception(ss.str());
+    }
+
+    // Set the cache ref -> result
+    d_conversion_cache.set_term_cache(ref, result);
   }
+};
 
-  // Set the cache ref -> result
-  d_conversion_cache->set_term_cache(ref, result);
-
+term_t yices2_internal::to_yices2_term(expr::term_ref ref) {
+  to_yices_visitor visitor(d_tm, *this, *d_conversion_cache);
+  expr::term_visit_topological<to_yices_visitor> topological_visit(d_tm, visitor);
+  topological_visit.run(ref);
+  term_t result = d_conversion_cache->get_term_cache(ref);
+  assert(result != NULL_TERM);
   return result;
 }
 
