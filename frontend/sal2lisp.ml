@@ -5,7 +5,11 @@ exception Not_implemented
 
 module StrMap = Map.Make(String)
 
-type sally_context = sally_condition StrMap.t
+type sally_substitution =
+	Expr of sally_condition
+	| Fun of string list * sal_expr
+
+type sally_context = sally_substitution StrMap.t
 
 let ctx_union a b =
 	StrMap.fold (fun k v c -> StrMap.add k v c) a b
@@ -17,24 +21,37 @@ let sal_state_vars_to_state_type (ctx:sally_context) name vars =
 		concat @@ map (fun (ids, ty) ->
 		let t = sal_type_to_sally_type ty in
 		map (fun n -> n, t) ids) declarations) vars) in
-	let type_init_ctx = List.fold_left (fun ctx (n, t) -> StrMap.add n (Lisp_ast.Ident(n)) ctx) ctx sally_vars in
+	let type_init_ctx = List.fold_left (fun ctx (n, t) -> StrMap.add n (Expr (Lisp_ast.Ident(n))) ctx) ctx sally_vars in
 	let transition_ctx = List.fold_left (
 		fun ctx (n, t) ->
-			let ctx = StrMap.add n (Lisp_ast.Ident ("state."^n)) ctx in
-			StrMap.add (n^"'") (Lisp_ast.Ident("next."^n)) ctx)
+			let ctx = StrMap.add n (Expr(Lisp_ast.Ident ("state."^n))) ctx in
+			StrMap.add (n^"'") (Expr(Lisp_ast.Ident("next."^n))) ctx)
 		ctx sally_vars in
 	type_init_ctx, transition_ctx, (name, sally_vars)
+
+exception CannotUseFunctionAsExpression
+exception CannotUseExpressionAsFunction
 
 let rec sal_expr_to_lisp (ctx:sally_context) = function
 | Decimal(i) -> Value (string_of_int i)
 | Float(i) -> Value(string_of_float i)
-| Ident(s) -> StrMap.find s ctx
+| Ident(s) -> (match StrMap.find s ctx with
+	| Expr(s) -> s
+	| Fun(_) -> raise CannotUseFunctionAsExpression)
 | Eq(a, b) -> Equality(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
 | Ge(a, b) -> GreaterEqual(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
 | Implies(a, b) -> Or(Not(sal_expr_to_lisp ctx a), sal_expr_to_lisp ctx b)
 | Next(s) -> (failwith ("Next ? " ^ s))
 | Funcall("G", [l]) -> sal_expr_to_lisp ctx l
-| Funcall(a, l) -> failwith ("funcall unsupported" ^ a)
+| Funcall(name, args_expr) -> (match  StrMap.find name ctx with
+	| Expr(_) -> raise CannotUseExpressionAsFunction
+	| Fun(decls, expr) ->
+		let args = List.combine decls (List.map (sal_expr_to_lisp ctx) args_expr) in
+		let inside_function_ctx = List.fold_left (fun ctx (arg_name, arg_value) ->
+			StrMap.add arg_name (Expr(arg_value)) ctx) ctx args in
+		sal_expr_to_lisp inside_function_ctx expr
+	)
+| Add(a, b) -> Lisp_ast.Add(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
 | Cond([], else_term) -> sal_expr_to_lisp ctx else_term
 | Cond((a,b)::q, else_term) -> Ite(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b, sal_expr_to_lisp ctx (Cond(q, else_term)))
 
@@ -84,7 +101,11 @@ let sal_context_to_lisp ctx =
 			transition_systems, q::queries, sally_ctx
 		| Constant_def(name, sal_type, expr) ->
 			transition_systems, queries,
-			StrMap.add name (sal_expr_to_lisp sally_ctx expr) sally_ctx
+			StrMap.add name (Expr(sal_expr_to_lisp sally_ctx expr)) sally_ctx
+		| Function_def(name, l, t, expr) ->
+			let var_list = List.(concat @@ map fst l) in
+			transition_systems, queries,
+			StrMap.add name (Fun(var_list, expr)) sally_ctx
 		| _ -> transition_systems, queries, sally_ctx
 		) ([], [], sally_ctx) defs in
 	

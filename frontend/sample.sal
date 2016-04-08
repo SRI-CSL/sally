@@ -4,6 +4,9 @@ BEGIN
   N: NATURAL = 12;  % number of processes
   M: NATURAL = 4;  % number of relays
 
+  plusone(x: NATURAL): NATURAL =
+    x+1;
+
   OM: MODULE =
   BEGIN
     OUTPUT
@@ -13,7 +16,7 @@ BEGIN
 
     TRANSITION
      [ round = 0 -->
-         round' = 1;
+         round' = plusone(round);
     []
        round = 1 -->
          round' = 2;

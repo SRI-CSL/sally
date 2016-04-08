@@ -15,6 +15,7 @@ type sally_condition =
 	| Or of sally_condition * sally_condition
 	| And of sally_condition * sally_condition
 	| Not of sally_condition
+	| Add of sally_condition * sally_condition
 	| Value of string
 	| Ident of string
 	| Ite of sally_condition * sally_condition * sally_condition
@@ -54,7 +55,7 @@ type fmt = ?nl:bool -> ?i:indentation->string->unit
 
 let rec get_expr_depth = function
 	| Value(_) | True | False | Ident(_) -> 1
-	| Equality(a, b) | GreaterEqual(a,b) | Or(a, b) | And(a, b) -> (max (get_expr_depth a) (get_expr_depth b)) + 1
+	| Equality(a, b) | GreaterEqual(a,b) | Or(a, b) | And(a, b) | Add(a,b) -> (max (get_expr_depth a) (get_expr_depth b)) + 1
 	| Not(a) -> 1 + get_expr_depth a
 
 let rec print_expr (f:fmt) =
@@ -80,6 +81,8 @@ let rec print_expr (f:fmt) =
 		print_folded ">=" a b
 	| Or(a, b) ->
 		print_folded "or" a b
+	| Add(a, b) ->
+		print_folded "+" a b
 	| And(a, b) ->
 		print_folded "and" a b
 	| Not(a) ->
