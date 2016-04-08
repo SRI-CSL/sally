@@ -1,6 +1,6 @@
 SHELL=/bin/sh
-OCAMLC=ocamlc
-OCAMLOPT=ocamlopt
+OCAMLC=ocamlc -g
+OCAMLOPT=ocamlopt -g
 OCAMLLEX=ocamllex
 OCAMLYACC=ocamlyacc
 OCAMLDEP=ocamldep
