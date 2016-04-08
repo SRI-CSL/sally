@@ -17,6 +17,7 @@ type sally_condition =
 	| Not of sally_condition
 	| Value of string
 	| Ident of string
+	| Ite of sally_condition * sally_condition * sally_condition
 	| True
 	| False
 

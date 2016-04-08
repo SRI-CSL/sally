@@ -3,70 +3,91 @@ open Sal_ast
 
 exception Not_implemented
 
+module StrMap = Map.Make(String)
+
+type sally_context = sally_condition StrMap.t
+
+let ctx_union a b =
+	StrMap.fold (fun k v c -> StrMap.add k v c) a b
+
 let sal_type_to_sally_type _ = Real
 
-let sal_state_vars_to_state_type name vars =
-	name, List.(concat @@ map (fun (_, declarations) ->
+let sal_state_vars_to_state_type (ctx:sally_context) name vars =
+	let sally_vars = List.(concat @@ map (fun (_, declarations) ->
 		concat @@ map (fun (ids, ty) ->
 		let t = sal_type_to_sally_type ty in
-		map (fun n -> n, t) ids) declarations) vars)
+		map (fun n -> n, t) ids) declarations) vars) in
+	let type_init_ctx = List.fold_left (fun ctx (n, t) -> StrMap.add n (Lisp_ast.Ident(n)) ctx) ctx sally_vars in
+	let transition_ctx = List.fold_left (
+		fun ctx (n, t) ->
+			let ctx = StrMap.add n (Lisp_ast.Ident ("state."^n)) ctx in
+			StrMap.add (n^"'") (Lisp_ast.Ident("next."^n)) ctx)
+		ctx sally_vars in
+	type_init_ctx, transition_ctx, (name, sally_vars)
 
-let rec sal_expr_to_lisp ?nonext:(nonext=false) = function
+let rec sal_expr_to_lisp (ctx:sally_context) = function
 | Decimal(i) -> Value (string_of_int i)
 | Float(i) -> Value(string_of_float i)
-| Ident(s) -> if s.[String.length s - 1] = '\'' then
-	Ident("next." ^ (String.sub s 0 (String.length s - 1)))
-	else if not nonext then
-	Ident("state." ^ s)
-	else
-	Ident(s)
-| Eq(a, b) -> Equality(sal_expr_to_lisp ~nonext:nonext a, sal_expr_to_lisp ~nonext:nonext b)
-| Ge(a, b) -> GreaterEqual(sal_expr_to_lisp ~nonext:nonext a, sal_expr_to_lisp ~nonext:nonext b)
-| Implies(a, b) -> Or(Not(sal_expr_to_lisp ~nonext:nonext a), sal_expr_to_lisp ~nonext:nonext b)
+| Ident(s) -> StrMap.find s ctx
+| Eq(a, b) -> Equality(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
+| Ge(a, b) -> GreaterEqual(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
+| Implies(a, b) -> Or(Not(sal_expr_to_lisp ctx a), sal_expr_to_lisp ctx b)
+| Next(s) -> (failwith ("Next ? " ^ s))
+| Funcall("G", [l]) -> sal_expr_to_lisp ctx l
+| Funcall(a, l) -> failwith ("funcall unsupported" ^ a)
+| Cond([], else_term) -> sal_expr_to_lisp ctx else_term
+| Cond((a,b)::q, else_term) -> Ite(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b, sal_expr_to_lisp ctx (Cond(q, else_term)))
 
-let sal_real_assignment_to_state =
+let sal_real_assignment_to_state ctx =
 	let to_condition = function
-	| Assign(SVar(n), expr) -> Equality(Ident("state."^n), sal_expr_to_lisp expr)
-	| Assign(NVar(n), expr) -> Equality(Ident("next."^n), sal_expr_to_lisp expr)
+	| Assign(SVar(n), expr) -> Equality(Ident("state."^n), sal_expr_to_lisp ctx expr)
+	| Assign(NVar(n), expr) -> Equality(Ident("next."^n), sal_expr_to_lisp ctx expr)
 	in
 	List.fold_left (fun l a -> Lisp_ast.And(l, to_condition a)) True
 
-let sal_init_to_state type_name name assign =
+let sal_init_to_state type_init_ctx type_name name assign =
 	let to_condition = function
-	| Assign(SVar(n), expr) -> Equality(Ident(n), sal_expr_to_lisp ~nonext:true expr)
+	| Assign(SVar(n), expr) ->
+		Equality(Ident(n), sal_expr_to_lisp type_init_ctx expr)
 	in
 	name, type_name, List.fold_left (fun l a -> Lisp_ast.And(l, to_condition a)) True assign
 
-let sal_transition_to_transition n = function
+let sal_transition_to_transition ctx n = function
 | NoTransition -> failwith "notransition"
 | GuardedCommands(l) -> let cond = List.fold_left (fun l a -> match a with
-	| Default(l) -> sal_real_assignment_to_state l
-	| Guarded(expr, assignment) -> Or(l, And(sal_expr_to_lisp expr, sal_real_assignment_to_state assignment))
+	| Default(assign) -> Lisp_ast.Or(l, sal_real_assignment_to_state ctx assign)
+	| Guarded(expr, assignment) -> Or(l, And(sal_expr_to_lisp ctx expr, sal_real_assignment_to_state ctx assignment))
 	) False l in
 	"trans", n, cond
 
-let sal_module_to_lisp defs (name, sal_module) =
-	let state_type = sal_state_vars_to_state_type name sal_module.state_vars in
-	let initial_state = sal_init_to_state name "init" sal_module.initialization in
-	let transitions = sal_transition_to_transition name sal_module.transition in
-	name, state_type, initial_state, transitions
+let sal_module_to_lisp ctx (name, sal_module) =
+	let type_init_ctx, transition_ctx, state_type = sal_state_vars_to_state_type ctx name sal_module.state_vars in
+	let initial_state = sal_init_to_state type_init_ctx name "init" sal_module.initialization in
+	let transitions = sal_transition_to_transition transition_ctx name sal_module.transition in
+	type_init_ctx, (name, state_type, initial_state, transitions)
 
-let sal_query_to_lisp defs systems (name, _, model_name, expr) =
-	let a = List.find (fun (n, _, _, _) -> n = model_name) systems in
-	((a, sal_expr_to_lisp ~nonext:true expr):query)
+let sal_query_to_lisp ctx systems (name, _, model_name, expr) =
+	let type_init_ctx, transition_system = List.find (fun (_, (n, _, _, _)) -> n = model_name) systems in
+	((transition_system, sal_expr_to_lisp (ctx_union ctx type_init_ctx) expr):query)
 
 let sal_context_to_lisp ctx =
 	let name = ctx.ctx_name in
 	let defs = ctx.definitions in
-	let modules_def = List.filter (function | Module_def(_) -> true | _ -> false) defs in
-	let modules_def = List.map (function | Module_def(a, b) -> a,b | _ -> raise Not_found) modules_def in
+	let sally_ctx = StrMap.empty in
+	let _, queries, _ =
+		List.fold_left (fun (transition_systems, queries, sally_ctx) -> function
+		| Module_def(a, b) ->
+			let sally_module = sal_module_to_lisp sally_ctx (a,b) in
+			sally_module::transition_systems, queries, sally_ctx
+		| Assertion(a,b,c,d) ->
+			let q = sal_query_to_lisp sally_ctx transition_systems (a,b,c,d) in
+			transition_systems, q::queries, sally_ctx
+		| Constant_def(name, sal_type, expr) ->
+			transition_systems, queries,
+			StrMap.add name (sal_expr_to_lisp sally_ctx expr) sally_ctx
+		| _ -> transition_systems, queries, sally_ctx
+		) ([], [], sally_ctx) defs in
 	
-	let assertion_defs = List.filter (function | Assertion(_) -> true | _ -> false) defs in
-	let assertion_defs = List.map (function | Assertion(a, b, c, d) -> a,b,c,d | _ -> raise Not_found)
-		assertion_defs in
 	
-	let transition_systems = List.map (sal_module_to_lisp defs) modules_def in
-	
-	let queries = List.map (sal_query_to_lisp defs transition_systems) assertion_defs in
 	(queries:query list)
 
