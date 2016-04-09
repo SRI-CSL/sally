@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <stdint.h>
+
 namespace sally {
 namespace alloc {
 
@@ -54,18 +56,22 @@ namespace alloc {
  * results) and lazy reference (meant for references not yet allocated).
  */
 class ref {
+public:
+
+  typedef uint32_t index_type;
+
 protected:
 
   /** Index into the memory */
-  size_t d_ref;
+  index_type d_ref;
 
-  ref(size_t ref): d_ref(ref) {}
+  ref(index_type ref): d_ref(ref) {}
 
   /** Allocator can create references */
   friend class allocator_base;
 
   /** Index for null value */
-  static const size_t null_value = (size_t)-1;
+  static const index_type null_value = (index_type)-1;
 
 public:
 
