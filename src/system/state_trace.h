@@ -54,6 +54,9 @@ class state_trace : public expr::gc_participant {
   /** Full model of the trace */
   expr::model::ref d_model;
 
+  /** Size of the model */
+  size_t d_model_size;
+
   /** Ensure variables up to (and including) frame k */
   void ensure_variables(size_t k);
 
@@ -111,9 +114,10 @@ public:
   expr::model::ref get_model() const;
 
   /**
-   * Add model to the trace (model over trace variables).
+   * Add model to the trace (model over trace variables), for frames
+   * 0, ..., size-1.
    */
-  void set_model(expr::model::ref m);
+  void set_model(expr::model::ref m, size_t size);
 
   /**
    * Check if formula is false in given frame.

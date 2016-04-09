@@ -27,6 +27,7 @@ namespace system {
 state_trace::state_trace(const state_type* st)
 : gc_participant(st->tm())
 , d_state_type(st)
+, d_model_size(0)
 {}
 
 size_t state_trace::size() const {
@@ -146,8 +147,10 @@ expr::model::ref state_trace::get_model() const {
   return d_model;
 }
 
-void state_trace::set_model(expr::model::ref m) {
+void state_trace::set_model(expr::model::ref m, size_t m_size) {
   d_model = m;
+  assert(d_model_size <= d_state_variables_structs.size());
+  d_model_size = m_size;
 }
 
 void state_trace::to_stream(std::ostream& out) const {
@@ -163,7 +166,7 @@ void state_trace::to_stream(std::ostream& out) const {
   const std::vector<expr::term_ref> input_vars = d_state_type->get_variables(state_type::STATE_INPUT);
 
   // Output the values
-  for (size_t k = 0; k < d_state_variables_structs.size(); ++ k) {
+  for (size_t k = 0; k < d_model_size; ++ k) {
 
     // The state variables
     out << "  (state" << std::endl;
@@ -176,7 +179,7 @@ void state_trace::to_stream(std::ostream& out) const {
     out << "  )" << std::endl;
 
     // The input variables (except the last one)
-    if (k + 1 < d_state_variables_structs.size()) {
+    if (k + 1 < d_model_size) {
       out << "  (input" << std::endl;
       std::vector<expr::term_ref> input_vars_k;
       get_struct_variables(d_input_variables_structs[k], input_vars_k);
