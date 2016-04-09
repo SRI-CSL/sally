@@ -18,11 +18,10 @@
 
 #pragma once
 
-#include "term.h"
-#include "term_manager.h"
-
 #include <vector>
 #include <boost/unordered_set.hpp>
+
+#include "utils/hash.h"
 
 namespace sally {
 namespace expr {
@@ -40,8 +39,18 @@ enum visitor_match_result {
 
 
 /** Generic term visitor. */
-template<typename visitor>
+template<typename visitor, typename term_type, typename term_type_hasher = utils::hash<term_type> >
 class term_visit_topological {
+
+  struct term_visitor_dfs_entry {
+    term_type t;
+    bool children_added;
+    visitor_match_result visit;
+
+    term_visitor_dfs_entry(term_type t, bool children_added, visitor_match_result visit)
+    : t(t), children_added(children_added), visit(visit)
+    {}
+  };
 
   /** The term manager */
   const term_manager& d_tm;
@@ -55,46 +64,39 @@ public:
   term_visit_topological(const term_manager& tm, visitor& v);
 
   /** Run the visitor on the term */
-  void run(term_ref t);
+  void run(term_type t);
 
 };
 
 
-template<typename visitor>
-term_visit_topological<visitor>::term_visit_topological(const term_manager& tm, visitor& v)
+template<typename visitor, typename term_type, typename term_type_hasher>
+term_visit_topological<visitor, term_type, term_type_hasher>::term_visit_topological(const term_manager& tm, visitor& v)
 : d_tm(tm)
 , d_visitor(v)
 {
 }
 
-struct dfs_entry {
-  term_ref t;
-  bool children_added;
-  visitor_match_result visit;
+template<typename visitor, typename term_type, typename term_type_hasher>
+void term_visit_topological<visitor, term_type, term_type_hasher>::run(term_type t) {
 
-  dfs_entry(term_ref t, bool children_added, visitor_match_result visit)
-  : t(t), children_added(children_added), visit(visit)
-  {}
-};
-
-template<typename visitor>
-void term_visit_topological<visitor>::run(term_ref t) {
-
-  typedef boost::unordered_set<term_ref, term_ref_hasher> visited_set;
+  typedef boost::unordered_set<term_type, term_type_hasher> visited_set;
 
   // The DFS stack
-  std::vector<dfs_entry> dfs_stack;
+  std::vector<term_visitor_dfs_entry> dfs_stack;
+
+  // Vector to keep the children
+  std::vector<term_type> children;
 
   // Terms already visited
   visited_set v;
 
   // Add initial one
-  dfs_stack.push_back(dfs_entry(t, false, d_visitor.match(t)));
+  dfs_stack.push_back(term_visitor_dfs_entry(t, false, d_visitor.match(t)));
 
   while (!dfs_stack.empty()) {
 
     // Process current
-    dfs_entry& current = dfs_stack.back();
+    term_visitor_dfs_entry& current = dfs_stack.back();
 
     // If visited already, we just skip it
     if (v.find(current.t) != v.end()) {
@@ -120,14 +122,14 @@ void term_visit_topological<visitor>::run(term_ref t) {
     if (current.visit == DONT_VISIT_AND_CONTINUE ||
         current.visit == VISIT_AND_CONTINUE) {
       // We should add them
-      const term& current_term = d_tm.term_of(current.t);
-      for (size_t i = 0; i < current_term.size(); ++ i) {
-        dfs_stack.push_back(dfs_entry(current_term[i], false, d_visitor.match(current_term[i])));
+      children.clear();
+      d_visitor.get_children(current.t, children);
+      for (size_t i = 0; i < children.size(); ++ i) {
+        dfs_stack.push_back(term_visitor_dfs_entry(children[i], false, d_visitor.match(children[i])));
       }
     }
   }
 }
-
 
 }
 }

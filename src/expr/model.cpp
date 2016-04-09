@@ -191,6 +191,14 @@ public:
 
   ~evaluation_visitor() {}
 
+  // Get the children of t
+  void get_children(expr::term_ref t, std::vector<expr::term_ref>& children) {
+    const expr::term& t_term = d_tm.term_of(t);
+    for (size_t i = 0; i < t_term.size(); ++ i) {
+      children.push_back(t_term[i]);
+    }
+  }
+
   // We visit only nodes that have not been evaluated yet, i.e. terms not in
   // the cache yet
   visitor_match_result match(term_ref t) {
@@ -384,7 +392,7 @@ public:
 
 value model::get_term_value_internal(expr::term_ref t, const expr::term_manager::substitution_map& var_renaming, term_to_value_map& cache) const {
   evaluation_visitor visitor(d_tm, var_renaming, cache, *this);
-  term_visit_topological<evaluation_visitor> visit_topological(d_tm, visitor);
+  term_visit_topological<evaluation_visitor, term_ref, term_ref_hasher> visit_topological(d_tm, visitor);
   visit_topological.run(t);
   return cache[t];
 }

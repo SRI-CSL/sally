@@ -342,6 +342,14 @@ public:
   , d_conversion_cache(cache)
   {}
 
+  // Get the children of t
+  void get_children(expr::term_ref t, std::vector<expr::term_ref>& children) {
+    const expr::term& t_term = d_tm.term_of(t);
+    for (size_t i = 0; i < t_term.size(); ++ i) {
+      children.push_back(t_term[i]);
+    }
+  }
+
   // We visit all regular nodes
   // the cache yet
   expr::visitor_match_result match(expr::term_ref t) {
@@ -459,7 +467,7 @@ public:
 
 term_t yices2_internal::to_yices2_term(expr::term_ref ref) {
   to_yices_visitor visitor(d_tm, *this, *d_conversion_cache);
-  expr::term_visit_topological<to_yices_visitor> topological_visit(d_tm, visitor);
+  expr::term_visit_topological<to_yices_visitor, expr::term_ref, expr::term_ref_hasher> topological_visit(d_tm, visitor);
   topological_visit.run(ref);
   term_t result = d_conversion_cache->get_term_cache(ref);
   assert(result != NULL_TERM);
@@ -543,172 +551,300 @@ expr::bitvector yices_bv_to_bitvector(size_t size, int32_t* bits) {
   return bv;
 }
 
+class to_term_visitor {
+
+  expr::term_manager& d_tm;
+
+  yices2_internal& d_yices;
+  yices2_term_cache& d_conversion_cache;
+
+  expr::term_ref d_bv1;
+  expr::term_ref d_bv0;
+
+public:
+
+  to_term_visitor(expr::term_manager& tm, yices2_internal& yices, yices2_term_cache& cache)
+  : d_tm(tm)
+  , d_yices(yices)
+  , d_conversion_cache(cache)
+  {
+    d_bv0 = d_tm.mk_bitvector_constant(expr::bitvector(1, 0));
+    d_bv1 = d_tm.mk_bitvector_constant(expr::bitvector(1, 1));
+  }
+
+  // Get the children of t
+  void get_children(term_t t, std::vector<term_t>& children) {
+    term_constructor_t t_constructor = yices_term_constructor(t);
+    switch (t_constructor) {
+    // No children or unsupported
+    case YICES_BOOL_CONSTANT:
+    case YICES_ARITH_CONSTANT:
+    case YICES_BV_CONSTANT:
+    case YICES_SCALAR_CONSTANT:
+    case YICES_VARIABLE:
+    case YICES_UNINTERPRETED_TERM:
+    case YICES_SELECT_TERM:
+      break;
+
+    // composite terms
+    case YICES_ITE_TERM:
+    case YICES_APP_TERM:
+    case YICES_UPDATE_TERM:
+    case YICES_TUPLE_TERM:
+    case YICES_EQ_TERM:
+    case YICES_DISTINCT_TERM:
+    case YICES_FORALL_TERM:
+    case YICES_LAMBDA_TERM:
+    case YICES_NOT_TERM:
+    case YICES_OR_TERM:
+    case YICES_XOR_TERM:
+    case YICES_BV_ARRAY:
+    case YICES_BV_DIV:
+    case YICES_BV_REM:
+    case YICES_BV_SDIV:
+    case YICES_BV_SREM:
+    case YICES_BV_SMOD:
+    case YICES_BV_SHL:
+    case YICES_BV_LSHR:
+    case YICES_BV_ASHR:
+    case YICES_BV_GE_ATOM:
+    case YICES_BV_SGE_ATOM:
+    case YICES_ARITH_GE_ATOM: {
+      size_t n = yices_term_num_children(t);
+      for (size_t i = 0; i < n; ++ i) {
+        term_t child = yices_term_child(t, i);
+        children.push_back(child);
+      }
+      break;
+    }
+
+    case YICES_BIT_TERM:
+      children.push_back(yices_proj_arg(t));
+      break;
+    // sums
+    case YICES_BV_SUM: {
+      // sum a_i * t_i
+      size_t bv_size = yices_term_bitsize(t);
+      int32_t* a_i_bits = new int32_t[bv_size];
+      size_t size = yices_term_num_children(t);
+      for (size_t i = 0; i < size; ++i) {
+        term_t t_i_yices;
+        yices_bvsum_component(t, i, a_i_bits, &t_i_yices);
+        if (t_i_yices != NULL_TERM) {
+          children.push_back(t_i_yices);
+        }
+      }
+      delete[] a_i_bits;
+      break;
+    }
+    case YICES_ARITH_SUM: {
+      mpq_t c_y;
+      mpq_init(c_y);
+      // sum c_i a_i
+      size_t size = yices_term_num_children(t);
+      std::vector<expr::term_ref> sum_children;
+      for (size_t i = 0; i < size; ++ i) {
+        term_t a_y;
+        yices_sum_component(t, i, c_y, &a_y);
+        if (a_y != NULL_TERM) {
+          children.push_back(a_y);
+        }
+      }
+      mpq_clear(c_y);
+      break;
+    }
+
+    // products
+    case YICES_POWER_PRODUCT:
+      break;
+
+    default:
+      assert(false);
+    }
+  }
+
+  // We visit all regular nodes
+  // the cache yet
+  expr::visitor_match_result match(term_t t) {
+    // Anything already in the cache should not be visited
+    if (!d_conversion_cache.get_term_cache(t).is_null()) {
+      return expr::DONT_VISIT_AND_BREAK;
+    }
+    // Otherwise, visit any meaningful children
+    return expr::VISIT_AND_CONTINUE;
+  }
+
+  void visit(term_t yices_term) {
+
+    // All children visited already, so they exist in cache
+
+    expr::term_ref result;
+
+    // Get the constructor type of t
+    term_constructor_t t_constructor = yices_term_constructor(yices_term);
+
+    switch (t_constructor) {
+    // atomic terms
+    case YICES_BOOL_CONSTANT: {
+      int32_t value;
+      yices_bool_const_value(yices_term, &value);
+      result = d_tm.mk_boolean_constant(value);
+      break;
+    }
+    case YICES_ARITH_CONSTANT: {
+      mpq_t q;
+      mpq_init(q);
+      yices_rational_const_value(yices_term, q);
+      expr::rational r(q);
+      result = d_tm.mk_rational_constant(r);
+      mpq_clear(q);
+      break;
+    }
+    case YICES_BV_CONSTANT: {
+      size_t size = yices_term_bitsize(yices_term);
+      int32_t* bits = new int32_t[size];
+      yices_bv_const_value(yices_term, bits);
+      result = d_tm.mk_bitvector_constant(yices_bv_to_bitvector(size, bits));
+      delete[] bits;
+      break;
+    }
+    case YICES_SCALAR_CONSTANT:
+      // Unsupported
+      break;
+    case YICES_VARIABLE:
+      // Qantifiers, not supported
+      break;
+    case YICES_UNINTERPRETED_TERM:
+      // Variables must be already in the cache
+      break;
+
+    // composite terms
+    case YICES_ITE_TERM:
+    case YICES_APP_TERM:
+    case YICES_UPDATE_TERM:
+    case YICES_TUPLE_TERM:
+    case YICES_EQ_TERM:
+    case YICES_DISTINCT_TERM:
+    case YICES_FORALL_TERM:
+    case YICES_LAMBDA_TERM:
+    case YICES_NOT_TERM:
+    case YICES_OR_TERM:
+    case YICES_XOR_TERM:
+    case YICES_BV_ARRAY:
+    case YICES_BV_DIV:
+    case YICES_BV_REM:
+    case YICES_BV_SDIV:
+    case YICES_BV_SREM:
+    case YICES_BV_SMOD:
+    case YICES_BV_SHL:
+    case YICES_BV_LSHR:
+    case YICES_BV_ASHR:
+    case YICES_BV_GE_ATOM:
+    case YICES_BV_SGE_ATOM:
+    case YICES_ARITH_GE_ATOM: {
+      size_t n = yices_term_num_children(yices_term);
+      std::vector<expr::term_ref> children;
+      for (size_t i = 0; i < n; ++ i) {
+        term_t child = yices_term_child(yices_term, i);
+        expr::term_ref child_term = d_conversion_cache.get_term_cache(child);
+        children.push_back(child_term);
+      }
+      result = d_yices.mk_term(t_constructor, children);
+      break;
+    }
+
+    // projections
+    case YICES_SELECT_TERM:
+      break;
+    case YICES_BIT_TERM: {
+      // Selects a bit, and the result is Boolean
+      size_t index = yices_proj_index(yices_term);
+      expr::term_ref argument = d_conversion_cache.get_term_cache(yices_proj_arg(yices_term));
+      result = d_tm.mk_bitvector_extract(argument, expr::bitvector_extract(index, index));
+      // Convert to boolean
+      result = d_tm.mk_term(expr::TERM_EQ, result, d_bv1);
+      break;
+    }
+    // sums
+    case YICES_BV_SUM: {
+      // sum a_i * t_i
+      size_t bv_size = yices_term_bitsize(yices_term);
+      int32_t* a_i_bits = new int32_t[bv_size];
+      size_t size = yices_term_num_children(yices_term);
+      std::vector<expr::term_ref> sum_children;
+      for (size_t i = 0; i < size; ++i) {
+        term_t t_i_yices;
+        yices_bvsum_component(yices_term, i, a_i_bits, &t_i_yices);
+        expr::term_ref a_i = d_tm.mk_bitvector_constant(yices_bv_to_bitvector(bv_size, a_i_bits));
+        if (t_i_yices != NULL_TERM) {
+          expr::term_ref t_i = d_conversion_cache.get_term_cache(t_i_yices);
+          sum_children.push_back(d_tm.mk_term(expr::TERM_BV_MUL, a_i, t_i));
+        } else {
+          sum_children.push_back(a_i);
+        }
+      }
+      if (size == 1) {
+        result = sum_children[0];
+      } else {
+        result = d_tm.mk_term(expr::TERM_BV_ADD, sum_children);
+      }
+      delete[] a_i_bits;
+      break;
+    }
+    case YICES_ARITH_SUM: {
+      mpq_t c_y;
+      mpq_init(c_y);
+      // sum c_i a_i
+      size_t size = yices_term_num_children(yices_term);
+      std::vector<expr::term_ref> sum_children;
+      for (size_t i = 0; i < size; ++ i) {
+        term_t a_y;
+        yices_sum_component(yices_term, i, c_y, &a_y);
+        expr::term_ref c = d_tm.mk_rational_constant(expr::rational(c_y));
+        if (a_y != NULL_TERM) {
+          expr::term_ref a = d_conversion_cache.get_term_cache(a_y);
+          sum_children.push_back(d_tm.mk_term(expr::TERM_MUL, c, a));
+        } else {
+          sum_children.push_back(c);
+        }
+      }
+      if (size == 1) {
+        result = sum_children[0];
+      } else {
+        result = d_tm.mk_term(expr::TERM_ADD, sum_children);
+      }
+      mpq_clear(c_y);
+      break;
+    }
+
+    // products
+    case YICES_POWER_PRODUCT:
+      break;
+
+    default:
+      assert(false);
+    }
+
+    // At this point we need to be non-null
+    if (result.is_null()) {
+      std::stringstream ss;
+      char* error = yices_error_string();
+      ss << "Yices error (term creation): " << error;
+      throw exception(ss.str());
+    }
+
+    // Set the cache ref -> result
+    d_conversion_cache.set_term_cache(yices_term, result);
+  }
+};
+
+
 expr::term_ref yices2_internal::to_term(term_t yices_term) {
-
-  expr::term_ref result;
-
-  // Check the cache
-  result = d_conversion_cache->get_term_cache(yices_term);
-  if (!result.is_null()) {
-    return result;
-  }
-
-  // Get the constructor type of t
-  term_constructor_t t_constructor = yices_term_constructor(yices_term);
-
-  switch (t_constructor) {
-  // atomic terms
-  case YICES_BOOL_CONSTANT: {
-    int32_t value;
-    yices_bool_const_value(yices_term, &value);
-    result = d_tm.mk_boolean_constant(value);
-    break;
-  }
-  case YICES_ARITH_CONSTANT: {
-    mpq_t q;
-    mpq_init(q);
-    yices_rational_const_value(yices_term, q);
-    expr::rational r(q);
-    result = d_tm.mk_rational_constant(r);
-    mpq_clear(q);
-    break;
-  }
-  case YICES_BV_CONSTANT: {
-    size_t size = yices_term_bitsize(yices_term);
-    int32_t* bits = new int32_t[size];
-    yices_bv_const_value(yices_term, bits);
-    result = d_tm.mk_bitvector_constant(yices_bv_to_bitvector(size, bits));
-    delete[] bits;
-    break;
-  }
-  case YICES_SCALAR_CONSTANT:
-    // Unsupported
-    break;
-  case YICES_VARIABLE:
-    // Qantifiers, not supported
-    break;
-  case YICES_UNINTERPRETED_TERM:
-    // Variables must be already in the cache
-    break;
-
-  // composite terms
-  case YICES_ITE_TERM:
-  case YICES_APP_TERM:
-  case YICES_UPDATE_TERM:
-  case YICES_TUPLE_TERM:
-  case YICES_EQ_TERM:
-  case YICES_DISTINCT_TERM:
-  case YICES_FORALL_TERM:
-  case YICES_LAMBDA_TERM:
-  case YICES_NOT_TERM:
-  case YICES_OR_TERM:
-  case YICES_XOR_TERM:
-  case YICES_BV_ARRAY:
-  case YICES_BV_DIV:
-  case YICES_BV_REM:
-  case YICES_BV_SDIV:
-  case YICES_BV_SREM:
-  case YICES_BV_SMOD:
-  case YICES_BV_SHL:
-  case YICES_BV_LSHR:
-  case YICES_BV_ASHR:
-  case YICES_BV_GE_ATOM:
-  case YICES_BV_SGE_ATOM:
-  case YICES_ARITH_GE_ATOM: {
-    size_t n = yices_term_num_children(yices_term);
-    std::vector<expr::term_ref> children;
-    for (size_t i = 0; i < n; ++ i) {
-      term_t child = yices_term_child(yices_term, i);
-      expr::term_ref child_term = to_term(child);
-      children.push_back(child_term);
-    }
-    result = mk_term(t_constructor, children);
-    break;
-  }
-
-  // projections
-  case YICES_SELECT_TERM:
-    break;
-  case YICES_BIT_TERM: {
-    // Selects a bit, and the result is Boolean
-    size_t index = yices_proj_index(yices_term);
-    expr::term_ref argument = to_term(yices_proj_arg(yices_term));
-    result = d_tm.mk_bitvector_extract(argument, expr::bitvector_extract(index, index));
-    // Convert to boolean
-    result = d_tm.mk_term(expr::TERM_EQ, result, d_bv1);
-    break;
-  }
-  // sums
-  case YICES_BV_SUM: {
-    // sum a_i * t_i
-    size_t bv_size = yices_term_bitsize(yices_term);
-    int32_t* a_i_bits = new int32_t[bv_size];
-    size_t size = yices_term_num_children(yices_term);
-    std::vector<expr::term_ref> sum_children;
-    for (size_t i = 0; i < size; ++i) {
-      term_t t_i_yices;
-      yices_bvsum_component(yices_term, i, a_i_bits, &t_i_yices);
-      expr::term_ref a_i = d_tm.mk_bitvector_constant(yices_bv_to_bitvector(bv_size, a_i_bits));
-      if (t_i_yices != NULL_TERM) {
-        expr::term_ref t_i = to_term(t_i_yices);
-        sum_children.push_back(d_tm.mk_term(expr::TERM_BV_MUL, a_i, t_i));
-      } else {
-        sum_children.push_back(a_i);
-      }
-    }
-    if (size == 1) {
-      result = sum_children[0];
-    } else {
-      result = d_tm.mk_term(expr::TERM_BV_ADD, sum_children);
-    }
-    delete[] a_i_bits;
-    break;
-  }
-  case YICES_ARITH_SUM: {
-    mpq_t c_y;
-    mpq_init(c_y);
-    // sum c_i a_i
-    size_t size = yices_term_num_children(yices_term);
-    std::vector<expr::term_ref> sum_children;
-    for (size_t i = 0; i < size; ++ i) {
-      term_t a_y;
-      yices_sum_component(yices_term, i, c_y, &a_y);
-      expr::term_ref c = d_tm.mk_rational_constant(expr::rational(c_y));
-      if (a_y != NULL_TERM) {
-        expr::term_ref a = to_term(a_y);
-        sum_children.push_back(d_tm.mk_term(expr::TERM_MUL, c, a));
-      } else {
-        sum_children.push_back(c);
-      }
-    }
-    if (size == 1) {
-      result = sum_children[0];
-    } else {
-      result = d_tm.mk_term(expr::TERM_ADD, sum_children);
-    }
-    mpq_clear(c_y);
-    break;
-  }
-
-  // products
-  case YICES_POWER_PRODUCT:
-    break;
-
-  default:
-    assert(false);
-  }
-
-  // At this point we need to be non-null
-  if (result.is_null()) {
-    std::stringstream ss;
-    char* error = yices_error_string();
-    ss << "Yices error (term creation): " << error;
-    throw exception(ss.str());
-  }
-
-  // Set the cache ref -> result
-  d_conversion_cache->set_term_cache(yices_term, result);
-
+  to_term_visitor visitor(d_tm, *this, *d_conversion_cache);
+  expr::term_visit_topological<to_term_visitor, term_t> visit_topological(d_tm, visitor);
+  visit_topological.run(yices_term);
+  expr::term_ref result = d_conversion_cache->get_term_cache(yices_term);
+  assert(!result.is_null());
   return result;
 }
 
