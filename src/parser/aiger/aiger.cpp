@@ -46,16 +46,15 @@ class aiger_parser : public internal_parser_interface {
   /** Aiger data */
   aiger* d_aiger;
 
-  /** Map from terms to aiger ids */
-  typedef boost::unordered_map<expr::term_ref, aiger_id_type, expr::term_ref_hasher> term_to_aiger_map;
-  /** Map from aiger ids to terms */
-  typedef boost::unordered_map<aiger_id_type, expr::term_ref> aiger_to_term_map;
-
   /** Map from aiger terms to terms */
-  aiger_to_term_map d_aiger_to_term_map;
+  std::vector<expr::term_ref> d_aiger_to_term_map;
 
-  /** Set the cache t_aiger -> t (for both negated and not negated) */
-  void set_cache(aiger_id_type t_aiger, expr::term_ref t);
+  /** Set the cache */
+  inline
+  void set_cache(aiger_id_type t_aiger, expr::term_ref t) {
+    assert(t_aiger < d_aiger_to_term_map.size());
+    d_aiger_to_term_map[t_aiger] = t;
+  }
 
   /** Convert aiger to term while updating the cache */
   expr::term_ref aiger_to_term(aiger_id_type t_aiger);
@@ -72,28 +71,19 @@ public:
 
 };
 
-void aiger_parser::set_cache(aiger_id_type t_aiger, expr::term_ref t) {
-
-  assert(d_aiger_to_term_map.find(t_aiger) == d_aiger_to_term_map.end());
-
-  // Cache negated t also
-  expr::term_ref t_not = d_tm.mk_term(expr::TERM_NOT, t);
-
-  // aiger -> term
-  d_aiger_to_term_map[t_aiger] = t;
-  d_aiger_to_term_map[aiger_not(t_aiger)] = t_not;
-}
-
 expr::term_ref aiger_parser::aiger_to_term(aiger_id_type t_aiger) {
 
+  assert(t_aiger < d_aiger_to_term_map.size());
+
   // Check in the cache
-  aiger_to_term_map::const_iterator find = d_aiger_to_term_map.find(t_aiger);
-  if (find != d_aiger_to_term_map.end()) {
-    return find->second;
+  if (!d_aiger_to_term_map[t_aiger].is_null()) {
+    return d_aiger_to_term_map[t_aiger];
   }
 
   aiger_id_type t_aiger_unsigned = aiger_strip(t_aiger);
-  assert(d_aiger_to_term_map.find(t_aiger_unsigned) == d_aiger_to_term_map.end());
+  aiger_id_type t_aiger_unsigned_not = aiger_not(t_aiger_unsigned);
+  assert(d_aiger_to_term_map[t_aiger_unsigned].is_null());
+  assert(d_aiger_to_term_map[t_aiger_unsigned_not].is_null());
 
   // Variables already in cache
   assert(aiger_is_input(d_aiger, t_aiger_unsigned) == 0);
@@ -107,18 +97,19 @@ expr::term_ref aiger_parser::aiger_to_term(aiger_id_type t_aiger) {
   expr::term_ref t1 = aiger_to_term(t_and->rhs0);
   expr::term_ref t2 = aiger_to_term(t_and->rhs1);
   expr::term_ref t_unsigned = d_tm.mk_term(expr::TERM_AND, t1, t2);
+  expr::term_ref t_unsigned_not = d_tm.mk_term(expr::TERM_NOT, t_unsigned);
 
   // Set the cache
   set_cache(t_aiger_unsigned, t_unsigned);
+  set_cache(t_aiger_unsigned_not, t_unsigned_not);
 
   // Return the right value
   if (aiger_sign(t_aiger)) {
-    return d_tm.mk_term(expr::TERM_NOT, t_unsigned);
+    return t_unsigned_not;
   } else {
     return t_unsigned;
   }
 }
-
 
 aiger_parser::aiger_parser(const system::context& ctx, const char* filename)
 : d_tm(ctx.tm())
@@ -132,6 +123,9 @@ aiger_parser::aiger_parser(const system::context& ctx, const char* filename)
     throw parser_exception(error);
   }
   d_aiger = a;
+
+  // Set the cache size
+  d_aiger_to_term_map.resize(2*a->maxvar+2);
 
   // Check that we can handle it
   if (a->num_constraints > 0) {
@@ -201,10 +195,20 @@ aiger_parser::aiger_parser(const system::context& ctx, const char* filename)
 
   // Add to cache
   for (size_t i = 0; i < input_aiger_ids.size(); ++ i) {
-    set_cache(input_aiger_ids[i], input_vars[i]);
+    aiger_id_type t_aiger = input_aiger_ids[i];
+    expr::term_ref t = input_vars[i];
+    set_cache(t_aiger, t);
+    aiger_id_type t_aiger_not = aiger_not(t_aiger);
+    expr::term_ref t_not = d_tm.mk_term(expr::TERM_NOT, t);
+    set_cache(t_aiger_not, t_not);
   }
   for (size_t i = 0; i < state_aiger_ids.size(); ++ i) {
-    set_cache(state_aiger_ids[i], state_vars[i]);
+    aiger_id_type t_aiger = state_aiger_ids[i];
+    expr::term_ref t = state_vars[i];
+    set_cache(t_aiger, t);
+    aiger_id_type t_aiger_not = aiger_not(t_aiger);
+    expr::term_ref t_not = d_tm.mk_term(expr::TERM_NOT, t);
+    set_cache(t_aiger_not, t_not);
   }
 
   // We have all variables and constants in the cache now. We can construct
