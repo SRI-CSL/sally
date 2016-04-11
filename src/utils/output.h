@@ -88,5 +88,11 @@ bool trace_tag_is_enabled(std::string tag);
 /** Return the trace stream that outputs anything only if the tag has been enabled */
 std::ostream& get_trace(std::string tag);
 
+/** Use let's when printing */
+void set_use_lets(std::ostream& out, bool flag);
+
+/** Do we use let's when printing */
+bool get_use_lets(std::ostream& out);
+
 }
 }

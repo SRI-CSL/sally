@@ -349,102 +349,118 @@ public:
     // Bit-vector terms
     case CONST_BITVECTOR:
       v = d_tm.get_bitvector_constant(t_term);
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
     case TERM_BV_ADD: {
       bitvector bv = children_values[0].get_bitvector();
-      for (size_t i = 0; i < children_values.size(); ++ i) {
+      for (size_t i = 1; i < children_values.size(); ++ i) {
         bv = bv.add(children_values[i].get_bitvector());
       }
       v = bv;
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
     }
     case TERM_BV_SUB: {
       const bitvector& lhs = children_values[0].get_bitvector();
       const bitvector& rhs = children_values[0].get_bitvector();
       v = lhs.sub(rhs);
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
     }
     case TERM_BV_MUL: {
       bitvector bv = children_values[0].get_bitvector();
-      for (size_t i = 0; i < children_values.size(); ++ i) {
+      for (size_t i = 1; i < children_values.size(); ++ i) {
         bv = bv.mul(children_values[i].get_bitvector());
       }
       v = bv;
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
     }
     case TERM_BV_UDIV: { // NOTE: semantics of division is x/0 = 111...111
       const bitvector& lhs = children_values[0].get_bitvector();
       const bitvector& rhs = children_values[0].get_bitvector();
       v = lhs.udiv(rhs);
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
     }
     case TERM_BV_SDIV: {
       const bitvector& lhs = children_values[0].get_bitvector();
       const bitvector& rhs = children_values[0].get_bitvector();
       v = lhs.sdiv(rhs);
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
     }
     case TERM_BV_UREM: {
       const bitvector& lhs = children_values[0].get_bitvector();
       const bitvector& rhs = children_values[0].get_bitvector();
       v = lhs.urem(rhs);
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
     }
     case TERM_BV_SREM: {
       const bitvector& lhs = children_values[0].get_bitvector();
       const bitvector& rhs = children_values[0].get_bitvector();
       v = lhs.srem(rhs);
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
     }
     case TERM_BV_SMOD: {
       const bitvector& lhs = children_values[0].get_bitvector();
       const bitvector& rhs = children_values[0].get_bitvector();
       v = lhs.smod(rhs);
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
     }
     case TERM_BV_XOR: {
       bitvector bv = children_values[0].get_bitvector();
-      for (size_t i = 0; i < children_values.size(); ++ i) {
+      for (size_t i = 1; i < children_values.size(); ++ i) {
         bv = bv.bvxor(children_values[i].get_bitvector());
       }
       v = bv;
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
     }
     case TERM_BV_SHL: {
       const bitvector& lhs = children_values[0].get_bitvector();
       const bitvector& rhs = children_values[0].get_bitvector();
       v = lhs.shl(rhs);
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
     }
     case TERM_BV_LSHR: {
       const bitvector& lhs = children_values[0].get_bitvector();
       const bitvector& rhs = children_values[0].get_bitvector();
       v = lhs.lshr(rhs);
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
     }
     case TERM_BV_ASHR: {
       const bitvector& lhs = children_values[0].get_bitvector();
       const bitvector& rhs = children_values[0].get_bitvector();
       v = lhs.ashr(rhs);
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
     }
     case TERM_BV_NOT:
       v = children_values[0].get_bitvector().bvnot();
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
     case TERM_BV_AND: {
       bitvector bv = children_values[0].get_bitvector();
-      for (size_t i = 0; i < children_values.size(); ++ i) {
+      for (size_t i = 1; i < children_values.size(); ++ i) {
         bv = bv.bvand(children_values[i].get_bitvector());
       }
       v = bv;
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
     }
     case TERM_BV_OR: {
       bitvector bv = children_values[0].get_bitvector();
-      for (size_t i = 0; i < children_values.size(); ++ i) {
+      for (size_t i = 1; i < children_values.size(); ++ i) {
         bv = bv.bvor(children_values[i].get_bitvector());
       }
       v = bv;
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
     }
     case TERM_BV_NAND:
@@ -458,16 +474,18 @@ public:
       break;
     case TERM_BV_CONCAT: {
       bitvector bv = children_values[0].get_bitvector();
-      for (size_t i = 0; i < children_values.size(); ++ i) {
+      for (size_t i = 1; i < children_values.size(); ++ i) {
         bv = bv.concat(children_values[i].get_bitvector());
       }
       v = bv;
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
     }
     case TERM_BV_EXTRACT: {
       size_t low = d_tm.get_bitvector_extract(t_term).low;
       size_t high = d_tm.get_bitvector_extract(t_term).high;
       v = children_values[0].get_bitvector().extract(low, high);
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
     }
     case TERM_BV_ULEQ: {

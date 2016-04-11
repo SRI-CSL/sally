@@ -63,6 +63,11 @@ int main(int argc, char* argv[]) {
     output::set_output_language(cout, out_lang);
     output::set_output_language(cerr, out_lang);
 
+    // Set whether to use lets in printouts
+    bool use_lets = boost_opts.count("no-lets") == 0;
+    output::set_use_lets(cout, use_lets);
+    output::set_use_lets(cerr, use_lets);
+
     // Set any trace tags if passed in
     if (boost_opts.count("debug") > 0) {
       vector<string>& tags = boost_opts.at("debug").as<vector<string> >();
@@ -227,6 +232,7 @@ void parse_options(int argc, char* argv[], variables_map& variables)
       ("live-stats-time", value<unsigned>()->default_value(100), "Time period for statistics output (in miliseconds)")
       ("smt2-output", value<string>(), "Generate smt2 logs of solver queries with given prefix.")
       ("ai", value<string>(), get_analyzer_list().c_str())
+      ("no-lets", "Don't use let expressions in printouts.");
       ;
 
   // Get the individual engine options

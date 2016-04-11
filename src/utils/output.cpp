@@ -47,6 +47,12 @@ long& __get_verbosity(std::ostream& out) {
   return out.iword(x_index);
 }
 
+static
+long& __get_use_lets(std::ostream& out) {
+  static const int x_index = std::ios_base::xalloc();
+  return out.iword(x_index);
+}
+
 expr::term_manager* get_term_manager(std::ostream& out) {
   return (expr::term_manager*) __get_term_manager(out);
 }
@@ -69,6 +75,14 @@ size_t get_verbosity(std::ostream& out) {
 
 void set_verbosity(std::ostream& out, size_t verbosity) {
   __get_verbosity(out) = verbosity;
+}
+
+void set_use_lets(std::ostream& out, bool flag) {
+  __get_use_lets(out) = flag;
+}
+
+bool get_use_lets(std::ostream& out) {
+  return __get_use_lets(out);
 }
 
 static

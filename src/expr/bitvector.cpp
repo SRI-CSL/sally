@@ -161,7 +161,7 @@ bitvector bitvector::concat(const bitvector& rhs) const {
 }
 
 bitvector bitvector::extract(size_t low, size_t high) const {
-  assert(low < high);
+  assert(low <= high);
   assert(high < d_size);
   size_t size = high-low+1;
   integer value(d_gmp_int >> low);
@@ -263,7 +263,6 @@ bitvector bitvector::sdiv(const bitvector& rhs) const {
       return udiv(rhs);             // D
     }
   }
-  return bitvector();
 }
 
 bitvector bitvector::urem(const bitvector& rhs) const {
@@ -274,7 +273,6 @@ bitvector bitvector::urem(const bitvector& rhs) const {
   } else {
     return bitvector(d_size, integer(d_gmp_int % rhs.d_gmp_int));
   }
-  return bitvector();
 }
 
 bitvector bitvector::srem(const bitvector& rhs) const {
