@@ -56,6 +56,9 @@ public:
   /** Get the size of the bitvector */
   size_t size() const { return d_size; }
 
+  /** Return bitvector 1..1 */
+  static bitvector one(size_t size);
+
   /** Get the integer */
   const mpz_class& mpz() const {
     return d_gmp_int;
@@ -77,6 +80,9 @@ public:
 
   /** Set the bit to value (returns self-reference) */
   bitvector& set_bit(size_t i, bool value);
+
+  /** Get the bit value */
+  bool get_bit(size_t i) const;
 
   bitvector concat(const bitvector& rhs) const;
   bitvector extract(size_t low, size_t high) const;
