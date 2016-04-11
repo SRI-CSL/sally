@@ -8,7 +8,7 @@ module StrMap = Map.Make(String)
 type sally_substitution =
 	Expr of sally_condition
 	| Fun of string list * sal_expr
-	| Type of sal_type
+	| Type of sally_type
 
 type sally_context = sally_substitution StrMap.t
 
@@ -30,12 +30,18 @@ let eval_sal ctx = function
 		| _ -> raise CannotUseFunctionAsExpression)
 	| _ -> failwith "couldn't statically evaluate"
 
+exception UnknownType of string
+
 let rec sal_type_to_sally_type ctx = function
-	| Base_type(e) -> Real
+	| Base_type("NATURAL") -> Real
+	| Base_type(e) -> (match StrMap.find e ctx with
+		| Type(t) -> t
+		| _ -> raise (UnknownType(e))
+		)
 	| Array(t1, t2) -> Lisp_ast.Array(sal_type_to_sally_type ctx t1, sal_type_to_sally_type ctx t2)
 	| Range(i1, i2) ->
 		match eval_sal ctx i1, eval_sal ctx i2 with
-		| Value(a), Value(b) -> let _ = Format.printf "%s to %s@." a b in Lisp_ast.Range (int_of_string a, int_of_string b)
+		| Value(a), Value(b) -> Lisp_ast.Range (int_of_string a, int_of_string b)
 		| _ -> failwith "couldn't evaluate properly"
 
 let sal_state_vars_to_state_type (ctx:sally_context) name vars =
@@ -56,6 +62,8 @@ let sal_state_vars_to_state_type (ctx:sally_context) name vars =
 		) ctx sally_vars in
 
 	type_init_ctx, transition_ctx, ((name, sally_vars):state_type)
+
+exception InadequateArrayUse
 
 let rec sal_expr_to_lisp (ctx:sally_context) = function
 	| Decimal(i) -> Value (string_of_int i)
@@ -88,6 +96,16 @@ let rec sal_expr_to_lisp (ctx:sally_context) = function
 		let b = sal_expr_to_lisp ctx b in
 		let next_condition = Cond(q, else_term) in
 		Ite(a, b, sal_expr_to_lisp ctx next_condition)
+	
+	| Array_access(a, b) ->
+		let sally_a = sal_expr_to_lisp ctx a in
+		let sally_b = sal_expr_to_lisp ctx b in
+		(match sally_a, sally_b with
+		| Ident(sa), Value(sb) ->
+			Ident(sa ^ "!" ^ sb)
+		| _ -> raise InadequateArrayUse
+		)
+
 
 let sal_real_assignment_to_state ctx =
 	let to_condition = function
@@ -143,7 +161,7 @@ let sal_context_to_lisp ctx =
 			StrMap.add name (Fun(var_list, expr)) sally_ctx
 		| Type_def(name, sal_type) ->
 			transition_systems, queries,
-			StrMap.add name (Type(sal_type)) sally_ctx
+			StrMap.add name (Type(sal_type_to_sally_type sally_ctx sal_type)) sally_ctx
 		| _ -> transition_systems, queries, sally_ctx
 		) ([], [], sally_ctx) defs in
 	

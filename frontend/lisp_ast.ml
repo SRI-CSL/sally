@@ -112,12 +112,24 @@ let print_state (f:fmt) ((ident, state_type, sally_cond):state) =
 let sally_type_to_string = function
 | Real -> "Real"
 | Bool -> "Bool"
+| Range(_, _) -> "Real"
+| Array(_, _) -> "Real"
 
 let print_state_type (f:fmt) (ident, var_list) =
 	f ~i:In ("(define-state-type state");
 	f ~nl:true "(";
-	List.iter (fun (name, sally_type) ->
-		f ~nl:true ("(" ^ name ^ " " ^ (sally_type_to_string sally_type) ^ ")");) var_list;
+	let rec print_variable (name, sally_type) =
+		match sally_type with
+		| Array(Range(array_inf, array_sup), b) ->
+			begin
+			for i = array_inf to array_sup do
+				print_variable (name ^ "!" ^ string_of_int i, b);
+			done;
+			end
+		| _ ->
+			f ~nl:true ("(" ^ name ^ " " ^ (sally_type_to_string sally_type) ^ ")")
+	in
+	List.iter print_variable var_list;
 	f ~i:Out "))"
 
 let print_ts (f:fmt) (name, state_type, init, transition) =
