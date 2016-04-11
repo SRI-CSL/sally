@@ -8,6 +8,8 @@ type transition_identifier = string
 type sally_type = 
 	| Real
 	| Bool
+	| Array of sally_type * sally_type
+	| Range of int * int
 
 type sally_condition =
 	| Equality of sally_condition * sally_condition
