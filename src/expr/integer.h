@@ -70,6 +70,8 @@ public:
   bool operator > (const integer& other) const;
   bool operator >= (const integer& other) const;
 
+  int sgn() const;
+
   /** Returns the hash of the integer */
   size_t hash() const { return d_gmp_int.get_si(); }
 

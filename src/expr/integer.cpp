@@ -59,6 +59,10 @@ std::ostream& operator << (std::ostream& out, const integer& z) {
   return out;
 }
 
+int integer::sgn() const {
+  return mpz_sgn(d_gmp_int.get_mpz_t());
+}
+
 integer integer::operator + (const integer& other) const {
   return integer(d_gmp_int + other.d_gmp_int);
 }

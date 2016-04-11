@@ -474,6 +474,37 @@ term_t yices2_internal::to_yices2_term(expr::term_ref ref) {
   return result;
 }
 
+expr::term_ref yices2_internal::bool_term_to_bv(expr::term_ref t) {
+  if (d_tm.type_of(t) == d_tm.boolean_type()) {
+    expr::term_ref result;
+    switch (d_tm.term_of(t).op()) {
+    case expr::TERM_NOT:
+      result = d_tm.mk_term(expr::TERM_BV_NOT, bool_term_to_bv(d_tm.term_of(t)[0]));
+      break;
+    case expr::TERM_EQ: {
+      // Catch cases like (extract[0] = 1), and replace with extract[0]
+      const expr::term& t_eq = d_tm.term_of(t);
+      if (t_eq[0] == d_bv0) {
+        result = d_tm.mk_term(expr::TERM_BV_NOT, t_eq[1]);
+      } else if (t_eq[0] == d_bv1) {
+        result = t_eq[1];
+      } else if (t_eq[1] == d_bv0) {
+        result = d_tm.mk_term(expr::TERM_BV_NOT, t_eq[0]);
+      } else if (t_eq[1] == d_bv1) {
+        result = t_eq[0];
+      } else {
+        result = d_tm.mk_term(expr::TERM_ITE, t, d_bv1, d_bv0);
+      }
+    }
+    default:
+      result = d_tm.mk_term(expr::TERM_ITE, t, d_bv1, d_bv0);
+    }
+    return result;
+  } else {
+    return t;
+  }
+}
+
 expr::term_ref yices2_internal::mk_term(term_constructor_t constructor, const std::vector<expr::term_ref>& children) {
   expr::term_ref result;
 
@@ -482,19 +513,25 @@ expr::term_ref yices2_internal::mk_term(term_constructor_t constructor, const st
     result = d_tm.mk_term(expr::TERM_ITE, children);
     break;
   case YICES_APP_TERM:
+    assert(false);
     break;
   case YICES_UPDATE_TERM:
+    assert(false);
     break;
   case YICES_TUPLE_TERM:
+    assert(false);
     break;
   case YICES_EQ_TERM:
     result = d_tm.mk_term(expr::TERM_EQ, children);
     break;
   case YICES_DISTINCT_TERM:
+    assert(false);
     break;
   case YICES_FORALL_TERM:
+    assert(false);
     break;
   case YICES_LAMBDA_TERM:
+    assert(false);
     break;
   case YICES_NOT_TERM:
     result = d_tm.mk_term(expr::TERM_NOT, children);
@@ -505,23 +542,37 @@ expr::term_ref yices2_internal::mk_term(term_constructor_t constructor, const st
   case YICES_XOR_TERM:
     result = d_tm.mk_term(expr::TERM_XOR, children);
     break;
-  case YICES_BV_ARRAY:
+  case YICES_BV_ARRAY: {
+    std::vector<expr::term_ref> bv_children;
+    for (size_t i = 0; i < children.size(); ++ i) {
+      bv_children.push_back(bool_term_to_bv(children[i]));
+    }
+    result = d_tm.mk_term(expr::TERM_BV_CONCAT, bv_children);
     break;
+  }
   case YICES_BV_DIV:
+    assert(false);
     break;
   case YICES_BV_REM:
+    assert(false);
     break;
   case YICES_BV_SDIV:
+    assert(false);
     break;
   case YICES_BV_SREM:
+    assert(false);
     break;
   case YICES_BV_SMOD:
+    assert(false);
     break;
   case YICES_BV_SHL:
+    assert(false);
     break;
   case YICES_BV_LSHR:
+    assert(false);
     break;
   case YICES_BV_ASHR:
+    assert(false);
     break;
   case YICES_BV_GE_ATOM:
     result = d_tm.mk_term(expr::TERM_BV_UGEQ, children);
@@ -533,6 +584,7 @@ expr::term_ref yices2_internal::mk_term(term_constructor_t constructor, const st
     result = d_tm.mk_term(expr::TERM_GEQ, children);
     break;
   default:
+    assert(false);
     break;
   }
 
@@ -755,6 +807,7 @@ public:
 
     // projections
     case YICES_SELECT_TERM:
+      assert(false);
       break;
     case YICES_BIT_TERM: {
       // Selects a bit, and the result is Boolean

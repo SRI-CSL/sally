@@ -25,7 +25,7 @@
 namespace sally {
 namespace expr {
 
-class bitvector : public integer {
+class bitvector : protected integer {
 
   /** The size in bits */
   size_t d_size;
@@ -53,6 +53,11 @@ public:
   /** Get the size of the bitvector */
   size_t size() const { return d_size; }
 
+  /** Get the integer */
+  const mpz_class& mpz() const {
+    return d_gmp_int;
+  }
+
   /** Hash */
   size_t hash() const;
 
@@ -61,8 +66,26 @@ public:
     return d_size == other.d_size && cmp(other) == 0;
   }
 
-  /** Output ot stream */
+  /** Output to stream */
   void to_stream(std::ostream& out) const;
+
+  /** Get signed integer */
+  integer get_signed() const;
+
+  /** Set the bit to value (returns self-reference) */
+  bitvector& set_bit(size_t i, bool value);
+
+  /** Operations */
+  bitvector concat(const bitvector& rhs) const;
+  bitvector extract(size_t low, size_t high) const;
+  bool uleq(const bitvector& rhs) const;
+  bool sleq(const bitvector& rhs) const;
+  bool ult(const bitvector& rhs) const;
+  bool slt(const bitvector& rhs) const;
+  bool ugeq(const bitvector& rhs) const;
+  bool sgeq(const bitvector& rhs) const;
+  bool ugt(const bitvector& rhs) const;
+  bool sgt(const bitvector& rhs) const;
 };
 
 /**

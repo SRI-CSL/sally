@@ -348,34 +348,124 @@ public:
 
     // Bit-vector terms
     case CONST_BITVECTOR:
+      v = d_tm.get_bitvector_constant(t_term);
+      break;
     case TERM_BV_ADD:
+      assert(false);
+      break;
     case TERM_BV_SUB:
+      assert(false);
+      break;
     case TERM_BV_MUL:
+      assert(false);
+      break;
     case TERM_BV_UDIV: // NOTE: semantics of division is x/0 = 111...111
+      assert(false);
+      break;
     case TERM_BV_SDIV:
+      assert(false);
+      break;
     case TERM_BV_UREM:
+      assert(false);
+      break;
     case TERM_BV_SREM:
+      assert(false);
+      break;
     case TERM_BV_SMOD:
+      assert(false);
+      break;
     case TERM_BV_XOR:
+      assert(false);
+      break;
     case TERM_BV_SHL:
+      assert(false);
+      break;
     case TERM_BV_LSHR:
+      assert(false);
+      break;
     case TERM_BV_ASHR:
+      assert(false);
+      break;
     case TERM_BV_NOT:
+      assert(false);
+      break;
     case TERM_BV_AND:
+      assert(false);
+      break;
     case TERM_BV_OR:
+      assert(false);
+      break;
     case TERM_BV_NAND:
+      assert(false);
+      break;
     case TERM_BV_NOR:
+      assert(false);
+      break;
     case TERM_BV_XNOR:
-    case TERM_BV_CONCAT:
-    case TERM_BV_EXTRACT:
-    case TERM_BV_ULEQ:
-    case TERM_BV_SLEQ:
-    case TERM_BV_ULT:
-    case TERM_BV_SLT:
-    case TERM_BV_UGEQ:
-    case TERM_BV_SGEQ:
-    case TERM_BV_UGT:
-    case TERM_BV_SGT:
+      assert(false);
+      break;
+    case TERM_BV_CONCAT: {
+      bitvector bv = children_values[0].get_bitvector();
+      for (size_t i = 0; i < children_values.size(); ++ i) {
+        bv = bv.concat(children_values[i].get_bitvector());
+      }
+      v = bv;
+      break;
+    }
+    case TERM_BV_EXTRACT: {
+      size_t low = d_tm.get_bitvector_extract(t_term).low;
+      size_t high = d_tm.get_bitvector_extract(t_term).high;
+      v = children_values[0].get_bitvector().extract(low, high);
+      break;
+    }
+    case TERM_BV_ULEQ: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[0].get_bitvector();
+      v = lhs.uleq(rhs);
+      break;
+    }
+    case TERM_BV_SLEQ: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[0].get_bitvector();
+      v = lhs.sleq(rhs);
+      break;
+    }
+    case TERM_BV_ULT: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[0].get_bitvector();
+      v = lhs.ult(rhs);
+      break;
+    }
+    case TERM_BV_SLT: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[0].get_bitvector();
+      v = lhs.slt(rhs);
+      break;
+    }
+    case TERM_BV_UGEQ: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[0].get_bitvector();
+      v = lhs.ugeq(rhs);
+      break;
+    }
+    case TERM_BV_SGEQ: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[0].get_bitvector();
+      v = lhs.sgeq(rhs);
+      break;
+    }
+    case TERM_BV_UGT: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[0].get_bitvector();
+      v = lhs.ugt(rhs);
+      break;
+    }
+    case TERM_BV_SGT: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[0].get_bitvector();
+      v = lhs.sgt(rhs);
+      break;
+    }
     default:
       assert(false);
     }

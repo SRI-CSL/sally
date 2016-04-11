@@ -120,6 +120,9 @@ public:
   /** Make a term given yices operator and children */
   expr::term_ref mk_term(term_constructor_t constructor, const std::vector<expr::term_ref>& children);
 
+  /** If Boolean convert to bitvector, otherwise keep. */
+  expr::term_ref bool_term_to_bv(expr::term_ref t);
+
   /** Make a yices term with given operator and children */
   term_t mk_yices2_term(expr::term_op op, size_t n, term_t* children);
 
