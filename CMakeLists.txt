@@ -61,6 +61,9 @@ if (MATHSAT5_FOUND)
   include_directories(${MATHSAT5_INCLUDE_DIR})
 endif()
 
+find_package(OCaml)
+add_subdirectory(frontend)
+
 # Make sure antlr C runtime is here
 include(ExternalProject) 
 ExternalProject_Add(
