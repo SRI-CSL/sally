@@ -35,6 +35,9 @@ public:
   /** Construct 0 of size 1 */
   bitvector(): d_size(1) {}
 
+  /** Copy constructor */
+  bitvector(const bitvector& other);
+
   /** Construct 0 */
   explicit bitvector(size_t size);
 
@@ -75,9 +78,28 @@ public:
   /** Set the bit to value (returns self-reference) */
   bitvector& set_bit(size_t i, bool value);
 
-  /** Operations */
   bitvector concat(const bitvector& rhs) const;
   bitvector extract(size_t low, size_t high) const;
+
+  bitvector add(const bitvector& rhs) const;
+  bitvector sub(const bitvector& rhs) const;
+  bitvector mul(const bitvector& rhs) const;
+
+  bitvector udiv(const bitvector& rhs) const;
+  bitvector sdiv(const bitvector& rhs) const;
+  bitvector urem(const bitvector& rhs) const;
+  bitvector srem(const bitvector& rhs) const;
+  bitvector smod(const bitvector& rhs) const;
+
+  bitvector shl(const bitvector& rhs) const;
+  bitvector lshr(const bitvector& rhs) const;
+  bitvector ashr(const bitvector& rhs) const;
+
+  bitvector bvxor(const bitvector& rhs) const;
+  bitvector bvand(const bitvector& rhs) const;
+  bitvector bvor(const bitvector& rhs) const;
+  bitvector bvnot() const;
+
   bool uleq(const bitvector& rhs) const;
   bool sleq(const bitvector& rhs) const;
   bool ult(const bitvector& rhs) const;

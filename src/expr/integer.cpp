@@ -63,6 +63,14 @@ int integer::sgn() const {
   return mpz_sgn(d_gmp_int.get_mpz_t());
 }
 
+unsigned long integer::get_unsigned() const {
+  return d_gmp_int.get_ui();
+}
+
+signed long integer::get_signed() const {
+  return d_gmp_int.get_si();
+}
+
 integer integer::operator + (const integer& other) const {
   return integer(d_gmp_int + other.d_gmp_int);
 }

@@ -350,51 +350,103 @@ public:
     case CONST_BITVECTOR:
       v = d_tm.get_bitvector_constant(t_term);
       break;
-    case TERM_BV_ADD:
-      assert(false);
+    case TERM_BV_ADD: {
+      bitvector bv = children_values[0].get_bitvector();
+      for (size_t i = 0; i < children_values.size(); ++ i) {
+        bv = bv.add(children_values[i].get_bitvector());
+      }
+      v = bv;
       break;
-    case TERM_BV_SUB:
-      assert(false);
+    }
+    case TERM_BV_SUB: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[0].get_bitvector();
+      v = lhs.sub(rhs);
       break;
-    case TERM_BV_MUL:
-      assert(false);
+    }
+    case TERM_BV_MUL: {
+      bitvector bv = children_values[0].get_bitvector();
+      for (size_t i = 0; i < children_values.size(); ++ i) {
+        bv = bv.mul(children_values[i].get_bitvector());
+      }
+      v = bv;
       break;
-    case TERM_BV_UDIV: // NOTE: semantics of division is x/0 = 111...111
-      assert(false);
+    }
+    case TERM_BV_UDIV: { // NOTE: semantics of division is x/0 = 111...111
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[0].get_bitvector();
+      v = lhs.udiv(rhs);
       break;
-    case TERM_BV_SDIV:
-      assert(false);
+    }
+    case TERM_BV_SDIV: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[0].get_bitvector();
+      v = lhs.sdiv(rhs);
       break;
-    case TERM_BV_UREM:
-      assert(false);
+    }
+    case TERM_BV_UREM: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[0].get_bitvector();
+      v = lhs.urem(rhs);
       break;
-    case TERM_BV_SREM:
-      assert(false);
+    }
+    case TERM_BV_SREM: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[0].get_bitvector();
+      v = lhs.srem(rhs);
       break;
-    case TERM_BV_SMOD:
-      assert(false);
+    }
+    case TERM_BV_SMOD: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[0].get_bitvector();
+      v = lhs.smod(rhs);
       break;
-    case TERM_BV_XOR:
-      assert(false);
+    }
+    case TERM_BV_XOR: {
+      bitvector bv = children_values[0].get_bitvector();
+      for (size_t i = 0; i < children_values.size(); ++ i) {
+        bv = bv.bvxor(children_values[i].get_bitvector());
+      }
+      v = bv;
       break;
-    case TERM_BV_SHL:
-      assert(false);
+    }
+    case TERM_BV_SHL: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[0].get_bitvector();
+      v = lhs.shl(rhs);
       break;
-    case TERM_BV_LSHR:
-      assert(false);
+    }
+    case TERM_BV_LSHR: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[0].get_bitvector();
+      v = lhs.lshr(rhs);
       break;
-    case TERM_BV_ASHR:
-      assert(false);
+    }
+    case TERM_BV_ASHR: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[0].get_bitvector();
+      v = lhs.ashr(rhs);
       break;
+    }
     case TERM_BV_NOT:
-      assert(false);
+      v = children_values[0].get_bitvector().bvnot();
       break;
-    case TERM_BV_AND:
-      assert(false);
+    case TERM_BV_AND: {
+      bitvector bv = children_values[0].get_bitvector();
+      for (size_t i = 0; i < children_values.size(); ++ i) {
+        bv = bv.bvand(children_values[i].get_bitvector());
+      }
+      v = bv;
       break;
-    case TERM_BV_OR:
-      assert(false);
+    }
+    case TERM_BV_OR: {
+      bitvector bv = children_values[0].get_bitvector();
+      for (size_t i = 0; i < children_values.size(); ++ i) {
+        bv = bv.bvor(children_values[i].get_bitvector());
+      }
+      v = bv;
       break;
+    }
     case TERM_BV_NAND:
       assert(false);
       break;

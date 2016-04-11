@@ -29,6 +29,11 @@ bitvector::bitvector(size_t size)
 : d_size(size)
 {}
 
+bitvector::bitvector(const bitvector& other)
+: integer(other)
+, d_size(other.d_size)
+{}
+
 /** Construct from integer */
 bitvector::bitvector(size_t size, const integer& z)
 : integer(z)
@@ -114,6 +119,7 @@ std::ostream& operator << (std::ostream& out, const bitvector& bv) {
 }
 
 bitvector& bitvector::set_bit(size_t i, bool value) {
+  assert(i < d_size);
   if (value) {
     mpz_setbit(d_gmp_int.get_mpz_t(), i);
   } else {
@@ -138,41 +144,137 @@ bitvector bitvector::concat(const bitvector& rhs) const {
 }
 
 bitvector bitvector::extract(size_t low, size_t high) const {
+  assert(low < high);
+  assert(high < d_size);
   size_t size = high-low+1;
   integer value(d_gmp_int >> low);
   return bitvector(size, value);
 }
 
 bool bitvector::uleq(const bitvector& rhs) const {
+  assert(d_size == rhs.d_size);
   return *this <= rhs;
 }
 
 bool bitvector::sleq(const bitvector& rhs) const {
+  assert(d_size == rhs.d_size);
   return get_signed() <= rhs.get_signed();
 }
 
 bool bitvector::ult(const bitvector& rhs) const {
+  assert(d_size == rhs.d_size);
   return *this < rhs;
 }
 
 bool bitvector::slt(const bitvector& rhs) const {
+  assert(d_size == rhs.d_size);
   return get_signed() < rhs.get_signed();
 }
 
 bool bitvector::ugeq(const bitvector& rhs) const {
+  assert(d_size == rhs.d_size);
   return *this >= rhs;
 }
 
 bool bitvector::sgeq(const bitvector& rhs) const {
+  assert(d_size == rhs.d_size);
   return get_signed() >= rhs.get_signed();
 }
 
 bool bitvector::ugt(const bitvector& rhs) const {
+  assert(d_size == rhs.d_size);
   return *this > rhs;
 }
 
 bool bitvector::sgt(const bitvector& rhs) const {
+  assert(d_size == rhs.d_size);
   return get_signed() > rhs.get_signed();
+}
+
+bitvector bitvector::add(const bitvector& rhs) const {
+  assert(d_size == rhs.d_size);
+  return bitvector(d_size, *this + rhs);
+}
+
+bitvector bitvector::sub(const bitvector& rhs) const {
+  assert(d_size == rhs.d_size);
+  assert(false);
+  return bitvector();
+}
+
+bitvector bitvector::mul(const bitvector& rhs) const {
+  assert(d_size == rhs.d_size);
+  return bitvector(d_size, *this * rhs);
+}
+
+bitvector bitvector::udiv(const bitvector& rhs) const {
+  assert(d_size == rhs.d_size);
+  // unsigned division, truncating towards 0. x/0 = 1...1
+  if (rhs.sgn() == 0) {
+    return bitvector(d_size, true);
+  } else {
+    return bitvector(d_size, integer(this->d_gmp_int / rhs.d_gmp_int));
+  }
+}
+
+bitvector bitvector::sdiv(const bitvector& rhs) const {
+  assert(d_size == rhs.d_size);
+  return bitvector();
+}
+
+bitvector bitvector::urem(const bitvector& rhs) const {
+  // unsigned remainder from truncating division
+  assert(d_size == rhs.d_size);
+  return bitvector();
+}
+
+bitvector bitvector::srem(const bitvector& rhs) const {
+  assert(d_size == rhs.d_size);
+  return bitvector();
+}
+
+bitvector bitvector::smod(const bitvector& rhs) const {
+  assert(d_size == rhs.d_size);
+  return bitvector();
+}
+
+bitvector bitvector::shl(const bitvector& rhs) const {
+  assert(d_size == rhs.d_size);
+  return bitvector();
+}
+
+bitvector bitvector::lshr(const bitvector& rhs) const {
+  assert(d_size == rhs.d_size);
+  if (d_size < rhs.d_gmp_int) {
+    return bitvector(d_size);
+  } else {
+    assert(false);
+    return bitvector();
+  }
+}
+
+bitvector bitvector::ashr(const bitvector& rhs) const {
+  assert(d_size == rhs.d_size);
+  return bitvector();
+}
+
+bitvector bitvector::bvxor(const bitvector& rhs) const {
+  assert(d_size == rhs.d_size);
+  return bitvector();
+}
+
+bitvector bitvector::bvand(const bitvector& rhs) const {
+  assert(d_size == rhs.d_size);
+  return bitvector();
+}
+
+bitvector bitvector::bvor(const bitvector& rhs) const {
+  assert(d_size == rhs.d_size);
+  return bitvector();
+}
+
+bitvector bitvector::bvnot() const {
+  return bitvector();
 }
 
 }
