@@ -318,7 +318,7 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
   smt::solver::result r = solver->check();
   assert(r == smt::solver::SAT);
   expr::model::ref model = solver->get_model();
-  d_trace->set_model(model);
+  d_trace->set_model(model, k+1);
 
   if (ctx().get_options().get_bool("ic3-dont-extend")) {
     return;
@@ -372,7 +372,7 @@ void ic3_engine::extend_induction_failure(expr::term_ref f) {
     // We're sat (either by knowing, or by checking), so we extend further
     set_invalid(f, k);
     model = solver->get_model();
-    d_trace->set_model(model);
+    d_trace->set_model(model, k+1);
   }
 }
 
@@ -585,7 +585,21 @@ bool ic3_engine::add_property(expr::term_ref P) {
     }
     return true;
   } else {
-    smt::solver::result result = d_smt->query_at_init(tm().mk_term(expr::TERM_NOT, P));
+
+    // Check at initial frame
+    smt::solver_scope solver_scope;
+    d_smt->ensure_counterexample_solver_depth(0);
+    d_smt->get_counterexample_solver(solver_scope);
+    solver_scope.push();
+    smt::solver* solver = solver_scope.get_solver();
+
+    // To check
+    expr::term_ref P_neg = tm().mk_term(expr::TERM_NOT, P);
+    expr::term_ref P_neg_0 = d_trace->get_state_formula(P_neg, 0);
+    solver->add(P_neg_0, smt::solver::CLASS_A);
+
+    // Should be SAT
+    smt::solver::result result = solver->check();
     if (result == smt::solver::UNSAT) {
       if (d_induction_frame.find(P) == d_induction_frame.end()) {
         add_to_induction_frame(P);
@@ -595,6 +609,8 @@ bool ic3_engine::add_property(expr::term_ref P) {
       d_properties.insert(P);
       return true;
     } else {
+      expr::model::ref model = solver->get_model();
+      d_trace->set_model(model, 1);
       return false;
     }
   }

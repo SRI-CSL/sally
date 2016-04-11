@@ -1,0 +1,26 @@
+(define-state-type state
+	(
+	(round Real)
+	))
+(define-states init state
+	
+	(and true (= round 0)))
+(define-transition trans state
+	
+	(or 
+		(or 
+			(or 
+				(or 
+					(or 
+						false
+						(and (= state.round 0) (and true (= next.round 1))))
+					(and (= state.round 1) (and true (= next.round 2))))
+				(and (= state.round 2) (and true (= next.round 3))))
+			(and (= state.round 3) (and true (= next.round 12))))
+		(and true (= next.round state.round))))
+(define-transition-system OM
+	state
+	init
+	trans)
+(query OM
+	(= round 21)) 
