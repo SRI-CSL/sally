@@ -121,8 +121,19 @@ let sal_init_to_state type_init_ctx type_name name assign =
 
 let sal_transition_to_transition ctx n = function
 | NoTransition -> failwith "notransition"
-| GuardedCommands(l) -> let cond = List.fold_left (fun l a -> match a with
-	| Default(assign) -> Lisp_ast.Or(l, sal_real_assignment_to_state ctx assign)
+| GuardedCommands(l) ->
+	let all_guarded = List.filter (function | Guarded(_) -> true | _ -> false) l in
+	let all_conditions = List.fold_left (fun l a ->
+		match a with
+		| Guarded(expr, _) ->
+			let guard = sal_expr_to_lisp ctx expr in
+			Lisp_ast.And(l, Lisp_ast.Not(guard))
+		| _ -> raise Not_found
+		) True all_guarded
+	in
+
+	let cond = List.fold_left (fun l a -> match a with
+	| Default(assign) -> Lisp_ast.Or(l, And(all_conditions, sal_real_assignment_to_state ctx assign))
 	| Guarded(expr, assignment) ->
 		let guard = sal_expr_to_lisp ctx expr in
 		let implies = sal_real_assignment_to_state ctx assignment in
