@@ -6,14 +6,14 @@ exception Not_implemented
 module StrMap = Map.Make(String)
 
 type sally_substitution =
-	Expr of sally_condition
-	| Fun of string list * sal_expr
+	Expr of sally_condition * sally_type
+	| Fun of (string * sally_type) list * sal_expr
 	| Type of sally_type
 
 type sally_context = sally_substitution StrMap.t
 
 exception CannotUseFunctionAsExpression
-exception CannotUseExpressionAsFunction
+exception CannotUseExpressionAsFunction of string
 
 let ctx_union a b =
 	StrMap.fold (fun k v c -> StrMap.add k v c) a b
@@ -26,7 +26,7 @@ let eval_sal ctx = function
 	| Float(i) -> Value(string_of_float i)
 
 	| Ident(s) -> (match StrMap.find s ctx with
-		| Expr(s) -> Value(eval_sally ctx s)
+		| Expr(s, _) -> Value(eval_sally ctx s)
 		| _ -> raise CannotUseFunctionAsExpression)
 	| _ -> failwith "couldn't statically evaluate"
 
@@ -34,11 +34,15 @@ exception UnknownType of string
 
 let rec sal_type_to_sally_type ctx = function
 	| Base_type("NATURAL") -> Real
+	| Base_type("BOOLEAN") -> Bool
+	| Base_type("REAL") -> Real
 	| Base_type(e) -> (match StrMap.find e ctx with
 		| Type(t) -> t
 		| _ -> raise (UnknownType(e))
 		)
 	| Array(t1, t2) -> Lisp_ast.Array(sal_type_to_sally_type ctx t1, sal_type_to_sally_type ctx t2)
+	| Enum(l) -> Real
+	| Subtype(_) -> Real
 	| Range(i1, i2) ->
 		match eval_sal ctx i1, eval_sal ctx i2 with
 		| Value(a), Value(b) -> Lisp_ast.Range (int_of_string a, int_of_string b)
@@ -52,13 +56,13 @@ let sal_state_vars_to_state_type (ctx:sally_context) name vars =
 
 	let type_init_ctx = List.fold_left
 		(fun ctx (n, t) ->
-			StrMap.add n (Expr (Lisp_ast.Ident(n))) ctx
+			StrMap.add n (Expr (Lisp_ast.Ident(n), t)) ctx
 		) ctx sally_vars in
 
 	let transition_ctx = List.fold_left
 		(fun ctx (n, t) ->
-			let ctx = StrMap.add n (Expr(Lisp_ast.Ident ("state."^n))) ctx in
-			StrMap.add (n^"'") (Expr(Lisp_ast.Ident("next."^n))) ctx
+			let ctx = StrMap.add n (Expr(Lisp_ast.Ident ("state."^n), t)) ctx in
+			StrMap.add (n^"'") (Expr(Lisp_ast.Ident("next."^n), t)) ctx
 		) ctx sally_vars in
 
 	type_init_ctx, transition_ctx, ((name, sally_vars):state_type)
@@ -70,11 +74,14 @@ let rec sal_expr_to_lisp (ctx:sally_context) = function
 	| Float(i) -> Value(string_of_float i)
 
 	| Ident(s) -> (match StrMap.find s ctx with
-		| Expr(s) -> s
+		| Expr(s, _) -> s
 		| _ -> raise CannotUseFunctionAsExpression)
 
 	| Eq(a, b) -> Equality(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
 	| Ge(a, b) -> GreaterEqual(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
+	| Gt(a, b) -> Greater(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
+	| Lt(a, b) -> Greater(sal_expr_to_lisp ctx b, sal_expr_to_lisp ctx a)
+	| Le(a, b) -> GreaterEqual(sal_expr_to_lisp ctx b, sal_expr_to_lisp ctx a)
 	| Implies(a, b) -> Or(Not(sal_expr_to_lisp ctx a), sal_expr_to_lisp ctx b)
 	| Add(a, b) -> Lisp_ast.Add(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
 
@@ -84,10 +91,10 @@ let rec sal_expr_to_lisp (ctx:sally_context) = function
 	| Funcall(name, args_expr) -> (match  StrMap.find name ctx with
 		| Fun(decls, expr) ->
 			let args = List.combine decls (List.map (sal_expr_to_lisp ctx) args_expr) in
-			let inside_function_ctx = List.fold_left (fun ctx (arg_name, arg_value) ->
-				StrMap.add arg_name (Expr(arg_value)) ctx) ctx args in
+			let inside_function_ctx = List.fold_left (fun ctx ((arg_name, arg_type), arg_value) ->
+				StrMap.add arg_name (Expr(arg_value, arg_type)) ctx) ctx args in
 			sal_expr_to_lisp inside_function_ctx expr
-		| _ -> raise CannotUseExpressionAsFunction
+		| _ -> raise (CannotUseExpressionAsFunction name)
 		)
 
 	| Cond([], else_term) -> sal_expr_to_lisp ctx else_term
@@ -105,19 +112,57 @@ let rec sal_expr_to_lisp (ctx:sally_context) = function
 			Ident(sa ^ "!" ^ sb)
 		| _ -> raise InadequateArrayUse
 		)
+	| Set_literal(_) -> failwith "set"
+	| Array_literal(n, e, e2) -> (failwith "Unsupported Array_literal")
+	| Cond(_) -> failwith "cond"
+	| Forall(t::q, expr) ->
+		begin
+		match t with
+		| [], sal_type -> sal_expr_to_lisp ctx (Forall(q, expr))
+		| t::end_decl, sal_type ->
+			let sally_type = sal_type_to_sally_type ctx sal_type in
+			match sally_type with
+			| Range(a, b) ->
+				let cond = ref True in
+				let _ = for i = a to b do
+					let (tmp_ctx:sally_context) = StrMap.add t (Expr(Value(string_of_int i), Real)) ctx in
+					cond := Lisp_ast.And(!cond, sal_expr_to_lisp tmp_ctx (Forall((end_decl, sal_type)::q, expr)))
+				done
+				in !cond
+		end
+	| Forall([], expr) -> sal_expr_to_lisp ctx expr
+	| Exists(_) -> failwith "exists"
+
+	| Not(e) -> Not(sal_expr_to_lisp ctx e)
+	| Neq(a, b) -> Not(sal_expr_to_lisp ctx (Eq(a, b)))
+  
+  | Opp(_) -> failwith "opp"
+  | Sub(_) -> failwith "sub"
+  | Mul(_) -> failwith "mul"
+  | Div(_) -> failwith "div"
+  | And(a, b) -> And(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
+  | Or(a, b) -> Or(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
+  | Xor(_) | Implies(_) | Iff(_) 
+  | Exists(_) -> failwith "exists"
+  | Let(_) -> failwith "logic"
 
 
 let sal_real_assignment_to_state ctx =
 	let to_condition = function
-	| Assign(n, expr) -> Equality(sal_expr_to_lisp ctx n, sal_expr_to_lisp ctx expr)
+	| Assign(n, expr) ->
+		begin
+		match expr with
+		| Array_literal(name, type_data, expr) -> failwith "Array litteral unsupported"
+		| _ -> Equality(sal_expr_to_lisp ctx n, sal_expr_to_lisp ctx expr)
+		end
+	| Member(n, Set_literal(in_name, t, expr)) ->
+		let intermediate_context = StrMap.add in_name (Expr(sal_expr_to_lisp ctx n, sal_type_to_sally_type ctx t)) ctx in
+		sal_expr_to_lisp intermediate_context expr
 	in
 	List.fold_left (fun l a -> Lisp_ast.And(l, to_condition a)) True
 
-let sal_init_to_state type_init_ctx type_name name assign =
-	let to_condition = function
-	| Assign(n, expr) -> Equality(sal_expr_to_lisp type_init_ctx n, sal_expr_to_lisp type_init_ctx expr)
-	in
-	name, type_name, List.fold_left (fun l a -> Lisp_ast.And(l, to_condition a)) True assign
+let sal_init_to_state ctx type_name name assign =
+	name, type_name, sal_real_assignment_to_state ctx assign
 
 let sal_transition_to_transition ctx n = function
 | NoTransition -> failwith "notransition"
@@ -165,9 +210,15 @@ let sal_context_to_lisp ctx =
 			transition_systems, q::queries, sally_ctx
 		| Constant_def(name, sal_type, expr) ->
 			transition_systems, queries,
-			StrMap.add name (Expr(sal_expr_to_lisp sally_ctx expr)) sally_ctx
+			StrMap.add name (Expr(sal_expr_to_lisp sally_ctx expr, sal_type_to_sally_type sally_ctx sal_type)) sally_ctx
+		| Constant_decl(name, sal_type) ->
+			transition_systems, queries,
+			(* TODO: value?? *)
+			StrMap.add name (Expr(Value("1"), sal_type_to_sally_type sally_ctx sal_type)) sally_ctx
 		| Function_def(name, l, t, expr) ->
-			let var_list = List.(concat @@ map fst l) in
+			let var_list = List.(concat @@ map (fun (arg_list, arg_type) ->
+				let sally_type = sal_type_to_sally_type sally_ctx arg_type in
+				map (fun s -> s, sally_type) arg_list) l) in
 			transition_systems, queries,
 			StrMap.add name (Fun(var_list, expr)) sally_ctx
 		| Type_def(name, sal_type) ->
