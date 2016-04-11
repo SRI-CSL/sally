@@ -3,7 +3,6 @@ BEGIN
 
   N: NATURAL = 12;  % number of processes
   M: NATURAL = 4;  % number of relays
-  PID: TYPE = [1 .. N];
 
   plusone(x: NATURAL): NATURAL =
     x+1;
@@ -11,15 +10,13 @@ BEGIN
   OM: MODULE =
   BEGIN
     OUTPUT
-      round:NATURAL,
-      v:  ARRAY PID OF NATURAL
+      round:NATURAL
 	INITIALIZATION
       round = 0;
 
     TRANSITION
      [ round = 0 -->
          round' = plusone(round);
-		 v'[1] = 1;
     []
        round = 1 -->
          round' = 2;
@@ -36,7 +33,4 @@ BEGIN
   agreement: LEMMA
     OM |- G(round >= 4 => round = N);
   
-  agreement2: LEMMA
-    OM |- G(round = v[0]);
- 
 END

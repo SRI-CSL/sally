@@ -56,13 +56,9 @@ and sal_expr =
 
 type state_var_decl = state_var_tag * (sal_decl list)
 
-type var_or_next =
-  | SVar of string
-  | NVar of string
-
 type sal_assignment =
-  | Assign of var_or_next * sal_expr (* x := value or x' := value *)
-  | Member of var_or_next * sal_expr (* x IN set of x' IN set *)
+  | Assign of sal_expr * sal_expr (* x := value or x' := value *)
+  | Member of sal_expr * sal_expr (* x IN set of x' IN set *)
 
 type guarded_command =
   | Guarded of sal_expr * (sal_assignment list)  (* expr -> assignments *)
@@ -94,13 +90,6 @@ type sal_context = {
   ctx_name: string;
   definitions: sal_def list;
 }
-  
-(*
- * Conversion from sal_expr to var_or_next:
- *  Ident(x) --> SVar(x)
- *  Next(s)  --> NVar(x)
- *)
-val to_state_var: sal_expr -> var_or_next
 
 
 (*

@@ -55,13 +55,9 @@ and sal_expr =
 
 type state_var_decl = state_var_tag * (sal_decl list)
 
-type var_or_next =
-  | SVar of string
-  | NVar of string
-
 type sal_assignment =
-  | Assign of var_or_next * sal_expr (* x = value or x' = value *)
-  | Member of var_or_next * sal_expr (* x IN set of x' IN set *)
+  | Assign of sal_expr * sal_expr (* x = value or x' = value *)
+  | Member of sal_expr * sal_expr (* x IN set of x' IN set *)
 
 type guarded_command =
   | Guarded of sal_expr * (sal_assignment list)  (* expr -> assignments *)
@@ -93,18 +89,6 @@ type sal_context = {
   ctx_name: string;
   definitions: sal_def list;
 }
-
-
-
-(*
- * Conversion from sal_expr to var_or_next:
- *  Ident(x) --> SVar(x)
- *  Next(s)  --> NVar(x)
- *)
-let to_state_var = function
-  | Ident(x) -> SVar(x)
-  | Next(x) -> NVar(x)
-  | _ -> failwith ("Expression can't be converted to a state/next-state variables")
 
 
 
@@ -330,13 +314,10 @@ let pp_var_decl_section pp (section, decls) =
 let pp_state_var_decls pp l =
   List.iter (fun dcl -> pp_var_decl_section pp dcl) l
 
-let pp_var_or_next pp = function
-  | SVar(name) -> F.fprintf pp "%s" name
-  | NVar(name) -> F.fprintf pp "%s'" name
-
 let pp_assignment pp = function
-  | Assign(x,e) -> F.fprintf pp "@[<hov2>%a =@ %a@]; " pp_var_or_next x pp_expr e
-  | Member(x,e) -> F.fprintf pp "@[<hov2>%a IN@ %a@]; " pp_var_or_next x pp_expr e
+  | Assign(x,e) -> F.fprintf pp "@[<hov2>%a =@ %a@]; " pp_expr x pp_expr e
+  | Member(x,e) -> F.fprintf pp "@[<hov2>%a IN@ %a@]; " pp_expr x pp_expr e
+
 
 let rec pp_list_of_assignments pp = function
   | [] -> ()

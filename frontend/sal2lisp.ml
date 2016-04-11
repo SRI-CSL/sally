@@ -31,11 +31,11 @@ let eval_sal ctx = function
 	| _ -> failwith "couldn't statically evaluate"
 
 let rec sal_type_to_sally_type ctx = function
-	| Base_type("NATURAL") -> Real
+	| Base_type(e) -> Real
 	| Array(t1, t2) -> Lisp_ast.Array(sal_type_to_sally_type ctx t1, sal_type_to_sally_type ctx t2)
 	| Range(i1, i2) ->
 		match eval_sal ctx i1, eval_sal ctx i2 with
-		| Value(a), Value(b) -> Lisp_ast.Range (int_of_string a, int_of_string b)
+		| Value(a), Value(b) -> let _ = Format.printf "%s to %s@." a b in Lisp_ast.Range (int_of_string a, int_of_string b)
 		| _ -> failwith "couldn't evaluate properly"
 
 let sal_state_vars_to_state_type (ctx:sally_context) name vars =
@@ -91,15 +91,13 @@ let rec sal_expr_to_lisp (ctx:sally_context) = function
 
 let sal_real_assignment_to_state ctx =
 	let to_condition = function
-	| Assign(SVar(n), expr) -> Equality(Ident("state."^n), sal_expr_to_lisp ctx expr)
-	| Assign(NVar(n), expr) -> Equality(Ident("next."^n), sal_expr_to_lisp ctx expr)
+	| Assign(n, expr) -> Equality(sal_expr_to_lisp ctx n, sal_expr_to_lisp ctx expr)
 	in
 	List.fold_left (fun l a -> Lisp_ast.And(l, to_condition a)) True
 
 let sal_init_to_state type_init_ctx type_name name assign =
 	let to_condition = function
-	| Assign(SVar(n), expr) ->
-		Equality(Ident(n), sal_expr_to_lisp type_init_ctx expr)
+	| Assign(n, expr) -> Equality(sal_expr_to_lisp type_init_ctx n, sal_expr_to_lisp type_init_ctx expr)
 	in
 	name, type_name, List.fold_left (fun l a -> Lisp_ast.And(l, to_condition a)) True assign
 

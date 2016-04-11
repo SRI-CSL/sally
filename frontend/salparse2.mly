@@ -323,7 +323,7 @@ number:
 
 var_or_next:
 | IDENT       { Ident($1) }
-| IDENT NEXT  { Next($1) }
+| IDENT NEXT  { Ident($1 ^ "'") }
 ;
 
 function_call:
@@ -419,8 +419,8 @@ assignments:
 ;
 
 assignment:
-| var_or_next EQUAL expr         { Assign(to_state_var($1),$3) }
-| var_or_next IN set_literal     { Member(to_state_var($1),$3) }
+| array_access EQUAL expr         { Assign($1,$3) }
+| var_or_next IN set_literal     { Member($1, $3) }
 ;
 
 guarded_commands:
