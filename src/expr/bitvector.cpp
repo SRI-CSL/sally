@@ -27,18 +27,22 @@ namespace expr {
 
 bitvector::bitvector(size_t size)
 : d_size(size)
-{}
+{
+  assert(size > 0);
+}
 
 bitvector::bitvector(const bitvector& other)
 : integer(other)
 , d_size(other.d_size)
-{}
+{
+}
 
 /** Construct from integer */
 bitvector::bitvector(size_t size, const integer& z)
 : integer(z)
 , d_size(size)
 {
+  assert(size > 0);
   assert(z.sgn() >= 0);
   if (mpz_sizeinbase(d_gmp_int.get_mpz_t(), 2) > size) {
     mpz_fdiv_r_2exp(d_gmp_int.get_mpz_t(), d_gmp_int.get_mpz_t(), size);
@@ -49,6 +53,7 @@ bitvector::bitvector(size_t size, long x)
 : integer(x)
 , d_size(size)
 {
+  assert(size > 0);
   assert(x >= 0);
   if (mpz_sizeinbase(d_gmp_int.get_mpz_t(), 2) > size) {
     mpz_fdiv_r_2exp(d_gmp_int.get_mpz_t(), d_gmp_int.get_mpz_t(), size);
@@ -56,6 +61,7 @@ bitvector::bitvector(size_t size, long x)
 }
 
 bitvector bitvector::one(size_t size) {
+  assert(size > 0);
   return bitvector(size, integer((mpz_class(1) << size) - 1));
 }
 
@@ -70,6 +76,7 @@ bitvector::bitvector(const char* bits)
 : integer(bits, 2)
 , d_size(strlen(bits))
 {
+  assert(d_size > 0);
   assert(sgn() >= 0);
   if (mpz_sizeinbase(d_gmp_int.get_mpz_t(), 2) > d_size) {
     mpz_fdiv_r_2exp(d_gmp_int.get_mpz_t(), d_gmp_int.get_mpz_t(), d_size);
@@ -80,6 +87,7 @@ bitvector::bitvector(std::string bits)
 : integer(bits, 2)
 , d_size(bits.size())
 {
+  assert(d_size > 0);
   assert(sgn() >= 0);
   if (mpz_sizeinbase(d_gmp_int.get_mpz_t(), 2) > d_size) {
     mpz_fdiv_r_2exp(d_gmp_int.get_mpz_t(), d_gmp_int.get_mpz_t(), d_size);
@@ -104,7 +112,6 @@ void bitvector::to_stream(std::ostream& out) const {
     assert(false);
   }
 }
-
 
 bool bitvector_extract::operator == (const bitvector_extract& other) const {
   return high == other.high && low == other.low;
@@ -208,9 +215,12 @@ bitvector bitvector::add(const bitvector& rhs) const {
 
 bitvector bitvector::sub(const bitvector& rhs) const {
   assert(d_size == rhs.d_size);
-  assert(false);
-  // x + !y +1
-  return add(rhs.bvnot().add(bitvector(d_size, 1)));
+  // x + (-y)
+  return add(rhs.neg());
+}
+
+bitvector bitvector::neg() const {
+  return bvnot().add(bitvector(d_size, 1));
 }
 
 bitvector bitvector::mul(const bitvector& rhs) const {
@@ -230,6 +240,29 @@ bitvector bitvector::udiv(const bitvector& rhs) const {
 
 bitvector bitvector::sdiv(const bitvector& rhs) const {
   assert(d_size == rhs.d_size);
+//  (bvsdiv s t) abbreviates
+//        (let ((?msb_s ((_ extract |m-1| |m-1|) s))
+//              (?msb_t ((_ extract |m-1| |m-1|) t)))
+//          (ite (and (= ?msb_s #b0) (= ?msb_t #b0))
+//               (bvudiv s t)                        // D
+//          (ite (and (= ?msb_s #b1) (= ?msb_t #b0))
+//               (bvneg (bvudiv (bvneg s) t))        // B
+//          (ite (and (= ?msb_s #b0) (= ?msb_t #b1))
+//               (bvneg (bvudiv s (bvneg t)))        // C
+//               (bvudiv (bvneg s) (bvneg t))))))    // A
+  if (msb()) {
+    if (rhs.msb()) {
+      return neg().udiv(rhs.neg()); // A
+    } else {
+      return neg().udiv(rhs).neg(); // B
+    }
+  } else {
+    if (rhs.msb()) {
+      return udiv(rhs.neg()).neg(); // C
+    } else {
+      return udiv(rhs);             // D
+    }
+  }
   return bitvector();
 }
 
@@ -246,12 +279,76 @@ bitvector bitvector::urem(const bitvector& rhs) const {
 
 bitvector bitvector::srem(const bitvector& rhs) const {
   assert(d_size == rhs.d_size);
-  return bitvector();
+//  (bvsrem s t) abbreviates
+//     (let ((?msb_s ((_ extract |m-1| |m-1|) s))
+//           (?msb_t ((_ extract |m-1| |m-1|) t)))
+//       (ite (and (= ?msb_s #b0) (= ?msb_t #b0))
+//            (bvurem s t)
+//       (ite (and (= ?msb_s #b1) (= ?msb_t #b0))
+//            (bvneg (bvurem (bvneg s) t))
+//       (ite (and (= ?msb_s #b0) (= ?msb_t #b1))
+//            (bvurem s (bvneg t)))
+//            (bvneg (bvurem (bvneg s) (bvneg t))))))
+  if (msb()) {
+    if (rhs.msb()) {
+      return neg().urem(rhs.neg()).neg();
+    } else {
+      return neg().urem(rhs).neg();
+    }
+  } else {
+    if (rhs.msb()) {
+      return urem(rhs.neg());
+    } else {
+      return urem(rhs);
+    }
+  }
 }
 
 bitvector bitvector::smod(const bitvector& rhs) const {
   assert(d_size == rhs.d_size);
-  return bitvector();
+//  (bvsmod s t) abbreviates
+//     (let ((?msb_s ((_ extract |m-1| |m-1|) s))
+//           (?msb_t ((_ extract |m-1| |m-1|) t)))
+//       (let ((abs_s (ite (= ?msb_s #b0) s (bvneg s)))
+//             (abs_t (ite (= ?msb_t #b0) t (bvneg t))))
+//         (let ((u (bvurem abs_s abs_t)))
+//           (ite (= u (_ bv0 m))
+//                u
+//           (ite (and (= ?msb_s #b0) (= ?msb_t #b0))
+//                u
+//           (ite (and (= ?msb_s #b1) (= ?msb_t #b0))
+//                (bvadd (bvneg u) t)
+//           (ite (and (= ?msb_s #b0) (= ?msb_t #b1))
+//                (bvadd u t)
+//                (bvneg u))))))))
+
+  // get absolute value
+  bitvector abs(*this), rhs_abs(rhs);
+  if (msb()) {
+    abs.neg();
+  }
+  if (rhs.msb()) {
+    rhs.neg();
+  }
+
+  bitvector u = abs.udiv(rhs_abs);
+  if (u == bitvector(d_size)) {
+    return u;
+  } else {
+    if (msb()) {
+      if (rhs.msb()) {
+        return u.neg();
+      } else {
+        return u.neg().add(rhs);
+      }
+    } else {
+      if (rhs.msb()) {
+        return u.add(rhs);
+      } else {
+        return u;
+      }
+    }
+  }
 }
 
 bitvector bitvector::shl(const bitvector& rhs) const {

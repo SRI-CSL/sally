@@ -84,11 +84,15 @@ public:
   /** Get the bit value */
   bool get_bit(size_t i) const;
 
+  /** Get the most significant bit */
+  bool msb() const { return get_bit(d_size-1); }
+
   bitvector concat(const bitvector& rhs) const;
   bitvector extract(size_t low, size_t high) const;
 
   bitvector add(const bitvector& rhs) const;
   bitvector sub(const bitvector& rhs) const;
+  bitvector neg() const;
   bitvector mul(const bitvector& rhs) const;
 
   bitvector udiv(const bitvector& rhs) const;
