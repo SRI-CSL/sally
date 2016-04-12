@@ -95,6 +95,9 @@ public:
   /** Returns the type with the given id */
   expr::term_ref get_type(std::string id) const;
 
+  /** Returns the bit-vector type of the given size */
+  expr::term_ref get_bitvector_type(size_t size) const;
+
   /** Returns the a variable with the given id */
   expr::term_ref get_variable(std::string id) const;
 

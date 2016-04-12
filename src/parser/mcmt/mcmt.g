@@ -352,7 +352,6 @@ term_op returns [expr::term_op op = expr::OP_LAST]
 variable_list[std::vector<std::string>& out_vars, std::vector<expr::term_ref>& out_types]
 @declarations {
   std::string var_id;
-  std::string type_id;
 } 
   : '(' 
     ( '(' 
@@ -361,13 +360,24 @@ variable_list[std::vector<std::string>& out_vars, std::vector<expr::term_ref>& o
         	out_vars.push_back(var_id); 
         } 
         // Type: either basic or composite (TODO: bitvector) 
-        symbol[type_id, parser::MCMT_TYPE, true] { 
-        	out_types.push_back(STATE->get_type(type_id)); 
-        }
+        t = type { out_types.push_back(t); } 
     ')' )*
     ')'
   ; 
         
+type returns [expr::term_ref type]
+@declarations {
+  std::string type_id;
+}
+  : // Primitive types
+    symbol[type_id, parser::MCMT_TYPE, true] { type = STATE->get_type(type_id); }  
+  | // Bitvector types 
+    '(_' 'BitVec' size = NUMERAL ')' { 
+       expr::integer int_value(STATE->token_text(size), 10);
+       type = STATE->get_bitvector_type(int_value.get_unsigned());       
+    }
+  ;
+      
 /** Comments (skip) */
 COMMENT
   : ';' (~('\n' | '\r'))* { SKIP(); }
