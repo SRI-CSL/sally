@@ -241,6 +241,16 @@ term returns [expr::term_ref t = expr::term_ref()]
         term_list[children] 
      ')'   
      { t = STATE->tm().mk_term(op, children); }
+  | '(' 
+       '(_' 'extract' high = NUMERAL low = NUMERAL ')'
+       s = term
+    ')' 
+    {
+     expr::integer hi_value(STATE->token_text(high), 10);
+     expr::integer lo_value(STATE->token_text(low), 10);
+     expr::bitvector_extract extract(hi_value.get_unsigned(), lo_value.get_unsigned());
+     t = STATE->tm().mk_bitvector_extract(s, extract);
+    }
   | '(' 'cond' { STATE->lsal_extensions() }?
        ( '(' term_list[children] ')' )+
        '(' 'else' else_term = term ')'
@@ -311,14 +321,16 @@ decimal_constant returns [expr::term_ref t = expr::term_ref()]
 
 bitvector_constant returns [expr::term_ref t = expr::term_ref()]
   : HEX_NUMERAL {
-     std::string hex_number(STATE->token_text($HEX_NUMERAL)); 
-     expr::integer int_value(hex_number.substr(2), 16);
+     std::string hex_number(STATE->token_text($HEX_NUMERAL));
+     hex_number = hex_number.substr(2); 
+     expr::integer int_value(hex_number, 16);
      expr::bitvector value(hex_number.size()*4, int_value);
      t = STATE->tm().mk_bitvector_constant(value);
     }
   | BIN_NUMERAL {
-     std::string bin_number(STATE->token_text($BIN_NUMERAL)); 
-     expr::integer int_value(bin_number.substr(2), 2);
+     std::string bin_number(STATE->token_text($BIN_NUMERAL));
+     bin_number = bin_number.substr(2);
+     expr::integer int_value(bin_number, 2);
      expr::bitvector value(bin_number.size(), int_value);
      t = STATE->tm().mk_bitvector_constant(value);
     }
@@ -331,13 +343,16 @@ bitvector_constant returns [expr::term_ref t = expr::term_ref()]
   ;
 
 term_op returns [expr::term_op op = expr::OP_LAST]
-  : 'and'            { op = expr::TERM_AND; } 
+  : // Boolean
+    'and'            { op = expr::TERM_AND; } 
   | 'or'             { op = expr::TERM_OR; }
   | 'not'            { op = expr::TERM_NOT; }
-  | '=>'        { op = expr::TERM_IMPLIES; } 
+  | '=>'             { op = expr::TERM_IMPLIES; } 
   | 'xor'            { op = expr::TERM_XOR; }
   | 'ite'            { op = expr::TERM_ITE; }
+    // Equeality
   | '='              { op = expr::TERM_EQ;  }
+    // Arithmetic
   | '+'              { op = expr::TERM_ADD; }
   | '-'              { op = expr::TERM_SUB; }
   | '*'              { op = expr::TERM_MUL; }
@@ -346,6 +361,34 @@ term_op returns [expr::term_op op = expr::OP_LAST]
   | '>='             { op = expr::TERM_GEQ; }
   | '<'              { op = expr::TERM_LT; }
   | '<='             { op = expr::TERM_LEQ; }
+    // Bitvectors
+  | 'bvadd' { op = expr::TERM_BV_ADD; }
+  | 'bvsub' { op = expr::TERM_BV_SUB; }
+  | 'bvmul' { op = expr::TERM_BV_MUL; }
+  | 'bvudiv' { op = expr::TERM_BV_UDIV; }
+  | 'bvsdiv' { op = expr::TERM_BV_SDIV; }
+  | 'bvurem' { op = expr::TERM_BV_UREM; }
+  | 'bvsrem' { op = expr::TERM_BV_SREM; }
+  | 'bvsmod' { op = expr::TERM_BV_SMOD; }
+  | 'bvxor' { op = expr::TERM_BV_XOR; }
+  | 'bvshl' { op = expr::TERM_BV_SHL; }
+  | 'bvlshr' { op = expr::TERM_BV_LSHR; }
+  | 'bvashr' { op = expr::TERM_BV_ASHR; }
+  | 'bvnot' { op = expr::TERM_BV_NOT; }
+  | 'bvand' { op = expr::TERM_BV_AND; }
+  | 'bvor' { op = expr::TERM_BV_OR; }
+  | 'bvnand' { op = expr::TERM_BV_NAND; }
+  | 'bvnor' { op = expr::TERM_BV_NOR; }
+  | 'bvxnor' { op = expr::TERM_BV_XNOR; }
+  | 'concat' { op = expr::TERM_BV_CONCAT; }
+  | 'bvuleq' { op = expr::TERM_BV_ULEQ; }
+  | 'bvsleq' { op = expr::TERM_BV_SLEQ; }
+  | 'bvult' { op = expr::TERM_BV_ULT; }
+  | 'bvslt' { op = expr::TERM_BV_SLT; }
+  | 'bvugeq' { op = expr::TERM_BV_UGEQ; }
+  | 'bvsgeq' { op = expr::TERM_BV_SGEQ; }
+  | 'bvugt' { op = expr::TERM_BV_UGT; }
+  | 'bvsgt' { op = expr::TERM_BV_SGT; }
   ;
 
 /** Parse a list of variables with types */
