@@ -571,7 +571,11 @@ expr::term_ref yices2_internal::mk_term(term_constructor_t constructor, const st
       bv_children.push_back(bool_term_to_bv(children[i]));
     }
     std::reverse(bv_children.begin(), bv_children.end());
-    result = d_tm.mk_term(expr::TERM_BV_CONCAT, bv_children);
+    if (bv_children.size() > 1) {
+      result = d_tm.mk_term(expr::TERM_BV_CONCAT, bv_children);
+    } else {
+      result = bv_children[1];
+    }
     break;
   }
   case YICES_BV_DIV:
