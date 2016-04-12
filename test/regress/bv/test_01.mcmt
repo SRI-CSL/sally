@@ -1,0 +1,29 @@
+(define-state-type vars (
+  (x (_ BitVec 4))
+  (shift (_ BitVec 4))
+  (sum (_ BitVec 4))
+))
+
+(define-states init vars
+  (and
+    (= sum (_ bv0 4))
+    (not (= shift #b0000))
+  )
+)
+
+(define-transition trans vars
+  (and
+    (= next.x (bvlshr state.x state.shift))
+    (= next.sum
+       (bvadd
+         state.sum
+         (concat #b000 ((_ extract 0 0) state.x))
+       )
+    )
+    (not (= next.shift #b0000))
+  )
+)
+
+(define-transition-system T vars init trans)
+
+(query T (bvule sum #b0100))

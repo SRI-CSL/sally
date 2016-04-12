@@ -381,12 +381,12 @@ term_op returns [expr::term_op op = expr::OP_LAST]
   | 'bvnor' { op = expr::TERM_BV_NOR; }
   | 'bvxnor' { op = expr::TERM_BV_XNOR; }
   | 'concat' { op = expr::TERM_BV_CONCAT; }
-  | 'bvuleq' { op = expr::TERM_BV_ULEQ; }
-  | 'bvsleq' { op = expr::TERM_BV_SLEQ; }
+  | 'bvule' { op = expr::TERM_BV_ULEQ; }
+  | 'bvsle' { op = expr::TERM_BV_SLEQ; }
   | 'bvult' { op = expr::TERM_BV_ULT; }
   | 'bvslt' { op = expr::TERM_BV_SLT; }
-  | 'bvugeq' { op = expr::TERM_BV_UGEQ; }
-  | 'bvsgeq' { op = expr::TERM_BV_SGEQ; }
+  | 'bvuge' { op = expr::TERM_BV_UGEQ; }
+  | 'bvsge' { op = expr::TERM_BV_SGEQ; }
   | 'bvugt' { op = expr::TERM_BV_UGT; }
   | 'bvsgt' { op = expr::TERM_BV_SGT; }
   ;

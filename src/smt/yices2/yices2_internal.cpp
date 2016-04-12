@@ -478,6 +478,13 @@ expr::term_ref yices2_internal::bool_term_to_bv(expr::term_ref t) {
   if (d_tm.type_of(t) == d_tm.boolean_type()) {
     expr::term_ref result;
     switch (d_tm.term_of(t).op()) {
+    case expr::CONST_BOOL:
+      if (d_tm.get_boolean_constant(d_tm.term_of(t))) {
+        result = d_bv1;
+      } else {
+        result = d_bv0;
+      }
+      break;
     case expr::TERM_NOT:
       result = d_tm.mk_term(expr::TERM_BV_NOT, bool_term_to_bv(d_tm.term_of(t)[0]));
       break;
@@ -495,6 +502,22 @@ expr::term_ref yices2_internal::bool_term_to_bv(expr::term_ref t) {
       } else {
         result = d_tm.mk_term(expr::TERM_ITE, t, d_bv1, d_bv0);
       }
+      break;
+    }
+    case expr::TERM_ITE: {
+      // Catch cases like (ITE (bit = 1) THEN 1 ELSE 0)
+      const expr::term& t_ite = d_tm.term_of(t);
+      if (t_ite[1] == d_bv1 && t_ite[2] == d_bv0) {
+        const expr::term& cond = d_tm.term_of(t_ite[0]);
+        if (cond.op() == expr::TERM_EQ && cond[1] == d_bv1) {
+          result = cond[0];
+        } else {
+          result = d_tm.mk_term(expr::TERM_ITE, t, d_bv1, d_bv0);
+        }
+      } else {
+        result = d_tm.mk_term(expr::TERM_ITE, t, d_bv1, d_bv0);
+      }
+      break;
     }
     default:
       result = d_tm.mk_term(expr::TERM_ITE, t, d_bv1, d_bv0);
@@ -547,32 +570,33 @@ expr::term_ref yices2_internal::mk_term(term_constructor_t constructor, const st
     for (size_t i = 0; i < children.size(); ++ i) {
       bv_children.push_back(bool_term_to_bv(children[i]));
     }
+    std::reverse(bv_children.begin(), bv_children.end());
     result = d_tm.mk_term(expr::TERM_BV_CONCAT, bv_children);
     break;
   }
   case YICES_BV_DIV:
-    assert(false);
+    result = d_tm.mk_term(expr::TERM_BV_UDIV, children);
     break;
   case YICES_BV_REM:
-    assert(false);
+    result = d_tm.mk_term(expr::TERM_BV_UREM, children);
     break;
   case YICES_BV_SDIV:
-    assert(false);
+    result = d_tm.mk_term(expr::TERM_BV_SDIV, children);
     break;
   case YICES_BV_SREM:
-    assert(false);
+    result = d_tm.mk_term(expr::TERM_BV_SREM, children);
     break;
   case YICES_BV_SMOD:
-    assert(false);
+    result = d_tm.mk_term(expr::TERM_BV_SMOD, children);
     break;
   case YICES_BV_SHL:
-    assert(false);
+    result = d_tm.mk_term(expr::TERM_BV_SHL, children);
     break;
   case YICES_BV_LSHR:
-    assert(false);
+    result = d_tm.mk_term(expr::TERM_BV_LSHR, children);
     break;
   case YICES_BV_ASHR:
-    assert(false);
+    result = d_tm.mk_term(expr::TERM_BV_ASHR, children);
     break;
   case YICES_BV_GE_ATOM:
     result = d_tm.mk_term(expr::TERM_BV_UGEQ, children);
@@ -1292,15 +1316,15 @@ void yices2_internal::generalize(smt::solver::generalization_type type, expr::mo
     efsmt_to_stream(out, &G_y, assertions, assertions_size, d_A_variables, d_T_variables, d_B_variables);
   }
 
-  yices_delete_term_vector(&G_y);
-
-
   if (output::trace_tag_is_enabled("yices2::gen")) {
     std::cerr << "generalization: " << std::endl;
     for (size_t i = 0; i < projection_out.size(); ++ i) {
+      std::cerr << i << ": "; yices_pp_term(stderr, G_y.data[i], 80, 100, 0);
       std::cerr << i << ": " << projection_out[i] << std::endl;
     }
   }
+
+  yices_delete_term_vector(&G_y);
 
   // Free temps
   delete[] variables;

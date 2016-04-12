@@ -351,7 +351,7 @@ bitvector bitvector::smod(const bitvector& rhs) const {
 
 bitvector bitvector::shl(const bitvector& rhs) const {
   assert(d_size == rhs.d_size);
-  if (rhs.d_gmp_int > d_size) {
+  if (rhs.d_gmp_int >= d_size) {
     // shift more than size => 0
     return bitvector(d_size);
   } else {
@@ -363,7 +363,7 @@ bitvector bitvector::shl(const bitvector& rhs) const {
 
 bitvector bitvector::lshr(const bitvector& rhs) const {
   assert(d_size == rhs.d_size);
-  if (d_size < rhs.d_gmp_int) {
+  if (d_size <= rhs.d_gmp_int) {
     // Shift more than size => 0
     return bitvector(d_size);
   } else {
@@ -375,7 +375,7 @@ bitvector bitvector::lshr(const bitvector& rhs) const {
 
 bitvector bitvector::ashr(const bitvector& rhs) const {
   assert(d_size == rhs.d_size);
-  if (d_size < rhs.d_gmp_int) {
+  if (d_size <= rhs.d_gmp_int) {
     // Shift more than size => 0 or 1 depending on top bit
     if (get_bit(d_size-1)) {
       return one(d_size);
