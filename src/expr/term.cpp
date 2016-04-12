@@ -160,14 +160,14 @@ void term::to_stream(std::ostream& out) const {
   switch (lang) {
   case output::MCMT:
   case output::HORN: {
-    std::vector<expr::term_ref> definitions;
-    mk_let_cache(*tm, let_cache, definitions);
     if (output::get_use_lets(out)) {
+      std::vector<expr::term_ref> definitions;
+      mk_let_cache(*tm, let_cache, definitions);
       to_stream_smt_with_let(out, *tm, let_cache, definitions);
+      tm->reset_fresh_variables();
     } else {
       to_stream_smt_without_let(out, *tm, let_cache, false);
     }
-    tm->reset_fresh_variables();
     break;
   }
   case output::NUXMV:

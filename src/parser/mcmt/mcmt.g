@@ -294,6 +294,7 @@ term_list[std::vector<expr::term_ref>& out]
 constant returns [expr::term_ref t = expr::term_ref()] 
   : bc = bool_constant     { t = bc; } 
   | dc = decimal_constant  { t = dc; } 
+  | bvc = bitvector_constant { t = bvc; }
   ; 
 
 bool_constant returns [expr::term_ref t = expr::term_ref()]
@@ -307,6 +308,27 @@ decimal_constant returns [expr::term_ref t = expr::term_ref()]
      t = STATE->tm().mk_rational_constant(value);
     }
   ; 
+
+bitvector_constant returns [expr::term_ref t = expr::term_ref()]
+  : HEX_NUMERAL {
+     std::string hex_number(STATE->token_text($HEX_NUMERAL)); 
+     expr::integer int_value(hex_number.substr(2), 16);
+     expr::bitvector value(hex_number.size()*4, int_value);
+     t = STATE->tm().mk_bitvector_constant(value);
+    }
+  | BIN_NUMERAL {
+     std::string bin_number(STATE->token_text($BIN_NUMERAL)); 
+     expr::integer int_value(bin_number.substr(2), 2);
+     expr::bitvector value(bin_number.size(), int_value);
+     t = STATE->tm().mk_bitvector_constant(value);
+    }
+  | '(_' 'bv' v = NUMERAL s = NUMERAL ')' {
+     expr::integer int_value(STATE->token_text(v), 10);
+     expr::integer size_value(STATE->token_text(s), 10);
+     expr::bitvector value(size_value.get_unsigned(), int_value);
+     t = STATE->tm().mk_bitvector_constant(value);     
+    }
+  ;
 
 term_op returns [expr::term_op op = expr::OP_LAST]
   : 'and'            { op = expr::TERM_AND; } 
@@ -334,9 +356,11 @@ variable_list[std::vector<std::string>& out_vars, std::vector<expr::term_ref>& o
 } 
   : '(' 
     ( '(' 
+        // Variable name
         symbol[var_id, parser::MCMT_OBJECT_LAST, false] { 
         	out_vars.push_back(var_id); 
         } 
+        // Type: either basic or composite (TODO: bitvector) 
         symbol[type_id, parser::MCMT_TYPE, true] { 
         	out_types.push_back(STATE->get_type(type_id)); 
         }
@@ -366,7 +390,17 @@ ALPHA : 'a'..'z' | 'A'..'Z';
 /** Matches a numeral (sequence of digits) */
 NUMERAL: DIGIT+;
 
+/** Matches a binary numeral (sequence of digits) */
+BIN_NUMERAL: '#b' ('0'|'1')+;
+
+/** Matches a binary numeral (sequence of digits) */
+HEX_NUMERAL: '#h' ('0'|'1')+;
+
 /** Matches a digit */
 fragment 
 DIGIT : '0'..'9';  
+
+/** MAthces a hexadecimal digit */
+fragment 
+HEX_DIGIT : DIGIT | 'a'..'f' | 'A'..'F';
  
