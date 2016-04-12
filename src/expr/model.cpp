@@ -362,7 +362,7 @@ public:
     }
     case TERM_BV_SUB: {
       const bitvector& lhs = children_values[0].get_bitvector();
-      const bitvector& rhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
       v = lhs.sub(rhs);
       assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
@@ -378,35 +378,35 @@ public:
     }
     case TERM_BV_UDIV: { // NOTE: semantics of division is x/0 = 111...111
       const bitvector& lhs = children_values[0].get_bitvector();
-      const bitvector& rhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
       v = lhs.udiv(rhs);
       assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
     }
     case TERM_BV_SDIV: {
       const bitvector& lhs = children_values[0].get_bitvector();
-      const bitvector& rhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
       v = lhs.sdiv(rhs);
       assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
     }
     case TERM_BV_UREM: {
       const bitvector& lhs = children_values[0].get_bitvector();
-      const bitvector& rhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
       v = lhs.urem(rhs);
       assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
     }
     case TERM_BV_SREM: {
       const bitvector& lhs = children_values[0].get_bitvector();
-      const bitvector& rhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
       v = lhs.srem(rhs);
       assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
     }
     case TERM_BV_SMOD: {
       const bitvector& lhs = children_values[0].get_bitvector();
-      const bitvector& rhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
       v = lhs.smod(rhs);
       assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
@@ -422,21 +422,21 @@ public:
     }
     case TERM_BV_SHL: {
       const bitvector& lhs = children_values[0].get_bitvector();
-      const bitvector& rhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
       v = lhs.shl(rhs);
       assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
     }
     case TERM_BV_LSHR: {
       const bitvector& lhs = children_values[0].get_bitvector();
-      const bitvector& rhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
       v = lhs.lshr(rhs);
       assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
     }
     case TERM_BV_ASHR: {
       const bitvector& lhs = children_values[0].get_bitvector();
-      const bitvector& rhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
       v = lhs.ashr(rhs);
       assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
       break;
@@ -490,49 +490,49 @@ public:
     }
     case TERM_BV_ULEQ: {
       const bitvector& lhs = children_values[0].get_bitvector();
-      const bitvector& rhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
       v = lhs.uleq(rhs);
       break;
     }
     case TERM_BV_SLEQ: {
       const bitvector& lhs = children_values[0].get_bitvector();
-      const bitvector& rhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
       v = lhs.sleq(rhs);
       break;
     }
     case TERM_BV_ULT: {
       const bitvector& lhs = children_values[0].get_bitvector();
-      const bitvector& rhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
       v = lhs.ult(rhs);
       break;
     }
     case TERM_BV_SLT: {
       const bitvector& lhs = children_values[0].get_bitvector();
-      const bitvector& rhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
       v = lhs.slt(rhs);
       break;
     }
     case TERM_BV_UGEQ: {
       const bitvector& lhs = children_values[0].get_bitvector();
-      const bitvector& rhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
       v = lhs.ugeq(rhs);
       break;
     }
     case TERM_BV_SGEQ: {
       const bitvector& lhs = children_values[0].get_bitvector();
-      const bitvector& rhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
       v = lhs.sgeq(rhs);
       break;
     }
     case TERM_BV_UGT: {
       const bitvector& lhs = children_values[0].get_bitvector();
-      const bitvector& rhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
       v = lhs.ugt(rhs);
       break;
     }
     case TERM_BV_SGT: {
       const bitvector& lhs = children_values[0].get_bitvector();
-      const bitvector& rhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
       v = lhs.sgt(rhs);
       break;
     }
@@ -623,6 +623,11 @@ void model::to_stream(std::ostream& out) const {
 
 std::ostream& operator << (std::ostream& out, const model& m) {
   m.to_stream(out);
+  return out;
+}
+
+std::ostream& operator << (std::ostream& out, const model::ref& m_ref) {
+  m_ref->to_stream(out);
   return out;
 }
 

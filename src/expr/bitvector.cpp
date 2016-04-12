@@ -357,6 +357,9 @@ bitvector bitvector::shl(const bitvector& rhs) const {
   } else {
     // concat shift size of zeroes to the right
     size_t shift_size = rhs.get_unsigned();
+    if (shift_size == 0) {
+      return rhs;
+    }
     return bitvector(d_size, concat(bitvector(shift_size)));
   }
 }
@@ -368,6 +371,9 @@ bitvector bitvector::lshr(const bitvector& rhs) const {
     return bitvector(d_size);
   } else {
     size_t shift_size = rhs.get_unsigned();
+    if (shift_size == 0) {
+      return rhs;
+    }
     // concat shift size of zeroes to thje left
     return bitvector(d_size, bitvector(shift_size).concat(extract(shift_size, d_size - 1)));
   }
@@ -383,12 +389,15 @@ bitvector bitvector::ashr(const bitvector& rhs) const {
       return bitvector(d_size);
     }
   } else {
+    size_t shift_size = rhs.get_unsigned();
+    if (shift_size == 0) {
+      return rhs;
+    }
     // What to pad with
     bitvector pad(d_size);
     if (get_bit(d_size-1)) {
       pad = one(d_size);
     }
-    size_t shift_size = rhs.get_unsigned();
     // concat shift size of zeroes to thje left
     return bitvector(d_size, pad.concat(extract(shift_size, d_size - 1)));
   }
