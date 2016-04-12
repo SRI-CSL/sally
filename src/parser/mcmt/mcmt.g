@@ -334,8 +334,8 @@ bitvector_constant returns [expr::term_ref t = expr::term_ref()]
      expr::bitvector value(bin_number.size(), int_value);
      t = STATE->tm().mk_bitvector_constant(value);
     }
-  | '(_' 'bv' v = NUMERAL s = NUMERAL ')' {
-     expr::integer int_value(STATE->token_text(v), 10);
+  | '(_' v = BV_NUMERAL s = NUMERAL ')' {
+     expr::integer int_value(STATE->token_text(v).substr(2), 10);
      expr::integer size_value(STATE->token_text(s), 10);
      expr::bitvector value(size_value.get_unsigned(), int_value);
      t = STATE->tm().mk_bitvector_constant(value);     
@@ -430,6 +430,9 @@ COMMENT
 WHITESPACE
   : (' ' | '\t' | '\f' | '\r' | '\n')+ { SKIP(); }
   ;
+
+/** Bitvector numeral */
+BV_NUMERAL: 'bv' DIGIT+;
 
 /** Matches a symbol. */
 SYMBOL
