@@ -1,5 +1,6 @@
-open Lisp_ast
-open Sal_ast
+open Ast
+open Ast.Lispy_ast
+open Ast.Sal_ast
 
 exception Not_implemented
 
@@ -40,12 +41,12 @@ let rec sal_type_to_sally_type ctx = function
 		| Type(t) -> t
 		| _ -> raise (UnknownType(e))
 		)
-	| Array(t1, t2) -> Lisp_ast.Array(sal_type_to_sally_type ctx t1, sal_type_to_sally_type ctx t2)
+	| Array(t1, t2) -> Lispy_ast.Array(sal_type_to_sally_type ctx t1, sal_type_to_sally_type ctx t2)
 	| Enum(l) -> Real
 	| Subtype(_) -> Real
 	| Range(i1, i2) ->
 		match eval_sal ctx i1, eval_sal ctx i2 with
-		| Value(a), Value(b) -> Lisp_ast.Range (int_of_string a, int_of_string b)
+		| Value(a), Value(b) -> Lispy_ast.Range (int_of_string a, int_of_string b)
 		| _ -> failwith "couldn't evaluate properly"
 
 let sal_state_vars_to_state_type (ctx:sally_context) name vars =
@@ -56,13 +57,13 @@ let sal_state_vars_to_state_type (ctx:sally_context) name vars =
 
 	let type_init_ctx = List.fold_left
 		(fun ctx (n, t) ->
-			StrMap.add n (Expr (Lisp_ast.Ident(n), t)) ctx
+			StrMap.add n (Expr (Lispy_ast.Ident(n), t)) ctx
 		) ctx sally_vars in
 
 	let transition_ctx = List.fold_left
 		(fun ctx (n, t) ->
-			let ctx = StrMap.add n (Expr(Lisp_ast.Ident ("state."^n), t)) ctx in
-			StrMap.add (n^"'") (Expr(Lisp_ast.Ident("next."^n), t)) ctx
+			let ctx = StrMap.add n (Expr(Lispy_ast.Ident ("state."^n), t)) ctx in
+			StrMap.add (n^"'") (Expr(Lispy_ast.Ident("next."^n), t)) ctx
 		) ctx sally_vars in
 
 	type_init_ctx, transition_ctx, ((name, sally_vars):state_type)
@@ -83,7 +84,7 @@ let rec sal_expr_to_lisp (ctx:sally_context) = function
 	| Lt(a, b) -> Greater(sal_expr_to_lisp ctx b, sal_expr_to_lisp ctx a)
 	| Le(a, b) -> GreaterEqual(sal_expr_to_lisp ctx b, sal_expr_to_lisp ctx a)
 	| Implies(a, b) -> Or(Not(sal_expr_to_lisp ctx a), sal_expr_to_lisp ctx b)
-	| Add(a, b) -> Lisp_ast.Add(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
+	| Add(a, b) -> Lispy_ast.Add(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
 
 	| Next(s) -> (failwith ("Next ? " ^ s))
 
@@ -126,7 +127,7 @@ let rec sal_expr_to_lisp (ctx:sally_context) = function
 				let cond = ref True in
 				let _ = for i = a to b do
 					let (tmp_ctx:sally_context) = StrMap.add t (Expr(Value(string_of_int i), Real)) ctx in
-					cond := Lisp_ast.And(!cond, sal_expr_to_lisp tmp_ctx (Forall((end_decl, sal_type)::q, expr)))
+					cond := Lispy_ast.And(!cond, sal_expr_to_lisp tmp_ctx (Forall((end_decl, sal_type)::q, expr)))
 				done
 				in !cond
 		end
@@ -159,7 +160,7 @@ let sal_real_assignment_to_state ctx =
 		let intermediate_context = StrMap.add in_name (Expr(sal_expr_to_lisp ctx n, sal_type_to_sally_type ctx t)) ctx in
 		sal_expr_to_lisp intermediate_context expr
 	in
-	List.fold_left (fun l a -> Lisp_ast.And(l, to_condition a)) True
+	List.fold_left (fun l a -> Lispy_ast.And(l, to_condition a)) True
 
 let sal_init_to_state ctx type_name name assign =
 	name, type_name, sal_real_assignment_to_state ctx assign
@@ -172,13 +173,13 @@ let sal_transition_to_transition ctx n = function
 		match a with
 		| Guarded(expr, _) ->
 			let guard = sal_expr_to_lisp ctx expr in
-			Lisp_ast.And(l, Lisp_ast.Not(guard))
+			Lispy_ast.And(l, Lispy_ast.Not(guard))
 		| _ -> raise Not_found
 		) True all_guarded
 	in
 
 	let cond = List.fold_left (fun l a -> match a with
-	| Default(assign) -> Lisp_ast.Or(l, And(all_conditions, sal_real_assignment_to_state ctx assign))
+	| Default(assign) -> Lispy_ast.Or(l, And(all_conditions, sal_real_assignment_to_state ctx assign))
 	| Guarded(expr, assignment) ->
 		let guard = sal_expr_to_lisp ctx expr in
 		let implies = sal_real_assignment_to_state ctx assignment in

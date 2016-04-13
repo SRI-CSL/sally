@@ -1,5 +1,5 @@
 {
-  open Salparse2
+  open Sal_parser
   let keyword_table = Hashtbl.create 53
   let keyword k = try Hashtbl.find keyword_table k with Not_found -> IDENT(k)
   let _ =

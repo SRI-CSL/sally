@@ -1,1 +1,1 @@
-add_ocaml_target("parse.d.byte")
+add_ocaml_target("frontend.d.byte")

@@ -1,5 +1,5 @@
 %{
-  open Sal_ast
+  open Ast.Sal_ast
 %}
 
 /*
@@ -57,7 +57,7 @@
 
 %start context
 
-%type <Sal_ast.sal_context> context
+%type <Ast.Sal_ast.sal_context> context
 
 %%
 
