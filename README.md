@@ -170,8 +170,9 @@ states of the system and the transitions that the system can make.
 
 #### Queries
 
-A query asks a question whether a state property is true in the given transition 
-system. For example, in the system ``T1``, it is clear that we the 
+A query asks whether a state property is invariant for the given transition 
+system (i.e., whether the state property is true in all reachable states). 
+For example, in the system ``T1``, it is clear that we the 
 variables ``x`` and ``y`` will always be equal and non-negative. We can check 
 these with the following queries.
 ```lisp
@@ -202,7 +203,7 @@ The full example above is available in ``examples/example.mcmt``.
     
 ### Usage 
 
-To see the full set of options run ``sally -h``. Some typical examples are as 
+To see the full set of options, run ``sally -h``. Some typical examples are as 
 follows
 
 * Checking the properties with the bounded model-checking (BMC) engine
