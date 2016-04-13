@@ -21,102 +21,99 @@
 open Ast.Lispy_ast
 
 type indentation = In | Out | None
-let print_to_ft f ?nl:(nl=false) ?i:(i=None) s =
-	(match i with
-	| In -> f.i <- f.i + 1
-	| Out -> f.i <- f.i - 1
-	| None -> ());
-	if i = In || nl then
-		Format.fprintf f.ft "%s\n%s" s (String.make (f.i) '\t')
-	else if i = Out && f.i = 0 then
-		Format.fprintf f.ft "%s@." s
-	else
-		Format.fprintf f.ft "%s" s;
 
-type fmt = ?nl:bool -> ?i:indentation->string->unit
-
-let rec get_expr_depth = function
-	| Value(_) | True | False | Ident(_) -> 1
-	| Equality(a, b) | GreaterEqual(a,b) | Greater(a, b) | Or(a, b) | And(a, b) | Add(a,b) -> (max (get_expr_depth a) (get_expr_depth b)) + 1
-	| Ite(a, b, c) -> (max (get_expr_depth c) (max (get_expr_depth a) (get_expr_depth b))) + 1
-	| Not(a) -> 1 + get_expr_depth a
-
-let rec print_expr (f:fmt) =
+let rec print_expr f =
 	let print_folded s a b =
-		if get_expr_depth (Equality(a, b)) >= 5 then
-			begin
-			f ~i:In ("(" ^ s ^ " ");
-			print_expr f a; f ~nl:true ""; print_expr f b;
-			f ~i:Out ")";
-			end
-		else
-			begin
-			f ("(" ^ s ^ " ");
-			print_expr f a; f " "; print_expr f b;
-			f ")";
-			end
+		Format.fprintf f "(%s  @[<v>" s;
+		print_expr f a; Format.fprintf f " "; print_expr f b;
+		Format.fprintf f "@])"
 	in
 	let print_folded3 s a b c =
-		if get_expr_depth (Ite(a, b,c)) >= 5 then
-			begin
-			f ~i:In ("(" ^ s ^ " ");
-			print_expr f a; f ~nl:true ""; print_expr f b; f ~nl:true ""; print_expr f c;
-			f ~i:Out ")";
-			end
-		else
-			begin
-			f ("(" ^ s ^ " ");
-			print_expr f a; f " "; print_expr f b; f " "; print_expr f c;
-			f ")";
-			end
+		Format.fprintf f "@(%s@\n@[" s;
+		print_expr f a; Format.fprintf f " ";
+		print_expr f b; Format.fprintf f " ";
+		print_expr f c;
+		Format.fprintf f "@])"
 	in
 	function
 	| Equality(a, b) -> print_folded "=" a b
-	| Value(s) -> f s
-	| Ident(s) -> f s
+	| Value(s) -> Format.fprintf f "%s" s
+	| Ident(s) -> Format.fprintf f "%s" s
 	| GreaterEqual(a, b) ->
 		print_folded ">=" a b
 	| Greater(a, b) ->
 		print_folded ">" a b
+	| Or(False, b) | Or (b, False) -> print_expr f b
 	| Or(a, b) ->
-		print_folded "or" a b
+		begin
+		Format.fprintf f "(or @[<v>";
+		let rec expand_or = function
+		| Or(False, a) | Or(a, False) -> expand_or a
+		| Or(c, d) ->
+			begin
+			expand_or c;
+			Format.fprintf f "@;";
+			expand_or d;
+			end
+		| a -> print_expr f a;
+		in
+		expand_or a;
+		Format.fprintf f "@;";
+		expand_or b;
+		Format.fprintf f "@])";
+		end
 	| Add(a, b) ->
 		print_folded "+" a b
+	| And(True, b) | And (b, True) -> print_expr f b
 	| And(a, b) ->
-		print_folded "and" a b
+		begin
+		Format.fprintf f "(and @[<v>";
+		let rec expand_and = function
+		| And(True, a) -> expand_and a
+		| And(a, True) -> expand_and a
+		| And(c, d) ->
+			begin
+			expand_and c;
+			Format.fprintf f "@;";
+			expand_and d;
+			end
+		| a -> print_expr f a
+		in
+		expand_and a;
+		Format.fprintf f "@;";
+		expand_and b;
+		Format.fprintf f "@])";
+		end
 	| Ite(a, b, c) ->
 		print_folded3 "ite" a b c
 	| Not(a) ->
 		begin
-		f "(not ";
+		Format.fprintf f "@[(not ";
 		print_expr f a;
-		f ")";
+		Format.fprintf f ")@]";
 		end
-	| True -> f "true"
-	| False -> f "false"
+	| True -> Format.fprintf f "true"
+	| False -> Format.fprintf f "false"
 
-let print_transition (f:fmt) ((ident, state_type, sally_cond):transition) =
-	f ~i:In ("(define-transition " ^ ident ^ " state");
-	f ~nl:true "";
+let print_transition f ((ident, state_type, sally_cond):transition) =
+	Format.fprintf f "@[(define-transition %s state @;  " ident;
 	print_expr f sally_cond;
-	f ~i:Out ")"
+	Format.fprintf f ")@]"
 
-let print_state (f:fmt) ((ident, state_type, sally_cond):state) =
-	f ~i:In ("(define-states " ^ ident ^ " state");
-	f ~nl:true "";
+let print_state f ((ident, state_type, sally_cond):state) =
+	Format.fprintf f "@[(define-states %s state @;  " ident;
 	print_expr f sally_cond;
-	f ~i:Out ")"
+	Format.fprintf f ")@]"
 
 
 let sally_type_to_string = function
-| Real -> "Real"
-| Bool -> "Bool"
-| Range(_, _) -> "Real"
-| Array(_, _) -> "Real"
+	| Real -> "Real"
+	| Bool -> "Bool"
+	| Range(_, _) -> "Real"
+	| Array(_, _) -> "Real"
 
-let print_state_type (f:fmt) (ident, var_list) =
-	f ~i:In ("(define-state-type state");
-	f ~nl:true "(";
+let print_state_type f (ident, var_list) =
+	Format.fprintf f "@[(define-state-type state @;  (@[<v>";
 	let rec print_variable (name, sally_type) =
 		match sally_type with
 		| Array(Range(array_inf, array_sup), b) ->
@@ -126,26 +123,25 @@ let print_state_type (f:fmt) (ident, var_list) =
 			done;
 			end
 		| _ ->
-			f ~nl:true ("(" ^ name ^ " " ^ (sally_type_to_string sally_type) ^ ")")
+			Format.fprintf f "(%s %s)@\n" name (sally_type_to_string sally_type)
 	in
 	List.iter print_variable var_list;
-	f ~i:Out "))"
+	Format.fprintf f "@]))@]@\n"
 
-let print_ts (f:fmt) (name, state_type, init, transition) =
+let print_ts f (name, state_type, init, transition) =
 	print_state_type f state_type;
+	Format.fprintf f "@;";
 	print_state f init;
+	Format.fprintf f "@;";
 	print_transition f transition;
-	f ~i:In ("(define-transition-system " ^ name);
-	f ~nl:true "state";
-	f ~nl:true "init";
-	f "trans";
-	f ~i:Out ")"
+	Format.fprintf f "@;";
+	Format.fprintf f "(define-transition-system %s state init trans)" name
 
 let print_query ch q =
-	let ft = {ft= Format.formatter_of_out_channel ch; i=0} in
-	let f = print_to_ft ft in
+	let f = Format.formatter_of_out_channel ch in
 	let transition_system, cond = q in
 	print_ts f transition_system;
-	f ~i:In ("(query " ^ (ts_name transition_system));
+	Format.fprintf f "@;@\n";
+	Format.fprintf f "@[(query %s " (ts_name transition_system);
 	print_expr f cond;
-	f ~i:Out ") "
+	Format.fprintf f "@])"
