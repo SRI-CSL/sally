@@ -37,6 +37,7 @@ exception Member_without_set
 exception Iteration_on_non_range_type
 exception Need_transition
 exception Unknown_type of string
+exception Bad_left_hand_side
 
 
 (** Union of two contexts, if a key is present in both a and b, the association in a in on top of
@@ -175,33 +176,53 @@ let sal_state_vars_to_state_type (ctx:sally_context) name vars =
 	type_init_ctx, transition_ctx, ((name, sally_vars):state_type)
 
 (** Converts a list of sal_assignments to a single big lispy condition *) 
-let sal_assignments_to_condition ctx =
+let sal_assignments_to_condition ?vars_to_defined:(s=[]) ctx assignment =
+	let variables_to_init = ref s in
+	let forget_variable n =
+		variables_to_init := List.filter (fun (name, _) -> name <> n) !variables_to_init
+	in
 	let to_condition = function
 	| Assign(n, expr) ->
 		begin
+		(match n with 
+			| Ident(name) -> forget_variable name
+			| _ -> raise Bad_left_hand_side);
 		match expr with
 		| Array_literal(name, type_data, expr) -> failwith "Array litteral unsupported"
 		| _ -> Equality(sal_expr_to_lisp ctx n, sal_expr_to_lisp ctx expr)
 		end
 	| Member(n, Set_literal(in_name, t, expr)) ->
+		let () = (match n with
+			| Ident(name) -> forget_variable name
+			| _ -> raise
+		Bad_left_hand_side) in
 		let intermediate_context = StrMap.add in_name (Expr(sal_expr_to_lisp ctx n, sal_type_to_sally_type ctx t)) ctx in
 		sal_expr_to_lisp intermediate_context expr
 	| Member(_) -> raise Member_without_set
 	in
-	List.fold_left (fun l a -> Lispy_ast.And(l, to_condition a)) True
+	let explicit_condition = List.fold_left (
+		fun l a ->
+			Lispy_ast.And(l, to_condition a)
+		) True assignment in
+	let implicit_condition = List.fold_left (
+		fun l (name, _) ->
+			Lispy_ast.And(l, Equality(sal_expr_to_lisp ctx (Ident name), sal_expr_to_lisp ctx (Ident (name ^ "'"))))
+		) True !variables_to_init in
+	Lispy_ast.And(explicit_condition, implicit_condition)
 
 (** Converts an assignment to a lispy state of type {i type_name} and named {i name} *)
-let sal_assignments_to_lispy_state ctx type_name name assign =
+let sal_assignments_to_lispy_state ctx state_type name assign =
+	let type_name, variables = state_type in
 	name, type_name, sal_assignments_to_condition ctx assign
 
 (** Takes a Sal transition and return a lispy one.
   * @param ctx a sally_context
   * @param transition_name the trasition systen name, usually the sal module name
   *)
-let sal_transition_to_transition ctx transition_name = function
+let sal_transition_to_transition ((type_name, variables):state_type) ctx transition_name = function
 | NoTransition -> raise Need_transition
 | Assignments(assign) (* Unguarded transitions *) -> 
-	"trans", transition_name, sal_assignments_to_condition ctx assign
+	"trans", transition_name, sal_assignments_to_condition ~vars_to_defined:variables ctx assign
 | GuardedCommands(l) ->
 	let all_guarded = List.filter (function | Guarded(_) -> true | _ -> false) l in
 	let all_conditions = List.fold_left (fun l a ->
@@ -214,18 +235,21 @@ let sal_transition_to_transition ctx transition_name = function
 	in
 
 	let cond = List.fold_left (fun l a -> match a with
-	| Default(assign) -> Lispy_ast.Or(l, And(all_conditions, sal_assignments_to_condition ctx assign))
+	| Default(assign) ->
+		Lispy_ast.Or(l,
+			And(all_conditions, sal_assignments_to_condition ~vars_to_defined:variables ctx assign)
+		)
 	| Guarded(expr, assignment) ->
 		let guard = sal_expr_to_lisp ctx expr in
-		let implies = sal_assignments_to_condition ctx assignment in
+		let implies = sal_assignments_to_condition ~vars_to_defined:variables ctx assignment in
 		Or(l, And(guard, implies))
 	) False l in
 	"trans", transition_name, cond
 
 let sal_module_to_lisp ctx (name, sal_module) =
 	let type_init_ctx, transition_ctx, state_type = sal_state_vars_to_state_type ctx name sal_module.state_vars in
-	let initial_state = sal_assignments_to_lispy_state type_init_ctx name "init" sal_module.initialization in
-	let transitions = sal_transition_to_transition transition_ctx name sal_module.transition in
+	let initial_state = sal_assignments_to_lispy_state type_init_ctx state_type "init" sal_module.initialization in
+	let transitions = sal_transition_to_transition state_type transition_ctx name sal_module.transition in
 	type_init_ctx, (name, state_type, initial_state, transitions)
 
 (** Takes a sal assertion and returns a lispy query. The model used in the assertion must already

@@ -24,12 +24,12 @@ type indentation = In | Out | None
 
 let rec print_expr f =
 	let print_folded s a b =
-		Format.fprintf f "(%s  @[<v>" s;
+		Format.fprintf f "(%s @[<v>" s;
 		print_expr f a; Format.fprintf f " "; print_expr f b;
 		Format.fprintf f "@])"
 	in
 	let print_folded3 s a b c =
-		Format.fprintf f "@(%s@\n@[" s;
+		Format.fprintf f "(%s @[" s;
 		print_expr f a; Format.fprintf f " ";
 		print_expr f b; Format.fprintf f " ";
 		print_expr f c;
@@ -130,11 +130,11 @@ let print_state_type f (ident, var_list) =
 
 let print_ts f (name, state_type, init, transition) =
 	print_state_type f state_type;
-	Format.fprintf f "@;";
+	Format.fprintf f "@\n";
 	print_state f init;
-	Format.fprintf f "@;";
+	Format.fprintf f "@\n";
 	print_transition f transition;
-	Format.fprintf f "@;";
+	Format.fprintf f "@\n";
 	Format.fprintf f "(define-transition-system %s state init trans)" name
 
 let print_query ch q =
