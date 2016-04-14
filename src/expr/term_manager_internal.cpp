@@ -524,9 +524,11 @@ public:
 };
 
 void term_manager_internal::compute_type(term_ref t) {
-  type_computation_visitor visitor(*this, d_type_cache);
-  term_visit_topological<type_computation_visitor, term_ref, term_ref_hasher> visit_topological(visitor);
-  visit_topological.run(t);
+  if (d_type_cache.find(t) == d_type_cache.end()) {
+    type_computation_visitor visitor(*this, d_type_cache);
+    term_visit_topological<type_computation_visitor, term_ref, term_ref_hasher> visit_topological(visitor);
+    visit_topological.run(t);
+  }
 }
 
 void term_manager_internal::typecheck(term_ref t_ref) {

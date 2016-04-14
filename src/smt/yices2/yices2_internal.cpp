@@ -577,7 +577,7 @@ expr::term_ref yices2_internal::mk_term(term_constructor_t constructor, const st
     if (bv_children.size() > 1) {
       result = d_tm.mk_term(expr::TERM_BV_CONCAT, bv_children);
     } else {
-      result = bv_children[1];
+      result = bv_children[0];
     }
     break;
   }
@@ -760,6 +760,11 @@ public:
   void visit(term_t yices_term) {
 
     // All children visited already, so they exist in cache
+
+    if (output::trace_tag_is_enabled("yices2::to_term")) {
+      std::cerr << "to_term::visit: ";
+      yices_pp_term(stderr, yices_term, 80, 100, 0);
+    }
 
     expr::term_ref result;
 
