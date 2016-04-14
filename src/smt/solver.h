@@ -296,13 +296,5 @@ public:
 
 std::ostream& operator << (std::ostream& out, solver::formula_class fc);
 
-/** Name transformer for any output to smt2 */
-class smt2_name_transformer : public utils::name_transformer {
-public:
-  std::string apply(std::string id) const {
-    return "|" + id + "|";
-  }
-};
-
 }
 }

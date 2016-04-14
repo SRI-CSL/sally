@@ -1415,10 +1415,6 @@ void yices2_internal::efsmt_to_stream(std::ostream& out, const term_vector_t* G_
 
   out << expr::set_tm(d_tm);
 
-  const utils::name_transformer* old_transformer = d_tm.get_name_transformer();
-  smt2_name_transformer name_transformer;
-  d_tm.set_name_transformer(&name_transformer);
-
   out << "(set-logic LRA)" << std::endl;
   out << "(set-info :smt-lib-version 2.0)" << std::endl;
   out << "(set-info :status unsat)" << std::endl;
@@ -1464,8 +1460,6 @@ void yices2_internal::efsmt_to_stream(std::ostream& out, const term_vector_t* G_
 
   out << std::endl;
   out << "(check-sat)" << std::endl;
-
-  d_tm.set_name_transformer(old_transformer);
 }
 
 
