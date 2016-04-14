@@ -36,9 +36,11 @@ namespace expr {
 enum term_op {
 
   // Types
+  TYPE_TYPE, // Type of types
   TYPE_BOOL,
   TYPE_INTEGER,
   TYPE_REAL,
+  TYPE_STRING,
   TYPE_BITVECTOR,
   TYPE_STRUCT,
 

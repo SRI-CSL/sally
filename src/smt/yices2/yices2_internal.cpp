@@ -298,7 +298,8 @@ type_t yices2_internal::to_yices2_type(expr::term_ref ref) {
 
   type_t result = NULL_TERM;
 
-  switch (d_tm.term_of(ref).op()) {
+  expr::term_op op = d_tm.term_of(ref).op();
+  switch (op) {
   case expr::TYPE_BOOL:
     result = s_bool_type;
     break;
@@ -370,6 +371,8 @@ public:
   void visit(expr::term_ref ref) {
     // At this point all the children are in the conversion cache
     term_t result = NULL_TERM;
+
+    TRACE("yices2:to_yices") << "convert::visit(" << ref << ")" << std::endl;
 
     // The term
     const expr::term& t = d_tm.term_of(ref);
@@ -467,7 +470,7 @@ public:
 
 term_t yices2_internal::to_yices2_term(expr::term_ref ref) {
   to_yices_visitor visitor(d_tm, *this, *d_conversion_cache);
-  expr::term_visit_topological<to_yices_visitor, expr::term_ref, expr::term_ref_hasher> topological_visit(d_tm, visitor);
+  expr::term_visit_topological<to_yices_visitor, expr::term_ref, expr::term_ref_hasher> topological_visit(visitor);
   topological_visit.run(ref);
   term_t result = d_conversion_cache->get_term_cache(ref);
   assert(result != NULL_TERM);
@@ -922,7 +925,7 @@ public:
 
 expr::term_ref yices2_internal::to_term(term_t yices_term) {
   to_term_visitor visitor(d_tm, *this, *d_conversion_cache);
-  expr::term_visit_topological<to_term_visitor, term_t> visit_topological(d_tm, visitor);
+  expr::term_visit_topological<to_term_visitor, term_t> visit_topological(visitor);
   visit_topological.run(yices_term);
   expr::term_ref result = d_conversion_cache->get_term_cache(yices_term);
   assert(!result.is_null());

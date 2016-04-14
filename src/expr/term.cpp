@@ -76,6 +76,8 @@ void term::mk_let_cache(term_manager& tm, expr_let_cache& let_cache, std::vector
   case TYPE_REAL:
   case TYPE_STRUCT:
   case TYPE_BITVECTOR:
+  case TYPE_STRING:
+  case TYPE_TYPE:
   case VARIABLE:
   case CONST_BOOL:
   case CONST_RATIONAL:
@@ -273,6 +275,10 @@ std::string get_smt_keyword(term_op op) {
     return "Integer";
   case TYPE_REAL:
     return "Real";
+  case TYPE_STRING:
+    return "String";
+  case TYPE_TYPE:
+    return "Type";
   default:
     assert(false);
     return "unknown";
@@ -324,6 +330,8 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
   case TYPE_BOOL:
   case TYPE_INTEGER:
   case TYPE_REAL:
+  case TYPE_STRING:
+  case TYPE_TYPE:
     out << get_smt_keyword(d_op);
     break;
   case TYPE_STRUCT:

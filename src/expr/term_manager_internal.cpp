@@ -18,6 +18,8 @@
 
 #include "expr/term_manager_internal.h"
 #include "expr/term_manager.h"
+#include "expr/term_visitor.h"
+
 
 #include "utils/exception.h"
 #include "utils/trace.h"
@@ -46,9 +48,11 @@ term_manager_internal::term_manager_internal(utils::statistics& stats)
   stats.add(d_stat_terms);
 
   // Create the types
+  d_typeType = term_ref_strong(*this, mk_term<TYPE_TYPE>(alloc::empty_type()));
   d_booleanType = term_ref_strong(*this, mk_term<TYPE_BOOL>(alloc::empty_type()));
   d_integerType = term_ref_strong(*this, mk_term<TYPE_INTEGER>(alloc::empty_type()));
   d_realType = term_ref_strong(*this, mk_term<TYPE_REAL>(alloc::empty_type()));
+  d_stringType = term_ref_strong(*this, mk_term<TYPE_STRING>(alloc::empty_type()));
 }
 
 term_manager_internal::~term_manager_internal() {
@@ -74,6 +78,7 @@ bool is_type(term_op op) {
   case TYPE_REAL:
   case TYPE_STRUCT:
   case TYPE_BITVECTOR:
+  case TYPE_STRING:
     return true;
   default:
     return false;
@@ -111,257 +116,421 @@ bool term_manager_internal::types_comparable(term_ref t1, term_ref t2) const {
   return (is_subtype_of(t1, t2) || is_subtype_of(t2, t1));
 }
 
-bool term_manager_internal::typecheck(term_ref t_ref) {
-  const term& t = term_of(t_ref);
-  term_op op = t.op();
+class type_computation_visitor {
 
-  bool ok = true;
+  typedef boost::unordered_map<term_ref, term_ref, term_ref_hasher> term_to_term_map;
 
-  switch (op) {
-  case TYPE_BOOL:
-  case TYPE_INTEGER:
-  case TYPE_REAL:
-  case VARIABLE:
-    break;
-  case TYPE_BITVECTOR:
-    ok = t.size() == 0 && payload_of<size_t>(t) > 0;
-    break;
-  case TYPE_STRUCT: {
-    if (t.size() % 2) {
-      ok = false;
-    } else {
-      for (size_t i = 0; ok && i < t.size(); ++ i) {
-        if (i % 2 == 0) {
-          ok = term_of(t[i]).op() == CONST_STRING;
-        } else {
-          ok = is_type(term_of(t[i]).op());
-        }
-      }
-    }
-    break;
-  }
-  // Equality
-  case TERM_EQ:
-    ok = (t.size() == 2 && types_comparable(type_of(t[0]), type_of(t[1])));
-    break;
-  // ITE
-  case TERM_ITE:
-    ok = (t.size() == 3 &&
-        type_of(t[0]) == boolean_type() &&
-        types_comparable(type_of(t[1]), type_of(t[2])));
-    break;
-  // Boolean terms
-  case CONST_BOOL:
-    break;
-  case TERM_AND:
-  case TERM_OR:
-  case TERM_XOR:
-    if (t.size() < 2) {
-      ok = false;
-    } else {
-      for (const term_ref* it = t.begin(); it != t.end(); ++ it) {
-        if (type_of(*it) != boolean_type()) {
-          ok = false;
-          break;
-        }
-      }
-    }
-    break;
-  case TERM_NOT:
-    if (t.size() != 1) {
-      ok = false;
-    } else {
-      ok = type_of(t[0]) == boolean_type();
-    }
-    break;
-  case TERM_IMPLIES:
-    if (t.size() != 2) {
-      ok = false;
-    } else {
-      ok = type_of(t[0]) == boolean_type() && type_of(t[1]) == boolean_type();
-    }
-    break;
-  // Arithmetic terms
-  case CONST_RATIONAL:
-    break;
-  case TERM_ADD:
-  case TERM_MUL:
-    if (t.size() < 2) {
-      ok = false;
-    } else {
-      for (const term_ref* it = t.begin(); it != t.end(); ++ it) {
-        term_ref it_type = type_of(*it);
-        if (!is_subtype_of(it_type, real_type())) {
-          ok = false;
-          break;
-        }
-      }
-    }
-    break;
-  case TERM_SUB:
-    // 1 child is OK
-    if (t.size() == 1) {
-      ok = is_subtype_of(type_of(t[0]), real_type());
-    } else if (t.size() != 2) {
-      ok = false;
-    } else {
-      ok = is_subtype_of(type_of(t[0]), real_type()) &&
-           is_subtype_of(type_of(t[1]), real_type());
-    }
-    break;
-  case TERM_LEQ:
-  case TERM_LT:
-  case TERM_GEQ:
-  case TERM_GT:
-    if (t.size() != 2) {
-      ok = false;
-    } else {
-      ok = is_subtype_of(type_of(t[0]), real_type()) &&
-           is_subtype_of(type_of(t[1]), real_type());
-    }
-    break;
-  case TERM_DIV:
-    if (t.size() != 2) {
-      ok = false;
-    } else {
-      ok = is_subtype_of(type_of(t[0]), real_type()) &&
-           is_subtype_of(type_of(t[1]), real_type());
-      // TODO: make TCC
-    }
-    break;
-  // Bitvector terms
-  case CONST_BITVECTOR:
-    ok = true;
-    break;
-  case TERM_BV_NOT:
-    ok = t.size() == 1 && is_bitvector_type(type_of(t[0]));
-    break;
-  case TERM_BV_SUB:
-    if (t.size() == 1) {
-      ok = is_bitvector_type(type_of(t[0]));
-    } else if (t.size() == 2) {
-      term_ref type_ref = type_of(t[0]);
-      if (!is_bitvector_type(type_ref)) {
-        ok = false;
-      } else {
-        ok = type_ref == type_of(t[1]);
-      }
-    } else {
-      ok = false;
-    }
-    break;
-  case TERM_BV_ADD:
-  case TERM_BV_MUL:
-  case TERM_BV_XOR:
-  case TERM_BV_AND:
-  case TERM_BV_OR:
-  case TERM_BV_NAND:
-  case TERM_BV_NOR:
-  case TERM_BV_XNOR:
-    if (t.size() < 2) {
-      ok = false;
-    } else {
-      const term_ref* it = t.begin();
-      term_ref type_ref = type_of(*it);
-      if (!is_bitvector_type(type_ref)) {
-        ok = false;
-      } else {
-        ok = true;
-        for (++ it; it != t.end(); ++ it) {
-          if (type_of(*it) != type_ref) {
-            ok = false;
-            break;
-          }
-        }
-      }
-    }
-    break;
-  case TERM_BV_SHL:
-  case TERM_BV_LSHR:
-  case TERM_BV_ASHR:
-    if (t.size() != 2) {
-      ok = false;
-    } else {
-      term_ref type_ref = type_of(t[0]);
-      if (!is_bitvector_type(type_ref)) {
-        ok = false;
-      } else {
-        ok = type_ref == type_of(t[1]);
-      }
-    }
-    break;
-  case TERM_BV_ULEQ:
-  case TERM_BV_SLEQ:
-  case TERM_BV_ULT:
-  case TERM_BV_SLT:
-  case TERM_BV_UGEQ:
-  case TERM_BV_SGEQ:
-  case TERM_BV_UGT:
-  case TERM_BV_SGT:
-  case TERM_BV_UDIV: // NOTE: Division x/0 = 11...11
-  case TERM_BV_SDIV:
-  case TERM_BV_UREM:
-  case TERM_BV_SREM:
-  case TERM_BV_SMOD:
-    if (t.size() != 2) {
-      ok = false;
-    } else {
-      term_ref type_ref = type_of(t[0]);
-      if (!is_bitvector_type(type_ref)) {
-        ok = false;
-      } else {
-        ok = type_ref == type_of(t[1]);
-      }
-    }
-    break;
-  case TERM_BV_CONCAT:
-    if (t.size() < 2) {
-      ok = false;
-    } else {
-      ok = true;
-      for (const term_ref* it = t.begin(); it != t.end(); ++ it) {
-        if (!is_bitvector_type(type_of(*it))) {
-          ok = false;
-        }
-      }
-    }
-    break;
-  case TERM_BV_EXTRACT:
-    if (t.size() != 1) {
-      ok = false;
-    } else {
-      term_ref child_type = type_of(t[0]);
-      if (!is_bitvector_type(child_type)) {
-        ok = false;
-      } else {
-        size_t child_size = bitvector_type_size(child_type);
-        const bitvector_extract& extract = payload_of<bitvector_extract>(t);
-        if (extract.high < extract.low) {
-          ok = false;
-        } else {
-          ok = extract.high < child_size;
-        }
-      }
-    }
-    break;
-  case CONST_STRING:
-    ok = true;
-    break;
-  default:
-    assert(false);
-  }
+  /** The term manager */
+  term_manager_internal& d_tm;
 
-  if (!ok) {
+  /** Cache of the term manager */
+  term_to_term_map& d_type_cache;
+
+  /** Set to false whenever type computation fails */
+  bool d_ok;
+
+  /** Types of the children */
+  std::vector<expr::term_ref> children_types;
+
+  inline
+  void error(expr::term_ref t_ref) const {
     std::stringstream ss;
     expr::term_manager* tm = output::get_term_manager(std::cerr);
-    if (tm->get_internal() == this) {
+    if (tm->get_internal() == &d_tm) {
       output::set_term_manager(ss, tm);
     }
     ss << "Can't typecheck " << t_ref << ".";
     throw exception(ss.str());
   }
 
-  return ok;
+  inline
+  expr::term_ref type_of(expr::term_ref t_ref) const {
+    term_to_term_map::const_iterator find = d_type_cache.find(t_ref);
+    if (find == d_type_cache.end()) {
+      error(t_ref);
+    }
+    return find->second;
+  }
+
+  inline
+  const term& term_of(expr::term_ref t_ref) const {
+    return d_tm.term_of(t_ref);
+  }
+
+public:
+
+  type_computation_visitor(expr::term_manager_internal& tm, term_to_term_map& type_cache)
+  : d_tm(tm)
+  , d_type_cache(type_cache)
+  , d_ok(true)
+  {}
+
+  /** Get the children of the term t that are relevant for the type computation */
+  void get_children(expr::term_ref t, std::vector<expr::term_ref>& children) {
+    const expr::term& t_term = d_tm.term_of(t);
+    for (size_t i = 0; i < t_term.size(); ++ i) {
+      children.push_back(t_term[i]);
+    }
+  }
+
+  /** We visit only nodes that don't have types yet and are relevant for type computation */
+  visitor_match_result match(term_ref t) {
+    if (d_type_cache.find(t) == d_type_cache.end()) {
+      // Visit the children if needed and then the node
+      return VISIT_AND_CONTINUE;
+    } else {
+      // Don't visit children or this node or the node
+      return DONT_VISIT_AND_BREAK;
+    }
+  }
+
+  /** Visit the term, compute type (children already type-checked) */
+  void visit(term_ref t_ref) {
+
+    expr::term_ref t_type;
+
+    TRACE("expr::types") << "compute_type::visit(" << t_ref << ")" << std::endl;
+
+    // If typechecking failed, we just skip
+    if (!d_ok) {
+      return;
+    }
+
+    // The term we're typechecking (safe, since all subtypes already computed)
+    const term& t = term_of(t_ref);
+    term_op op = t.op();
+
+    switch (op) {
+    // Types -> TYPE_TYPE
+    case TYPE_TYPE:
+    case TYPE_BOOL:
+    case TYPE_INTEGER:
+    case TYPE_REAL:
+    case TYPE_STRING:
+      t_type = d_tm.type_type();
+      break;
+    case VARIABLE:
+      // Type in payload
+      t_type = t[0];
+      break;
+    case TYPE_BITVECTOR:
+      d_ok = t.size() == 0 && d_tm.payload_of<size_t>(t) > 0;
+      if (d_ok) t_type = d_tm.type_type();
+      break;
+    case TYPE_STRUCT: {
+      if (t.size() % 2) {
+        d_ok = false;
+      } else {
+        const term_ref* it = t.begin();
+        for (bool even = true; d_ok && it != t.end(); even = !even, ++ it) {
+          if (even) {
+            d_ok = term_of(*it).op() == CONST_STRING;
+          } else {
+            d_ok = is_type(term_of(*it).op());
+          }
+        }
+      }
+      if (d_ok) t_type = d_tm.type_type();
+      break;
+    }
+    // Equality
+    case TERM_EQ: {
+      if (t.size() != 2) {
+        d_ok = false;
+      } else {
+        term_ref t0 = type_of(t[0]);
+        term_ref t1 = type_of(t[1]);
+        d_ok = d_tm.types_comparable(t0, t1);
+      }
+      if (d_ok) t_type = d_tm.boolean_type();
+      break;
+    }
+    // ITE
+    case TERM_ITE:
+      if (t.size() != 3) {
+        d_ok = false;
+      } else {
+        term_ref t0 = type_of(t[0]);
+        term_ref t1 = type_of(t[1]);
+        term_ref t2 = type_of(t[2]);
+        d_ok = t0 == d_tm.boolean_type() && d_tm.types_comparable(t1, t2);
+        if (d_ok) t_type = d_tm.supertype_of(t1, t2);
+      }
+      break;
+    // Boolean terms
+    case CONST_BOOL:
+      t_type = d_tm.boolean_type();
+      break;
+    case TERM_AND:
+    case TERM_OR:
+    case TERM_XOR:
+      if (t.size() < 2) {
+        d_ok = false;
+      } else {
+        for (const term_ref* it = t.begin(); it != t.end(); ++ it) {
+          if (type_of(*it) != d_tm.boolean_type()) {
+            d_ok = false;
+            break;
+          }
+        }
+      }
+      if (d_ok) t_type = d_tm.boolean_type();
+      break;
+    case TERM_NOT:
+      if (t.size() != 1) {
+        d_ok = false;
+      } else {
+        d_ok = type_of(t[0]) == d_tm.boolean_type();
+      }
+      if (d_ok) t_type = d_tm.boolean_type();
+      break;
+    case TERM_IMPLIES:
+      if (t.size() != 2) {
+        d_ok = false;
+      } else {
+        d_ok = type_of(t[0]) == d_tm.boolean_type() && type_of(t[1]) == d_tm.boolean_type();
+      }
+      if (d_ok) t_type = d_tm.boolean_type();
+      break;
+    // Arithmetic terms
+    case CONST_RATIONAL:
+      d_ok = true;
+      t_type = d_tm.real_type();
+      break;
+    case TERM_ADD:
+    case TERM_MUL:
+      if (t.size() < 2) {
+        d_ok = false;
+      } else {
+        term_ref max_type;
+        for (const term_ref* it = t.begin(); it != t.end(); ++ it) {
+          term_ref it_type = type_of(*it);
+          if (!d_tm.is_subtype_of(it_type, d_tm.real_type())) {
+            d_ok = false;
+            break;
+          } else {
+            if (max_type.is_null()) {
+              max_type = it_type;
+            } else {
+              max_type = d_tm.supertype_of(max_type, it_type);
+            }
+          }
+        }
+        if (d_ok) t_type = max_type;
+      }
+      break;
+    case TERM_SUB:
+      // 1 child is OK
+      if (t.size() == 1) {
+        term_ref t0 = type_of(t[0]);
+        d_ok = d_tm.is_subtype_of(type_of(t[0]), d_tm.real_type());
+        if (d_ok) t_type = t0;
+      } else if (t.size() != 2) {
+        d_ok = false;
+      } else {
+        term_ref t0 = type_of(t[0]);
+        term_ref t1 = type_of(t[1]);
+        d_ok = d_tm.is_subtype_of(t0, d_tm.real_type()) &&
+               d_tm.is_subtype_of(t1, d_tm.real_type());
+        if (d_ok) t_type = d_tm.supertype_of(t0, t1);
+      }
+      break;
+    case TERM_LEQ:
+    case TERM_LT:
+    case TERM_GEQ:
+    case TERM_GT:
+      if (t.size() != 2) {
+        d_ok = false;
+      } else {
+        term_ref t0 = type_of(t[0]);
+        term_ref t1 = type_of(t[1]);
+        d_ok = d_tm.is_subtype_of(t0, d_tm.real_type()) &&
+               d_tm.is_subtype_of(t1, d_tm.real_type());
+        if (d_ok) t_type = d_tm.boolean_type();
+      }
+      break;
+    case TERM_DIV:
+      if (t.size() != 2) {
+        d_ok = false;
+      } else {
+        term_ref t0 = type_of(t[0]);
+        term_ref t1 = type_of(t[1]);
+        d_ok = d_tm.is_subtype_of(t0, d_tm.real_type()) &&
+               d_tm.is_subtype_of(t1, d_tm.real_type());
+        // TODO: make TCC
+        if (d_ok) t_type = d_tm.supertype_of(t0, t1);
+      }
+      break;
+    // Bitvector terms
+    case CONST_BITVECTOR: {
+      size_t size = d_tm.payload_of<bitvector>(t_ref).size();
+      t_type = d_tm.bitvector_type(size);
+      break;
+    }
+    case TERM_BV_NOT:
+      if (t.size() != 1) {
+        d_ok = false;
+      } else {
+        term_ref t0 = type_of(t[0]);
+        d_ok = d_tm.is_bitvector_type(t0);
+        if (d_ok) t_type = t0;
+      }
+      break;
+    case TERM_BV_SUB:
+      if (t.size() == 1) {
+        term_ref t0 = type_of(t[0]);
+        d_ok = d_tm.is_bitvector_type(t0);
+        t_type = t0;
+      } else if (t.size() == 2) {
+        term_ref t0 = type_of(t[0]);
+        term_ref t1 = type_of(t[1]);
+        if (!d_tm.is_bitvector_type(t0)) {
+          d_ok = false;
+        } else {
+          d_ok = t0 == t1;
+        }
+        if (d_ok) t_type = t0;
+      } else {
+        d_ok = false;
+      }
+      break;
+    case TERM_BV_ADD:
+    case TERM_BV_MUL:
+    case TERM_BV_XOR:
+    case TERM_BV_AND:
+    case TERM_BV_OR:
+    case TERM_BV_NAND:
+    case TERM_BV_NOR:
+    case TERM_BV_XNOR:
+      if (t.size() < 2) {
+        d_ok = false;
+      } else {
+        const term_ref* it = t.begin();
+        term_ref t0 = type_of(*it);
+        if (!d_tm.is_bitvector_type(t0)) {
+          d_ok = false;
+        } else {
+          d_ok = true;
+          for (++ it; it != t.end(); ++ it) {
+            if (type_of(*it) != t0) {
+              d_ok = false;
+              break;
+            }
+          }
+        }
+        if (d_ok) t_type = t0;
+      }
+      break;
+    case TERM_BV_SHL:
+    case TERM_BV_LSHR:
+    case TERM_BV_ASHR:
+    case TERM_BV_UDIV: // NOTE: Division x/0 = 11...11
+    case TERM_BV_SDIV:
+    case TERM_BV_UREM:
+    case TERM_BV_SREM:
+    case TERM_BV_SMOD:
+      if (t.size() != 2) {
+        d_ok = false;
+      } else {
+        term_ref t0 = type_of(t[0]);
+        if (!d_tm.is_bitvector_type(t0)) {
+          d_ok = false;
+        } else {
+          d_ok = t0 == type_of(t[1]);
+        }
+        if (d_ok) t_type = t0;
+      }
+      break;
+    case TERM_BV_ULEQ:
+    case TERM_BV_SLEQ:
+    case TERM_BV_ULT:
+    case TERM_BV_SLT:
+    case TERM_BV_UGEQ:
+    case TERM_BV_SGEQ:
+    case TERM_BV_UGT:
+    case TERM_BV_SGT:
+      if (t.size() != 2) {
+        d_ok = false;
+      } else {
+        term_ref t0 = type_of(t[0]);
+        if (!d_tm.is_bitvector_type(t0)) {
+          d_ok = false;
+        } else {
+          d_ok = t0 == type_of(t[1]);
+        }
+        if (d_ok) t_type = d_tm.boolean_type();
+      }
+      break;
+    case TERM_BV_CONCAT:
+      if (t.size() < 2) {
+        d_ok = false;
+      } else {
+        for (const term_ref* it = t.begin(); it != t.end(); ++ it) {
+          if (!d_tm.is_bitvector_type(type_of(*it))) {
+            d_ok = false;
+          }
+        }
+        if (d_ok) {
+          size_t size = 0;
+          for (const term_ref* it = t.begin(); it != t.end(); ++ it) {
+            term_ref it_type = type_of(*it);
+            size += d_tm.bitvector_type_size(it_type);
+          }
+          t_type = d_tm.bitvector_type(size);
+        }
+      }
+      break;
+    case TERM_BV_EXTRACT:
+      if (t.size() != 1) {
+        d_ok = false;
+      } else {
+        term_ref t0 = type_of(t[0]);
+        if (!d_tm.is_bitvector_type(t0)) {
+          d_ok = false;
+        } else {
+          size_t child_size = d_tm.bitvector_type_size(t0);
+          const bitvector_extract& extract = d_tm.payload_of<bitvector_extract>(t);
+          if (extract.high < extract.low) {
+            d_ok = false;
+          } else {
+            d_ok = extract.high < child_size;
+            if (d_ok) {
+              size_t size = extract.high - extract.low + 1;
+              t_type = d_tm.bitvector_type(size);
+            }
+          }
+        }
+      }
+      break;
+    case CONST_STRING:
+      d_ok = true;
+      t_type = d_tm.string_type();
+      break;
+    default:
+      assert(false);
+    }
+
+    TRACE("expr::types") << "compute_type::visit(" << t_ref << ") => " << t_type << std::endl;
+
+    assert(!d_ok || !t_type.is_null());
+
+    if (!d_ok) {
+      error(t_ref);
+    } else {
+      assert(d_type_cache.find(t_ref) == d_type_cache.end());
+      d_type_cache[t_ref] = t_type;
+    }
+  }
+};
+
+void term_manager_internal::compute_type(term_ref t) {
+  type_computation_visitor visitor(*this, d_type_cache);
+  term_visit_topological<type_computation_visitor, term_ref, term_ref_hasher> visit_topological(visitor);
+  visit_topological.run(t);
+}
+
+void term_manager_internal::typecheck(term_ref t_ref) {
+  compute_type(t_ref);
 }
 
 void term_manager_internal::to_stream(std::ostream& out) const {
@@ -383,139 +552,12 @@ void term_manager_internal::to_stream(std::ostream& out) const {
   }
 }
 
-term_ref term_manager_internal::type_of(const term& t) const {
-
-  // Reference of t
+term_ref term_manager_internal::type_of(const term& t) {
   term_ref t_ref = ref_of(t);
-
-  // Check if computed already
+  compute_type(t_ref);
   term_to_term_map::const_iterator find = d_type_cache.find(t_ref);
-  if (find != d_type_cache.end()) {
-    return find->second;
-  }
-
-  // The result
-  term_ref result = term_ref();
-
-  // Compute the type
-  switch (t.op()) {
-  case TYPE_BOOL:
-  case TYPE_INTEGER:
-  case TYPE_REAL:
-  case TYPE_STRUCT:
-    result = term_ref();
-    break;
-  case VARIABLE:
-    result = t[0];
-    break;
-  // Equality
-  case TERM_EQ:
-    result = boolean_type();
-    break;
-  // ITE
-  case TERM_ITE:
-    result = type_of(t[1]);
-    break;
-  // Boolean terms
-  case CONST_BOOL:
-  case TERM_AND:
-  case TERM_OR:
-  case TERM_XOR:
-  case TERM_NOT:
-  case TERM_IMPLIES:
-    result = boolean_type();
-    break;
-  // Arithmetic terms
-  case CONST_RATIONAL:
-    if (payload_of<rational>(t).is_integer()) {
-      result = d_integerType;
-    } else {
-      result = d_realType;
-    }
-    break;
-  case TERM_ADD:
-  case TERM_MUL:
-  case TERM_SUB: {
-    // If all children are integer, it's integer
-    result = integer_type();
-    for (const term_ref* it = t.begin(); it != t.end(); ++ it) {
-      if (type_of(*it) != integer_type()) {
-        result = real_type();
-        break;
-      }
-    }
-    break;
-  }
-  case TERM_DIV:
-    result = d_realType;
-    break;
-  case TERM_LEQ:
-  case TERM_LT:
-  case TERM_GEQ:
-  case TERM_GT:
-    result = d_booleanType;
-    break;
-  case CONST_BITVECTOR:
-    result = const_cast<term_manager_internal*>(this)->bitvector_type(payload_of<bitvector>(t).size());
-    break;
-
-  case TERM_BV_ADD:
-  case TERM_BV_SUB:
-  case TERM_BV_MUL:
-  case TERM_BV_XOR:
-  case TERM_BV_NOT:
-  case TERM_BV_AND:
-  case TERM_BV_OR:
-  case TERM_BV_NAND:
-  case TERM_BV_NOR:
-  case TERM_BV_XNOR:
-  case TERM_BV_UDIV:
-  case TERM_BV_SDIV:
-  case TERM_BV_UREM:
-  case TERM_BV_SREM:
-  case TERM_BV_SMOD:
-    result = type_of(t[0]);
-    break;
-  case TERM_BV_ULEQ:
-  case TERM_BV_SLEQ:
-  case TERM_BV_ULT:
-  case TERM_BV_SLT:
-  case TERM_BV_UGEQ:
-  case TERM_BV_SGEQ:
-  case TERM_BV_UGT:
-  case TERM_BV_SGT:
-    result = boolean_type();
-    break;
-  case TERM_BV_SHL:
-  case TERM_BV_LSHR:
-  case TERM_BV_ASHR:
-    result = type_of(t[0]);
-    break;
-  case TERM_BV_CONCAT: {
-    size_t size = 0;
-    for (const term_ref* it = t.begin(); it != t.end(); ++ it) {
-      term_ref type_ref = type_of(*it);
-      size += bitvector_type_size(type_ref);
-    }
-    result = const_cast<term_manager_internal*>(this)->bitvector_type(size);
-    break;
-  }
-  case TERM_BV_EXTRACT: {
-    const bitvector_extract& extract = payload_of<bitvector_extract>(t);
-    size_t size = extract.high - extract.low + 1;
-    result = const_cast<term_manager_internal*>(this)->bitvector_type(size);
-    break;
-  }
-  case CONST_STRING:
-    break;
-  default:
-    assert(false);
-  }
-
-  // Cache
-  const_cast<term_manager_internal*>(this)->d_type_cache[t_ref] = result;
-
-  return result;
+  assert (find != d_type_cache.end());
+  return find->second;
 }
 
 /** Add a namespace entry (will be removed from prefix when printing. */

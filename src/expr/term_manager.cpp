@@ -35,7 +35,6 @@ size_t term_manager::s_instances = 0;
 
 term_manager::term_manager(utils::statistics& stats)
 : d_tm(new term_manager_internal(stats))
-, d_eq_rewrite(false)
 , d_id(s_instances ++)
 , d_tmp_var_id(0)
 {
@@ -77,44 +76,46 @@ size_t term_manager::get_bitvector_size(term_ref t_ref) const {
 }
 
 term_ref term_manager::mk_term(term_op op, const std::vector<term_ref>& children) {
+  term_ref result;
   if (children.size() == 2) {
-    return mk_term(op, children[0], children[1]);
+    result = mk_term(op, children[0], children[1]);
   } else {
-    return d_tm->mk_term(op, children.begin(), children.end());
+    result = d_tm->mk_term(op, children.begin(), children.end());
   }
+  d_tm->typecheck(result);
+  return result;
 }
 
 term_ref term_manager::mk_term(term_op op, const term_ref* children_begin, const term_ref* children_end) {
+  expr::term_ref result;
   if (children_end - children_begin == 2) {
-    return mk_term(op, *children_begin, *(children_begin + 1));
+    result = mk_term(op, *children_begin, *(children_begin + 1));
   } else {
-    return d_tm->mk_term(op, children_begin, children_end);
+    result = d_tm->mk_term(op, children_begin, children_end);
   }
+  d_tm->typecheck(result);
+  return result;
 }
 
 term_ref term_manager::mk_term(term_op op, term_ref c) {
   term_ref children[1] = { c };
-  return d_tm->mk_term(op, children, children + 1);
-}
-
-void term_manager::set_eq_rewrite(bool flag) {
-  d_eq_rewrite = flag;
+  term_ref result = d_tm->mk_term(op, children, children + 1);
+  d_tm->typecheck(result);
+  return result;
 }
 
 term_ref term_manager::mk_term(term_op op, term_ref c1, term_ref c2) {
-  if (d_eq_rewrite && op == expr::TERM_EQ && d_tm->is_subtype_of(type_of(c1), real_type())) {
-    term_ref leq = d_tm->mk_term<expr::TERM_LEQ>(c1, c2);
-    term_ref geq = d_tm->mk_term<expr::TERM_GEQ>(c1, c2);
-    return d_tm->mk_term<expr::TERM_AND>(leq, geq);
-  } else {
-    term_ref children[2] = { c1 , c2 };
-    return d_tm->mk_term(op, children, children + 2);
-  }
+  term_ref children[2] = { c1 , c2 };
+  term_ref result = d_tm->mk_term(op, children, children + 2);
+  d_tm->typecheck(result);
+  return result;
 }
 
 term_ref term_manager::mk_term(term_op op, term_ref c1, term_ref c2, term_ref c3) {
   term_ref children[3] = { c1 , c2, c3 };
-  return d_tm->mk_term(op, children, children + 3);
+  term_ref result = d_tm->mk_term(op, children, children + 3);
+  d_tm->typecheck(result);
+  return result;
 }
 
 term_ref term_manager::mk_variable(term_ref type) {
@@ -195,7 +196,9 @@ term_ref term_manager::mk_bitvector_constant(const bitvector& value) {
 }
 
 term_ref term_manager::mk_bitvector_extract(term_ref t, const bitvector_extract& extract) {
-  return d_tm->mk_term<expr::TERM_BV_EXTRACT>(extract, t);
+  term_ref result = d_tm->mk_term<expr::TERM_BV_EXTRACT>(extract, t);
+  d_tm->typecheck(result);
+  return result;
 }
 
 term_ref term_manager::mk_string_constant(std::string value) {
@@ -236,7 +239,9 @@ term_ref term_manager::mk_struct_type(const std::vector<std::string>& names, con
     type_argumens.push_back(types[i]);
   }
 
-  return mk_term(TYPE_STRUCT, type_argumens);
+  term_ref result = mk_term(TYPE_STRUCT, type_argumens);
+  d_tm->typecheck(result);
+  return result;
 }
 
 size_t term_manager::get_struct_type_size(const term& t) const {

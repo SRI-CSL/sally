@@ -552,7 +552,7 @@ public:
 
 value model::get_term_value_internal(expr::term_ref t, const expr::term_manager::substitution_map& var_renaming, term_to_value_map& cache) const {
   evaluation_visitor visitor(d_tm, var_renaming, cache, *this);
-  term_visit_topological<evaluation_visitor, term_ref, term_ref_hasher> visit_topological(d_tm, visitor);
+  term_visit_topological<evaluation_visitor, term_ref, term_ref_hasher> visit_topological(visitor);
   visit_topological.run(t);
   return cache[t];
 }

@@ -52,16 +52,13 @@ class term_visit_topological {
     {}
   };
 
-  /** The term manager */
-  const term_manager& d_tm;
-
   /** Visitor to notify */
   visitor& d_visitor;
 
 public:
 
   /** Construct the visitor */
-  term_visit_topological(const term_manager& tm, visitor& v);
+  term_visit_topological(visitor& v);
 
   /** Run the visitor on the term */
   void run(term_type t);
@@ -70,9 +67,8 @@ public:
 
 
 template<typename visitor, typename term_type, typename term_type_hasher>
-term_visit_topological<visitor, term_type, term_type_hasher>::term_visit_topological(const term_manager& tm, visitor& v)
-: d_tm(tm)
-, d_visitor(v)
+term_visit_topological<visitor, term_type, term_type_hasher>::term_visit_topological(visitor& v)
+: d_visitor(v)
 {
 }
 

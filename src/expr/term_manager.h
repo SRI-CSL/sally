@@ -42,9 +42,6 @@ class term_manager {
 
   friend struct set_tm;
 
-  /** Whether to rewrite equalities to inequalities */
-  bool d_eq_rewrite;
-
   /** Participants in garbage collection */
   std::set<gc_participant*> d_gc_participants;
 
@@ -274,9 +271,6 @@ public:
 
   /** Get the current name transformer */
   const utils::name_transformer* get_name_transformer() const;
-
-  /** Mark whether to rewrite all equlities to inequalities at construction */
-  void set_eq_rewrite(bool flag);
 
   /** Perform garbage collection */
   void gc();

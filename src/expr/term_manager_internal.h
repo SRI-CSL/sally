@@ -176,9 +176,6 @@ private:
    */
   term_to_term_map d_tcc_map;
 
-  /** Type-check the term (adds to TCC if needed) */
-  bool typecheck(term_ref t);
-
   /** Compute the hash of the term parts */
   template <term_op op, typename iterator_type>
   size_t term_hash(const typename term_op_traits<op>::payload_type& payload, iterator_type begin, iterator_type end);
@@ -213,6 +210,9 @@ private:
   // These below should be last, so that they are destructed first
   //
 
+  /** The type of types */
+  term_ref_strong d_typeType;
+
   /** Boolean type */
   term_ref_strong d_booleanType;
 
@@ -221,6 +221,9 @@ private:
 
   /** Real type */
   term_ref_strong d_realType;
+
+  /** String type */
+  term_ref_strong d_stringType;
 
   typedef std::map<size_t, term_ref_strong> bitvector_type_map;
 
@@ -235,6 +238,9 @@ private:
 
   utils::stat_int* d_stat_terms;
 
+  /** Compute the type of t and all subterms */
+  void compute_type(term_ref t);
+
 public:
 
   /** Construct them manager */
@@ -246,6 +252,12 @@ public:
   /** Print the term manager information and all the terms to out */
   void to_stream(std::ostream& out) const;
 
+  /** Type-check the term */
+  void typecheck(term_ref t);
+
+  /** Get the type of types */
+  term_ref type_type() const { return d_typeType; }
+
   /** Get the Boolean type */
   term_ref boolean_type() const { return d_booleanType; }
 
@@ -254,6 +266,9 @@ public:
 
   /** Get the Real type */
   term_ref real_type() const { return d_realType; }
+
+  /** Get the String type */
+  term_ref string_type() const  { return d_stringType; }
 
   /** Get the Bitvector type */
   term_ref bitvector_type(size_t size);
@@ -354,10 +369,10 @@ public:
   }
 
   /** Get the type of the term */
-  term_ref type_of(const term& t) const;
+  term_ref type_of(const term& t);
 
   /** Get the type of the term */
-  term_ref type_of(term_ref t) const {
+  term_ref type_of(term_ref t) {
     return type_of(term_of(t));
   }
 
@@ -492,15 +507,9 @@ term_ref_fat term_manager_internal::mk_term_internal(const typename term_op_trai
   // Update the statistic
   d_stat_terms->get_value() = d_memory.size();
 
-  // Type-check the term
-  if (!typecheck(t_ref)) {
-    return term_ref_fat();
-  }
-
   // Set the id of the term and add to terms
   size_t id = new_term_id();
   d_term_ids[t_ref] = id;
-
 
   // Get the reference
   return term_ref_fat(t_ref, id, hash);
