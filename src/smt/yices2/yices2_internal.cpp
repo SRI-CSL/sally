@@ -166,10 +166,14 @@ term_t yices2_internal::mk_yices2_term(expr::term_op op, size_t n, term_t* child
     assert(n == 3);
     result = yices_ite(children[0], children[1], children[2]);
     break;
-  case expr::TERM_BV_ADD:
-    assert(n == 2);
+  case expr::TERM_BV_ADD: {
+    assert(n >= 2);
     result = yices_bvadd(children[0], children[1]);
+    for (size_t i = 3; i < n; ++ i) {
+      result = yices_bvadd(result, children[i]);
+    }
     break;
+  }
   case expr::TERM_BV_SUB:
     if (n == 1) {
       result = yices_bvneg(children[0]);
@@ -177,10 +181,14 @@ term_t yices2_internal::mk_yices2_term(expr::term_op op, size_t n, term_t* child
       result = yices_bvsub(children[0], children[1]);
     }
     break;
-  case expr::TERM_BV_MUL:
-    assert(n == 2);
+  case expr::TERM_BV_MUL: {
+    assert(n >= 2);
     result = yices_bvmul(children[0], children[1]);
+    for (size_t i = 3; i < n; ++ i) {
+      result = yices_bvmul(result, children[i]);
+    }
     break;
+  }
   case expr::TERM_BV_UDIV: // NOTE: semantics of division is x/0 = 111...111
     assert(n == 2);
     result = yices_bvdiv(children[0], children[1]);
