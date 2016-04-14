@@ -361,10 +361,16 @@ public:
       break;
     }
     case TERM_BV_SUB: {
-      const bitvector& lhs = children_values[0].get_bitvector();
-      const bitvector& rhs = children_values[1].get_bitvector();
-      v = lhs.sub(rhs);
-      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
+      if (children_values.size() == 1) {
+        v = children_values[0].get_bitvector().neg();
+      } else if (children_values.size() == 2) {
+        const bitvector& lhs = children_values[0].get_bitvector();
+        const bitvector& rhs = children_values[1].get_bitvector();
+        v = lhs.sub(rhs);
+        assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
+      } else {
+        assert(false);
+      }
       break;
     }
     case TERM_BV_MUL: {
