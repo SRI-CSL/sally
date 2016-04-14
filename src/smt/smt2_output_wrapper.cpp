@@ -99,6 +99,10 @@ expr::model::ref smt2_output_wrapper::get_model() const {
     if (space) { out_nonconst << " "; }
     out_nonconst << *it << std::endl;
   }
+  for (it = d_T_variables.begin(); it != d_T_variables.end(); ++ it, space = true) {
+    if (space) { out_nonconst << " "; }
+    out_nonconst << *it << std::endl;
+  }
   for (it = d_B_variables.begin(); it != d_B_variables.end(); ++ it, space = true) {
     if (space) { out_nonconst << " "; }
     out_nonconst << *it << std::endl;
@@ -131,7 +135,7 @@ void smt2_output_wrapper::generalize(generalization_type type, std::vector<expr:
 }
 
 void smt2_output_wrapper::generalize(generalization_type type, expr::model::ref m, std::vector<expr::term_ref>& projection_out) {
-  d_solver->generalize(type, projection_out);
+  d_solver->generalize(type, m, projection_out);
 }
 
 void smt2_output_wrapper::interpolate(std::vector<expr::term_ref>& out) {
