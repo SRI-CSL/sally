@@ -64,6 +64,10 @@ let rec print_expr f =
 		end
 	| Add(a, b) ->
 		print_folded "+" a b
+	| Sub(a, b) ->
+		print_folded "-" a b
+	| Div(a, b) ->
+		print_folded "/" a b
 	| And(True, b) | And (b, True) -> print_expr f b
 	| And(a, b) ->
 		begin

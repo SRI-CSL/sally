@@ -222,9 +222,9 @@ sal_expr_to_lisp (ctx:sally_context) = function
 	| Neq(a, b) -> Not(sal_expr_to_lisp ctx (Eq(a, b)))
   
   | Opp(_) -> failwith "opp"
-  | Sub(_) -> failwith "sub"
+  | Sub(a,b) -> Sub(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
   | Mul(_) -> failwith "mul"
-  | Div(_) -> failwith "div"
+  | Div(a,b) -> Div(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
   | And(a, b) -> And(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
   | Or(a, b) -> Or(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
   | Xor(_) | Iff(_) -> failwith "xor implies iff"
@@ -305,7 +305,10 @@ let sal_assignments_to_condition ?only_define_type:(only_type=false) ?vars_to_de
 	let fake_equality_function ctx (name, ty) = match ty with
 		| Lispy_ast.Range(a, b) ->
 			begin
-				let expr = sal_expr_to_lisp ctx (Ident name) in
+				let expr = match next_var name ctx with
+					| Expr(a, _) -> a
+					| _ -> raise Cannot_use_function_as_expression
+				in
 				List.fold_left (fun l i ->
 					Lispy_ast.Or(l, Equality(expr, Value (string_of_int i)))
 				) False (seq a b)
