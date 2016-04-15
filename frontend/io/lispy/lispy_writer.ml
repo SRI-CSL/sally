@@ -38,7 +38,7 @@ let rec print_expr f =
 	function
 	| Equality(a, b) -> print_folded "=" a b
 	| Value(s) -> Format.fprintf f "%s" s
-	| Ident(s) -> Format.fprintf f "%s" s
+	| Ident(s, _) -> Format.fprintf f "%s" s
 	| GreaterEqual(a, b) ->
 		print_folded ">=" a b
 	| Greater(a, b) ->
@@ -111,6 +111,13 @@ let sally_type_to_string = function
 	| Bool -> "Bool"
 	| Range(_, _) -> "Real"
 	| Array(_, _) -> "Real"
+
+let rec sally_type_to_debug = function
+	| Real -> "Real"
+	| Bool -> "Bool"
+	| Range(b, a) -> "[" ^ string_of_int b ^ ".." ^ string_of_int a ^ "]"
+	| Array(a, b) -> sally_type_to_debug a ^ " -> " ^ sally_type_to_debug b
+
 
 let print_state_type f (ident, var_list) =
 	Format.fprintf f "@[(define-state-type state @;  (@[<v>";

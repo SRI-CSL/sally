@@ -136,7 +136,7 @@ BEGIN
          %% Process i makes a decision:
 	 %%  v[i] = maj(cy[i][1] ... cy[i][m])
          v' IN { d: ARRAY PID OF DATA | 
-             FORALL (i: PID):  good_p[i] => d[i] = maj(cy[i]) };
+             FORALL (i: PID):  good_p[i] => d[i] = maj4(cy[i][1], cy[i][2], cy[i][3], cy[i][4]) };
          round' = 3;
     []
        round = 3 --> %% done

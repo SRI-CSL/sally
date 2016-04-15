@@ -33,6 +33,7 @@ exception Not_implemented
 exception Cannot_use_function_as_expression
 exception Cannot_use_expression_as_function of string
 exception Inadequate_array_use
+exception Inadequate_array_index
 exception Member_without_set
 exception Iteration_on_non_range_type
 exception Need_transition
@@ -55,6 +56,10 @@ let eval_sally ctx = function
 	| Value(s) -> s
 	| _ -> raise Not_implemented
 
+let rec seq i = function
+	| x when x = i -> [i]
+	| n -> n::(seq i (n-1))
+
 (** Convert a sal type to a lispy one, based on the information contained in ctx *)
 let rec sal_type_to_sally_type ctx = function
 	| Base_type("NATURAL") -> (* FIXME: need a real natural type *) Real
@@ -76,6 +81,41 @@ let rec sal_type_to_sally_type ctx = function
 		let from_as_string = eval_sally ctx sally_expr_from
 		and to_as_string = eval_sally ctx sally_expr_to in
 		Lispy_ast.Range (int_of_string from_as_string, int_of_string to_as_string)
+and
+get_disjonctions_from_array ctx = function
+	| Array_access(Ident(s), Decimal(i)) ->
+		begin
+		match StrMap.find s ctx with
+		| Expr(Ident(n, _), Array(_, dest_type)) ->
+			[(True, Lispy_ast.Ident(n ^ "!" ^ string_of_int i, dest_type))]
+		| Expr(expr, _) -> let f = Format.formatter_of_out_channel stdout in let _ = Io.Lispy_writer.print_expr f expr in raise Inadequate_array_use
+		| _ -> raise Inadequate_array_use
+		end
+	| Array_access(Ident(s), a) ->
+		begin
+		match StrMap.find s ctx with
+		| Expr(Ident(n, _), Array(Range(array_start, array_end), dest_type)) ->
+			let l = seq array_start array_end in
+			let index_expr = sal_expr_to_lisp ctx a in
+			List.map (fun i ->
+				(Equality(index_expr, Value(string_of_int i)), Lispy_ast.Ident(n ^ "!" ^ string_of_int i, dest_type))) l
+		| Expr(Ident(n, _), _) -> raise Inadequate_array_index
+		| _ -> raise Inadequate_array_use
+		end
+	| Array_access(Array_access(a, b), index) ->
+		let sub_array = Array_access(a,b) in
+		let all_sub_disjs = get_disjonctions_from_array ctx sub_array in
+		List.(concat @@ map (fun (disj, sub_array_cell) ->
+			let sub_array_cell_name, dest_type =
+				match sub_array_cell with
+				| Lispy_ast.Ident(sub, dest_type) -> sub, dest_type
+				| _ -> failwith "should be ident"
+			in
+			let tmp_ctx = StrMap.add sub_array_cell_name (Expr(sub_array_cell, dest_type)) ctx in
+			map (fun (sub_disj, array_cell) ->
+				(Lispy_ast.And(disj, sub_disj), array_cell)
+				) @@ get_disjonctions_from_array tmp_ctx (Array_access(Ident(sub_array_cell_name), index))) all_sub_disjs)
+	| _ -> raise Inadequate_array_use
 and
 (** Convert a sal expr to a lispy condition, based on the information contained in ctx *)
 sal_expr_to_lisp (ctx:sally_context) = function
@@ -114,13 +154,39 @@ sal_expr_to_lisp (ctx:sally_context) = function
 		Ite(a, b, sal_expr_to_lisp ctx next_condition)
 	
 	| Array_access(a, b) ->
+		let conds = get_disjonctions_from_array ctx (Array_access (a, b)) in
+		begin
+		match conds with
+		| [] -> raise Inadequate_array_use
+		| (last_dsj, last_result)::q ->
+			(* it's safe to ignore the last conditions, as the index has to be in the array range
+			 * If it is not the case, then one value is "randomly" (the implementation of
+			 * get_disjonctions_from_array suggests it is the last array cell) chosen *)
+			List.fold_left (fun l (dsj, result) -> Ite(dsj, result, l)) last_result q
+		end
+	
+	(*| Array_access(a, b) ->
 		let sally_a = sal_expr_to_lisp ctx a in
 		let sally_b = sal_expr_to_lisp ctx b in
 		(match sally_a, sally_b with
-		| Ident(sa), Value(sb) ->
-			Ident(sa ^ "!" ^ sb)
+		| Ident(sa, Array(index_type, dest_type)), Value(sb) ->
+			Ident(sa ^ "!" ^ sb, dest_type)
+		| Ident(sa, Array(index_type, dest_type)), selector ->
+				(match index_type with
+				| Range(a, b) ->
+					List.fold_left (fun l n ->
+						Ite(Equality(selector, Value(string_of_int n)),
+							Ident(sa ^ "!" ^ (string_of_int n), dest_type), l)
+					) (Ident(sa ^ "!" ^ (string_of_int a), dest_type)) (seq (a+1) b)
+				| _ -> raise Inadequate_array_index)
+
+		| Ident(sa, mytype), _ -> (Format.printf "%s@." (Io.Lispy_writer.sally_type_to_debug mytype); raise Inadequate_array_index)
+		| expr, _ -> (
+
+	let f = Format.formatter_of_out_channel stdout in
+	Io.Lispy_writer.print_expr f expr; raise Inadequate_array_index)
 		| _ -> raise Inadequate_array_use
-		)
+		)*)
 	| Set_literal(_) -> failwith "set"
 	| Array_literal(n, e, e2) -> (failwith "Unsupported Array_literal")
 	| Forall(t::q, expr) ->
@@ -165,13 +231,13 @@ let sal_state_vars_to_state_type (ctx:sally_context) name vars =
 
 	let type_init_ctx = List.fold_left
 		(fun ctx (n, t) ->
-			StrMap.add n (Expr (Lispy_ast.Ident(n), t)) ctx
+			StrMap.add n (Expr (Lispy_ast.Ident(n, t), t)) ctx
 		) ctx sally_vars in
 
 	let transition_ctx = List.fold_left
 		(fun ctx (n, t) ->
-			let ctx = StrMap.add n (Expr(Lispy_ast.Ident ("state."^n), t)) ctx in
-			StrMap.add (n^"'") (Expr(Lispy_ast.Ident("next."^n), t)) ctx
+			let ctx = StrMap.add n (Expr(Lispy_ast.Ident ("state."^n, t), t)) ctx in
+			StrMap.add (n^"'") (Expr(Lispy_ast.Ident("next."^n, t), t)) ctx
 		) ctx sally_vars in
 
 	type_init_ctx, transition_ctx, ((name, sally_vars):state_type)
@@ -210,14 +276,14 @@ let sal_assignments_to_condition ?vars_to_defined:(s=[]) ctx assignment =
 			let cond = ref True in
 			let lispy_ident, lispy_next_ident = StrMap.find name ctx, StrMap.find (name ^ "'") ctx in
 			(match lispy_ident, lispy_next_ident with
-				| Expr(Ident(lispy_ident), _), Expr(Ident(lispy_next_ident), _) ->
+				| Expr(Ident(lispy_ident,_), _), Expr(Ident(lispy_next_ident, _), _) ->
 				begin
 				for i = a to b do
 					let ident = name ^ "!" ^ string_of_int i in
 					let lispy_ident_i = lispy_ident ^ "!" ^ string_of_int i in
 					let lispy_next_ident_i = lispy_next_ident ^ "!" ^ string_of_int i in
-					let (tmp_ctx:sally_context) = StrMap.add ident (Expr(Ident(lispy_ident_i), t)) ctx in
-					let (tmp_ctx:sally_context) = StrMap.add (ident ^ "'") (Expr(Ident(lispy_next_ident_i), t)) tmp_ctx in
+					let (tmp_ctx:sally_context) = StrMap.add ident (Expr(Ident(lispy_ident_i, t), t)) ctx in
+					let (tmp_ctx:sally_context) = StrMap.add (ident ^ "'") (Expr(Ident(lispy_next_ident_i, t), t)) tmp_ctx in
 					cond := Lispy_ast.And(!cond, get_equality_term tmp_ctx (ident, t));
 				done;
 				!cond
@@ -268,8 +334,20 @@ let sal_transition_to_transition ((type_name, variables):state_type) ctx transit
 	) False l in
 	"trans", transition_name, cond
 
-let sal_module_to_lisp ctx (name, sal_module) =
+let add_variable_to_state_type ((name, vars):state_type) var_name var_type =
+	((name, (var_name, var_type)::vars):state_type)
+
+let sal_module_to_lisp undefined_constants ctx (name, sal_module) =
+	let ctx = List.fold_left (fun l (n, _) ->
+		StrMap.remove n l) ctx undefined_constants in
 	let type_init_ctx, transition_ctx, state_type = sal_state_vars_to_state_type ctx name sal_module.state_vars in
+	let transition_ctx = List.fold_left (fun l (n,t) ->
+		let ctx = StrMap.add n (Expr(Ident("state."^n, t), t)) l in
+		let ctx = StrMap.add (n^"'") (Expr(Ident("next."^n, t), t)) ctx in
+		ctx
+		) transition_ctx undefined_constants in
+	let state_type = List.fold_left (fun st (n,t) ->
+		add_variable_to_state_type st n t) state_type undefined_constants in
 	let initial_state = sal_assignments_to_lispy_state type_init_ctx state_type "init" sal_module.initialization in
 	let transitions = sal_transition_to_transition state_type transition_ctx name sal_module.transition in
 	type_init_ctx, (name, state_type, initial_state, transitions)
@@ -286,10 +364,11 @@ let sal_query_to_lisp ctx systems (name, _, model_name, expr) =
 let sal_context_to_lisp ctx =
 	let defs = ctx.definitions in
 	let sally_ctx = StrMap.empty in
+	let undefined_constants = ref [] in
 	let _, queries, _ =
 		List.fold_left (fun (transition_systems, queries, sally_ctx) -> function
 		| Module_def(a, b) ->
-			let sally_module = sal_module_to_lisp sally_ctx (a,b) in
+			let sally_module = sal_module_to_lisp !undefined_constants sally_ctx (a,b) in
 			sally_module::transition_systems, queries, sally_ctx
 		| Assertion(a,b,c,d) ->
 			let q = sal_query_to_lisp sally_ctx transition_systems (a,b,c,d) in
@@ -298,9 +377,14 @@ let sal_context_to_lisp ctx =
 			transition_systems, queries,
 			StrMap.add name (Expr(sal_expr_to_lisp sally_ctx expr, sal_type_to_sally_type sally_ctx sal_type)) sally_ctx
 		| Constant_decl(name, sal_type) ->
+			begin
+			let sally_type = sal_type_to_sally_type sally_ctx sal_type in
+			undefined_constants := (name, sally_type)::!undefined_constants;
 			transition_systems, queries,
 			(* TODO: value?? *)
-			StrMap.add name (Expr(Value("1"), sal_type_to_sally_type sally_ctx sal_type)) sally_ctx
+			
+			StrMap.add name (Expr(Ident(name, sally_type), sally_type)) sally_ctx
+			end
 		| Function_def(name, l, t, expr) ->
 			let var_list = List.(concat @@ map (fun (arg_list, arg_type) ->
 				let sally_type = sal_type_to_sally_type sally_ctx arg_type in

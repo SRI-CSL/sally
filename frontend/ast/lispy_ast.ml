@@ -36,7 +36,7 @@ type sally_condition =
 	| Not of sally_condition
 	| Add of sally_condition * sally_condition
 	| Value of string
-	| Ident of string
+	| Ident of string * sally_type
 	| Ite of sally_condition * sally_condition * sally_condition
 	| True
 	| False
