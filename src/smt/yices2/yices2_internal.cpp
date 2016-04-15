@@ -169,7 +169,7 @@ term_t yices2_internal::mk_yices2_term(expr::term_op op, size_t n, term_t* child
   case expr::TERM_BV_ADD: {
     assert(n >= 2);
     result = yices_bvadd(children[0], children[1]);
-    for (size_t i = 3; i < n; ++ i) {
+    for (size_t i = 2; i < n; ++ i) {
       result = yices_bvadd(result, children[i]);
     }
     break;
@@ -184,7 +184,7 @@ term_t yices2_internal::mk_yices2_term(expr::term_op op, size_t n, term_t* child
   case expr::TERM_BV_MUL: {
     assert(n >= 2);
     result = yices_bvmul(children[0], children[1]);
-    for (size_t i = 3; i < n; ++ i) {
+    for (size_t i = 2; i < n; ++ i) {
       result = yices_bvmul(result, children[i]);
     }
     break;
