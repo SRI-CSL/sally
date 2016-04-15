@@ -389,7 +389,6 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
   case TERM_LT:
   case TERM_GEQ:
   case TERM_GT:
-  case TERM_BV_ADD:
   case TERM_BV_MUL:
   case TERM_BV_XOR:
   case TERM_BV_SHL:
@@ -428,6 +427,7 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
     }
     break;
   }
+  case TERM_BV_ADD:
   case TERM_BV_CONCAT:
   {
     // Some solver (looking at you MathSAT), don't take non-binary concats
