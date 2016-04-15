@@ -401,7 +401,6 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
   case TERM_BV_NAND:
   case TERM_BV_NOR:
   case TERM_BV_XNOR:
-  case TERM_BV_CONCAT:
   case TERM_BV_ULEQ:
   case TERM_BV_SLEQ:
   case TERM_BV_ULT:
@@ -425,6 +424,22 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
       SMT_REF_OUT(*it);
     }
     if (size() > 0) {
+      out << ")";
+    }
+    break;
+  }
+  case TERM_BV_CONCAT:
+  {
+    // Some solver (looking at you MathSAT), don't take non-binary concats
+    // so we print (concat (concat a b) c)
+    for (size_t i = 1; i < size(); ++ i) {
+      out << "(" << get_smt_keyword(d_op) << " ";
+    }
+    const term_ref* it = begin();
+    out << *it;
+    for (++ it; it != end(); ++ it) {
+      out << " ";
+      SMT_REF_OUT(*it);
       out << ")";
     }
     break;
