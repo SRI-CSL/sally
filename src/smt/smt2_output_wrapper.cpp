@@ -48,7 +48,7 @@ smt2_output_wrapper::smt2_output_wrapper(expr::term_manager& tm, const options& 
 
   // If logic set, set it
   if (opts.has_option("solver-logic") > 0) {
-    d_output << "(set-logic " << opts.get_string("solver-logic");
+    d_output << "(set-logic " << opts.get_string("solver-logic") << ")" << std::endl;
   }
 }
 
