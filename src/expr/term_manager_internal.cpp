@@ -620,9 +620,12 @@ term_ref term_manager_internal::substitute(term_ref t, substitution_map& subst) 
   term_op op = term_of(t).op();
   // Need special cases for operators with payload
   switch (op) {
-  case TERM_BV_EXTRACT:
-    t_new = mk_term<TERM_BV_EXTRACT>(payload_of<bitvector_extract>(t), children.begin(), children.end());
+  case TERM_BV_EXTRACT: {
+    // Make a copy, in case we resize on construction
+    bitvector_extract extract = payload_of<bitvector_extract>(t);
+    t_new = mk_term<TERM_BV_EXTRACT>(extract, children[0]);
     break;
+  }
   default:
     t_new = mk_term(op, children.begin(), children.end());
   }
