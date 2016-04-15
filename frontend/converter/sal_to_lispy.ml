@@ -38,6 +38,7 @@ exception Iteration_on_non_range_type
 exception Need_transition
 exception Unknown_type of string
 exception Bad_left_hand_side
+exception Unsupported_array_type
 
 
 (** Union of two contexts, if a key is present in both a and b, the association in a in on top of
@@ -179,7 +180,7 @@ let sal_state_vars_to_state_type (ctx:sally_context) name vars =
 let sal_assignments_to_condition ?vars_to_defined:(s=[]) ctx assignment =
 	let variables_to_init = ref s in
 	let forget_variable n =
-		variables_to_init := List.filter (fun (name, _) -> name <> n) !variables_to_init
+		variables_to_init := List.filter (fun (name, _) -> (name ^ "'") <> n) !variables_to_init
 	in
 	let to_condition = function
 	| Assign(n, expr) ->
@@ -204,9 +205,30 @@ let sal_assignments_to_condition ?vars_to_defined:(s=[]) ctx assignment =
 		fun l a ->
 			Lispy_ast.And(l, to_condition a)
 		) True assignment in
+	let rec get_equality_term ctx = function
+		| (name, Lispy_ast.Array(Range(a,b), t)) ->
+			let cond = ref True in
+			let lispy_ident, lispy_next_ident = StrMap.find name ctx, StrMap.find (name ^ "'") ctx in
+			(match lispy_ident, lispy_next_ident with
+				| Expr(Ident(lispy_ident), _), Expr(Ident(lispy_next_ident), _) ->
+				begin
+				for i = a to b do
+					let ident = name ^ "!" ^ string_of_int i in
+					let lispy_ident_i = lispy_ident ^ "!" ^ string_of_int i in
+					let lispy_next_ident_i = lispy_next_ident ^ "!" ^ string_of_int i in
+					let (tmp_ctx:sally_context) = StrMap.add ident (Expr(Ident(lispy_ident_i), t)) ctx in
+					let (tmp_ctx:sally_context) = StrMap.add (ident ^ "'") (Expr(Ident(lispy_next_ident_i), t)) tmp_ctx in
+					cond := Lispy_ast.And(!cond, get_equality_term tmp_ctx (ident, t));
+				done;
+				!cond
+				end
+				| _ -> raise Not_found)
+		| (name, Array(_, t)) -> raise Unsupported_array_type
+		| (name, _) -> Equality(sal_expr_to_lisp ctx (Ident name), sal_expr_to_lisp ctx (Ident (name ^ "'")))
+	in
 	let implicit_condition = List.fold_left (
-		fun l (name, _) ->
-			Lispy_ast.And(l, Equality(sal_expr_to_lisp ctx (Ident name), sal_expr_to_lisp ctx (Ident (name ^ "'"))))
+		fun l var ->
+			Lispy_ast.And(l, get_equality_term ctx var)
 		) True !variables_to_init in
 	Lispy_ast.And(explicit_condition, implicit_condition)
 
