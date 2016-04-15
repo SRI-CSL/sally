@@ -1,0 +1,123 @@
+%
+% Approximate agreement protocol
+%
+
+approx_simple_syntax: CONTEXT =
+
+BEGIN
+
+  N: NATURAL = 6;  %% number of processes
+
+  PID: TYPE = [1 .. N];
+
+  %
+  % Data = real values
+  %
+  DATA: TYPE = REAL;
+
+  %
+  % Precision = positive real
+  %
+  eps: { x: REAL | x > 0 };
+
+  %
+  % Sort function
+  % - input = array v of N values
+  % - output = a permutation p of the N indices 
+  %   such that v[p[i]] <= v[p[i+1]] for i= 1 .. N-1
+  %
+  sort(v: ARRAY PID OF DATA, p: ARRAY PID OF PID): BOOLEAN =
+        (FORALL (i, j: PID): p[i] = p[j] => i = j)
+    AND (FORALL (i: PID): i<N => v[p[i]] <= v[p[i+1]]);
+  
+
+  %
+  % Fault model:
+  % - g = array of N boolean
+  % - g[i] is true if process i is non-faulty
+  % - assumption: no more than one faulty process
+  %
+  one_fault(g: ARRAY PID OF BOOLEAN): BOOLEAN =
+    FORALL (i, j: PID): i<j => g[i] OR g[j];
+ 
+
+  %
+  % Variant: no faults
+  %
+  all_good(g: ARRAY PID OF BOOLEAN): BOOLEAN =
+    FORALL (i: PID): g(i);
+
+
+  %
+  % Approximate agreement: flat representation
+  %  v[i] = value of process i
+  %  c[i][j] = channel from process i to process j
+  %  p[i] = permutation used by process i
+  %  good[i] = whether i is faulty
+  %
+  approx: MODULE =
+  BEGIN
+    OUTPUT
+      v: ARRAY PID OF DATA,
+      c: ARRAY PID OF ARRAY PID OF DATA,
+      p: ARRAY PID OF ARRAY PID OF PID,
+      good: ARRAY PID OF BOOLEAN,
+      round: REAL
+
+  INITIALIZATION
+     good IN { g: ARRAY PID OF BOOLEAN | one_fault(g) };
+
+     v IN { a: ARRAY PID OF DATA |
+             (FORALL (i, j: PID): good[i] AND good[j] => a[i] - a[j] < eps AND a[j] - a[i] < eps) };
+
+     p IN { a: ARRAY PID OF ARRAY PID OF DATA | FORALL (i, j: PID): a[i][j] = j};
+
+     round = 0;
+
+  TRANSITION
+     round' = round + 1;
+
+     %%
+     %% communication:
+     %% good processes send their value
+     %% faulty process send an arbitrary value
+     %%
+     c' IN { x: ARRAY PID OF ARRAY PID OF DATA |
+              (FORALL (i: PID): good[i] => (FORALL (j: PID): x[i][j] = v[i])) };
+
+     %%
+     %% update rule:
+     %% - process i receives c'[1][i] ... c'[N][i]
+     %% - it sorts the value it receives in increasing order
+     %%   then it picks the median as its new value
+     %%
+     p' IN { x: ARRAY PID OF ARRAY PID OF PID |
+			(
+			FORALL (k: PID):
+				good[k] =>
+				
+				(FORALL (i, j: PID): x[k][i] = x[k][j] => i = j)
+					AND (FORALL (i: PID): i<N => c'[x[k][i]][k] <= c'[x[k][i+1]][k])
+			)
+			};
+
+     %% v'[i] = median of c'[1][i] ... c'[N][i].
+     %% for N=4, this is (c'[k_2][i] + c'[k_3][i])/2 where k_2 = p'[i][2] and k_3 = p'[i][3]
+     %% for N=5, this is c'[k_3][i] where k_3 is p'[i][3]
+     %% for N=6, this is (c'[k_3][i] + c'[k_4][i])/2 where k_3 = p'[i][3] and k_4 = p'[i][4]
+     v' IN { x: ARRAY PID OF DATA | 
+              (FORALL (i: PID): good[i] => x[i] = (c'[p'[i][3]][i] + c'[p'[i][4]][i])/2 ) };
+  
+  END;
+
+  %%one_fault_invar: LEMMA
+  %  approx |- G(one_fault(good));
+
+  agreement: THEOREM
+    approx |- G(FORALL (i, j: PID): good[i] AND good[j] => v[i] - v[j] < eps AND v[j] - v[i] < eps);
+     
+
+  %liveness: THEOREM
+  %  approx |- G(round <= 10);
+
+END
