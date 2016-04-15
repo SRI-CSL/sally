@@ -83,23 +83,17 @@ let rec sal_type_to_sally_type ctx = function
 		Lispy_ast.Range (int_of_string from_as_string, int_of_string to_as_string)
 and
 get_disjonctions_from_array ctx = function
-	| Array_access(Ident(s), Decimal(i)) ->
-		begin
-		match StrMap.find s ctx with
-		| Expr(Ident(n, _), Array(_, dest_type)) ->
-			[(True, Lispy_ast.Ident(n ^ "!" ^ string_of_int i, dest_type))]
-		| Expr(expr, _) -> let f = Format.formatter_of_out_channel stdout in let _ = Io.Lispy_writer.print_expr f expr in raise Inadequate_array_use
-		| _ -> raise Inadequate_array_use
-		end
 	| Array_access(Ident(s), a) ->
 		begin
-		match StrMap.find s ctx with
-		| Expr(Ident(n, _), Array(Range(array_start, array_end), dest_type)) ->
+		let index_expr = sal_expr_to_lisp ctx a in
+		match index_expr, StrMap.find s ctx with
+		| Value(s), Expr(Ident(n, _), Array(Range(array_start, array_end), dest_type)) ->
+			[(True, Lispy_ast.Ident(n ^ "!" ^ s, dest_type))]
+		| _, Expr(Ident(n, _), Array(Range(array_start, array_end), dest_type)) ->
 			let l = seq array_start array_end in
-			let index_expr = sal_expr_to_lisp ctx a in
 			List.map (fun i ->
 				(Equality(index_expr, Value(string_of_int i)), Lispy_ast.Ident(n ^ "!" ^ string_of_int i, dest_type))) l
-		| Expr(Ident(n, _), _) -> raise Inadequate_array_index
+		| _, Expr(Ident(n, _), _) -> raise Inadequate_array_index
 		| _ -> raise Inadequate_array_use
 		end
 	| Array_access(Array_access(a, b), index) ->
