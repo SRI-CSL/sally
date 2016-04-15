@@ -733,7 +733,6 @@ public:
       mpq_init(c_y);
       // sum c_i a_i
       size_t size = yices_term_num_children(t);
-      std::vector<expr::term_ref> sum_children;
       for (size_t i = 0; i < size; ++ i) {
         term_t a_y;
         yices_sum_component(t, i, c_y, &a_y);
@@ -746,8 +745,16 @@ public:
     }
 
     // products
-    case YICES_POWER_PRODUCT:
+    case YICES_POWER_PRODUCT: {
+      size_t size = yices_term_num_children(t);
+      for (size_t i = 0; i < size; ++ i) {
+        term_t p_t;
+        uint32_t p_d;
+        yices_product_component(t, i, &p_t, &p_d);
+        children.push_back(p_t);
+      }
       break;
+    }
 
     default:
       assert(false);
@@ -915,9 +922,20 @@ public:
     }
 
     // products
-    case YICES_POWER_PRODUCT:
+    case YICES_POWER_PRODUCT: {
+      size_t size = yices_term_num_children(yices_term);
+      std::vector<expr::term_ref> pow_children;
+      for (size_t i = 0; i < size; ++ i) {
+        term_t p_t;
+        uint32_t p_d;
+        yices_product_component(yices_term, i, &p_t, &p_d);
+        while (p_d --) {
+          pow_children.push_back(d_conversion_cache.get_term_cache(p_t));
+        }
+      }
+      result = d_tm.mk_term(expr::TERM_BV_MUL, pow_children);
       break;
-
+    }
     default:
       assert(false);
     }
