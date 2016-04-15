@@ -29,9 +29,9 @@ let rec print_expr f =
 		Format.fprintf f "@])"
 	in
 	let print_folded3 s a b c =
-		Format.fprintf f "(%s @[" s;
-		print_expr f a; Format.fprintf f " ";
-		print_expr f b; Format.fprintf f " ";
+		Format.fprintf f "(%s @[<v>" s;
+		print_expr f a; Format.fprintf f "@;";
+		print_expr f b; Format.fprintf f "@;";
 		print_expr f c;
 		Format.fprintf f "@])"
 	in
