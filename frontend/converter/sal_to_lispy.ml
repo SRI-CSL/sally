@@ -40,6 +40,7 @@ exception Need_transition
 exception Unknown_type of string
 exception Bad_left_hand_side
 exception Unsupported_array_type
+exception Variable_not_found of string
 
 
 (** Union of two contexts, if a key is present in both a and b, the association in a in on top of
@@ -59,6 +60,19 @@ let eval_sally ctx = function
 let rec seq i = function
 	| x when x = i -> [i]
 	| n -> n::(seq i (n-1))
+
+let ctx_var name ctx =
+	try
+		StrMap.find name ctx
+	with
+	| Not_found -> raise (Variable_not_found name)
+
+let next_var name ctx =
+	try
+		StrMap.find (name ^ "'") ctx
+	with
+	| Not_found ->
+		ctx_var name ctx
 
 (** Convert a sal type to a lispy one, based on the information contained in ctx *)
 let rec sal_type_to_sally_type ctx = function
@@ -116,7 +130,7 @@ sal_expr_to_lisp (ctx:sally_context) = function
 	| Decimal(i) -> Value (string_of_int i)
 	| Float(i) -> Value(string_of_float i)
 
-	| Ident(s) -> (match StrMap.find s ctx with
+	| Ident(s) -> (match ctx_var s ctx with
 		| Expr(s, _) -> s
 		| _ -> raise Cannot_use_function_as_expression)
 
@@ -237,7 +251,7 @@ let sal_state_vars_to_state_type (ctx:sally_context) name vars =
 	type_init_ctx, transition_ctx, ((name, sally_vars):state_type)
 
 (** Converts a list of sal_assignments to a single big lispy condition *) 
-let sal_assignments_to_condition ?vars_to_defined:(s=[]) ctx assignment =
+let sal_assignments_to_condition ?only_define_type:(only_type=false) ?vars_to_define:(s=[]) ctx assignment =
 	let variables_to_init = ref s in
 	let forget_variable n =
 		variables_to_init := List.filter (fun (name, _) -> (name ^ "'") <> n) !variables_to_init
@@ -265,10 +279,11 @@ let sal_assignments_to_condition ?vars_to_defined:(s=[]) ctx assignment =
 		fun l a ->
 			Lispy_ast.And(l, to_condition a)
 		) True assignment in
-	let rec get_equality_term ctx = function
+	let rec get_equality_term equality_function ctx = function
 		| (name, Lispy_ast.Array(Range(a,b), t)) ->
 			let cond = ref True in
-			let lispy_ident, lispy_next_ident = StrMap.find name ctx, StrMap.find (name ^ "'") ctx in
+			let lispy_ident, lispy_next_ident = StrMap.find name ctx, next_var name ctx
+			in
 			(match lispy_ident, lispy_next_ident with
 				| Expr(Ident(lispy_ident,_), _), Expr(Ident(lispy_next_ident, _), _) ->
 				begin
@@ -278,24 +293,45 @@ let sal_assignments_to_condition ?vars_to_defined:(s=[]) ctx assignment =
 					let lispy_next_ident_i = lispy_next_ident ^ "!" ^ string_of_int i in
 					let (tmp_ctx:sally_context) = StrMap.add ident (Expr(Ident(lispy_ident_i, t), t)) ctx in
 					let (tmp_ctx:sally_context) = StrMap.add (ident ^ "'") (Expr(Ident(lispy_next_ident_i, t), t)) tmp_ctx in
-					cond := Lispy_ast.And(!cond, get_equality_term tmp_ctx (ident, t));
+					cond := Lispy_ast.And(!cond, get_equality_term equality_function tmp_ctx (ident, t));
 				done;
 				!cond
 				end
 				| _ -> raise Not_found)
 		| (name, Array(_, t)) -> raise Unsupported_array_type
-		| (name, _) -> Equality(sal_expr_to_lisp ctx (Ident name), sal_expr_to_lisp ctx (Ident (name ^ "'")))
+		| (name, ty) -> equality_function ctx (name, ty)
 	in
-	let implicit_condition = List.fold_left (
-		fun l var ->
-			Lispy_ast.And(l, get_equality_term ctx var)
-		) True !variables_to_init in
-	Lispy_ast.And(explicit_condition, implicit_condition)
+	let real_equality_function ctx (name, ty) = Equality(sal_expr_to_lisp ctx (Ident name), sal_expr_to_lisp ctx (Ident (name ^ "'"))) in
+	let fake_equality_function ctx (name, ty) = match ty with
+		| Lispy_ast.Range(a, b) ->
+			begin
+				let expr = sal_expr_to_lisp ctx (Ident name) in
+				List.fold_left (fun l i ->
+					Lispy_ast.Or(l, Equality(expr, Value (string_of_int i)))
+				) False (seq a b)
+			end
+		| _ -> True
+	in
+	let type_condition =
+		List.fold_left (
+			fun l var ->
+				Lispy_ast.And(l, get_equality_term fake_equality_function ctx var)
+			) True s
+	in
+	let implicit_condition =
+		if only_type then
+			True
+		else
+			List.fold_left (
+				fun l var ->
+					Lispy_ast.And(l, get_equality_term real_equality_function ctx var)
+				) True !variables_to_init in
+	Lispy_ast.(And(type_condition, And(explicit_condition, implicit_condition)))
 
 (** Converts an assignment to a lispy state of type {i type_name} and named {i name} *)
 let sal_assignments_to_lispy_state ctx state_type name assign =
 	let type_name, variables = state_type in
-	name, type_name, sal_assignments_to_condition ctx assign
+	name, type_name, sal_assignments_to_condition ~only_define_type:true ~vars_to_define:variables ctx assign
 
 (** Takes a Sal transition and return a lispy one.
   * @param ctx a sally_context
@@ -304,7 +340,7 @@ let sal_assignments_to_lispy_state ctx state_type name assign =
 let sal_transition_to_transition ((type_name, variables):state_type) ctx transition_name = function
 | NoTransition -> raise Need_transition
 | Assignments(assign) (* Unguarded transitions *) -> 
-	"trans", transition_name, sal_assignments_to_condition ~vars_to_defined:variables ctx assign
+	"trans", transition_name, sal_assignments_to_condition ~vars_to_define:variables ctx assign
 | GuardedCommands(l) ->
 	let all_guarded = List.filter (function | Guarded(_) -> true | _ -> false) l in
 	let all_conditions = List.fold_left (fun l a ->
@@ -319,11 +355,11 @@ let sal_transition_to_transition ((type_name, variables):state_type) ctx transit
 	let cond = List.fold_left (fun l a -> match a with
 	| Default(assign) ->
 		Lispy_ast.Or(l,
-			And(all_conditions, sal_assignments_to_condition ~vars_to_defined:variables ctx assign)
+			And(all_conditions, sal_assignments_to_condition ~vars_to_define:variables ctx assign)
 		)
 	| Guarded(expr, assignment) ->
 		let guard = sal_expr_to_lisp ctx expr in
-		let implies = sal_assignments_to_condition ~vars_to_defined:variables ctx assignment in
+		let implies = sal_assignments_to_condition ~vars_to_define:variables ctx assignment in
 		Or(l, And(guard, implies))
 	) False l in
 	"trans", transition_name, cond
@@ -335,11 +371,12 @@ let sal_module_to_lisp undefined_constants ctx (name, sal_module) =
 	let ctx = List.fold_left (fun l (n, _) ->
 		StrMap.remove n l) ctx undefined_constants in
 	let type_init_ctx, transition_ctx, state_type = sal_state_vars_to_state_type ctx name sal_module.state_vars in
-	let transition_ctx = List.fold_left (fun l (n,t) ->
+	let transition_ctx,type_init_ctx = List.fold_left (fun (l, tyctx) (n,t) ->
 		let ctx = StrMap.add n (Expr(Ident("state."^n, t), t)) l in
 		let ctx = StrMap.add (n^"'") (Expr(Ident("next."^n, t), t)) ctx in
-		ctx
-		) transition_ctx undefined_constants in
+		let tyctx = StrMap.add n (Expr(Ident(n, t), t)) tyctx in
+		ctx, tyctx
+		) (transition_ctx, type_init_ctx) undefined_constants in
 	let state_type = List.fold_left (fun st (n,t) ->
 		add_variable_to_state_type st n t) state_type undefined_constants in
 	let initial_state = sal_assignments_to_lispy_state type_init_ctx state_type "init" sal_module.initialization in
