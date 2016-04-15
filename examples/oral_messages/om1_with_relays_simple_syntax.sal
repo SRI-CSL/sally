@@ -2,7 +2,7 @@
 % Byzantine fault tolerant OM1 protocol with relays
 %
 
-om1_with_relays: CONTEXT =
+om1_with_relays_simple_syntax: CONTEXT =
 BEGIN
 
   N: NATURAL = 4;  % number of processes
@@ -143,19 +143,19 @@ BEGIN
      ]
   END;
 
-  agreement: LEMMA
-    OM |- G(FORALL (i, j: PID): good_p[i] AND good_p[j] AND round >= 3 => v[i] = v[j]);
+  %%agreement: LEMMA
+  %%  OM |- G(FORALL (i, j: PID): good_p[i] AND good_p[j] AND round >= 3 => v[i] = v[j]);
 
-  %validity: LEMMA
-  %  OM |- G(FORALL (i: PID): good_p[i] AND good_p[source] AND round >= 3 => v[i] = val);
+  validity: LEMMA
+    OM |- G(FORALL (i: PID): good_p[i] AND good_p[source] AND round >= 3 => v[i] = val);
  
-  %test0: LEMMA
-  %  OM |- G(FORALL (i: PID, j, k: RID): round >= 1 => cx[i][j] = cx[i][k]);
+  %%test0: LEMMA
+  %%  OM |- G(FORALL (i: PID, j, k: RID): round >= 1 => cx[i][j] = cx[i][k]);
 
-  %test1: LEMMA
-  %  OM |- G(FORALL (i: PID, j, k: RID): round >= 2 => cy[i][j] = cy[i][k]);
+  %%test1: LEMMA
+  %%  OM |- G(FORALL (i: PID, j, k: RID): round >= 2 => cy[i][j] = cy[i][k]);
 
-  %test2: LEMMA
-  %  OM |- G(FORALL (i, j: PID, k: RID): round >= 2 => cy[i][k] = cy[j][k]);
+  %%test2: LEMMA
+  %%  OM |- G(FORALL (i, j: PID, k: RID): round >= 2 => cy[i][k] = cy[j][k]);
 
 END

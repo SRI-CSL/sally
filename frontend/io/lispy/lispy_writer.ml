@@ -144,11 +144,28 @@ let print_ts f (name, state_type, init, transition) =
 	Format.fprintf f "@\n";
 	Format.fprintf f "(define-transition-system %s state init trans)" name
 
-let print_query ch q =
-	let f = Format.formatter_of_out_channel ch in
+let print_query f q =
 	let transition_system, cond = q in
-	print_ts f transition_system;
-	Format.fprintf f "@;@\n";
 	Format.fprintf f "@[(query %s " (ts_name transition_system);
 	print_expr f cond;
 	Format.fprintf f "@])"
+
+let print_queries ch (q:query list) =
+	let f = Format.formatter_of_out_channel ch in
+	let transition_systems = ref [] in
+	List.iter (fun (ts, cond) ->
+		if List.mem (ts_name ts) !transition_systems then
+		begin
+			print_query f (ts, cond);
+			Format.fprintf f "@;@\n";
+		end
+		else
+		begin
+			transition_systems := (ts_name ts)::!transition_systems;
+			print_ts f ts;
+			Format.fprintf f "@;@\n";
+			print_query f (ts, cond);
+			Format.fprintf f "@;@\n";
+		end
+	) q
+

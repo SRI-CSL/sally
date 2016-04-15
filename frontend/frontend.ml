@@ -29,5 +29,5 @@ let ch =
 
 let ctx = Io.Sal_lexer.parse ch in
 	let lispy = Converter.Sal_to_lispy.sal_context_to_lisp ctx in
-	List.iter (Io.Lispy_writer.print_query stdout) lispy
+	Io.Lispy_writer.print_queries stdout lispy
 
