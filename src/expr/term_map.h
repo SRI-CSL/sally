@@ -87,6 +87,11 @@ class hash_map_to_term_ref : public boost::unordered_map<key, expr::term_ref, ke
 
 public:
 
+  hash_map_to_term_ref() {}
+
+  hash_map_to_term_ref(const key_hasher& hasher)
+  : super(boost::unordered::detail::default_bucket_count, hasher) {}
+
   /** Relocate the terms and remove keys that have been collected */
   template <typename gc_relocator>
   void reloc(const gc_relocator& gc_reloc) {

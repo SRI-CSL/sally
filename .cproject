@@ -32,6 +32,7 @@
 								<option id="gnu.cpp.compiler.option.preprocessor.def.1267789742" name="Defined symbols (-D)" superClass="gnu.cpp.compiler.option.preprocessor.def" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="WITH_YICES2=1"/>
 									<listOptionValue builtIn="false" value="WITH_MATHSAT5=1"/>
+									<listOptionValue builtIn="false" value="WITH_Z3=1"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1119723607" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
@@ -43,6 +44,7 @@
 								<option id="gnu.c.compiler.option.preprocessor.def.symbols.1848914050" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="WITH_YICES2=1"/>
 									<listOptionValue builtIn="false" value="WITH_MATHSAT5=1"/>
+									<listOptionValue builtIn="false" value="WITH_Z3=1"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.638789082" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
@@ -56,7 +58,7 @@
 							<tool id="cdt.managedbuild.tool.gnu.assembler.base.133666711" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.base">
 								<option id="gnu.both.asm.option.include.paths.1977420588" name="Include paths (-I)" superClass="gnu.both.asm.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${HOME}/Software/include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${HOME}/Software/mathsat-5.3.2-linux-x86_64/include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${HOME}/Software/mathsat-5.3.10-linux-x86_64/include&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.618220787" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 							</tool>
@@ -64,7 +66,6 @@
 					</folderInfo>
 					<sourceEntries>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
-						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="yices2"/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -112,6 +113,7 @@
 								<option id="gnu.c.compiler.option.preprocessor.def.symbols.973098644" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="WITH_YICES2=1"/>
 									<listOptionValue builtIn="false" value="WITH_MATHSAT5=1"/>
+									<listOptionValue builtIn="false" value="WITH_Z3=1"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.909872702" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
@@ -152,15 +154,21 @@
 			<resource resourceType="PROJECT" workspacePath="/sal2"/>
 		</configuration>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
+	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 	<storageModule moduleId="scannerConfiguration">
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.gnu.base.680933916;cdt.managedbuild.toolchain.gnu.base.680933916.756318916;cdt.managedbuild.tool.gnu.cpp.compiler.base.1998123431;cdt.managedbuild.tool.gnu.cpp.compiler.input.1119723607">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.gnu.base.680933916.1392169939;cdt.managedbuild.toolchain.gnu.base.680933916.1392169939.;cdt.managedbuild.tool.gnu.cpp.compiler.base.849772933;cdt.managedbuild.tool.gnu.cpp.compiler.input.89327522">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.gnu.base.680933916;cdt.managedbuild.toolchain.gnu.base.680933916.756318916;cdt.managedbuild.tool.gnu.c.compiler.base.21122748;cdt.managedbuild.tool.gnu.c.compiler.input.638789082">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.gnu.base.680933916.1392169939;cdt.managedbuild.toolchain.gnu.base.680933916.1392169939.;cdt.managedbuild.tool.gnu.c.compiler.base.423845323;cdt.managedbuild.tool.gnu.c.compiler.input.909872702">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
 	</storageModule>
-	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
-	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 </cproject>

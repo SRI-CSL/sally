@@ -32,6 +32,9 @@ endif()
 if (MATHSAT5_FOUND)
   target_link_libraries(sally_test ${MATHSAT5_LIBRARY})
 endif()
+if (Z3_FOUND)
+  target_link_libraries(sally_test ${Z3_LIBRARY})
+endif()
 target_link_libraries(sally_test ${GMP_LIBRARY})
 
 # Add the test

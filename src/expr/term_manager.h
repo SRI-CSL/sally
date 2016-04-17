@@ -93,7 +93,7 @@ public:
   size_t get_bitvector_type_size(term_ref bv_type) const;
 
   /** Get the size of a bitvector term */
-  size_t get_bitvector_size(term_ref bv_type) const;
+  size_t get_bitvector_size(term_ref bv_term) const;
 
   /** Make a term, given children */
   term_ref mk_term(term_op op, term_ref c);

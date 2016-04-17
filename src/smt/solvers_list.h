@@ -24,6 +24,7 @@
 
 #include "smt/yices2/yices2_info.h"
 #include "smt/mathsat5/mathsat5_info.h"
+#include "smt/z3/z3_info.h"
 #include "smt/y2m5/y2m5_info.h"
 #include "smt/generic/generic_solver_info.h"
 
@@ -34,6 +35,9 @@ sally::smt::solver_data::solver_data() {
 #endif
 #ifdef WITH_MATHSAT5
   add_module_info<mathsat5_info>();
+#endif
+#ifdef WITH_Z3
+  add_module_info<z3_info>();
 #endif
 #ifdef WITH_YICES2
 #ifdef WITH_MATHSAT5
@@ -47,6 +51,8 @@ std::string sally::smt::factory::get_default_solver_id() {
   if (s_default_solver.empty()) {
 #ifdef WITH_YICES2
     s_default_solver = yices2_info::get_id();
+#elif defined WITH_Z3
+    s_default_solver = z3_info::get_id();
 #elif defined WITH_MATHSAT5
     s_default_solver = mathsat5_info::get_id();
 #else
