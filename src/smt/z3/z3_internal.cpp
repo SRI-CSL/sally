@@ -521,6 +521,14 @@ expr::model::ref z3_internal::get_model(const std::set<expr::term_ref>& x_variab
 
   // Get the model from z3
   Z3_model z3_model = Z3_solver_get_model(d_ctx, d_solver);
+  Z3_error_code error = Z3_get_error_code(d_ctx);
+  if (error != Z3_OK) {
+    std::stringstream ss;
+    Z3_string msg = Z3_get_error_msg(d_ctx, error);
+    ss << "Z3 error (model): " << msg << ".";
+    throw exception(ss.str());
+  }
+  Z3_model_inc_ref(d_ctx, z3_model);
 
   if (output::trace_tag_is_enabled("z3::model")) {
     std::cerr << Z3_model_to_string(d_ctx, z3_model) << std::endl;
@@ -563,62 +571,57 @@ expr::model::ref z3_internal::get_model(const std::set<expr::term_ref>& x_variab
   for (size_t i = 0; i < variables.size(); ++ i) {
     expr::term_ref var = variables[i];
     Z3_ast z3_var = to_z3_term(var);
-    Z3_func_decl z3_var_decl = Z3_to_func_decl(d_ctx, z3_var);
     expr::term_ref var_type = d_tm.type_of(var);
+    Z3_ast value;
+    bool ok = Z3_model_eval(d_ctx, z3_model, z3_var, 1, &value);
+    if (ok) {
+      Z3_inc_ref(d_ctx, value);
+    }
 
     expr::value var_value;
     switch (d_tm.term_of(var_type).op()) {
     case expr::TYPE_BOOL: {
-      Z3_ast v = Z3_model_get_const_interp(d_ctx, z3_model, z3_var_decl);
-      if (v == 0) {
-        // Default value
-        var_value = expr::value(false);
-      } else {
-        assert(false);
-      }
+      var_value = expr::value(Z3_get_bool_value(d_ctx, value));
       break;
     }
     case expr::TYPE_INTEGER: {
-      Z3_ast v = Z3_model_get_const_interp(d_ctx, z3_model, z3_var_decl);
-      if (v == 0) {
-        // Default value
-        expr::rational default_value;
-        var_value = expr::value(default_value);
-      } else {
-        assert(false);
-      }
+      Z3_string value_string = Z3_get_numeral_string(d_ctx, value);
+      expr::rational q_value(value_string);
+      var_value = expr::value(q_value);
       break;
     }
     case expr::TYPE_REAL: {
-      Z3_ast v = Z3_model_get_const_interp(d_ctx, z3_model, z3_var_decl);
-      if (v == 0) {
-        // Default value
-        expr::rational default_value;
-        var_value = expr::value(default_value);
-      } else {
-        assert(false);
-      }
+      Z3_string value_string = Z3_get_numeral_string(d_ctx, value);
+      expr::rational q_value(value_string);
+      var_value = expr::value(q_value);
       break;
     }
     case expr::TYPE_BITVECTOR: {
-      Z3_ast v = Z3_model_get_const_interp(d_ctx, z3_model, z3_var_decl);
-      if (v == 0) {
-        // Default value
-        size_t size = d_tm.get_bitvector_size(var);
-        expr::bitvector default_value(size);
-        var_value = expr::value(default_value);
-      } else {
-        assert(false);
-      }
+      Z3_string value_string = Z3_get_numeral_string(d_ctx, value);
+      size_t bv_size = d_tm.get_bitvector_size(var);
+      expr::integer z_value(value_string, 10);
+      var_value = expr::value(expr::bitvector(bv_size, z_value));
       break;
     }
     default:
       assert(false);
     }
 
+    if (ok) {
+      Z3_dec_ref(d_ctx, value);
+    }
+
     // Add the association
     m->set_variable_value(var, var_value);
-  }
+
+    Z3_error_code error = Z3_get_error_code(d_ctx);
+    if (error != Z3_OK) {
+      std::stringstream ss;
+      Z3_string msg = Z3_get_error_msg(d_ctx, error);
+      ss << "Z3 error (model): " << msg << ".";
+      throw exception(ss.str());
+    }
+}
 
   // Free the yices model
   Z3_model_dec_ref(d_ctx, z3_model);

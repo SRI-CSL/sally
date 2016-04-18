@@ -40,6 +40,7 @@ z3_term_cache::z3_term_cache(expr::term_manager& tm)
 
   // Make the context and set it to
   d_ctx = Z3_mk_context_rc(cfg);
+  Z3_set_error_handler(d_ctx, 0);
   d_hasher.ctx = d_ctx;
   d_z3_to_term_cache = z3_to_term_cache(d_hasher);
 
