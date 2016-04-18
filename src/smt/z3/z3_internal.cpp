@@ -689,7 +689,7 @@ void z3_internal::add_variable(expr::term_ref var, smt::solver::variable_class f
 }
 
 void z3_internal::interpolate(std::vector<expr::term_ref>& out) {
-  assert(false);
+
 }
 
 void z3_internal::gc_collect(const expr::gc_relocator& gc_reloc) {

@@ -26,6 +26,7 @@
 #include "smt/mathsat5/mathsat5_info.h"
 #include "smt/z3/z3_info.h"
 #include "smt/y2m5/y2m5_info.h"
+#include "smt/y2z3/y2z3_info.h"
 #include "smt/generic/generic_solver_info.h"
 
 
@@ -42,6 +43,11 @@ sally::smt::solver_data::solver_data() {
 #ifdef WITH_YICES2
 #ifdef WITH_MATHSAT5
   add_module_info<y2m5_info>();
+#endif
+#endif
+#ifdef WITH_YICES2
+#ifdef WITH_Z3
+  add_module_info<y2z3_info>();
 #endif
 #endif
   add_module_info<generic_solver_info>();
