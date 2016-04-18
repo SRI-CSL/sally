@@ -42,9 +42,6 @@ class z3_term_cache : public expr::gc_participant {
   /** The term manager this cache is using */
   expr::term_manager& d_tm;
 
-  /** z3 config */
-  Z3_config d_cfg;
-
   /** z3 context */
   Z3_context d_ctx;
 

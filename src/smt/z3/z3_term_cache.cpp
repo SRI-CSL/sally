@@ -35,18 +35,20 @@ z3_term_cache::z3_term_cache(expr::term_manager& tm)
 , d_cache_is_clean(true)
 {
   // Global configuration
-  d_cfg = Z3_mk_config();
-  Z3_set_param_value(d_cfg, "MODEL", "true");
+  Z3_config cfg = Z3_mk_config();
+  Z3_set_param_value(cfg, "MODEL", "true");
 
   // Make the context and set it to
-  d_ctx = Z3_mk_context_rc(d_cfg);
+  d_ctx = Z3_mk_context_rc(cfg);
   d_hasher.ctx = d_ctx;
   d_z3_to_term_cache = z3_to_term_cache(d_hasher);
+
+  Z3_del_config(cfg);
 }
 
 z3_term_cache::~z3_term_cache() {
+  clear();
   Z3_del_context(d_ctx);
-  Z3_del_config(d_cfg);
 }
 
 z3_term_cache::tm_to_cache_map z3_term_cache::s_tm_to_cache_map;
@@ -156,14 +158,23 @@ expr::term_ref z3_term_cache::get_term_cache(Z3_ast t) const {
 }
 
 void z3_term_cache::clear() {
+
+  term_to_z3_cache::const_iterator it1 = d_term_to_z3_cache.begin();
+  for (; it1 != d_term_to_z3_cache.end(); ++ it1) {
+    Z3_dec_ref(d_ctx, it1->second);
+  }
+
+  z3_to_term_cache::const_iterator it2 = d_z3_to_term_cache.begin();
+  for (; it2 != d_z3_to_term_cache.end(); ++ it2) {
+    Z3_dec_ref(d_ctx, it2->first);
+  }
+
   d_cache_is_clean = true;
   d_term_to_z3_cache.clear();
-  d_term_to_z3_cache.clear();
+  d_z3_to_term_cache.clear();
   d_permanent_terms.clear();
   d_permanent_terms_z3.clear();
 
-  // TODO: decrease reference counts
-  assert(false);
 }
 
 z3_term_cache::tm_to_cache_map::~tm_to_cache_map() {

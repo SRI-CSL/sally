@@ -141,7 +141,7 @@ expr::term_ref yices2_term_cache::get_term_cache(term_t t) const {
 void yices2_term_cache::clear() {
   d_cache_is_clean = true;
   d_term_to_yices_cache.clear();
-  d_term_to_yices_cache.clear();
+  d_yices_to_term_cache.clear();
   d_permanent_terms.clear();
   d_permanent_terms_yices.clear();
 }

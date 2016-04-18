@@ -63,6 +63,10 @@ public:
 
   /** Output ot stream */
   void to_stream(std::ostream& out) const;
+
+  const mpz_class& mpz() const {
+    return d_gmp_int;
+  }
 };
 
 /**

@@ -34,6 +34,8 @@ int z3_internal::s_instances = 0;
 
 z3_internal::z3_internal(expr::term_manager& tm, const options& opts)
 : d_tm(tm)
+, d_ctx(0)
+, d_solver(0)
 , d_conversion_cache(0)
 , d_last_check_status(Z3_L_UNDEF)
 , d_instance(s_instances)
@@ -50,6 +52,7 @@ z3_internal::z3_internal(expr::term_manager& tm, const options& opts)
 
   /** Make the solver */
   d_solver = Z3_mk_solver(d_ctx);
+  Z3_solver_inc_ref(d_ctx, d_solver);
 
   // Bitvector bits
   d_bv0 = expr::term_ref_strong(d_tm, d_tm.mk_bitvector_constant(expr::bitvector(1, 0)));
@@ -316,10 +319,16 @@ Z3_ast z3_internal::to_z3_term(expr::term_ref ref) {
   const expr::term& t = d_tm.term_of(ref);
   expr::term_op t_op = t.op();
 
+  // Temps to decref after we're done
+  std::vector<Z3_ast> to_decref;
+
   switch (t_op) {
   case expr::VARIABLE: {
     Z3_symbol symbol = Z3_mk_string_symbol(d_ctx, d_tm.get_variable_name(t).c_str());
-    result = Z3_mk_const(d_ctx, symbol, to_z3_type(t[0]));
+    Z3_sort sort = to_z3_type(t[0]);
+    Z3_inc_ref(d_ctx, Z3_sort_to_ast(d_ctx, sort));
+    to_decref.push_back(Z3_sort_to_ast(d_ctx, sort));
+    result = Z3_mk_const(d_ctx, symbol, sort);
     d_conversion_cache->set_term_cache(result, ref);
     break;
   }
@@ -327,18 +336,18 @@ Z3_ast z3_internal::to_z3_term(expr::term_ref ref) {
     result = d_tm.get_boolean_constant(t) ? Z3_mk_true(d_ctx) : Z3_mk_false(d_ctx);
     break;
   case expr::CONST_RATIONAL: {
-    std::stringstream ss;
-    ss << t;
-    result = Z3_mk_numeral(d_ctx, ss.str().c_str(), Z3_mk_real_sort(d_ctx));
+    Z3_sort sort = Z3_mk_real_sort(d_ctx);
+    Z3_inc_ref(d_ctx, Z3_sort_to_ast(d_ctx, sort));
+    to_decref.push_back(Z3_sort_to_ast(d_ctx, sort));
+    result = Z3_mk_numeral(d_ctx, d_tm.get_rational_constant(t).mpq().get_str(10).c_str(), sort);
     break;
   }
   case expr::CONST_BITVECTOR: {
-    expr::bitvector bv(d_tm.get_bitvector_constant(t));
-    const expr::integer& bv_value = bv;
-    std::stringstream ss;
-    ss << bv_value;
+    const expr::bitvector& bv = d_tm.get_bitvector_constant(t);
     Z3_sort bv_sort = Z3_mk_bv_sort(d_ctx, bv.size());
-    result = Z3_mk_numeral(d_ctx, ss.str().c_str(), bv_sort);
+    Z3_inc_ref(d_ctx, Z3_sort_to_ast(d_ctx, bv_sort));
+    to_decref.push_back(Z3_sort_to_ast(d_ctx, bv_sort));
+    result = Z3_mk_numeral(d_ctx, bv.mpz().get_str(10).c_str(), bv_sort);
     break;
   }
   case expr::TERM_ITE:
@@ -413,6 +422,10 @@ Z3_ast z3_internal::to_z3_term(expr::term_ref ref) {
 
   // Set the cache ref -> result
   d_conversion_cache->set_term_cache(ref, result);
+
+  for (size_t i = 0; i < to_decref.size(); ++ i) {
+    Z3_dec_ref(d_ctx, to_decref[i]);
+  }
 
   return result;
 }
@@ -563,7 +576,6 @@ expr::model::ref z3_internal::get_model(const std::set<expr::term_ref>& x_variab
       } else {
         assert(false);
       }
-      Z3_dec_ref(d_ctx, v);
       break;
     }
     case expr::TYPE_INTEGER: {
@@ -575,7 +587,6 @@ expr::model::ref z3_internal::get_model(const std::set<expr::term_ref>& x_variab
       } else {
         assert(false);
       }
-      Z3_dec_ref(d_ctx, v);
       break;
     }
     case expr::TYPE_REAL: {
@@ -587,7 +598,6 @@ expr::model::ref z3_internal::get_model(const std::set<expr::term_ref>& x_variab
       } else {
         assert(false);
       }
-      Z3_dec_ref(d_ctx, v);
       break;
     }
     case expr::TYPE_BITVECTOR: {
@@ -600,7 +610,6 @@ expr::model::ref z3_internal::get_model(const std::set<expr::term_ref>& x_variab
       } else {
         assert(false);
       }
-      Z3_dec_ref(d_ctx, v);
       break;
     }
     default:

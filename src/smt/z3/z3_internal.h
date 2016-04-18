@@ -24,7 +24,11 @@
 
 #include <gmp.h>
 #include <vector>
-#include <z3.h>
+
+extern "C"
+{
+  #include <z3.h>
+}
 
 #include "expr/term_manager.h"
 #include "smt/solver.h"
@@ -41,9 +45,6 @@ class z3_internal {
 
   /** Number of yices instances */
   static int s_instances;
-
-  /** The z3 config */
-  Z3_config d_cfg;
 
   /** The z3 context */
   Z3_context d_ctx;
