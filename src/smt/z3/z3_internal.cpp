@@ -639,7 +639,7 @@ void z3_internal::push() {
 }
 
 void z3_internal::pop() {
-  Z3_solver_push(d_ctx, d_solver);
+  Z3_solver_pop(d_ctx, d_solver, 1);
   Z3_error_code error = Z3_get_error_code(d_ctx);
   if (error != Z3_OK) {
     std::stringstream ss;
