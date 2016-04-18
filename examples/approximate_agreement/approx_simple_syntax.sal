@@ -110,14 +110,14 @@ BEGIN
   
   END;
 
-  %%one_fault_invar: LEMMA
-  %  approx |- G(one_fault(good));
+  one_fault_invar: LEMMA
+    approx |- G(one_fault(good));
 
   agreement: THEOREM
     approx |- G(FORALL (i, j: PID): good[i] AND good[j] => v[i] - v[j] < eps AND v[j] - v[i] < eps);
      
 
-  %liveness: THEOREM
-  %  approx |- G(round <= 10);
+  liveness: THEOREM
+    approx |- G(round <= 10);
 
 END
