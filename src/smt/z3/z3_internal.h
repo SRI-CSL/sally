@@ -99,11 +99,15 @@ public:
   /** Get the yices version of the type */
   Z3_sort to_z3_type(expr::term_ref ref);
 
-  /** Get the sal version of the term */
+  /** Get the sally version of the term */
   expr::term_ref to_term(Z3_ast t);
 
-  /** Make a yices term with given operator and children */
+  /** Make a z3 term with given operator and children */
   Z3_ast mk_z3_term(expr::term_op op, size_t n, const std::vector<Z3_ast>& children);
+
+  /** Make a term given z3 operator and children */
+  expr::term_ref mk_term(Z3_decl_kind kind, const std::vector<expr::term_ref>& children);
+
 
   /** Add an assertion to yices */
   void add(expr::term_ref ref, solver::formula_class f_class);

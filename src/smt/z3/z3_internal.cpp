@@ -430,6 +430,140 @@ Z3_ast z3_internal::to_z3_term(expr::term_ref ref) {
   return result;
 }
 
+expr::term_ref z3_internal::mk_term(Z3_decl_kind kind, const std::vector<expr::term_ref>& children) {
+  expr::term_ref result;
+
+  switch (kind) {
+  // Basic
+  case Z3_OP_TRUE:
+  case Z3_OP_FALSE:
+  case Z3_OP_EQ:
+  case Z3_OP_DISTINCT:
+  case Z3_OP_ITE:
+  case Z3_OP_AND:
+  case Z3_OP_OR:
+  case Z3_OP_IFF:
+  case Z3_OP_XOR:
+  case Z3_OP_NOT:
+  case Z3_OP_IMPLIES:
+  case Z3_OP_OEQ:
+  case Z3_OP_INTERP:
+    // TODO: basic
+    assert(false);
+    break;
+
+    // Arithmetic
+  case Z3_OP_ANUM:
+  case Z3_OP_AGNUM:
+  case Z3_OP_LE:
+  case Z3_OP_GE:
+  case Z3_OP_LT:
+  case Z3_OP_GT:
+  case Z3_OP_ADD:
+  case Z3_OP_SUB:
+  case Z3_OP_UMINUS:
+  case Z3_OP_MUL:
+  case Z3_OP_DIV:
+  case Z3_OP_IDIV:
+  case Z3_OP_REM:
+  case Z3_OP_MOD:
+  case Z3_OP_TO_REAL:
+  case Z3_OP_TO_INT:
+  case Z3_OP_IS_INT:
+  case Z3_OP_POWER:
+    // TODO: arithmetic
+    assert(false);
+    break;
+
+    // Arrays & Sets
+  case Z3_OP_STORE:
+  case Z3_OP_SELECT:
+  case Z3_OP_CONST_ARRAY:
+  case Z3_OP_ARRAY_MAP:
+  case Z3_OP_ARRAY_DEFAULT:
+  case Z3_OP_SET_UNION:
+  case Z3_OP_SET_INTERSECT:
+  case Z3_OP_SET_DIFFERENCE:
+  case Z3_OP_SET_COMPLEMENT:
+  case Z3_OP_SET_SUBSET:
+  case Z3_OP_AS_ARRAY:
+  case Z3_OP_ARRAY_EXT:
+    // TODO: arrays
+    assert(false);
+    break;
+
+    // Bit-vectors
+  case Z3_OP_BNUM:
+  case Z3_OP_BIT1:
+  case Z3_OP_BIT0:
+  case Z3_OP_BNEG:
+  case Z3_OP_BADD:
+  case Z3_OP_BSUB:
+  case Z3_OP_BMUL:
+
+  case Z3_OP_BSDIV:
+  case Z3_OP_BUDIV:
+  case Z3_OP_BSREM:
+  case Z3_OP_BUREM:
+  case Z3_OP_BSMOD:
+
+    // special functions to record the division by 0 cases
+    // these are internal functions
+  case Z3_OP_BSDIV0:
+  case Z3_OP_BUDIV0:
+  case Z3_OP_BSREM0:
+  case Z3_OP_BUREM0:
+  case Z3_OP_BSMOD0:
+
+  case Z3_OP_ULEQ:
+  case Z3_OP_SLEQ:
+  case Z3_OP_UGEQ:
+  case Z3_OP_SGEQ:
+  case Z3_OP_ULT:
+  case Z3_OP_SLT:
+  case Z3_OP_UGT:
+  case Z3_OP_SGT:
+
+  case Z3_OP_BAND:
+  case Z3_OP_BOR:
+  case Z3_OP_BNOT:
+  case Z3_OP_BXOR:
+  case Z3_OP_BNAND:
+  case Z3_OP_BNOR:
+  case Z3_OP_BXNOR:
+
+  case Z3_OP_CONCAT:
+  case Z3_OP_SIGN_EXT:
+  case Z3_OP_ZERO_EXT:
+  case Z3_OP_EXTRACT:
+  case Z3_OP_REPEAT:
+
+  case Z3_OP_BREDOR:
+  case Z3_OP_BREDAND:
+  case Z3_OP_BCOMP:
+
+  case Z3_OP_BSHL:
+  case Z3_OP_BLSHR:
+  case Z3_OP_BASHR:
+  case Z3_OP_ROTATE_LEFT:
+  case Z3_OP_ROTATE_RIGHT:
+  case Z3_OP_EXT_ROTATE_LEFT:
+  case Z3_OP_EXT_ROTATE_RIGHT:
+
+  case Z3_OP_INT2BV:
+  case Z3_OP_BV2INT:
+  case Z3_OP_CARRY:
+  case Z3_OP_XOR3:
+    // TODO: bit-vectors
+    assert(false);
+    break;
+  default:
+    assert(false);
+  }
+
+  return result;
+}
+
 expr::term_ref z3_internal::to_term(Z3_ast z3_term) {
 
   expr::term_ref result;
@@ -442,13 +576,58 @@ expr::term_ref z3_internal::to_term(Z3_ast z3_term) {
 
   // Get the constructor type of t
   Z3_ast_kind t_kind = Z3_get_ast_kind(d_ctx, z3_term);
+  Z3_sort sort = Z3_get_sort(d_ctx, z3_term);
+  Z3_sort_kind sort_kind = Z3_get_sort_kind(d_ctx, sort);
 
   switch (t_kind) {
   case Z3_NUMERAL_AST:
+    switch (sort_kind) {
+    case Z3_BOOL_SORT:
+      result = d_tm.mk_boolean_constant(Z3_get_bool_value(d_ctx, z3_term));
+      break;
+    case Z3_INT_SORT: {
+      Z3_string value_string = Z3_get_numeral_string(d_ctx, z3_term);
+      expr::rational value_int(value_string);
+      result = d_tm.mk_rational_constant(value_int);
+      break;
+    }
+    case Z3_REAL_SORT: {
+      Z3_string value_string = Z3_get_numeral_string(d_ctx, z3_term);
+      expr::rational value_q(value_string);
+      result = d_tm.mk_rational_constant(value_q);
+      break;
+    }
+    case Z3_BV_SORT: {
+      Z3_string value_string = Z3_get_numeral_string(d_ctx, z3_term);
+      expr::integer value_int(value_string, 10);
+      unsigned size = Z3_get_bv_sort_size(d_ctx, sort);
+      expr::bitvector value_bv(size, value_int);
+      result = d_tm.mk_bitvector_constant(value_bv);
+      break;
+    }
+    default:
+      assert(false);
+    }
     break;
-  case Z3_APP_AST:
+  case Z3_APP_AST: {
+    Z3_app app = Z3_to_app(d_ctx, z3_term);
+    unsigned num_fields = Z3_get_app_num_args(d_ctx, app);
+    Z3_func_decl d = Z3_get_app_decl(d_ctx, app);
+    Z3_decl_kind d_kind = Z3_get_decl_kind(d_ctx, d);
+    std::vector<expr::term_ref> children;
+    if (num_fields > 0) {
+      for (size_t i = 0; i < num_fields; i++) {
+        if (i > 0) {
+          Z3_ast child = Z3_get_app_arg(d_ctx, app, i);
+          children.push_back(to_term(child));
+        }
+      }
+    }
+    result = mk_term(d_kind, children);
     break;
+  }
   case Z3_VAR_AST:
+    assert(false);
     break;
   case Z3_QUANTIFIER_AST:
     assert(false);
@@ -457,6 +636,7 @@ expr::term_ref z3_internal::to_term(Z3_ast z3_term) {
     assert(false);
     break;
   case Z3_FUNC_DECL_AST:
+    assert(false);
     break;
   default:
     assert(false);
