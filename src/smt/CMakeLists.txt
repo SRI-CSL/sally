@@ -11,5 +11,9 @@ add_library(smt
   mathsat5/mathsat5_term_cache.cpp
   y2m5/y2m5.cpp
   generic/generic_solver.cpp
+  z3/z3.cpp
+  z3/z3_internal.cpp
+  z3/z3_common.cpp
+  y2z3/y2z3.cpp 
 )
 

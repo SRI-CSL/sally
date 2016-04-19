@@ -61,6 +61,15 @@ if (MATHSAT5_FOUND)
   include_directories(${MATHSAT5_INCLUDE_DIR})
 endif()
 
+# Find Z3
+SET(Z3_HOME CACHE STRING "Z3 installation directory")
+find_package(Z3 4.4.1)
+if (Z3_FOUND)
+  add_definitions(-DWITH_Z3)
+  include_directories(${Z3_INCLUDE_DIR})
+endif()
+
+
 # Make sure antlr C runtime is here
 include(ExternalProject) 
 ExternalProject_Add(
