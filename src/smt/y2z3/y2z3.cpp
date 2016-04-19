@@ -113,6 +113,11 @@ void y2z3::generalize(generalization_type type, std::vector<expr::term_ref>& out
   d_yices2->generalize(type, out);
 }
 
+void y2z3::generalize(generalization_type type, expr::model::ref m, std::vector<expr::term_ref>& out) {
+  TRACE("y2z3") << "y2z3[" << s_instance << "]: generalizing" << std::endl;
+  d_yices2->generalize(type, m, out);
+}
+
 void y2z3::interpolate(std::vector<expr::term_ref>& out) {
   TRACE("y2z3") << "y2z3[" << s_instance << "]: interpolating" << std::endl;
   if (d_last_z3_result == UNKNOWN) {

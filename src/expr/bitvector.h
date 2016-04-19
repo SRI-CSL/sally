@@ -118,11 +118,6 @@ public:
   bool sgeq(const bitvector& rhs) const;
   bool ugt(const bitvector& rhs) const;
   bool sgt(const bitvector& rhs) const;
-
-  const mpz_class& mpz() const {
-    return d_gmp_int;
-  }
-
 };
 
 /**

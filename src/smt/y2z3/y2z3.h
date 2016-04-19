@@ -75,6 +75,9 @@ public:
   /** Generalize the last call to check assuming the result was SAT. */
   void generalize(generalization_type type, std::vector<expr::term_ref>& out);
 
+  /** Generalize the given model. */
+  void generalize(generalization_type type, expr::model::ref m, std::vector<expr::term_ref>& out);
+
   /** Interpolate the last UNSAT result */
   void interpolate(std::vector<expr::term_ref>& out);
 
