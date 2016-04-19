@@ -36,7 +36,7 @@ extern "C"
 namespace sally {
 namespace smt {
 
-class z3_term_cache;
+class z3_common;
 
 class z3_internal {
 
@@ -51,6 +51,9 @@ class z3_internal {
 
   /** The z3 solver */
   Z3_solver d_solver;
+
+  /** Parameters of the solvers */
+  Z3_params d_params;
 
   /** All assertions we have in context (strong)  */
   std::vector<expr::term_ref_strong> d_assertions;
@@ -71,7 +74,7 @@ class z3_internal {
   std::vector<expr::term_ref> d_T_variables;
 
   /** Term conversion cache */
-  z3_term_cache* d_conversion_cache;
+  z3_common* d_conversion_cache;
 
   /** Bitvector 1 */
   expr::term_ref_strong d_bv1;

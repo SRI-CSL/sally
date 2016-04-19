@@ -19,7 +19,7 @@
 #ifdef WITH_Z3
 
 #include "smt/z3/z3_internal.h"
-#include "smt/z3/z3_term_cache.h"
+#include "z3_common.h"
 #include "utils/trace.h"
 #include "expr/gc_relocator.h"
 #include "utils/output.h"
@@ -36,6 +36,7 @@ z3_internal::z3_internal(expr::term_manager& tm, const options& opts)
 : d_tm(tm)
 , d_ctx(0)
 , d_solver(0)
+, d_params(0)
 , d_conversion_cache(0)
 , d_last_check_status(Z3_L_UNDEF)
 , d_instance(s_instances)
@@ -45,14 +46,18 @@ z3_internal::z3_internal(expr::term_manager& tm, const options& opts)
     TRACE("z3") << "z3: first instance." << std::endl;
   }
   s_instances ++;
-  d_conversion_cache = z3_term_cache::get_cache(tm);
+  d_conversion_cache = z3_common::get_cache(tm);
 
-  /** Set the context */
+  // Set the context
   d_ctx = d_conversion_cache->get_context();
 
-  /** Make the solver */
+  // Make the solver
   d_solver = Z3_mk_solver(d_ctx);
   Z3_solver_inc_ref(d_ctx, d_solver);
+
+  // Make the parameters
+  d_params = Z3_mk_params(d_ctx);
+  Z3_params_inc_ref(d_ctx, d_params);
 
   // Bitvector bits
   d_bv0 = expr::term_ref_strong(d_tm, d_tm.mk_bitvector_constant(expr::bitvector(1, 0)));
@@ -63,6 +68,9 @@ z3_internal::~z3_internal() {
 
   // The context
   Z3_solver_dec_ref(d_ctx, d_solver);
+
+  // The parameters
+  Z3_params_dec_ref(d_ctx, d_params);
 
   // Cleanup if the last one
   s_instances--;
@@ -436,130 +444,309 @@ expr::term_ref z3_internal::mk_term(Z3_decl_kind kind, const std::vector<expr::t
   switch (kind) {
   // Basic
   case Z3_OP_TRUE:
+    result = d_tm.mk_boolean_constant(true);
+    break;
   case Z3_OP_FALSE:
+    result = d_tm.mk_boolean_constant(false);
+    break;
   case Z3_OP_EQ:
+    result = d_tm.mk_term(expr::TERM_EQ, children[0], children[1]);
+    break;
   case Z3_OP_DISTINCT:
+    assert(false);
+    break;
   case Z3_OP_ITE:
+    result = d_tm.mk_term(expr::TERM_ITE, children);
+    break;
   case Z3_OP_AND:
+    result = d_tm.mk_term(expr::TERM_AND, children);
+    break;
   case Z3_OP_OR:
+    result = d_tm.mk_term(expr::TERM_OR, children);
+    break;
   case Z3_OP_IFF:
+    result = d_tm.mk_term(expr::TERM_EQ, children);
+    break;
   case Z3_OP_XOR:
+    result = d_tm.mk_term(expr::TERM_XOR, children);
+    break;
   case Z3_OP_NOT:
+    result = d_tm.mk_term(expr::TERM_NOT, children[0]);
+    break;
   case Z3_OP_IMPLIES:
+    result = d_tm.mk_term(expr::TERM_IMPLIES, children);
+    break;
   case Z3_OP_OEQ:
+    assert(false);
+    break;
   case Z3_OP_INTERP:
-    // TODO: basic
     assert(false);
     break;
 
     // Arithmetic
   case Z3_OP_ANUM:
+    assert(false);
+    break;
   case Z3_OP_AGNUM:
+    assert(false);
+    break;
   case Z3_OP_LE:
+    result = d_tm.mk_term(expr::TERM_LEQ, children);
+    break;
   case Z3_OP_GE:
+    result = d_tm.mk_term(expr::TERM_GEQ, children);
+    break;
   case Z3_OP_LT:
+    result = d_tm.mk_term(expr::TERM_LT, children);
+    break;
   case Z3_OP_GT:
+    result = d_tm.mk_term(expr::TERM_GT, children);
+    break;
   case Z3_OP_ADD:
+    result = d_tm.mk_term(expr::TERM_ADD, children);
+    break;
   case Z3_OP_SUB:
+    result = d_tm.mk_term(expr::TERM_SUB, children);
+    break;
   case Z3_OP_UMINUS:
+    result = d_tm.mk_term(expr::TERM_SUB, children);
+    break;
   case Z3_OP_MUL:
+    result = d_tm.mk_term(expr::TERM_MUL, children);
+    break;
   case Z3_OP_DIV:
+    result = d_tm.mk_term(expr::TERM_DIV, children);
+    break;
   case Z3_OP_IDIV:
+    assert(false);
+    break;
   case Z3_OP_REM:
+    assert(false);
+    break;
   case Z3_OP_MOD:
+    assert(false);
+    break;
   case Z3_OP_TO_REAL:
+    assert(false);
+    break;
   case Z3_OP_TO_INT:
+    assert(false);
+    break;
   case Z3_OP_IS_INT:
+    assert(false);
+    break;
   case Z3_OP_POWER:
-    // TODO: arithmetic
     assert(false);
     break;
 
     // Arrays & Sets
   case Z3_OP_STORE:
+    assert(false);
+    break;
   case Z3_OP_SELECT:
+    assert(false);
+    break;
   case Z3_OP_CONST_ARRAY:
+    assert(false);
+    break;
   case Z3_OP_ARRAY_MAP:
+    assert(false);
+    break;
   case Z3_OP_ARRAY_DEFAULT:
+    assert(false);
+    break;
   case Z3_OP_SET_UNION:
+    assert(false);
+    break;
   case Z3_OP_SET_INTERSECT:
+    assert(false);
+    break;
   case Z3_OP_SET_DIFFERENCE:
+    assert(false);
+    break;
   case Z3_OP_SET_COMPLEMENT:
+    assert(false);
+    break;
   case Z3_OP_SET_SUBSET:
+    assert(false);
+    break;
   case Z3_OP_AS_ARRAY:
+    assert(false);
+    break;
   case Z3_OP_ARRAY_EXT:
-    // TODO: arrays
     assert(false);
     break;
 
-    // Bit-vectors
+  // Bit-vectors
   case Z3_OP_BNUM:
+    assert(false);
+    break;
   case Z3_OP_BIT1:
+    assert(false);
+    break;
   case Z3_OP_BIT0:
+    assert(false);
+    break;
   case Z3_OP_BNEG:
+    assert(false);
+    break;
   case Z3_OP_BADD:
+    assert(false);
+    break;
   case Z3_OP_BSUB:
+    assert(false);
+    break;
   case Z3_OP_BMUL:
+    assert(false);
+    break;
 
   case Z3_OP_BSDIV:
+    assert(false);
+    break;
   case Z3_OP_BUDIV:
+    assert(false);
+    break;
   case Z3_OP_BSREM:
+    assert(false);
+    break;
   case Z3_OP_BUREM:
+    assert(false);
+    break;
   case Z3_OP_BSMOD:
+    assert(false);
+    break;
 
     // special functions to record the division by 0 cases
     // these are internal functions
   case Z3_OP_BSDIV0:
-  case Z3_OP_BUDIV0:
-  case Z3_OP_BSREM0:
-  case Z3_OP_BUREM0:
-  case Z3_OP_BSMOD0:
-
-  case Z3_OP_ULEQ:
-  case Z3_OP_SLEQ:
-  case Z3_OP_UGEQ:
-  case Z3_OP_SGEQ:
-  case Z3_OP_ULT:
-  case Z3_OP_SLT:
-  case Z3_OP_UGT:
-  case Z3_OP_SGT:
-
-  case Z3_OP_BAND:
-  case Z3_OP_BOR:
-  case Z3_OP_BNOT:
-  case Z3_OP_BXOR:
-  case Z3_OP_BNAND:
-  case Z3_OP_BNOR:
-  case Z3_OP_BXNOR:
-
-  case Z3_OP_CONCAT:
-  case Z3_OP_SIGN_EXT:
-  case Z3_OP_ZERO_EXT:
-  case Z3_OP_EXTRACT:
-  case Z3_OP_REPEAT:
-
-  case Z3_OP_BREDOR:
-  case Z3_OP_BREDAND:
-  case Z3_OP_BCOMP:
-
-  case Z3_OP_BSHL:
-  case Z3_OP_BLSHR:
-  case Z3_OP_BASHR:
-  case Z3_OP_ROTATE_LEFT:
-  case Z3_OP_ROTATE_RIGHT:
-  case Z3_OP_EXT_ROTATE_LEFT:
-  case Z3_OP_EXT_ROTATE_RIGHT:
-
-  case Z3_OP_INT2BV:
-  case Z3_OP_BV2INT:
-  case Z3_OP_CARRY:
-  case Z3_OP_XOR3:
-    // TODO: bit-vectors
     assert(false);
     break;
+  case Z3_OP_BUDIV0:
+    assert(false);
+    break;
+  case Z3_OP_BSREM0:
+    assert(false);
+    break;
+  case Z3_OP_BUREM0:
+    assert(false);
+    break;
+  case Z3_OP_BSMOD0:
+    assert(false);
+    break;
+
+  case Z3_OP_ULEQ:
+    assert(false);
+    break;
+  case Z3_OP_SLEQ:
+    assert(false);
+    break;
+  case Z3_OP_UGEQ:
+    assert(false);
+    break;
+  case Z3_OP_SGEQ:
+    assert(false);
+    break;
+  case Z3_OP_ULT:
+    assert(false);
+    break;
+  case Z3_OP_SLT:
+    assert(false);
+    break;
+  case Z3_OP_UGT:
+    assert(false);
+    break;
+  case Z3_OP_SGT:
+    assert(false);
+    break;
+
+  case Z3_OP_BAND:
+    assert(false);
+    break;
+  case Z3_OP_BOR:
+    assert(false);
+    break;
+  case Z3_OP_BNOT:
+    assert(false);
+    break;
+  case Z3_OP_BXOR:
+    assert(false);
+    break;
+  case Z3_OP_BNAND:
+    assert(false);
+    break;
+  case Z3_OP_BNOR:
+    assert(false);
+    break;
+  case Z3_OP_BXNOR:
+    assert(false);
+    break;
+
+  case Z3_OP_CONCAT:
+    assert(false);
+    break;
+  case Z3_OP_SIGN_EXT:
+    assert(false);
+    break;
+  case Z3_OP_ZERO_EXT:
+    assert(false);
+    break;
+  case Z3_OP_EXTRACT:
+    assert(false);
+    break;
+  case Z3_OP_REPEAT:
+    assert(false);
+    break;
+
+  case Z3_OP_BREDOR:
+    assert(false);
+    break;
+  case Z3_OP_BREDAND:
+    assert(false);
+    break;
+  case Z3_OP_BCOMP:
+    assert(false);
+    break;
+
+  case Z3_OP_BSHL:
+    assert(false);
+    break;
+  case Z3_OP_BLSHR:
+    assert(false);
+    break;
+  case Z3_OP_BASHR:
+    assert(false);
+    break;
+  case Z3_OP_ROTATE_LEFT:
+    assert(false);
+    break;
+  case Z3_OP_ROTATE_RIGHT:
+    assert(false);
+    break;
+  case Z3_OP_EXT_ROTATE_LEFT:
+    assert(false);
+    break;
+  case Z3_OP_EXT_ROTATE_RIGHT:
+    assert(false);
+    break;
+
+  case Z3_OP_INT2BV:
+    assert(false);
+    break;
+  case Z3_OP_BV2INT:
+    assert(false);
+    break;
+  case Z3_OP_CARRY:
+    assert(false);
+    break;
+  case Z3_OP_XOR3:
+    assert(false);
+    break;
+
   default:
     assert(false);
   }
+
+  assert(!result.is_null());
 
   return result;
 }
@@ -572,6 +759,10 @@ expr::term_ref z3_internal::to_term(Z3_ast z3_term) {
   result = d_conversion_cache->get_term_cache(z3_term);
   if (!result.is_null()) {
     return result;
+  }
+
+  if (output::trace_tag_is_enabled("z3::to_term")) {
+    std::cerr << "to_term: " << Z3_ast_to_string(d_ctx, z3_term) << std::endl;
   }
 
   // Get the constructor type of t
@@ -617,10 +808,8 @@ expr::term_ref z3_internal::to_term(Z3_ast z3_term) {
     std::vector<expr::term_ref> children;
     if (num_fields > 0) {
       for (size_t i = 0; i < num_fields; i++) {
-        if (i > 0) {
-          Z3_ast child = Z3_get_app_arg(d_ctx, app, i);
-          children.push_back(to_term(child));
-        }
+        Z3_ast child = Z3_get_app_arg(d_ctx, app, i);
+        children.push_back(to_term(child));
       }
     }
     result = mk_term(d_kind, children);
@@ -870,6 +1059,86 @@ void z3_internal::add_variable(expr::term_ref var, smt::solver::variable_class f
 
 void z3_internal::interpolate(std::vector<expr::term_ref>& out) {
 
+  assert(d_assertions.size() == d_assertion_classes.size());
+  assert(d_last_check_status == Z3_L_FALSE);
+
+  std::vector<Z3_ast> to_decref;
+
+  Z3_ast proof = Z3_solver_get_proof(d_ctx, d_solver);
+  Z3_inc_ref(d_ctx, proof);
+  to_decref.push_back(proof);
+
+  // Collect the pattern formulas
+  std::vector<Z3_ast> A_formulas;
+  std::vector<Z3_ast> B_formulas;
+  for (size_t i = 0; i < d_assertions.size(); ++ i) {
+    switch (d_assertion_classes[i]) {
+    case solver::CLASS_A:
+    case solver::CLASS_T: {
+      A_formulas.push_back(to_z3_term(d_assertions[i]));
+      break;
+    }
+    case solver::CLASS_B: {
+      B_formulas.push_back(to_z3_term(d_assertions[i]));
+      break;
+    }
+    default:
+      break;
+    }
+  }
+
+  // Make the pattern
+  Z3_ast A_conj;
+  assert(A_formulas.size() > 0);
+  if (A_formulas.size() > 1) {
+    A_conj = Z3_mk_and(d_ctx, A_formulas.size(), &A_formulas[0]);
+    Z3_inc_ref(d_ctx, A_conj);
+    to_decref.push_back(A_conj);
+  } else {
+    A_conj = A_formulas[0];
+  }
+
+  Z3_ast B_conj;
+  assert(B_formulas.size() > 0);
+  if (B_formulas.size() > 1) {
+    B_conj = Z3_mk_and(d_ctx, B_formulas.size(), &B_formulas[0]);
+    Z3_inc_ref(d_ctx, B_conj);
+    to_decref.push_back(B_conj);
+  } else {
+    B_conj = B_formulas[0];
+  }
+
+  A_conj = Z3_mk_interpolant(d_ctx, A_conj);
+  Z3_inc_ref(d_ctx, A_conj);
+  to_decref.push_back(A_conj);
+
+  Z3_ast F_args[2] = { A_conj, B_conj };
+  Z3_ast F = Z3_mk_and(d_ctx, 2, F_args);
+  Z3_inc_ref(d_ctx, F);
+  to_decref.push_back(F);
+
+  // Get the interpolant
+  Z3_ast_vector interpolant = Z3_get_interpolant(d_ctx, proof, F, d_params);
+  Z3_error_code error = Z3_get_error_code(d_ctx);
+  if (error != Z3_OK) {
+    std::stringstream ss;
+    Z3_string msg = Z3_get_error_msg(d_ctx, error);
+    ss << "Z3 error (interpolant): " << msg << ".";
+    throw exception(ss.str());
+  }
+  Z3_ast_vector_inc_ref(d_ctx, interpolant);
+  unsigned size = Z3_ast_vector_size(d_ctx, interpolant);
+  for (unsigned i = 0; i < size; ++ i) {
+    Z3_ast I_i_z3 = Z3_ast_vector_get(d_ctx, interpolant, i);
+    expr::term_ref I_i = to_term(I_i_z3);
+    out.push_back(I_i);
+  }
+  Z3_ast_vector_dec_ref(d_ctx, interpolant);
+
+  // Decref
+  for (size_t i = 0; i < to_decref.size(); ++ i) {
+    Z3_dec_ref(d_ctx, to_decref[i]);
+  }
 }
 
 void z3_internal::gc_collect(const expr::gc_relocator& gc_reloc) {

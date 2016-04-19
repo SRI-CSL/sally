@@ -1,3 +1,4 @@
+
 /**
  * This file is part of sally.
  * Copyright (C) 2015 SRI International.
@@ -17,26 +18,25 @@
  */
 #ifdef WITH_Z3
 
-#include "smt/z3/z3_term_cache.h"
+#include "z3_common.h"
 #include "expr/gc_relocator.h"
 
 #include <iomanip>
 #include <iostream>
 #include <fstream>
 
-#define unused_var(x) { (void)x; }
-
 namespace sally {
 namespace smt {
 
-z3_term_cache::z3_term_cache(expr::term_manager& tm)
+z3_common::z3_common(expr::term_manager& tm)
 : gc_participant(tm, false)
 , d_tm(tm)
 , d_cache_is_clean(true)
 {
   // Global configuration
   Z3_config cfg = Z3_mk_config();
-  Z3_set_param_value(cfg, "MODEL", "true");
+  Z3_set_param_value(cfg, "model", "true");
+  Z3_set_param_value(cfg, "proof", "true");
 
   // Make the context and set it to
   d_ctx = Z3_mk_context_rc(cfg);
@@ -47,14 +47,14 @@ z3_term_cache::z3_term_cache(expr::term_manager& tm)
   Z3_del_config(cfg);
 }
 
-z3_term_cache::~z3_term_cache() {
+z3_common::~z3_common() {
   clear();
   Z3_del_context(d_ctx);
 }
 
-z3_term_cache::tm_to_cache_map z3_term_cache::s_tm_to_cache_map;
+z3_common::tm_to_cache_map z3_common::s_tm_to_cache_map;
 
-void z3_term_cache::set_term_cache(expr::term_ref t, Z3_ast t_z3) {
+void z3_common::set_term_cache(expr::term_ref t, Z3_ast t_z3) {
   assert(d_term_to_z3_cache.find(t) == d_term_to_z3_cache.end());
 
   d_term_to_z3_cache[t] = t_z3;
@@ -97,7 +97,7 @@ void z3_term_cache::set_term_cache(expr::term_ref t, Z3_ast t_z3) {
   }
 }
 
-void z3_term_cache::set_term_cache(Z3_ast t_z3, expr::term_ref t) {
+void z3_common::set_term_cache(Z3_ast t_z3, expr::term_ref t) {
   assert(d_z3_to_term_cache.find(t_z3) == d_z3_to_term_cache.end());
 
   d_z3_to_term_cache[t_z3] = t;
@@ -140,7 +140,7 @@ void z3_term_cache::set_term_cache(Z3_ast t_z3, expr::term_ref t) {
   }
 }
 
-Z3_ast z3_term_cache::get_term_cache(expr::term_ref t) const {
+Z3_ast z3_common::get_term_cache(expr::term_ref t) const {
   term_to_z3_cache::const_iterator find = d_term_to_z3_cache.find(t);
   if (find != d_term_to_z3_cache.end()) {
     return find->second;
@@ -149,7 +149,7 @@ Z3_ast z3_term_cache::get_term_cache(expr::term_ref t) const {
   }
 }
 
-expr::term_ref z3_term_cache::get_term_cache(Z3_ast t) const {
+expr::term_ref z3_common::get_term_cache(Z3_ast t) const {
   z3_to_term_cache::const_iterator find = d_z3_to_term_cache.find(t);
   if (find != d_z3_to_term_cache.end()) {
     return find->second;
@@ -158,7 +158,7 @@ expr::term_ref z3_term_cache::get_term_cache(Z3_ast t) const {
   }
 }
 
-void z3_term_cache::clear() {
+void z3_common::clear() {
 
   term_to_z3_cache::const_iterator it1 = d_term_to_z3_cache.begin();
   for (; it1 != d_term_to_z3_cache.end(); ++ it1) {
@@ -178,36 +178,36 @@ void z3_term_cache::clear() {
 
 }
 
-z3_term_cache::tm_to_cache_map::~tm_to_cache_map() {
+z3_common::tm_to_cache_map::~tm_to_cache_map() {
   tm_to_cache_map::map_type::iterator it = s_tm_to_cache_map.map.begin();
   for (; it != s_tm_to_cache_map.map.end(); ++ it) {
     delete it->second;
   }
 }
 
-z3_term_cache* z3_term_cache::get_cache(expr::term_manager& tm) {
+z3_common* z3_common::get_cache(expr::term_manager& tm) {
 
-  z3_term_cache* cache = 0;
+  z3_common* cache = 0;
 
   // Try to find an existing one
   tm_to_cache_map::map_type::const_iterator find = s_tm_to_cache_map.map.find(tm.id());
   if (find != s_tm_to_cache_map.map.end()) {
     cache = find->second;
   } else {
-    cache = new z3_term_cache(tm);
+    cache = new z3_common(tm);
     s_tm_to_cache_map.map[tm.id()] = cache;
   }
 
   return cache;
 }
 
-void z3_term_cache::gc() {
+void z3_common::gc() {
   if (!d_cache_is_clean) {
     assert(false);
   }
 }
 
-void z3_term_cache::gc_collect(const expr::gc_relocator& gc_reloc) {
+void z3_common::gc_collect(const expr::gc_relocator& gc_reloc) {
   d_term_to_z3_cache.reloc(gc_reloc);
   d_z3_to_term_cache.reloc(gc_reloc);
   gc_reloc.reloc(d_permanent_terms);

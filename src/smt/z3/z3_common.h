@@ -37,7 +37,7 @@ struct z3_hasher {
   size_t operator()(Z3_ast value) const { return Z3_get_ast_hash(ctx, value); }
 };
 
-class z3_term_cache : public expr::gc_participant {
+class z3_common : public expr::gc_participant {
 
   /** The term manager this cache is using */
   expr::term_manager& d_tm;
@@ -67,7 +67,7 @@ class z3_term_cache : public expr::gc_participant {
 
   class tm_to_cache_map {
   public:
-    typedef std::map<size_t, z3_term_cache*> map_type;
+    typedef std::map<size_t, z3_common*> map_type;
     map_type map;
     ~tm_to_cache_map();
   };
@@ -78,10 +78,10 @@ class z3_term_cache : public expr::gc_participant {
 public:
 
   /** Create a new cache */
-  z3_term_cache(expr::term_manager& tm);
+  z3_common(expr::term_manager& tm);
 
   /** Delete the term cache */
-  ~z3_term_cache();
+  ~z3_common();
 
   /** Get the z3 context */
   Z3_context get_context() const {
@@ -102,7 +102,7 @@ public:
 
   /** Get a cache associated with tm */
   static
-  z3_term_cache* get_cache(expr::term_manager& tm);
+  z3_common* get_cache(expr::term_manager& tm);
 
   /** Clear the cache */
   void clear();

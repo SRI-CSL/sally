@@ -13,7 +13,7 @@ add_library(smt
   generic/generic_solver.cpp
   z3/z3.cpp
   z3/z3_internal.cpp
-  z3/z3_term_cache.cpp
+  z3/z3_common.cpp
   y2z3/y2z3.cpp 
 )
 
