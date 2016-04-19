@@ -36,6 +36,9 @@ let rec print_expr f =
 		Format.fprintf f "@])"
 	in
 	function
+	| Forall(n, t, expr) -> print_folded "forall" (Ident(n ^ " (" ^ sally_type_to_string t ^ ")", Real)) expr
+	| Exists(n, t, expr) -> print_folded "exists" (Ident(n ^ " (" ^ sally_type_to_string t ^ ")", Real)) expr
+	| Select(expr, index) -> print_folded "select" expr index
 	| Equality(a, b) -> print_folded "=" a b
 	| Value(s) -> Format.fprintf f "%s" s
 	| Ident(s, _) -> Format.fprintf f "%s" s
@@ -99,6 +102,15 @@ let rec print_expr f =
 	| True -> Format.fprintf f "true"
 	| False -> Format.fprintf f "false"
 
+and sally_type_to_string = function
+	| Real -> "Real"
+	| Bool -> "Bool"
+	| Range(_, _) -> "Real"
+	| Array(IntegerRange(n), t) -> "Array " ^ sally_type_to_string (IntegerRange n) ^ " ("^ sally_type_to_string t ^ ")"
+	| Array(_, _) -> failwith "Cannot instanciate arbitrary arrays"
+	| IntegerRange(n) -> "Range" ^ n
+
+
 let print_transition f ((ident, state_type, sally_cond):transition) =
 	Format.fprintf f "@[(define-transition %s state @;  " ident;
 	print_expr f sally_cond;
@@ -110,17 +122,12 @@ let print_state f ((ident, state_type, sally_cond):state) =
 	Format.fprintf f ")@]"
 
 
-let sally_type_to_string = function
-	| Real -> "Real"
-	| Bool -> "Bool"
-	| Range(_, _) -> "Real"
-	| Array(_, _) -> "Real"
-
 let rec sally_type_to_debug = function
 	| Real -> "Real"
 	| Bool -> "Bool"
 	| Range(b, a) -> "[" ^ string_of_int b ^ ".." ^ string_of_int a ^ "]"
 	| Array(a, b) -> sally_type_to_debug a ^ " -> " ^ sally_type_to_debug b
+	| IntegerRange(n) -> n ^ ":[..]"
 
 
 let print_state_type f (ident, var_list) =

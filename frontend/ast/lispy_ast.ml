@@ -26,6 +26,7 @@ type sally_type =
 	| Bool
 	| Array of sally_type * sally_type
 	| Range of int * int
+	| IntegerRange of string
 
 type sally_condition =
 	| Equality of sally_condition * sally_condition
@@ -40,6 +41,9 @@ type sally_condition =
 	| Value of string
 	| Ident of string * sally_type
 	| Ite of sally_condition * sally_condition * sally_condition
+	| Forall of string * sally_type * sally_condition
+	| Select of sally_condition * sally_condition
+	| Exists of string * sally_type * sally_condition
 	| True
 	| False
 

@@ -78,7 +78,7 @@ let next_var name ctx =
 		ctx_var name ctx
 
 (** Convert a sal type to a lispy one, based on the information contained in ctx *)
-let rec sal_type_to_sally_type ctx = function
+let rec sal_type_to_sally_type ctx ?name:(name="anonymous") = function
 	| Base_type("NATURAL") -> (* FIXME: need a real natural type *) Real
 	| Base_type("BOOLEAN") -> Bool
 	| Base_type("REAL") -> Real
@@ -91,6 +91,7 @@ let rec sal_type_to_sally_type ctx = function
 	| Array(t1, t2) -> Lispy_ast.Array(sal_type_to_sally_type ctx t1, sal_type_to_sally_type ctx t2)
 	| Enum(l) -> Real
 	| Subtype(_) -> Real
+	| IntegerRange -> IntegerRange name
 	| Range(i1, i2) -> (* FIXME: need to check it stays natural and inside the range *)
 		let sally_expr_from = sal_expr_to_lisp ctx i1
 		and sally_expr_to = sal_expr_to_lisp ctx i2 in
@@ -110,6 +111,8 @@ get_disjonctions_from_array ctx = function
 			let l = seq array_start array_end in
 			List.map (fun i ->
 				(Equality(index_expr, Value(string_of_int i)), Lispy_ast.Ident(n ^ "!" ^ string_of_int i, dest_type))) l
+		| index_expr, Expr(a, Array(IntegerRange(_), dest_type)) ->
+			[True, Lispy_ast.Select(a, index_expr)]
 		| _, Expr(Ident(n, _), _) -> raise Inadequate_array_index
 		| _ -> raise Inadequate_array_use
 		end
@@ -216,6 +219,9 @@ sal_expr_to_lisp (ctx:sally_context) = function
 				done;
 				!cond
 				end
+			| IntegerRange(n) ->
+				let tmp_ctx = ctx_add_expr t (Ident(t, sally_type)) sally_type ctx in
+				Lispy_ast.Forall(t, sally_type, sal_expr_to_lisp tmp_ctx (Forall((end_decl, sal_type)::q, expr)))
 			| _ -> raise Iteration_on_non_range_type
 		end
 	| Forall([], expr) -> sal_expr_to_lisp ctx expr
@@ -301,6 +307,7 @@ let sal_assignments_to_condition ?only_define_type:(only_type=false) ?vars_to_de
 				!cond
 				end
 				| _ -> raise Not_found)
+		| (name, Array(IntegerRange(s), t)) -> equality_function ctx (name, Lispy_ast.Array(IntegerRange(s), t))
 		| (name, Array(_, t)) -> raise Unsupported_array_type
 		| (name, ty) -> equality_function ctx (name, ty)
 	in
@@ -378,6 +385,10 @@ let sal_transition_to_transition ((type_name, variables):state_type) ctx transit
 						let tmp_ctx = ctx_add_expr t (Value (string_of_int i)) Real ctx in
 						compute_condition tmp_ctx l (ExistentialGuarded((end_decl, sal_type), expr, assignment))
 					) l (seq a b)
+				| IntegerRange(s) ->
+					let tmp_ctx = ctx_add_expr t (Ident (t, IntegerRange(s))) Real ctx in
+					Lispy_ast.Or(l, Lispy_ast.Exists(t, IntegerRange(s), compute_condition tmp_ctx False (ExistentialGuarded((end_decl, sal_type), expr, assignment))))
+					
 				| _ -> raise Iteration_on_non_range_type
 			end
 		| Guarded(expr, assignment) ->
@@ -448,7 +459,7 @@ let sal_context_to_lisp ctx =
 			StrMap.add name (Fun(var_list, expr)) sally_ctx
 		| Type_def(name, sal_type) ->
 			transition_systems, queries,
-			StrMap.add name (Type(sal_type_to_sally_type sally_ctx sal_type)) sally_ctx
+			StrMap.add name (Type(sal_type_to_sally_type ~name sally_ctx sal_type)) sally_ctx
 		| Type_decl(n) -> raise Not_implemented
 		) ([], [], sally_ctx) defs in
 	

@@ -35,6 +35,7 @@ type sal_type =
   | Enum of (string list)                       (* Enumeration/scalar type *)
   | Array of sal_type * sal_type                (* ARRAY index_type OF element_type *)
   | Subtype of string * sal_type * sal_expr     (* Predicate subtype *)
+  | IntegerRange
 
 and sal_decl = (string list) * sal_type         (* name1, ..., name_k: type *)
 

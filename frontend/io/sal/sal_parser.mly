@@ -139,6 +139,7 @@ stype:
 
 simple_type:
 | IDENT                                           { Base_type($1) }
+| OPEN_BRACKET ELLIPSIS CLOSE_BRACKET   { IntegerRange }
 | OPEN_BRACKET expr ELLIPSIS expr CLOSE_BRACKET   { Range($2,$4) }
 | OPEN_BRACE enumlist CLOSE_BRACE                 { Enum($2) }
 ;
