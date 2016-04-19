@@ -61,6 +61,9 @@ let rec seq i = function
 	| x when x = i -> [i]
 	| n -> n::(seq i (n-1))
 
+let ctx_add_expr name v ty ctx =
+	StrMap.add name (Expr(v, ty)) ctx
+
 let ctx_var name ctx =
 	try
 		StrMap.find name ctx
@@ -355,16 +358,34 @@ let sal_transition_to_transition ((type_name, variables):state_type) ctx transit
 		) True all_guarded
 	in
 
-	let cond = List.fold_left (fun l a -> match a with
-	| Default(assign) ->
-		Lispy_ast.Or(l,
-			And(all_conditions, sal_assignments_to_condition ~vars_to_define:variables ctx assign)
-		)
-	| Guarded(expr, assignment) ->
-		let guard = sal_expr_to_lisp ctx expr in
-		let implies = sal_assignments_to_condition ~vars_to_define:variables ctx assignment in
-		Or(l, And(guard, implies))
-	) False l in
+	let rec compute_condition ctx l = function
+		| Default(assign) ->
+			Lispy_ast.Or(l,
+				And(all_conditions, sal_assignments_to_condition ~vars_to_define:variables ctx assign)
+			)
+		| ExistentialGuarded(existential_vars, expr, assignment) ->
+			begin
+			match existential_vars with
+			| [], sal_type ->
+				let guard = sal_expr_to_lisp ctx expr in
+				let implies = sal_assignments_to_condition ~vars_to_define:variables ctx assignment in
+				Or(l, And(guard, implies))
+			| t::end_decl, sal_type ->
+				let sally_type = sal_type_to_sally_type ctx sal_type in
+				match sally_type with
+				| Range(a, b) ->
+					List.fold_left (fun l i ->
+						let tmp_ctx = ctx_add_expr t (Value (string_of_int i)) Real ctx in
+						compute_condition tmp_ctx l (ExistentialGuarded((end_decl, sal_type), expr, assignment))
+					) l (seq a b)
+				| _ -> raise Iteration_on_non_range_type
+			end
+		| Guarded(expr, assignment) ->
+			let guard = sal_expr_to_lisp ctx expr in
+			let implies = sal_assignments_to_condition ~vars_to_define:variables ctx assignment in
+			Or(l, And(guard, implies))
+	in
+	let cond = List.fold_left (compute_condition ctx) False l in
 	"trans", transition_name, cond
 
 let add_variable_to_state_type ((name, vars):state_type) var_name var_type =

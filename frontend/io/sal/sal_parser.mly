@@ -447,6 +447,7 @@ guarded_commands:
 ;
 
 guarded_command:
+| var_decl AND expr ARROW assignments           { ExistentialGuarded($1, $3,$5) }
 | expr ARROW assignments           { Guarded($1,$3) }
 | expr ARROW                       { Guarded($1,[]) }
 | ELSE ARROW assignments           { Default($3) }

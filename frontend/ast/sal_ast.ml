@@ -78,6 +78,7 @@ type sal_assignment =
   | Member of sal_expr * sal_expr (* x IN set of x' IN set *)
 
 type guarded_command =
+  | ExistentialGuarded of sal_decl * sal_expr * (sal_assignment list)
   | Guarded of sal_expr * (sal_assignment list)  (* expr -> assignments *)
   | Default of (sal_assignment list)             (* ELSE -> assignments *)
 
