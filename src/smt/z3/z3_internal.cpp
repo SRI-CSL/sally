@@ -281,7 +281,7 @@ Z3_ast z3_internal::mk_z3_term(expr::term_op op, size_t n, const std::vector<Z3_
 
 Z3_sort z3_internal::to_z3_type(expr::term_ref ref) {
 
-  Z3_sort result;
+  Z3_sort result = 0;
 
   switch (d_tm.term_of(ref).op()) {
   case expr::TYPE_BOOL:
