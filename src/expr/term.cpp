@@ -128,6 +128,7 @@ void term::mk_let_cache(term_manager& tm, expr_let_cache& let_cache, std::vector
   case TERM_BV_SMOD:
   case TERM_BV_SUB:
   case TERM_BV_EXTRACT:
+  case TERM_BV_SGN_EXTEND:
     for (const term_ref* it = begin(); it != end(); ++ it) {
       const term& child = tm.term_of(*it);
       child.mk_let_cache(tm, let_cache, definitions);
@@ -463,6 +464,13 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
   case TERM_BV_EXTRACT: {
     const bitvector_extract& extract = tm_internal.payload_of<bitvector_extract>(*this);
     out << "((_ extract " << extract.high << " " << extract.low << ") ";
+    SMT_REF_OUT(child(0));
+    out << ")";
+    break;
+  }
+  case TERM_BV_SGN_EXTEND: {
+    const bitvector_sgn_extend& extend = tm_internal.payload_of<bitvector_sgn_extend>(*this);
+    out << "((_ sign_extend " << extend.size << ") ";
     SMT_REF_OUT(child(0));
     out << ")";
     break;

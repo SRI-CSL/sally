@@ -201,6 +201,10 @@ term_ref term_manager::mk_bitvector_extract(term_ref t, const bitvector_extract&
   return result;
 }
 
+term_ref term_manager::mk_bitvector_sgn_extend(term_ref t, const bitvector_sgn_extend& extend) {
+  return d_tm->mk_term<expr::TERM_BV_SGN_EXTEND>(extend, t);
+}
+
 term_ref term_manager::mk_string_constant(std::string value) {
   return d_tm->mk_term<CONST_STRING>(value);
 }
@@ -223,6 +227,11 @@ bitvector term_manager::get_bitvector_constant(const term& t) const {
 bitvector_extract term_manager::get_bitvector_extract(const term& t) const {
   assert(t.op() == TERM_BV_EXTRACT);
   return d_tm->payload_of<bitvector_extract>(t);
+}
+
+bitvector_sgn_extend term_manager::get_bitvector_sgn_extend(const term& t) const {
+  assert(t.op() == TERM_BV_SGN_EXTEND);
+  return d_tm->payload_of<bitvector_sgn_extend>(t);
 }
 
 std::string term_manager::get_string_constant(const term& t) const {

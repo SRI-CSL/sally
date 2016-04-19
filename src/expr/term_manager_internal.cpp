@@ -502,7 +502,22 @@ public:
         }
       }
       break;
-    case CONST_STRING:
+  case TERM_BV_SGN_EXTEND:
+    if (t.size() != 1) {
+      d_ok = false;
+    } else {
+      term_ref t0 = type_of(t[0]);
+      if (!d_tm.is_bitvector_type(t0)) {
+        d_ok = false;
+      } else {
+        const bitvector_sgn_extend& extend = d_tm.payload_of<bitvector_sgn_extend>(t);
+        size_t child_size = d_tm.bitvector_type_size(t0); 
+        d_ok = extend.size > 0;
+        if (d_ok) t_type = d_tm.bitvector_type(child_size + extend.size);
+      }
+    }
+    break;
+  case CONST_STRING:
       d_ok = true;
       t_type = d_tm.string_type();
       break;

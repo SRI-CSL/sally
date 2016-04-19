@@ -124,6 +124,15 @@ size_t bitvector_extract::hash() const {
   return hasher.get();
 }
 
+bool bitvector_sgn_extend::operator == (const bitvector_sgn_extend& other) const {
+  return size == other.size;
+}
+
+size_t bitvector_sgn_extend::hash() const {
+  return size;
+}
+
+
 std::ostream& operator << (std::ostream& out, const bitvector& bv) {
   bv.to_stream(out);
   return out;

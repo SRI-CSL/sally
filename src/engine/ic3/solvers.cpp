@@ -461,6 +461,14 @@ void solvers::add_to_reachability_solver(size_t k, expr::term_ref f)  {
     // Add directly
     smt::solver* solver = get_reachability_solver(k);
     solver->add(f, smt::solver::CLASS_A);
+    if (d_ctx.get_options().get_bool("ic3-check-deadlock")) {
+      smt::solver::result result = solver->check();
+      if (result != smt::solver::SAT) {
+        std::stringstream ss;
+        ss << "ic3: deadlock detected at reachability frame " << k << ".";
+        throw exception(ss.str());
+      }
+    }
   }
 }
 
@@ -531,6 +539,15 @@ void solvers::add_to_induction_solver(expr::term_ref f, induction_assertion_type
     break;
   default:
     assert(false);
+  }
+
+  if (d_ctx.get_options().get_bool("ic3-check-deadlock")) {
+    smt::solver::result result = d_induction_solver->check();
+    if (result != smt::solver::SAT) {
+      std::stringstream ss;
+      ss << "ic3: deadlock detected when checking induction of depth " << d_induction_solver_depth << ".";
+      throw exception(ss.str());
+    }
   }
 }
 

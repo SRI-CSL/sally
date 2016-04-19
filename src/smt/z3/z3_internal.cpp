@@ -351,7 +351,7 @@ Z3_ast z3_internal::to_z3_term(expr::term_ref ref) {
     break;
   }
   case expr::CONST_BITVECTOR: {
-    const expr::bitvector& bv = d_tm.get_bitvector_constant(t);
+    expr::bitvector bv = d_tm.get_bitvector_constant(t);
     Z3_sort bv_sort = Z3_mk_bv_sort(d_ctx, bv.size());
     Z3_inc_ref(d_ctx, Z3_sort_to_ast(d_ctx, bv_sort));
     to_decref.push_back(Z3_sort_to_ast(d_ctx, bv_sort));

@@ -163,8 +163,14 @@ public:
   /** Make a new bitvector extract operator */
   term_ref mk_bitvector_extract(term_ref t, const bitvector_extract& extract);
 
+  /** Make a new bitvector sgn extend */
+  term_ref mk_bitvector_sgn_extend(term_ref t, const bitvector_sgn_extend& extend);
+
   /** Get the extract of the extract term */
   bitvector_extract get_bitvector_extract(const term& t) const;
+
+  /** Get the sgn extend of the extend term */
+  bitvector_sgn_extend get_bitvector_sgn_extend(const term& t) const;
 
   /** Make a new string constant */
   term_ref mk_string_constant(std::string value);

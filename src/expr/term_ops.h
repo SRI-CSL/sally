@@ -102,6 +102,7 @@ enum term_op {
   TERM_BV_SGEQ,
   TERM_BV_UGT,
   TERM_BV_SGT,
+  TERM_BV_SGN_EXTEND,
 
   // Constant strings
   CONST_STRING,
@@ -136,13 +137,20 @@ struct term_op_traits<TYPE_BITVECTOR> {
 };
 
 /**
- * Bitvector extract has a payload of type pair<size_t, size_t>.
+ * Bitvector extract.
  */
 template<>
 struct term_op_traits<TERM_BV_EXTRACT> {
   typedef expr::bitvector_extract payload_type;
 };
 
+/**
+ * Bitvector sign extend.
+ */
+template<>
+struct term_op_traits<TERM_BV_SGN_EXTEND> {
+  typedef expr::bitvector_sgn_extend payload_type;
+};
 
 /**
  * Boolean constant terms have a payload of type bool and no children.

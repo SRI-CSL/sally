@@ -139,6 +139,23 @@ struct bitvector_extract {
   size_t hash() const;
 };
 
+/**
+ * Payload for bitvector sign-extend operation.
+ */
+struct bitvector_sgn_extend {
+  /** How many bits */
+  size_t size;
+
+  bitvector_sgn_extend(size_t size)
+  : size(size) {}
+
+  /** Comparison */
+  bool operator == (const bitvector_sgn_extend& other) const;
+
+  /** Hash */
+  size_t hash() const;
+};
+
 std::ostream& operator << (std::ostream& out, const bitvector& bv);
 
 }
@@ -156,6 +173,13 @@ template<>
 struct hash<expr::bitvector_extract> {
   size_t operator()(const expr::bitvector_extract& extract) const {
     return extract.hash();
+  }
+};
+
+template<>
+struct hash<expr::bitvector_sgn_extend> {
+  size_t operator()(const expr::bitvector_sgn_extend& extend) const {
+    return extend.hash();
   }
 };
 
