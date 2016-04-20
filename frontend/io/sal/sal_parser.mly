@@ -46,6 +46,8 @@
 %token LEMMA
 %token THEOREM
 %token PROCESS_TYPE
+%token TRUE
+%token FALSE
 
 %token OPEN_PAR
 %token CLOSE_PAR
@@ -284,6 +286,8 @@ not_expression:
 
 eq_r_expression:
 | eq_expression         { $1 }
+| TRUE { True }
+| FALSE { False }
 | q_expression          { $1 }
 ;
 

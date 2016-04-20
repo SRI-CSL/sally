@@ -72,6 +72,8 @@ and sal_expr =
   | Exists of sal_decl list * sal_expr
   | Forall of sal_decl list * sal_expr
   | Let of let_decl list * sal_expr
+  | True
+  | False
 
 type state_var_decl = state_var_tag * (sal_decl list)
 

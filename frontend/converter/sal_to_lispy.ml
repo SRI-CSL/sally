@@ -106,7 +106,7 @@ get_disjonctions_from_array ctx = function
 		let index_expr = sal_expr_to_lisp ctx a in
 		match index_expr, StrMap.find s ctx with
 		| Value(s), Expr(Ident(n, _), Array(Range(array_start, array_end), dest_type)) ->
-			[(True, Lispy_ast.Ident(n ^ "!" ^ s, dest_type))]
+			[(Lispy_ast.True, Lispy_ast.Ident(n ^ "!" ^ s, dest_type))]
 		| _, Expr(Ident(n, _), Array(Range(array_start, array_end), dest_type)) ->
 			let l = seq array_start array_end in
 			List.map (fun i ->
@@ -212,7 +212,7 @@ sal_expr_to_lisp (ctx:sally_context) = function
 			match sally_type with
 			| Range(a, b) ->
 				begin
-				let cond = ref True in
+				let cond = ref Lispy_ast.True in
 				for i = a to b do
 					let (tmp_ctx:sally_context) = StrMap.add t (Expr(Value(string_of_int i), Real)) ctx in
 					cond := Lispy_ast.And(!cond, sal_expr_to_lisp tmp_ctx (Forall((end_decl, sal_type)::q, expr)))
@@ -229,6 +229,8 @@ sal_expr_to_lisp (ctx:sally_context) = function
 
 	| Not(e) -> Not(sal_expr_to_lisp ctx e)
 	| Neq(a, b) -> Not(sal_expr_to_lisp ctx (Eq(a, b)))
+	| True -> Lispy_ast.True
+	| False -> Lispy_ast.False
   
   | Opp(_) -> failwith "opp"
   | Sub(a,b) -> Sub(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
@@ -290,7 +292,7 @@ let sal_assignments_to_condition ?only_define_type:(only_type=false) ?vars_to_de
 		) True assignment in
 	let rec get_equality_term equality_function ctx = function
 		| (name, Lispy_ast.Array(Range(a,b), t)) ->
-			let cond = ref True in
+			let cond = ref Lispy_ast.True in
 			let lispy_ident, lispy_next_ident = StrMap.find name ctx, next_var name ctx
 			in
 			(match lispy_ident, lispy_next_ident with
@@ -333,7 +335,7 @@ let sal_assignments_to_condition ?only_define_type:(only_type=false) ?vars_to_de
 	in
 	let implicit_condition =
 		if only_type then
-			True
+			Lispy_ast.True
 		else
 			List.fold_left (
 				fun l var ->

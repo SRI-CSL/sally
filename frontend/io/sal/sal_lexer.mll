@@ -54,6 +54,8 @@
 	"AND", AND;
 	"NOT", NOT;
 	"PROCESS_TYPE", PROCESS_TYPE;
+	"TRUE", TRUE;
+	"FALSE", FALSE;
       ]
 }
 
