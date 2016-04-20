@@ -27,7 +27,9 @@ let ch =
     stdin
 ;;
 
-let ctx = Io.Sal_lexer.parse ch in
-	let lispy = Converter.Sal_to_lispy.sal_context_to_lisp ctx in
-	Io.Lispy_writer.print_queries stdout lispy
+let _ =
+	Io.Sal_lexer.parse ch
+	|> Converter.Sal_to_lispy.sal_context_to_lisp
+	|> List.map Ast.Lispy_simplifier.simplify_query
+	|> Io.Lispy_writer.print_queries stdout
 

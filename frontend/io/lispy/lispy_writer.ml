@@ -46,12 +46,10 @@ let rec print_expr f =
 		print_folded ">=" a b
 	| Greater(a, b) ->
 		print_folded ">" a b
-	| Or(False, b) | Or (b, False) -> print_expr f b
 	| Or(a, b) ->
 		begin
 		Format.fprintf f "(or @[<v>";
 		let rec expand_or = function
-		| Or(False, a) | Or(a, False) -> expand_or a
 		| Or(c, d) ->
 			begin
 			expand_or c;
@@ -71,13 +69,10 @@ let rec print_expr f =
 		print_folded "-" a b
 	| Div(a, b) ->
 		print_folded "/" a b
-	| And(True, b) | And (b, True) -> print_expr f b
 	| And(a, b) ->
 		begin
 		Format.fprintf f "(and @[<v>";
 		let rec expand_and = function
-		| And(True, a) -> expand_and a
-		| And(a, True) -> expand_and a
 		| And(c, d) ->
 			begin
 			expand_and c;
