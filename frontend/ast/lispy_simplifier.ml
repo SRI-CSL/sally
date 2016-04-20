@@ -22,6 +22,7 @@ let apply_to_condition f = function
 let rec simplify_condition = function
 	| And(True, b) | And (b, True) -> simplify_condition b
 	| Or(False, b) | Or (b, False) -> simplify_condition b
+	| Not(Not(a)) -> simplify_condition a
 	| Or(a, b) ->
 		let c = simplify_condition a
 		and d = simplify_condition b in
