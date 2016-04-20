@@ -370,24 +370,21 @@ let sal_transition_to_transition ((type_name, variables):state_type) ctx transit
 			Lispy_ast.Or(l,
 				And(all_conditions, sal_assignments_to_condition ~vars_to_define:variables ctx assign)
 			)
-		| ExistentialGuarded(existential_vars, expr, assignment) ->
+		| ExistentialGuarded(existential_vars, guard) ->
 			begin
 			match existential_vars with
-			| [], sal_type ->
-				let guard = sal_expr_to_lisp ctx expr in
-				let implies = sal_assignments_to_condition ~vars_to_define:variables ctx assignment in
-				Or(l, And(guard, implies))
+			| [], sal_type -> compute_condition ctx l guard
 			| t::end_decl, sal_type ->
 				let sally_type = sal_type_to_sally_type ctx sal_type in
 				match sally_type with
 				| Range(a, b) ->
 					List.fold_left (fun l i ->
 						let tmp_ctx = ctx_add_expr t (Value (string_of_int i)) Real ctx in
-						compute_condition tmp_ctx l (ExistentialGuarded((end_decl, sal_type), expr, assignment))
+						compute_condition tmp_ctx l (ExistentialGuarded((end_decl, sal_type), guard))
 					) l (seq a b)
 				| IntegerRange(s) ->
 					let tmp_ctx = ctx_add_expr t (Ident (t, IntegerRange(s))) Real ctx in
-					Lispy_ast.Or(l, Lispy_ast.Exists(t, IntegerRange(s), compute_condition tmp_ctx False (ExistentialGuarded((end_decl, sal_type), expr, assignment))))
+					Lispy_ast.Or(l, Lispy_ast.Exists(t, IntegerRange(s), compute_condition tmp_ctx False (ExistentialGuarded((end_decl, sal_type), guard))))
 					
 				| _ -> raise Iteration_on_non_range_type
 			end

@@ -53,6 +53,7 @@
 	"OR", OR;
 	"AND", AND;
 	"NOT", NOT;
+	"PROCESS_TYPE", PROCESS_TYPE;
       ]
 }
 

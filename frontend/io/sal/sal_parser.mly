@@ -45,6 +45,7 @@
 %token OF
 %token LEMMA
 %token THEOREM
+%token PROCESS_TYPE
 
 %token OPEN_PAR
 %token CLOSE_PAR
@@ -139,7 +140,7 @@ stype:
 
 simple_type:
 | IDENT                                           { Base_type($1) }
-| OPEN_BRACKET ELLIPSIS CLOSE_BRACKET   { IntegerRange }
+| PROCESS_TYPE   { IntegerRange }
 | OPEN_BRACKET expr ELLIPSIS expr CLOSE_BRACKET   { Range($2,$4) }
 | OPEN_BRACE enumlist CLOSE_BRACE                 { Enum($2) }
 ;
@@ -448,7 +449,10 @@ guarded_commands:
 ;
 
 guarded_command:
-| var_decl AND expr ARROW assignments           { ExistentialGuarded($1, $3,$5) }
+| OPEN_PAR var_declarations CLOSE_PAR COLUMN expr ARROW assignments           {
+	List.fold_left (fun expr decl ->
+		ExistentialGuarded(decl, expr)
+	) (Guarded($5, $7)) $2 }
 | expr ARROW assignments           { Guarded($1,$3) }
 | expr ARROW                       { Guarded($1,[]) }
 | ELSE ARROW assignments           { Default($3) }

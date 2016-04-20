@@ -1,6 +1,6 @@
 mutex: CONTEXT =
 	BEGIN
-  	P1: PROCESS_TYPE;
+  	P1: TYPE = PROCESS_TYPE;
 
 		mutex: MODULE =
 			BEGIN
@@ -18,7 +18,7 @@ mutex: CONTEXT =
 				TRANSITION
 				[
 				  (i: P1): NOT want[i] -->
-            % want' = want WITH [i] = True
+				  		% want' = want WITH [i] = True
 						want' IN { a: ARRAY P1 OF BOOLEAN |
 							FORALL(j: P1):
 								a[j] = (i = j OR want[j])
