@@ -113,14 +113,14 @@ and sally_type_to_string = function
 	| IntegerRange(n) -> n
 
 
-let print_transition f ((ident, state_type, sally_cond):transition) =
-	Format.fprintf f "@[(define-transition %s state @;  " ident;
-	print_expr f sally_cond;
+let print_transition f (transition:transition) =
+	Format.fprintf f "@[(define-transition %s state @;  " transition.id;
+	print_expr f transition.formula;
 	Format.fprintf f ")@]"
 
-let print_state f ((ident, state_type, sally_cond):state) =
-	Format.fprintf f "@[(define-states %s state @;  " ident;
-	print_expr f sally_cond;
+let print_state f (state:state) =
+	Format.fprintf f "@[(define-states %s state @;  " state.id;
+	print_expr f state.condition;
 	Format.fprintf f ")@]"
 
 
@@ -148,37 +148,35 @@ let print_state_type f (ident, var_list) =
 	List.iter print_variable var_list;
 	Format.fprintf f "@]))@]@\n"
 
-let print_ts f (name, state_type, init, transition) =
-	print_state_type f state_type;
+let print_transition_system f ts =
+	print_state_type f ts.state_type;
 	Format.fprintf f "@\n";
-	print_state f init;
+	print_state f ts.initial_state;
 	Format.fprintf f "@\n";
-	print_transition f transition;
+	print_transition f ts.transition;
 	Format.fprintf f "@\n";
-	Format.fprintf f "(define-transition-system %s state init trans)" name
+	Format.fprintf f "(define-transition-system %s state init trans)" ts.id
 
 let print_query f q =
-	let transition_system, cond = q in
-	Format.fprintf f "@[(query %s " (ts_name transition_system);
-	print_expr f cond;
+	Format.fprintf f "@[(query %s " (q.transition_system.id);
+	print_expr f q.condition;
 	Format.fprintf f "@])"
 
-let print_queries ch (q:query list) =
+let output_queries_to_channel ch (q:query list) =
 	let f = Format.formatter_of_out_channel ch in
-	let transition_systems = ref [] in
-	List.iter (fun (ts, cond) ->
-		if List.mem (ts_name ts) !transition_systems then
-		begin
-			print_query f (ts, cond);
-			Format.fprintf f "@;@\n";
-		end
-		else
-		begin
-			transition_systems := (ts_name ts)::!transition_systems;
-			print_ts f ts;
-			Format.fprintf f "@;@\n";
-			print_query f (ts, cond);
-			Format.fprintf f "@;@\n";
-		end
-	) q
+	let _ = List.fold_left (fun ts_written q ->
+		let ts_written = 
+			let ts_id = q.transition_system.id in
+			if List.mem ts_id ts_written then
+				ts_written
+			else
+				let _ = print_transition_system f q.transition_system in
+				let _ = Format.fprintf f "@;@\n" in
+				ts_id::ts_written
+		in
+		print_query f q;
+		Format.fprintf f "@;@\n";
+		ts_written
+	) [] q
+	in ()
 

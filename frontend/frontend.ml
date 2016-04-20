@@ -31,5 +31,5 @@ let _ =
 	Io.Sal_lexer.parse ch
 	|> Converter.Sal_to_lispy.sal_context_to_lisp
 	|> List.map Ast.Lispy_simplifier.simplify_query
-	|> Io.Lispy_writer.print_queries stdout
+	|> Io.Lispy_writer.output_queries_to_channel stdout
 

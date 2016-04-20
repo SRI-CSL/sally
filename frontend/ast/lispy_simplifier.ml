@@ -36,15 +36,17 @@ let rec simplify_condition = function
 		else And(c, d)
 	| a -> apply_to_condition simplify_condition a
 
-let simplify_transition (id, state_type_id, sally_condition) =
-	id, state_type_id, simplify_condition sally_condition
+let simplify_transition t =
+	{ t with formula = simplify_condition t.formula; }
 
-let simplify_state (id, type_id, condition) =
-	id, type_id, simplify_condition condition
+let simplify_state (s:state) =
+	{ s with condition = simplify_condition s.condition; }
 
-let simplify_transition_system (system_identifier, state_type, initial_state, transition) =
-	system_identifier, state_type, simplify_state initial_state, simplify_transition transition
+let simplify_transition_system transition_system  =
+	{ transition_system with
+		initial_state = simplify_state transition_system.initial_state;
+		transition = simplify_transition transition_system.transition; }
 
-let simplify_query (transition_system, sally_condition) =
-	simplify_transition_system transition_system,
-	simplify_condition sally_condition
+let simplify_query q =
+	{ transition_system = simplify_transition_system q.transition_system;
+	  condition = simplify_condition q.condition; }

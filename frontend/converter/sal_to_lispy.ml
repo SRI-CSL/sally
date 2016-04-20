@@ -345,8 +345,10 @@ let sal_assignments_to_condition ?only_define_type:(only_type=false) ?vars_to_de
 
 (** Converts an assignment to a lispy state of type {i type_name} and named {i name} *)
 let sal_assignments_to_lispy_state ctx state_type name assign =
-	let type_name, variables = state_type in
-	name, type_name, sal_assignments_to_condition ~only_define_type:true ~vars_to_define:variables ctx assign
+	let type_name, vars_to_define = state_type in
+	{	id = name;
+		state_type_id = type_name;
+		condition = sal_assignments_to_condition ~only_define_type:true ~vars_to_define ctx assign; }
 
 (** Takes a Sal transition and return a lispy one.
   * @param ctx a sally_context
@@ -355,7 +357,9 @@ let sal_assignments_to_lispy_state ctx state_type name assign =
 let sal_transition_to_transition ((type_name, variables):state_type) ctx transition_name = function
 | NoTransition -> raise Need_transition
 | Assignments(assign) (* Unguarded transitions *) -> 
-	"trans", transition_name, sal_assignments_to_condition ~vars_to_define:variables ctx assign
+	{	id = "trans";
+		state_type_id = transition_name;
+		formula = sal_assignments_to_condition ~vars_to_define:variables ctx assign; }
 | GuardedCommands(l) ->
 	let all_guarded = List.filter (function | Guarded(_) -> true | _ -> false) l in
 	let all_conditions = List.fold_left (fun l a ->
@@ -396,7 +400,9 @@ let sal_transition_to_transition ((type_name, variables):state_type) ctx transit
 			Or(l, And(guard, implies))
 	in
 	let cond = List.fold_left (compute_condition ctx) False l in
-	"trans", transition_name, cond
+	{ id = "trans";
+	  state_type_id = transition_name;
+	  formula = cond; }
 
 let add_variable_to_state_type ((name, vars):state_type) var_name var_type =
 	((name, (var_name, var_type)::vars):state_type)
@@ -415,7 +421,11 @@ let sal_module_to_lisp undefined_constants ctx (name, sal_module) =
 		add_variable_to_state_type st n t) state_type undefined_constants in
 	let initial_state = sal_assignments_to_lispy_state type_init_ctx state_type "init" sal_module.initialization in
 	let transitions = sal_transition_to_transition state_type transition_ctx name sal_module.transition in
-	type_init_ctx, (name, state_type, initial_state, transitions)
+	type_init_ctx,
+	{ id = name;
+	  state_type = state_type;
+	  initial_state = initial_state;
+	  transition = transitions; }
 
 (** Takes a sal assertion and returns a lispy query. The model used in the assertion must already
   * exist in the systems list of transition system.
@@ -423,8 +433,9 @@ let sal_module_to_lisp undefined_constants ctx (name, sal_module) =
   * ignored.
   *)
 let sal_query_to_lisp ctx systems (name, _, model_name, expr) =
-	let type_init_ctx, transition_system = List.find (fun (_, (n, _, _, _)) -> n = model_name) systems in
-	((transition_system, sal_expr_to_lisp (ctx_union ctx type_init_ctx) expr):query)
+	let type_init_ctx, transition_system = List.find (fun (_, ts) -> ts.id = model_name) systems in
+	{ transition_system = transition_system;
+	  condition = sal_expr_to_lisp (ctx_union ctx type_init_ctx) expr; }
 
 let sal_context_to_lisp ctx =
 	let defs = ctx.definitions in
