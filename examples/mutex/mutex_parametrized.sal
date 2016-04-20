@@ -1,49 +1,52 @@
 mutex: CONTEXT =
 	BEGIN
-		PROC: TYPE = [..];
+  	P1: PROCESS_TYPE;
 
 		mutex: MODULE =
 			BEGIN
 				OUTPUT
-					want: ARRAY PROC OF BOOLEAN,
-					crit: ARRAY PROC OF BOOLEAN,
-					turn: PROC
+					want: ARRAY P1 OF BOOLEAN,
+					crit: ARRAY P1 OF BOOLEAN,
+					turn: P1
 
 				INITIALIZATION
-					want IN { a: ARRAY PROC OF BOOLEAN | FORALL(i:PROC): NOT a[i] };
-					crit IN { a: ARRAY PROC OF BOOLEAN | FORALL(i:PROC): NOT a[i] };
+				    % want = [[P1] False]
+					% crit = [False]
+					want IN { a: ARRAY P1 OF BOOLEAN | FORALL(i:P1): NOT a[i] };
+					crit IN { a: ARRAY P1 OF BOOLEAN | FORALL(i:P1): NOT a[i] };
 
 				TRANSITION
 				[
-					i: PROC AND NOT want[i] -->
-
-						want IN { a: ARRAY PROC OF BOOLEAN |
-							FORALL(j: PROC):
+				  (i: P1): NOT want[i] -->
+            % want' = want WITH [i] = True
+						want' IN { a: ARRAY P1 OF BOOLEAN |
+							FORALL(j: P1):
 								a[j] = (i = j OR want[j])
 						};
 				[]
-					i: PROC AND want[i] AND NOT crit[i] AND turn = i -->
-						
-						crit IN { a: ARRAY PROC OF BOOLEAN |
-							FORALL(j: PROC):
+					(i: P1): want[i] AND NOT crit[i] AND turn = i -->
+  					% crit' = crit WITH [i] = True
+						crit IN { a: ARRAY P1 OF BOOLEAN |
+							FORALL(j: P1):
 								a[j] = (i = j OR crit[j])
 						};
 				[]
-					i: PROC AND crit[i] -->
-
-						turn IN { a : PROC | 1 = 1 };
-						crit IN { a: ARRAY PROC OF BOOLEAN |
-							FORALL(j: PROC):
+					(i:P1): crit[i] -->
+   					% want = with WITH [i] = False
+	  				% crit' = crit WITH [i] = False
+						turn IN { a : P1 | 1 = 1 };
+						crit IN { a: ARRAY P1 OF BOOLEAN |
+							FORALL(j: P1):
 								a[j] = (i /= j AND crit[j])
 						};
-						want IN { a: ARRAY PROC OF BOOLEAN |
-							FORALL(j: PROC):
+						want IN { a: ARRAY P1 OF BOOLEAN |
+							FORALL(j: P1):
 								a[j] = (i /= j AND want[j])
 						};
 				]
 			END;
 
 		safe: LEMMA
-			mutex |- G(FORALL (i, j: PROC): i /= j => NOT crit[i] OR NOT crit[j]);
+			mutex |- G(FORALL (i, j: P1): i /= j => NOT crit[i] OR NOT crit[j]);
 
 	END

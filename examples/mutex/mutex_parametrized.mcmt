@@ -1,0 +1,70 @@
+;; Process type, implicitly x: P1 means 0 <= n < #P1
+;;
+;; sally input.mcmt -> parametric
+;; sally input.mcmt --define-type #P1=3
+;;
+(define-process-type P1)
+
+;; State type
+(define-state-type state (
+  (want (Array (P1) Bool)) ;; Array indexed by P1, mapping to Bool
+  (crit (Array (P1) Bool)) ;; Array indexed by P1, mapping to Bool
+  (turn P1)                ;; 0 <= turn < #P1
+))
+
+;; Initial states
+(define-states init state
+  (and
+    ;; (= want ((as const (Array (P1) Bool)) False))
+    ;; (= crit ((as const (Array (P1) Bool)) False))
+    (forall ((i P1)) (not (select want i)))
+    (forall ((i P1)) (not (select crit i)))
+  )
+)
+
+;; Transition
+(define-transition trans state
+  (or
+    (exists ((i P1))
+      (and
+        (not (select state.want i))
+        ;; (= next.want (store state.want i True))
+        (forall ((j P1)) (= (select next.want j) (or (= i j) (select state.want j))))
+        (= state.crit next.crit)
+        (= state.turn next.turn)
+      )
+    )
+    (exists ((i P1))
+      (and
+        (select state.want i)
+        (not (select state.crit i))
+        (= state.turn i)
+        ;; (= next.crit (store state.crit i True))
+        (forall ((j P1)) (= (select next.crit j) (or (= i j) (select state.crit j))))
+        (= state.want next.want)
+        (= state.turn next.turn)
+      )
+    )
+    (exists ((i P1))
+      (and
+        (select state.crit i)
+        ;; (= next.want (store state.want i False))
+        ;; (= next.crit (store state.crit i False))
+        (forall ((j P1)) (= (select next.crit j) (and (not (= i j)) (select state.crit j))))
+        (forall ((j P1)) (= (select next.want j) (and (not (= i j)) (select state.want j))))
+      )
+    )
+  )
+)
+
+;; Transition system
+(define-transition-system mutex state init trans)
+
+;; Query
+(query mutex (forall ((i P1) (j P1))
+  (or
+    (= i j)
+    (not (select crit i))
+    (not (select crit j))
+  )
+)
