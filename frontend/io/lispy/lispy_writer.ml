@@ -110,7 +110,7 @@ and sally_type_to_string = function
 	| Range(_, _) -> "Real"
 	| Array(IntegerRange(n), t) -> "Array " ^ sally_type_to_string (IntegerRange n) ^ " ("^ sally_type_to_string t ^ ")"
 	| Array(_, _) -> failwith "Cannot instanciate arbitrary arrays"
-	| IntegerRange(n) -> "Range" ^ n
+	| IntegerRange(n) -> n
 
 
 let print_transition f ((ident, state_type, sally_cond):transition) =
