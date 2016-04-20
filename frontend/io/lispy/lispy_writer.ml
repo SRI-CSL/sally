@@ -28,6 +28,13 @@ let rec print_expr f =
 		print_expr f a; Format.fprintf f " "; print_expr f b;
 		Format.fprintf f "@])"
 	in
+	let print_folded_exists s a b =
+		Format.fprintf f "(%s " s;
+		print_expr f a;
+		Format.fprintf f "@\n  @[<v>";
+		print_expr f b;
+		Format.fprintf f "@])"
+	in
 	let print_folded3 s a b c =
 		Format.fprintf f "(%s @[<v>" s;
 		print_expr f a; Format.fprintf f "@;";
@@ -36,8 +43,8 @@ let rec print_expr f =
 		Format.fprintf f "@])"
 	in
 	function
-	| Forall(n, t, expr) -> print_folded "forall" (Ident(n ^ " (" ^ sally_type_to_string t ^ ")", Real)) expr
-	| Exists(n, t, expr) -> print_folded "exists" (Ident(n ^ " (" ^ sally_type_to_string t ^ ")", Real)) expr
+	| Forall(n, t, expr) -> print_folded_exists "forall" (Ident(n ^ " (" ^ sally_type_to_string t ^ ")", Real)) expr
+	| Exists(n, t, expr) -> print_folded_exists "exists" (Ident(n ^ " (" ^ sally_type_to_string t ^ ")", Real)) expr
 	| Select(expr, index) -> print_folded "select" expr index
 	| Equality(a, b) -> print_folded "=" a b
 	| Value(s) -> Format.fprintf f "%s" s
@@ -48,20 +55,20 @@ let rec print_expr f =
 		print_folded ">" a b
 	| Or(a, b) ->
 		begin
-		Format.fprintf f "(or @[<v>";
+		Format.fprintf f "@[(or@\n  @[<v>";
 		let rec expand_or = function
 		| Or(c, d) ->
 			begin
 			expand_or c;
-			Format.fprintf f "@;";
+			Format.fprintf f "@\n";
 			expand_or d;
 			end
 		| a -> print_expr f a;
 		in
 		expand_or a;
-		Format.fprintf f "@;";
+		Format.fprintf f "@\n";
 		expand_or b;
-		Format.fprintf f "@])";
+		Format.fprintf f "@])@]";
 		end
 	| Add(a, b) ->
 		print_folded "+" a b
@@ -71,20 +78,20 @@ let rec print_expr f =
 		print_folded "/" a b
 	| And(a, b) ->
 		begin
-		Format.fprintf f "(and @[<v>";
+		Format.fprintf f "@[(and@\n  @[<v>";
 		let rec expand_and = function
 		| And(c, d) ->
 			begin
 			expand_and c;
-			Format.fprintf f "@;";
+			Format.fprintf f "@\n";
 			expand_and d;
 			end
 		| a -> print_expr f a
 		in
 		expand_and a;
-		Format.fprintf f "@;";
+		Format.fprintf f "@\n";
 		expand_and b;
-		Format.fprintf f "@])";
+		Format.fprintf f "@])@]";
 		end
 	| Ite(a, b, c) ->
 		print_folded3 "ite" a b c
