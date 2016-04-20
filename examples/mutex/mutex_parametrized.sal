@@ -26,7 +26,7 @@ mutex: CONTEXT =
 				[]
 					(i: P1): want[i] AND NOT crit[i] AND turn = i -->
   					% crit' = crit WITH [i] = True
-						crit IN { a: ARRAY P1 OF BOOLEAN |
+						crit' IN { a: ARRAY P1 OF BOOLEAN |
 							FORALL(j: P1):
 								a[j] = (i = j OR crit[j])
 						};
@@ -34,12 +34,12 @@ mutex: CONTEXT =
 					(i:P1): crit[i] -->
    					% want = with WITH [i] = False
 	  				% crit' = crit WITH [i] = False
-						turn IN { a : P1 | 1 = 1 };
-						crit IN { a: ARRAY P1 OF BOOLEAN |
+						turn' IN { a : P1 | TRUE };
+						crit' IN { a: ARRAY P1 OF BOOLEAN |
 							FORALL(j: P1):
 								a[j] = (i /= j AND crit[j])
 						};
-						want IN { a: ARRAY P1 OF BOOLEAN |
+						want' IN { a: ARRAY P1 OF BOOLEAN |
 							FORALL(j: P1):
 								a[j] = (i /= j AND want[j])
 						};
