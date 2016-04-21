@@ -81,12 +81,12 @@ let existential_pass = function
 		in
 		let inter_a, inter_b =
 			list_inter a_variables b_variables ( fun a b ->
-				String.compare (fst a) (fst b))
+				compare (snd a) (snd b))
 			|> List.split
 		in
 		let a =
 			List.combine inter_a inter_b
-			|> remove_first_existentials b in
+			|> remove_first_existentials a in
 		let b =
 			List.combine inter_b inter_b
 			|> remove_first_existentials b
