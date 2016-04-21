@@ -1,6 +1,7 @@
 mutex: CONTEXT =
 	BEGIN
   	P1: TYPE = PROCESS_TYPE;
+  	%P1: TYPE = [1..3];
 
 		mutex: MODULE =
 			BEGIN
