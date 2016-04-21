@@ -45,9 +45,12 @@ let simplify_state (s:state) =
 
 let simplify_transition_system transition_system  =
 	{ transition_system with
-		initial_state = simplify_state transition_system.initial_state;
-		transition = simplify_transition transition_system.transition; }
+	  initial_state = simplify_state transition_system.initial_state;
+	  transition = simplify_transition transition_system.transition; }
 
 let simplify_query q =
 	{ transition_system = simplify_transition_system q.transition_system;
 	  condition = simplify_condition q.condition; }
+
+let simplify_context c =
+	{ c with queries = List.map simplify_query c.queries }

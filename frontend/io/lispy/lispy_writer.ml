@@ -162,8 +162,12 @@ let print_query f q =
 	print_expr f q.condition;
 	Format.fprintf f "@])"
 
-let output_queries_to_channel ch (q:query list) =
+let output_context_to_channel ch c =
 	let f = Format.formatter_of_out_channel ch in
+	List.iter (fun parametrized_type ->
+		Format.fprintf f "(define-process-type %s)@\n" parametrized_type;
+	) c.parametrized_types;
+	Format.fprintf f "@\n";
 	let _ = List.fold_left (fun ts_written q ->
 		let ts_written = 
 			let ts_id = q.transition_system.id in
@@ -177,6 +181,6 @@ let output_queries_to_channel ch (q:query list) =
 		print_query f q;
 		Format.fprintf f "@;@\n";
 		ts_written
-	) [] q
+	) [] c.queries
 	in ()
 

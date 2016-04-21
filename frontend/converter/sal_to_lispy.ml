@@ -441,7 +441,7 @@ let sal_context_to_lisp ctx =
 	let defs = ctx.definitions in
 	let sally_ctx = StrMap.empty in
 	let undefined_constants = ref [] in
-	let _, queries, _ =
+	let _, queries, sally_env =
 		List.fold_left (fun (transition_systems, queries, sally_ctx) -> function
 		| Module_def(a, b) ->
 			let sally_module = sal_module_to_lisp !undefined_constants sally_ctx (a,b) in
@@ -473,6 +473,15 @@ let sal_context_to_lisp ctx =
 		| Type_decl(n) -> raise Not_implemented
 		) ([], [], sally_ctx) defs in
 	
+	let extract_integer_ranges s =
+		StrMap.fold (fun k v param_types ->
+			match v with
+			| Type(IntegerRange(s)) -> s::param_types
+			| _ -> param_types
+		) s []
+	in
 	
-	(queries:query list)
+	
+	{ queries = (queries:query list);
+	  parametrized_types = extract_integer_ranges sally_env; }
 

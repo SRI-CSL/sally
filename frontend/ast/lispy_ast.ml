@@ -63,6 +63,8 @@ type transition = {
 	formula: sally_condition;
 }
 
+type parametrized_type = string
+
 type transition_system = {
 	id: system_identifier;
 	state_type: state_type;
@@ -73,5 +75,10 @@ type transition_system = {
 type query = {
 	transition_system: transition_system;
 	condition: sally_condition;
+}
+
+type context = {
+	queries: query list;
+	parametrized_types: parametrized_type list;
 }
 

@@ -30,6 +30,6 @@ let ch =
 let _ =
 	Io.Sal_lexer.parse ch
 	|> Converter.Sal_to_lispy.sal_context_to_lisp
-	|> List.map Ast.Lispy_simplifier.simplify_query
-	|> Io.Lispy_writer.output_queries_to_channel stdout
+	|> Ast.Lispy_simplifier.simplify_context
+	|> Io.Lispy_writer.output_context_to_channel stdout
 
