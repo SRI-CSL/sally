@@ -155,7 +155,7 @@ let print_transition_system f ts =
 	Format.fprintf f "@\n";
 	print_transition f ts.transition;
 	Format.fprintf f "@\n";
-	Format.fprintf f "(define-transition-system %s state init trans)" ts.id
+	Format.fprintf f "(define-transition-system %s state init trans)@." ts.id
 
 let print_query f q =
 	Format.fprintf f "@[(query %s " (q.transition_system.id);
