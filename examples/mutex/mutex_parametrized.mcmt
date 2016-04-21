@@ -68,3 +68,57 @@
     (not (select crit j))
   )
 )
+(define-process-type P1)
+
+(define-state-type state 
+  ((want Array P1 (Bool))
+   (crit Array P1 (Bool))
+   (turn P1)
+   ))
+
+(define-states init state 
+  (and
+    (forall i (P1)
+      (not (select want i)))
+    (forall i (P1)
+      (not (select crit i)))))
+(define-transition trans state 
+  (exists i (P1)
+  (or
+    (and
+      (not (select state.want i))
+      (forall j (P1)
+        (= (select next.want j) (or
+                                  (= i j)
+                                  (select state.want j))))
+      (= state.crit next.crit)
+      (= state.turn next.turn))
+    (and
+      (select state.want i)
+      (not (select state.crit i))
+      (= state.turn i)
+      (forall j (P1)
+        (= (select next.crit j) (or
+                                  (= i j)
+                                  (select state.crit j))))
+      (= state.want next.want)
+      (= state.turn next.turn))
+    (and
+      (select state.crit i)
+      (forall j (P1)
+        (= (select next.crit j) (and
+                                  (not (= i j))
+                                  (select state.crit j))))
+      (forall j (P1)
+        (= (select next.want j) (and
+                                  (not (= i j))
+                                  (select state.want j))))))))
+(define-transition-system mutex state init trans)
+
+
+(query mutex (forall i (P1)
+  (forall j (P1)
+    (or
+      (= i j)
+      (not (select crit i))
+      (not (select crit j))))))
