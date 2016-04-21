@@ -84,15 +84,21 @@ let existential_pass = function
 				compare (snd a) (snd b))
 			|> List.split
 		in
-		let a =
+		let new_vars =
 			List.combine inter_a inter_b
-			|> remove_first_existentials a in
-		let b =
-			List.combine inter_b inter_b
+			|> List.map (fun ((na, t), (nb, b)) ->
+				if na = nb then na, t
+				else Lispy_var.get_fresh_variable (), t)
+		in
+		let a =
+			List.combine inter_a new_vars
+			|> remove_first_existentials a
+		and b =
+			List.combine inter_b new_vars
 			|> remove_first_existentials b
 		in
 		List.fold_left (fun c (var, var_type) ->
-			Exists(var, var_type, c)) (Or(a, b)) inter_b
+			Exists(var, var_type, c)) (Or(a, b)) new_vars
 	| a -> a
 
 let simplify_condition = apply_to_condition (identity_pass >> existential_pass)
