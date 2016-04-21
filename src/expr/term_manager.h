@@ -119,7 +119,7 @@ public:
   term_ref mk_variable(std::string name, term_ref type);
 
   /** Get the name of this variable */
-  std::string get_variable_name(expr::term_ref t) const;
+  std::string get_variable_name(term_ref t) const;
 
   /** Get the name of this variable */
   std::string get_variable_name(const term& t) const;
@@ -138,6 +138,18 @@ public:
 
   /** Returns the default value for the given type */
   term_ref get_default_value(term_ref type) const;
+
+  /** Returns the conjuncts of the formula */
+  void get_conjuncts(term_ref f, std::set<term_ref>& out);
+
+  /** Returns the conjuncts of the formula */
+  void get_disjuncts(term_ref f, std::set<term_ref>& out);
+
+  /** Make a negation (simplifies a bit) */
+  term_ref mk_not(term_ref f1);
+
+  /** Make a conjunction (simplifies a bit). */
+  term_ref mk_and(term_ref f1, term_ref f2);
 
   /** Make a conjunction. If no children => true. One child => child. */
   term_ref mk_and(const std::vector<term_ref>& conjuncts);
@@ -197,7 +209,7 @@ public:
   term_ref get_struct_field(const term& t, size_t i) const;
 
   /** Get all fields of a struct variable */
-  void get_struct_fields(const term& t, std::vector<expr::term_ref>& out) const;
+  void get_struct_fields(const term& t, std::vector<term_ref>& out) const;
 
   /** Get a reference for the term */
   term_ref ref_of(const term& term) const;

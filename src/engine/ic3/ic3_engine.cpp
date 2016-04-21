@@ -291,7 +291,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
   d_smt->add_to_induction_solver(F_fwd, solvers::INDUCTION_FIRST);
   d_smt->add_to_induction_solver(F_fwd, solvers::INDUCTION_INTERMEDIATE);
 
-  F_fwd = tm().mk_term(expr::TERM_AND, ind.F_fwd, F_fwd);
+  F_fwd = tm().mk_and(ind.F_fwd, F_fwd);
   TRACE("ic3") << "ic3: new F_fwd: " << F_fwd << std::endl;
 
   // We know what F_fwd removes the CTI, and F_fwd => !CEX, so we can add it

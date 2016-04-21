@@ -87,7 +87,7 @@ term_ref term_manager::mk_term(term_op op, const std::vector<term_ref>& children
 }
 
 term_ref term_manager::mk_term(term_op op, const term_ref* children_begin, const term_ref* children_end) {
-  expr::term_ref result;
+  term_ref result;
   if (children_end - children_begin == 2) {
     result = mk_term(op, *children_begin, *(children_begin + 1));
   } else {
@@ -196,13 +196,13 @@ term_ref term_manager::mk_bitvector_constant(const bitvector& value) {
 }
 
 term_ref term_manager::mk_bitvector_extract(term_ref t, const bitvector_extract& extract) {
-  term_ref result = d_tm->mk_term<expr::TERM_BV_EXTRACT>(extract, t);
+  term_ref result = d_tm->mk_term<TERM_BV_EXTRACT>(extract, t);
   d_tm->typecheck(result);
   return result;
 }
 
 term_ref term_manager::mk_bitvector_sgn_extend(term_ref t, const bitvector_sgn_extend& extend) {
-  return d_tm->mk_term<expr::TERM_BV_SGN_EXTEND>(extend, t);
+  return d_tm->mk_term<TERM_BV_SGN_EXTEND>(extend, t);
 }
 
 term_ref term_manager::mk_string_constant(std::string value) {
@@ -281,7 +281,7 @@ term_ref term_manager::get_struct_field(const term& t, size_t i) const {
 }
 
 /** Get all fields of a struct variable */
-void term_manager::get_struct_fields(const term& t, std::vector<expr::term_ref>& out) const {
+void term_manager::get_struct_fields(const term& t, std::vector<term_ref>& out) const {
   for (size_t i = 0; i < get_struct_size(t); ++ i) {
     out.push_back(get_struct_field(t, i));
   }
@@ -321,7 +321,7 @@ size_t term_manager::id_of(term_ref ref) const {
 
 std::string term_manager::to_string(term_ref ref) const {
   std::stringstream ss;
-  ss << set_tm(*const_cast<expr::term_manager*>(this)) << ref;
+  ss << set_tm(*const_cast<term_manager*>(this)) << ref;
   return ss.str();
 }
 
@@ -366,34 +366,114 @@ term_ref term_manager::substitute_and_cache(term_ref t, substitution_map& subst)
   return d_tm->substitute(t, subst);
 }
 
+term_ref term_manager::mk_not(term_ref f) {
+  term_op op = d_tm->term_of(f).op();
+  switch (op) {
+  case TERM_NOT:
+    return d_tm->term_of(f)[0];
+  default:
+    return mk_term(expr::TERM_NOT, f);
+  }
+}
+
+void term_manager::get_conjuncts(term_ref f, std::set<term_ref>& out) {
+  term_op op = d_tm->term_of(f).op();
+  switch (op) {
+  case TERM_AND: {
+    size_t n = d_tm->term_of(f).size();
+    for (size_t i = 0; i < n; ++ i) {
+      get_conjuncts(d_tm->term_of(f)[i], out);
+    }
+    break;
+  }
+  case TERM_NOT: {
+    std::set<term_ref> disjuncts;
+    get_disjuncts(d_tm->term_of(f)[0], disjuncts);
+    std::set<term_ref>::const_iterator it;
+    for (it = disjuncts.begin(); it != disjuncts.end(); ++ it) {
+      out.insert(mk_not(*it));
+    }
+    break;
+  }
+  default:
+    out.insert(f);
+  }
+}
+
+void term_manager::get_disjuncts(term_ref f, std::set<term_ref>& out) {
+  term_op op = d_tm->term_of(f).op();
+  switch (op) {
+  case TERM_OR: {
+    size_t n = d_tm->term_of(f).size();
+    for (size_t i = 0; i < n; ++ i) {
+      get_disjuncts(d_tm->term_of(f)[i], out);
+    }
+    break;
+  }
+  case TERM_NOT: {
+    std::set<term_ref> conjuncts;
+    get_conjuncts(d_tm->term_of(f)[0], conjuncts);
+    std::set<term_ref>::const_iterator it;
+    for (it = conjuncts.begin(); it != conjuncts.end(); ++ it) {
+      out.insert(mk_not(*it));
+    }
+    break;
+  }
+  default:
+    out.insert(f);
+  }
+}
+
 term_ref term_manager::mk_and(const std::vector<term_ref>& conjuncts) {
-  if (conjuncts.size() == 0) {
+  std::set<term_ref> lits;
+  std::vector<term_ref>::const_iterator it;
+  for (it = conjuncts.begin(); it != conjuncts.end(); ++ it) {
+    get_conjuncts(*it, lits);
+  }
+  if (lits.size() == 0) {
     return mk_boolean_constant(true);
   }
-  if (conjuncts.size() == 1) {
+  if (lits.size() == 1) {
     return *conjuncts.begin();
   }
-  return d_tm->mk_term<TERM_AND>(conjuncts.begin(), conjuncts.end());
+  return d_tm->mk_term<TERM_AND>(lits.begin(), lits.end());
+}
+
+term_ref term_manager::mk_and(term_ref f1, term_ref f2) {
+  std::vector<term_ref> conjuncts;
+  conjuncts.push_back(f1);
+  conjuncts.push_back(f2);
+  return mk_and(conjuncts);
 }
 
 term_ref term_manager::mk_and(const std::set<term_ref>& conjuncts) {
-  if (conjuncts.size() == 0) {
+  std::set<term_ref> lits;
+  std::set<term_ref>::const_iterator it;
+  for (it = conjuncts.begin(); it != conjuncts.end(); ++ it) {
+    get_conjuncts(*it, lits);
+  }
+  if (lits.size() == 0) {
     return mk_boolean_constant(true);
   }
-  if (conjuncts.size() == 1) {
-    return *conjuncts.begin();
+  if (lits.size() == 1) {
+    return *lits.begin();
   }
-  return d_tm->mk_term<TERM_AND>(conjuncts.begin(), conjuncts.end());
+  return d_tm->mk_term<TERM_AND>(lits.begin(), lits.end());
 }
 
 term_ref term_manager::mk_or(const std::vector<term_ref>& disjuncts) {
-  if (disjuncts.size() == 0) {
+  std::set<term_ref> lits;
+  std::vector<term_ref>::const_iterator it;
+  for (it = disjuncts.begin(); it != disjuncts.end(); ++ it) {
+    get_disjuncts(*it, lits);
+  }
+  if (lits.size() == 0) {
     return mk_boolean_constant(false);
   }
-  if (disjuncts.size() == 1) {
+  if (lits.size() == 1) {
     return disjuncts[0];
   }
-  return d_tm->mk_term<TERM_OR>(disjuncts.begin(), disjuncts.end());
+  return d_tm->mk_term<TERM_OR>(lits.begin(), lits.end());
 }
 
 bool term_manager::is_subtype_of(term_ref t1, term_ref t2) const {
