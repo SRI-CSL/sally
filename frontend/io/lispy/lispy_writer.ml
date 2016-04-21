@@ -43,8 +43,8 @@ let rec print_expr f =
 		Format.fprintf f "@])"
 	in
 	function
-	| Forall(n, t, expr) -> print_folded_exists "forall" (Ident(n ^ " (" ^ sally_type_to_string t ^ ")", Real)) expr
-	| Exists(n, t, expr) -> print_folded_exists "exists" (Ident(n ^ " (" ^ sally_type_to_string t ^ ")", Real)) expr
+	| Forall(n, t, expr) -> print_folded_exists "forall " (Ident("((" ^ n ^ " " ^ sally_type_to_string t ^ "))", Real)) expr
+	| Exists(n, t, expr) -> print_folded_exists "exists" (Ident("((" ^ n ^ " " ^ sally_type_to_string t ^ "))", Real)) expr
 	| Select(expr, index) -> print_folded "select" expr index
 	| Equality(a, b) -> print_folded "=" a b
 	| Value(s) -> Format.fprintf f "%s" s
