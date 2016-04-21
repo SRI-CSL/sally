@@ -1,8 +1,8 @@
 (define-process-type P1)
 
 (define-state-type state 
-  ((want Array P1 (Bool))
-   (crit Array P1 (Bool))
+  ((want (Array (P1) (Bool)))
+   (crit (Array (P1) (Bool)))
    (turn P1)
    ))
 
