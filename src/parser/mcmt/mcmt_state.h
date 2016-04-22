@@ -25,6 +25,7 @@
 
 
 #include <iosfwd>
+#include <stack>
 
 #include <antlr3.h>
 
@@ -39,6 +40,7 @@ enum mcmt_object {
   MCMT_STATE_FORMULA,
   MCMT_TRANSITION_FORMULA,
   MCMT_TRANSITION_SYSTEM,
+  MCMT_PROCESS_TYPE,
   MCMT_OBJECT_LAST
 };
 
@@ -53,6 +55,8 @@ class mcmt_state {
 
   /** Symbol table for types */
   utils::symbol_table<expr::term_ref_strong> d_types;
+
+  std::stack<std::string> lambda_variables;
 
 public:
 
@@ -132,6 +136,11 @@ public:
 
   /** Collect terms */
   void gc_collect(const expr::gc_relocator& gc_reloc);
+
+  void mk_process_type(std::string id);
+
+  void push_lambda(std::string);
+  void pop_lambda();
 
 };
 

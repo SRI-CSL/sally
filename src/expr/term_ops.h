@@ -107,6 +107,14 @@ enum term_op {
   // Constant strings
   CONST_STRING,
 
+  // Quantifiers
+  TERM_FORALL,
+  TERM_EXISTS,
+
+  // Arrays
+  TERM_SELECT,
+  TERM_STORE,
+
   // Marker for the last
   OP_LAST
 };

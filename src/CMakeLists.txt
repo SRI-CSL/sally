@@ -1,5 +1,7 @@
 set(sally_SRC_DIRS utils expr smt system parser ai engine)
 
+add_definitions(-std=c++11)
+
 # Add all the subdirectories
 foreach(DIR ${sally_SRC_DIRS})
   add_subdirectory(${DIR})

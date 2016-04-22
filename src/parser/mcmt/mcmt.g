@@ -54,6 +54,7 @@ internal_command
 /** Parses a system definition command */  
 system_command returns [parser::command* cmd = 0] 
   : c = declare_state_type       { $cmd = c; }
+  | c = declare_process_type     { $cmd = c; }
   | c = define_states            { $cmd = c; }
   | c = define_transition        { $cmd = c; }
   | c = define_transition_system { $cmd = c; }
@@ -82,6 +83,26 @@ declare_state_type returns [parser::command* cmd = 0]
       $cmd = new parser::declare_state_type_command(id, STATE->mk_state_type(id, state_vars, state_types, input_vars, input_types));
     }
   ; 
+
+/** Declaration of a process type */
+declare_process_type returns [parser::command* cmd = 0]
+@declarations {
+  std::string id;
+  std::vector<std::string> state_vars;  
+  std::vector<expr::term_ref> state_types;
+  std::vector<std::string> input_vars;  
+  std::vector<expr::term_ref> input_types;
+}
+  : '(' 'define-process-type' 
+        // Name of the type
+        symbol[id, parser::MCMT_PROCESS_TYPE, false]
+    ')' 
+    {
+      STATE->mk_process_type(id);
+      $cmd = new parser::define_process_type_command(id);
+    }
+  ; 
+
 
 /** Definition of a state set  */
 define_states returns [parser::command* cmd = 0]
@@ -227,6 +248,8 @@ term returns [expr::term_ref t = expr::term_ref()]
 @declarations {
   std::string id;
   std::vector<expr::term_ref> children;
+  std::vector<std::string> out_vars;
+  std::vector<expr::term_ref> out_types;
 } 
   : symbol[id, parser::MCMT_VARIABLE, true] { t = STATE->get_variable(id); }                
   | c = constant { t = c; }
@@ -236,6 +259,15 @@ term returns [expr::term_ref t = expr::term_ref()]
        let_t = term { t = let_t; }
        { STATE->pop_scope(); }
     ')' 
+  | '(' 'forall' variable_list[out_vars, out_types]
+       { for(std::string& s: out_vars) {
+	   		STATE->push_lambda(s);
+		}}
+       for_t = term { t = STATE->tm().mk_term(expr::TERM_FORALL, for_t); }
+       { for(std::string& s: out_vars) {
+	   		STATE->pop_lambda();
+		}}
+	 ')'
   | '(' 
         op = term_op 
         term_list[children] 
@@ -389,7 +421,31 @@ term_op returns [expr::term_op op = expr::OP_LAST]
   | 'bvsge' { op = expr::TERM_BV_SGEQ; }
   | 'bvugt' { op = expr::TERM_BV_UGT; }
   | 'bvsgt' { op = expr::TERM_BV_SGT; }
+  | 'select'         { op = expr::TERM_SELECT; }
+  | 'store'          { op = expr::TERM_SELECT; }
   ;
+
+type_declaration[std::string& id]
+@declarations {
+	std::string type_id;
+	std::string index_id;
+	std::string content_id;
+}
+	: ('(' 'Array' WHITESPACE* type_declaration[index_id] type_declaration [content_id]
+         { 
+			id = index_id;
+        }
+	')')
+	| ('('
+        symbol[type_id, parser::MCMT_TYPE, true] { 
+			id = type_id;
+        }
+	')')
+	|
+        symbol[type_id, parser::MCMT_TYPE, true] { 
+			id = type_id;
+        }
+	;
 
 /** Parse a list of variables with types */
 variable_list[std::vector<std::string>& out_vars, std::vector<expr::term_ref>& out_types]
@@ -403,7 +459,9 @@ variable_list[std::vector<std::string>& out_vars, std::vector<expr::term_ref>& o
         	out_vars.push_back(var_id); 
         } 
         // Type: either basic or composite (TODO: bitvector) 
-        t = type { out_types.push_back(t); } 
+        type_declaration[type_id] { 
+        	out_types.push_back(STATE->get_type(type_id)); 
+        }
     ')' )*
     ')'
   ; 

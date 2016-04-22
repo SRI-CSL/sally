@@ -216,3 +216,16 @@ void mcmt_state::gc_collect(const expr::gc_relocator& gc_reloc) {
   d_variables.gc_relocate(gc_reloc);
   d_types.gc_relocate(gc_reloc);
 }
+
+void mcmt_state::mk_process_type(std::string id) {
+  term_manager& tm = d_context.tm();
+  d_types.add_entry(id, term_ref_strong(tm, tm.real_type()));
+}
+
+void mcmt_state::push_lambda(std::string v) {
+	lambda_variables.push(v);
+}
+
+void mcmt_state::pop_lambda() {
+	lambda_variables.pop();
+}

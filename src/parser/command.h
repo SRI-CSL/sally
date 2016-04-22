@@ -36,6 +36,7 @@ public:
     DEFINE_STATES,
     DEFINE_TRANSITION,
     DEFINE_TRANSITION_SYSTEM,
+	DEFINE_PROCESS_TYPE,
     ASSUME,
     QUERY
   };
@@ -196,6 +197,34 @@ public:
   /** Output the command to stream */
   void to_stream(std::ostream& out) const;
 };
+
+/** Command to define process type */
+class define_process_type_command : public command {
+
+  /** Id of the process type */
+  std::string d_id;
+
+public:
+
+  /** Command to define a new process type with given id */
+  define_process_type_command(std::string id)
+  : command(DEFINE_PROCESS_TYPE)
+  , d_id(id)
+  {}
+
+  /** Deletes the transitino system if not used */
+  ~define_process_type_command();
+
+  /** Get the id of the system */
+  std::string get_id() const { return d_id; }
+
+  /** Define the transition on given context. */
+  void run(system::context* ctx, engine* e);
+
+  /** Output the command to stream */
+  void to_stream(std::ostream& out) const;
+};
+
 
 /** Command to query a system. */
 class query_command : public command {

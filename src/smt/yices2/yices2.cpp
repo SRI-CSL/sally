@@ -25,7 +25,9 @@
  *
  * This should not be necessary for recent C++ compilers.
  */
-#define __STDC_LIMIT_MACROS 1
+#ifndef __STDC_LIMIT_MACROS
+#  define __STDC_LIMIT_MACROS 1
+#endif
 
 #include <gmp.h>
 #include <yices.h>
