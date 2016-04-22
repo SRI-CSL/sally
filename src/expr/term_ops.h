@@ -110,6 +110,7 @@ enum term_op {
   // Quantifiers
   TERM_FORALL,
   TERM_EXISTS,
+  TERM_QUANTIFIED_VARIABLE,
 
   // Arrays
   TERM_SELECT,

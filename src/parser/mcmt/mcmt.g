@@ -451,6 +451,7 @@ type_declaration[std::string& id]
 variable_list[std::vector<std::string>& out_vars, std::vector<expr::term_ref>& out_types]
 @declarations {
   std::string var_id;
+  std::string type_id;
 } 
   : '(' 
     ( '(' 

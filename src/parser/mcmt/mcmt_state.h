@@ -56,7 +56,7 @@ class mcmt_state {
   /** Symbol table for types */
   utils::symbol_table<expr::term_ref_strong> d_types;
 
-  std::stack<std::string> lambda_variables;
+  std::list<std::string> lambda_variables;
 
 public:
 

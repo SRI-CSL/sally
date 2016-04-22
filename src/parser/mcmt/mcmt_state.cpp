@@ -181,6 +181,11 @@ bool mcmt_state::is_declared(std::string id, mcmt_object type) const {
 
 void mcmt_state::ensure_declared(std::string id, mcmt_object type, bool declared) const {
   if (declared != is_declared(id, type)) {
+  	for(std::string s : lambda_variables) {
+		if(s == id) {
+			return;
+		}
+	}
     if (declared) throw parser_exception(id + " not declared");
     else throw parser_exception(id + " already declared");
   }
@@ -223,9 +228,9 @@ void mcmt_state::mk_process_type(std::string id) {
 }
 
 void mcmt_state::push_lambda(std::string v) {
-	lambda_variables.push(v);
+	lambda_variables.push_front(v);
 }
 
 void mcmt_state::pop_lambda() {
-	lambda_variables.pop();
+	lambda_variables.pop_front();
 }
