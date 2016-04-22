@@ -202,7 +202,9 @@ term_ref term_manager::mk_bitvector_extract(term_ref t, const bitvector_extract&
 }
 
 term_ref term_manager::mk_bitvector_sgn_extend(term_ref t, const bitvector_sgn_extend& extend) {
-  return d_tm->mk_term<TERM_BV_SGN_EXTEND>(extend, t);
+  term_ref result = d_tm->mk_term<TERM_BV_SGN_EXTEND>(extend, t);
+  d_tm->typecheck(result);
+  return result;
 }
 
 term_ref term_manager::mk_string_constant(std::string value) {

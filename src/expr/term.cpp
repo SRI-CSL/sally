@@ -736,6 +736,11 @@ void term::to_stream_nuxmv_without_let(std::ostream& out, term_manager& tm, cons
     out << child(0) << "[" << extract.high << ":" << extract.low << "]";
     break;
   }
+  case TERM_BV_SGN_EXTEND: {
+    const bitvector_sgn_extend& extend = tm_internal.payload_of<bitvector_sgn_extend>(*this);
+    out << "(" << child(0) << " sgn_extend " << extend.size << ")";
+    break;
+  }
   case CONST_RATIONAL:
     // Stream is already in NUXMV mode
     out << tm_internal.payload_of<rational>(*this);

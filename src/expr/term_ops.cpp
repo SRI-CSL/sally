@@ -19,6 +19,7 @@
 #include "expr/term_ops.h"
 
 #include <iostream>
+#include <cassert>
 
 namespace sally {
 namespace expr {
@@ -27,9 +28,12 @@ std::ostream& operator << (std::ostream& out, term_op op) {
 
 #define SWITCH_TO_STRING(op) case op: out << #op; break;
   switch (op) {
+    SWITCH_TO_STRING(TYPE_TYPE)
     SWITCH_TO_STRING(TYPE_BOOL)
     SWITCH_TO_STRING(TYPE_INTEGER)
     SWITCH_TO_STRING(TYPE_REAL)
+    SWITCH_TO_STRING(TYPE_STRING)
+    SWITCH_TO_STRING(TYPE_BITVECTOR)
     SWITCH_TO_STRING(TYPE_STRUCT)
     SWITCH_TO_STRING(VARIABLE)
     SWITCH_TO_STRING(TERM_EQ)
@@ -79,10 +83,12 @@ std::ostream& operator << (std::ostream& out, term_op op) {
     SWITCH_TO_STRING(TERM_BV_SGEQ)
     SWITCH_TO_STRING(TERM_BV_UGT)
     SWITCH_TO_STRING(TERM_BV_SGT)
+    SWITCH_TO_STRING(TERM_BV_SGN_EXTEND)
     SWITCH_TO_STRING(OP_LAST)
 
   default:
-    out << "unknown";
+    assert(false);
+    out << "unknown" << (unsigned) op;
   }
 #undef SWITCH_TO_STRING
   return out;
