@@ -625,6 +625,9 @@ term_ref term_manager_internal::mk_term(term_op op, iterator begin, iterator end
     SWITCH_TO_TERM(TERM_BV_NOR)
     SWITCH_TO_TERM(TERM_BV_XNOR)
     SWITCH_TO_TERM(TERM_BV_CONCAT)
+	SWITCH_TO_TERM(TERM_FORALL)
+	SWITCH_TO_TERM(TERM_EXISTS)
+	SWITCH_TO_TERM(TERM_SELECT)
   default:
     assert(false);
   }

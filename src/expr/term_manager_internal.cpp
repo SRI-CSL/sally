@@ -209,6 +209,9 @@ public:
     case TYPE_STRING:
       t_type = d_tm.type_type();
       break;
+    case TERM_QUANTIFIED_VARIABLE:
+	  t_type = d_tm.integer_type();
+	  break;
     case VARIABLE:
       // Type in payload
       t_type = t[0];
@@ -257,6 +260,35 @@ public:
         if (d_ok) t_type = d_tm.supertype_of(t1, t2);
       }
       break;
+    case TERM_FORALL:
+      if (t.size() != 1) {
+        d_ok = false;
+      } else {
+        term_ref t0 = type_of(t[0]);
+        d_ok = true;
+        t_type = t0;
+      }
+      break;
+    case TERM_EXISTS:
+      if (t.size() != 1) {
+        d_ok = false;
+      } else {
+        term_ref t0 = type_of(t[0]);
+        d_ok = true;
+        t_type = t0;
+      }
+      break;
+	case TERM_SELECT:
+	  if (t.size() != 2) {
+	    d_ok = false;
+	  } else {
+	    /*term_ref t0 = type_of(t[0]);
+		term_ref t1 = type_of(t[1]);*/
+		// TODO: check types
+		d_ok = true;
+		t_type = d_tm.boolean_type();
+	  }
+	  break;
     // Boolean terms
     case CONST_BOOL:
       t_type = d_tm.boolean_type();

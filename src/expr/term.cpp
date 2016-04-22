@@ -83,6 +83,7 @@ void term::mk_let_cache(term_manager& tm, expr_let_cache& let_cache, std::vector
   case CONST_RATIONAL:
   case CONST_BITVECTOR:
   case CONST_STRING:
+  case TERM_QUANTIFIED_VARIABLE:
     record_let = false;
     break;
   case TERM_EQ:
@@ -129,6 +130,9 @@ void term::mk_let_cache(term_manager& tm, expr_let_cache& let_cache, std::vector
   case TERM_BV_SUB:
   case TERM_BV_EXTRACT:
   case TERM_BV_SGN_EXTEND:
+  case TERM_FORALL:
+  case TERM_SELECT:
+  case TERM_EXISTS:
     for (const term_ref* it = begin(); it != end(); ++ it) {
       const term& child = tm.term_of(*it);
       child.mk_let_cache(tm, let_cache, definitions);
@@ -413,6 +417,9 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
   case TERM_BV_SDIV:
   case TERM_BV_UREM:
   case TERM_BV_SREM:
+  case TERM_FORALL:
+  case TERM_SELECT:
+  case TERM_EXISTS:
   case TERM_BV_SMOD:
   {
     if (size() > 0) {

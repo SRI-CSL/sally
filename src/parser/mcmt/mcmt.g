@@ -268,6 +268,15 @@ term returns [expr::term_ref t = expr::term_ref()]
 	   		STATE->pop_lambda();
 		}}
 	 ')'
+  | '(' 'exists' variable_list[out_vars, out_types]
+       { for(std::string& s: out_vars) {
+	   		STATE->push_lambda(s);
+		}}
+       for_t = term { t = STATE->tm().mk_term(expr::TERM_EXISTS, for_t); }
+       { for(std::string& s: out_vars) {
+	   		STATE->pop_lambda();
+		}}
+	 ')'
   | '(' 
         op = term_op 
         term_list[children] 

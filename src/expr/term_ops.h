@@ -170,6 +170,15 @@ struct term_op_traits<CONST_BOOL> {
 };
 
 /**
+ * Quantified variables have a payload of type int.
+ */
+template<>
+struct term_op_traits<TERM_QUANTIFIED_VARIABLE> {
+  typedef int payload_type;
+};
+
+
+/**
  * Rational constants terms have a payload of type rational (gmp) and no children.
  */
 template<>

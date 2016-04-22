@@ -60,6 +60,14 @@ term_ref mcmt_state::get_bitvector_type(size_t size) const {
 }
 
 term_ref mcmt_state::get_variable(std::string id) const {
+  int i = 0;
+  for(std::string s : lambda_variables) {
+    i++;
+    if(s == id) {
+      auto result = tm().mk_quantified_constant(i);
+	  return result;
+    }
+  }
   if (!d_variables.has_entry(id)) {
     throw parser_exception(id + "undeclared");
   }
@@ -171,6 +179,8 @@ bool mcmt_state::is_declared(std::string id, mcmt_object type) const {
     break;
   case MCMT_OBJECT_LAST:
     // Always no op
+    return false;
+  case MCMT_PROCESS_TYPE:
     return false;
   default:
     assert(false);

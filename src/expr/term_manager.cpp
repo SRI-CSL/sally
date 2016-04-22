@@ -187,6 +187,10 @@ term_ref term_manager::mk_boolean_constant(bool value) {
   return d_tm->mk_term<CONST_BOOL>(value);
 }
 
+term_ref term_manager::mk_quantified_constant(int value) {
+  return d_tm->mk_term<TERM_QUANTIFIED_VARIABLE>(value);
+}
+
 term_ref term_manager::mk_rational_constant(const rational& value) {
   return d_tm->mk_term<CONST_RATIONAL>(value);
 }
@@ -213,6 +217,12 @@ bool term_manager::get_boolean_constant(const term& t) const {
   assert(t.op() == CONST_BOOL);
   return d_tm->payload_of<bool>(t);
 }
+
+int term_manager::get_integer_constant(const term& t) const {
+  assert(t.op() == TERM_QUANTIFIED_VARIABLE);
+  return d_tm->payload_of<int>(t);
+}
+
 
 rational term_manager::get_rational_constant(const term& t) const {
   assert(t.op() == CONST_RATIONAL);

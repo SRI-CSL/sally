@@ -136,6 +136,15 @@ public:
   /** Returns the boolan constant value */
   bool get_boolean_constant(const term& t) const;
 
+  /** Make a new integer constant */
+  term_ref mk_integer_constant(bool value);
+  
+  /** Make a new quantified constant */
+  term_ref mk_quantified_constant(int value);
+
+  /** Returns the quantifier or integer constant value */
+  int get_integer_constant(const term& t) const;
+
   /** Returns the default value for the given type */
   term_ref get_default_value(term_ref type) const;
 
