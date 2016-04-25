@@ -142,13 +142,13 @@ public:
   void mk_let_cache(term_manager& tm, expr_let_cache& let_cache, std::vector<expr::term_ref>& definitions) const;
 
   /** Output to the stream using the SMT2 language */
-  void to_stream_smt_with_let(std::ostream& out, term_manager& tm, const expr_let_cache& let_cache, const std::vector<expr::term_ref>& definitions) const;
+  void to_stream_smt_with_let(std::ostream& out, term_manager& tm, const expr_let_cache& let_cache, const std::vector<expr::term_ref>& definitions, int level = 0) const;
 
   /** Output to the stream using the SMT2 language */
-  void to_stream_smt_without_let(std::ostream& out, term_manager& tm, const expr_let_cache& let_cache, bool use_cache_on_root = true) const;
+  void to_stream_smt_without_let(std::ostream& out, term_manager& tm, const expr_let_cache& let_cache, bool use_cache_on_root = true, int level = 0) const;
 
   /** Output to the stream using the NUXMV language */
-  void to_stream_nuxmv_without_let(std::ostream& out, term_manager& tm, const expr_let_cache& let_cache, bool use_cache_on_root = true) const;
+  void to_stream_nuxmv_without_let(std::ostream& out, term_manager& tm, const expr_let_cache& let_cache, bool use_cache_on_root = true, int level = 0) const;
 
   /** Output to the stream using the language set on the stream */
   void to_stream(std::ostream& out) const;

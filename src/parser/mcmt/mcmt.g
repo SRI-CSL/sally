@@ -26,6 +26,7 @@ options {
   #include <string>
   #include "parser/command.h"
   #include "parser/mcmt/mcmt_state.h"
+  #include <iostream>
   using namespace sally;
 }
 
@@ -265,8 +266,12 @@ term returns [expr::term_ref t = expr::term_ref()]
 	   for (std::vector<std::string>::iterator it_vars=out_vars.begin(); it_vars != out_vars.end() && it_types != out_types.end(); ++it_vars) {
 	   		STATE->push_lambda(*it_vars, *it_types);
 			++it_types;
-		}}
-       for_t = term { t = STATE->tm().mk_term(expr::TERM_FORALL, for_t); }
+		}
+		if(out_vars.size() != 1) {
+			std::cout << "Several variables in a forall is unsupported" << std::endl;
+		}
+		}
+       for_t = term { t = STATE->tm().mk_term(expr::TERM_FORALL, *(out_types.begin()), for_t); }
        { for(std::string& s: out_vars) {
 	   		STATE->pop_lambda();
 		}}
@@ -277,8 +282,12 @@ term returns [expr::term_ref t = expr::term_ref()]
 	   for (std::vector<std::string>::iterator it_vars=out_vars.begin(); it_vars != out_vars.end() && it_types != out_types.end(); ++it_vars) {
 	   		STATE->push_lambda(*it_vars, *it_types);
 			++it_types;
-		}}
-       for_t = term { t = STATE->tm().mk_term(expr::TERM_EXISTS, for_t); }
+		}
+		if(out_vars.size() != 1) {
+			std::cout << "Several variables in a forall is unsupported" << std::endl;
+		}
+		}
+       for_t = term { t = STATE->tm().mk_term(expr::TERM_EXISTS, *(out_types.begin()), for_t); }
        { for(std::string& s: out_vars) {
 	   		STATE->pop_lambda();
 		}}

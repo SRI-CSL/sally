@@ -269,19 +269,19 @@ public:
       }
       break;
     case TERM_FORALL:
-      if (t.size() != 1) {
+      if (t.size() != 2) {
         d_ok = false;
       } else {
-        term_ref t0 = type_of(t[0]);
+        term_ref t0 = type_of(t[1]);
         d_ok = true;
         t_type = t0;
       }
       break;
     case TERM_EXISTS:
-      if (t.size() != 1) {
+      if (t.size() != 2) {
         d_ok = false;
       } else {
-        term_ref t0 = type_of(t[0]);
+        term_ref t0 = type_of(t[1]);
         d_ok = true;
         t_type = t0;
       }
