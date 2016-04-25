@@ -139,6 +139,9 @@ class solvers {
   /** Whether to generate models for queries */
   bool d_generate_models_for_queries;
 
+  /** Use quickxplain to minimze the interpolant */
+  void quickxplain_interpolant(smt::solver* I_solver, smt::solver* T_solver, const std::vector<expr::term_ref>& disjuncts, size_t begin, size_t end, std::vector<expr::term_ref>& out);
+
 public:
 
   /** Create solvers for the given transition system */

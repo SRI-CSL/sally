@@ -151,6 +151,9 @@ public:
   /** Make a conjunction (simplifies a bit). */
   term_ref mk_and(term_ref f1, term_ref f2);
 
+  /** Make a disjunction (simplifies a bit). */
+  term_ref mk_or(term_ref f1, term_ref f2);
+
   /** Make a conjunction. If no children => true. One child => child. */
   term_ref mk_and(const std::vector<term_ref>& conjuncts);
 

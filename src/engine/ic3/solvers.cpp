@@ -377,6 +377,80 @@ expr::term_ref solvers::generalize_sat(smt::solver* solver, expr::model::ref m) 
   return G;
 }
 
+void solvers::quickxplain_interpolant(smt::solver* I_solver, smt::solver* T_solver, const std::vector<expr::term_ref>& disjuncts, size_t begin, size_t end, std::vector<expr::term_ref>& out) {
+
+  // TRACE("ic3::min") << "min: begin = " << begin << ", end = " << end << std::endl;
+
+  smt::solver_scope I_solver_scope(I_solver);
+  smt::solver_scope T_solver_scope(T_solver);
+
+  smt::solver::result I_solver_result = smt::solver::UNSAT;
+  smt::solver::result T_solver_result = smt::solver::UNSAT;
+
+  if (I_solver) { I_solver_result = I_solver->check(); }
+  if (T_solver) { T_solver_result = T_solver->check(); }
+
+  if (I_solver_result == smt::solver::UNSAT && T_solver_result == smt::solver::UNSAT) {
+    // Solver state already unsat, done
+    return;
+  }
+
+  // If only one solver is unsat, we don't use it anymore
+  if (I_solver_result == smt::solver::UNSAT) { I_solver = 0; }
+  if (T_solver_result == smt::solver::UNSAT) { T_solver = 0; }
+
+  assert(begin < end);
+
+  if (begin + 1 == end) {
+    // Only one left, we keep it, since we're SAT in one of the solvers
+    out.push_back(disjuncts[begin]);
+    return;
+  }
+
+  // Split: how many in first half?
+  size_t n = (end - begin) / 2;
+
+  // Assert first half and minimize the second
+  if (I_solver) I_solver_scope.push();
+  if (T_solver) T_solver_scope.push();
+  for (size_t i = begin; i < begin + n; ++ i) {
+    expr::term_ref to_assert = d_tm.mk_term(expr::TERM_NOT, disjuncts[i]);
+    // Add to initial solver
+    if (I_solver) {
+      I_solver->add(to_assert, smt::solver::CLASS_A);
+    }
+    // Add to transition solver
+    if (T_solver) {
+      to_assert = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, to_assert);
+      T_solver->add(to_assert, smt::solver::CLASS_A);
+    }
+  }
+  size_t old_out_size = out.size();
+  quickxplain_interpolant(I_solver, T_solver, disjuncts, begin + n, end, out);
+  if (I_solver) I_solver_scope.pop();
+  if (T_solver) T_solver_scope.pop();
+
+  // Now, assert the minimized second half, and minimize the first half
+  if (I_solver) I_solver_scope.push();
+  if (T_solver) T_solver_scope.push();
+  for (size_t i = old_out_size; i < out.size(); ++ i) {
+    expr::term_ref to_assert = d_tm.mk_term(expr::TERM_NOT, out[i]);
+    // Add to initial solver
+    if (I_solver) {
+      I_solver->add(to_assert, smt::solver::CLASS_A);
+    }
+    // Add to transition solver
+    if (T_solver) {
+      to_assert = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, to_assert);
+      T_solver->add(to_assert, smt::solver::CLASS_A);
+    }
+  }
+  quickxplain_interpolant(I_solver, T_solver, disjuncts, begin, begin + n, out);
+  if (I_solver) I_solver_scope.pop();
+  if (T_solver) T_solver_scope.pop();
+}
+
+
 expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
 
   TRACE("ic3") << "learning forward to refute: " << G << std::endl;
@@ -426,8 +500,21 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
 
   TRACE("ic3") << "T_I: " << T_I << std::endl;
 
-  // Result is the disjunction of the two
-  expr::term_ref learnt = d_tm.mk_term(expr::TERM_OR, T_I, I_I);
+  expr::term_ref learnt;
+
+  if (d_ctx.get_options().get_bool("ic3-minimize-interpolants")) {
+    // Get all the disjuncts
+    std::set<expr::term_ref> disjuncts;
+    d_tm.get_disjuncts(I_I, disjuncts);
+    d_tm.get_disjuncts(T_I, disjuncts);
+    std::vector<expr::term_ref> disjuncts_vec(disjuncts.begin(), disjuncts.end()), minimized_vec;
+    quickxplain_interpolant(I_solver, T_solver, disjuncts_vec, 0, disjuncts_vec.size(), minimized_vec);
+    TRACE("ic3::min") << "min: old_size = " << disjuncts_vec.size() << ", new_size = " << minimized_vec.size() << std::endl;
+    learnt = d_tm.mk_or(minimized_vec);
+  } else {
+    // Result is the disjunction of the two
+    learnt = d_tm.mk_or(T_I, I_I);
+  }
 
   return learnt;
 }

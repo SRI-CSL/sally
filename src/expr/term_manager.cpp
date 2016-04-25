@@ -448,6 +448,13 @@ term_ref term_manager::mk_and(term_ref f1, term_ref f2) {
   return mk_and(conjuncts);
 }
 
+term_ref term_manager::mk_or(term_ref f1, term_ref f2) {
+  std::vector<term_ref> disjuncts;
+  disjuncts.push_back(f1);
+  disjuncts.push_back(f2);
+  return mk_or(disjuncts);
+}
+
 term_ref term_manager::mk_and(const std::set<term_ref>& conjuncts) {
   std::set<term_ref> lits;
   std::set<term_ref>::const_iterator it;

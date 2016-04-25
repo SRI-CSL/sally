@@ -39,13 +39,13 @@ namespace ic3 {
 
 // Fibonacci heap returns the top element in the order, so this should
 bool induction_obligation_cmp::operator() (const induction_obligation& ind1, const induction_obligation& ind2) const {
+  // Prefer deeper ones
+  if (ind1.d != ind2.d) {
+    return ind1.d > ind2.d;
+  }
   // Prefer higher scores
   if (ind1.score != ind2.score) {
     return ind1.score < ind2.score;
-  }
-  // If same score, prefer deeper ones
-  if (ind1.d != ind2.d) {
-    return ind1.d > ind2.d;
   }
   // Otherwise just break ties, basically term id's => created earlier wins
   if (ind1.F_cex < ind2.F_cex) {
