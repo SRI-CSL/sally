@@ -18,15 +18,6 @@
 
 #ifdef WITH_Z3
 
-/*
- * BD: added this to work around issues with <stdint.h>. Without this,
- * the macro UINT32_MAX may not be defined in C++ even if you include
- * <stdint.h>.
- *
- * This should not be necessary for recent C++ compilers.
- */
-#define __STDC_LIMIT_MACROS 1
-
 #include <gmp.h>
 #include <boost/unordered_map.hpp>
 
