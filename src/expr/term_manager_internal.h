@@ -272,6 +272,9 @@ public:
 
   /** Get the Bitvector type */
   term_ref bitvector_type(size_t size);
+  
+  term_ref mk_process_type();
+
 
   /** Is t the bitvector type */
   bool is_bitvector_type(term_ref t) const;
@@ -583,6 +586,7 @@ term_ref term_manager_internal::mk_term(term_op op, iterator begin, iterator end
   // Only needed for the kinds that can be constructed with an op and children
   switch (op) {
     SWITCH_TO_TERM(TYPE_STRUCT)
+	SWITCH_TO_TERM(TYPE_ARRAY)
     SWITCH_TO_TERM(TERM_EQ)
     SWITCH_TO_TERM(TERM_ITE)
     SWITCH_TO_TERM(TERM_AND)

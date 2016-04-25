@@ -43,6 +43,8 @@ enum term_op {
   TYPE_STRING,
   TYPE_BITVECTOR,
   TYPE_STRUCT,
+  TYPE_PROCESS,
+  TYPE_ARRAY,
 
   // Variables
   VARIABLE,
@@ -143,6 +145,11 @@ struct term_op_traits {
 template<>
 struct term_op_traits<TYPE_BITVECTOR> {
   typedef size_t payload_type;
+};
+
+template<>
+struct term_op_traits<TYPE_PROCESS> {
+  typedef alloc::empty_type payload_type;
 };
 
 /**

@@ -56,7 +56,7 @@ class mcmt_state {
   /** Symbol table for types */
   utils::symbol_table<expr::term_ref_strong> d_types;
 
-  std::list<std::string> lambda_variables;
+  std::list<std::pair<std::string, expr::term_ref>> lambda_variables;
 
 public:
 
@@ -139,7 +139,9 @@ public:
 
   void mk_process_type(std::string id);
 
-  void push_lambda(std::string);
+  std::string mk_array_type(std::string from, std::string to);
+
+  void push_lambda(std::string, expr::term_ref);
   void pop_lambda();
 
 };

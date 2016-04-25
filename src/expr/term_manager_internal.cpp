@@ -79,6 +79,8 @@ bool is_type(term_op op) {
   case TYPE_STRUCT:
   case TYPE_BITVECTOR:
   case TYPE_STRING:
+  case TYPE_ARRAY:
+  case TYPE_PROCESS:
     return true;
   default:
     return false;
@@ -90,6 +92,10 @@ bool term_manager_internal::is_subtype_of(term_ref t1, term_ref t2) const {
     return true;
   }
   if (t1 == integer_type() && t2 == real_type()) {
+    return true;
+  }
+  const term& t = term_of(t1);
+  if (t.op() == TYPE_PROCESS && t2 == integer_type()) {
     return true;
   }
   return false;
@@ -206,6 +212,8 @@ public:
     case TYPE_BOOL:
     case TYPE_INTEGER:
     case TYPE_REAL:
+	case TYPE_ARRAY:
+	case TYPE_PROCESS:
     case TYPE_STRING:
       t_type = d_tm.type_type();
       break;
@@ -689,6 +697,12 @@ term_ref term_manager_internal::bitvector_type(size_t size) {
    d_bitvectorType[size] = term_ref_strong(*this, new_type);
    return new_type;
 }
+
+term_ref term_manager_internal::mk_process_type() {
+   term_ref new_type = mk_term<TYPE_PROCESS>(alloc::empty_type());
+   return new_type;
+}
+
 
 bool term_manager_internal::is_bitvector_type(term_ref t) const {
   return term_of(t).d_op == TYPE_BITVECTOR;

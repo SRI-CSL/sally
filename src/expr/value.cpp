@@ -187,7 +187,8 @@ term_ref value::to_term(term_manager& tm) const {
   case VALUE_RATIONAL:
     return tm.mk_rational_constant(d_q);
   case VALUE_QUANTIFIED:
-    return tm.mk_quantified_constant(d_i);
+  	assert(false);
+    //return tm.mk_quantified_constant(d_i);
   }
   return term_ref();
 }

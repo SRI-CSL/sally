@@ -78,6 +78,8 @@ void term::mk_let_cache(term_manager& tm, expr_let_cache& let_cache, std::vector
   case TYPE_BITVECTOR:
   case TYPE_STRING:
   case TYPE_TYPE:
+  case TYPE_ARRAY:
+  case TYPE_PROCESS:
   case VARIABLE:
   case CONST_BOOL:
   case CONST_RATIONAL:
@@ -218,6 +220,12 @@ std::string get_smt_keyword(term_op op) {
     return ">";
   case TERM_ITE:
     return "ite";
+  case TERM_SELECT:
+    return "select";
+  case TERM_FORALL:
+    return "forall";
+  case TERM_EXISTS:
+    return "exists";
 
   case TERM_BV_ADD:
     return "bvadd";
@@ -284,6 +292,10 @@ std::string get_smt_keyword(term_op op) {
     return "String";
   case TYPE_TYPE:
     return "Type";
+  case TYPE_ARRAY:
+  	return "Array";
+  case TYPE_PROCESS:
+  	return "Proc";
   default:
     assert(false);
     return "unknown";
@@ -336,6 +348,8 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
   case TYPE_INTEGER:
   case TYPE_REAL:
   case TYPE_STRING:
+  case TYPE_ARRAY:
+  case TYPE_PROCESS:
   case TYPE_TYPE:
     out << get_smt_keyword(d_op);
     break;
@@ -488,6 +502,9 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
     break;
   case CONST_BITVECTOR:
     out << tm_internal.payload_of<bitvector>(*this);
+    break;
+  case TERM_QUANTIFIED_VARIABLE:
+    out << tm_internal.payload_of<int>(*this);
     break;
   case CONST_STRING:
     out << tm_internal.payload_of<utils::string>(*this);

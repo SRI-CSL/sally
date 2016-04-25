@@ -260,8 +260,11 @@ term returns [expr::term_ref t = expr::term_ref()]
        { STATE->pop_scope(); }
     ')' 
   | '(' 'forall' variable_list[out_vars, out_types]
-       { for(std::string& s: out_vars) {
-	   		STATE->push_lambda(s);
+       {
+	   std::vector<expr::term_ref>::iterator it_types = out_types.begin();
+	   for (std::vector<std::string>::iterator it_vars=out_vars.begin(); it_vars != out_vars.end() && it_types != out_types.end(); ++it_vars) {
+	   		STATE->push_lambda(*it_vars, *it_types);
+			++it_types;
 		}}
        for_t = term { t = STATE->tm().mk_term(expr::TERM_FORALL, for_t); }
        { for(std::string& s: out_vars) {
@@ -269,8 +272,11 @@ term returns [expr::term_ref t = expr::term_ref()]
 		}}
 	 ')'
   | '(' 'exists' variable_list[out_vars, out_types]
-       { for(std::string& s: out_vars) {
-	   		STATE->push_lambda(s);
+       {
+	   std::vector<expr::term_ref>::iterator it_types = out_types.begin();
+	   for (std::vector<std::string>::iterator it_vars=out_vars.begin(); it_vars != out_vars.end() && it_types != out_types.end(); ++it_vars) {
+	   		STATE->push_lambda(*it_vars, *it_types);
+			++it_types;
 		}}
        for_t = term { t = STATE->tm().mk_term(expr::TERM_EXISTS, for_t); }
        { for(std::string& s: out_vars) {
@@ -442,7 +448,7 @@ type_declaration[std::string& id]
 }
 	: ('(' 'Array' WHITESPACE* type_declaration[index_id] type_declaration [content_id]
          { 
-			id = index_id;
+      		id = STATE->mk_array_type(index_id, content_id);
         }
 	')')
 	| ('('

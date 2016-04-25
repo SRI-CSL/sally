@@ -187,8 +187,8 @@ term_ref term_manager::mk_boolean_constant(bool value) {
   return d_tm->mk_term<CONST_BOOL>(value);
 }
 
-term_ref term_manager::mk_quantified_constant(int value) {
-  return d_tm->mk_term<TERM_QUANTIFIED_VARIABLE>(value);
+term_ref term_manager::mk_quantified_constant(int value, term_ref ty) {
+  return d_tm->mk_term<TERM_QUANTIFIED_VARIABLE>(value, ty);
 }
 
 term_ref term_manager::mk_rational_constant(const rational& value) {
@@ -527,6 +527,7 @@ void term_manager::gc() {
   for (; it != d_gc_participants.end(); ++ it) {
     (*it)->gc_collect(gc_reloc);
   }
+  term_ref mk_term(term_op op, const term_ref* children_begin, const term_ref* children_end);
 
   TRACE("gc") << "term_manager::gc(): done" << std::endl;
 }
@@ -543,6 +544,14 @@ void term_manager::gc_deregister(gc_participant* o) {
 
 size_t term_manager::id() const {
   return d_id;
+}
+
+term_ref term_manager::mk_process_type(std::string) {
+  return d_tm->mk_process_type();
+}
+
+term_ref term_manager::mk_array_type(term_ref from, term_ref to) {
+	return mk_term(TYPE_ARRAY, from, to);
 }
 
 }

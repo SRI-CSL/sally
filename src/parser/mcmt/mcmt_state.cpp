@@ -61,10 +61,10 @@ term_ref mcmt_state::get_bitvector_type(size_t size) const {
 
 term_ref mcmt_state::get_variable(std::string id) const {
   int i = 0;
-  for(std::string s : lambda_variables) {
+  for(std::pair<std::string, expr::term_ref> s : lambda_variables) {
     i++;
-    if(s == id) {
-      auto result = tm().mk_quantified_constant(i);
+    if(s.first == id) {
+      auto result = tm().mk_quantified_constant(i, s.second);
 	  return result;
     }
   }
@@ -191,8 +191,8 @@ bool mcmt_state::is_declared(std::string id, mcmt_object type) const {
 
 void mcmt_state::ensure_declared(std::string id, mcmt_object type, bool declared) const {
   if (declared != is_declared(id, type)) {
-  	for(std::string s : lambda_variables) {
-		if(s == id) {
+  	for(std::pair<std::string, expr::term_ref> s : lambda_variables) {
+		if(s.first == id) {
 			return;
 		}
 	}
@@ -234,11 +234,17 @@ void mcmt_state::gc_collect(const expr::gc_relocator& gc_reloc) {
 
 void mcmt_state::mk_process_type(std::string id) {
   term_manager& tm = d_context.tm();
-  d_types.add_entry(id, term_ref_strong(tm, tm.real_type()));
+  d_types.add_entry(id, term_ref_strong(tm, tm.mk_process_type(id)));
 }
 
-void mcmt_state::push_lambda(std::string v) {
-	lambda_variables.push_front(v);
+std::string mcmt_state::mk_array_type(std::string from, std::string to) {
+  term_manager& tm = d_context.tm();
+  d_types.add_entry(from + "^" + to, term_ref_strong(tm, tm.mk_array_type(d_types.get_entry(from), d_types.get_entry(to))));
+  return from + "^" + to;
+}
+
+void mcmt_state::push_lambda(std::string v, expr::term_ref type) {
+	lambda_variables.push_front(std::make_pair(v, type));
 }
 
 void mcmt_state::pop_lambda() {
