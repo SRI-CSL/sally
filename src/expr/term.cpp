@@ -295,7 +295,7 @@ std::string get_smt_keyword(term_op op) {
   case TYPE_ARRAY:
   	return "Array";
   case TYPE_PROCESS:
-  	return "Proc";
+  	return "Int";
   default:
     assert(false);
     return "unknown";
