@@ -46,6 +46,12 @@ expr::term_ref solver::generalize(generalization_type type) {
   return d_tm.mk_and(projection_out);
 }
 
+expr::term_ref solver::generalize(generalization_type type, expr::model::ref m) {
+  std::vector<expr::term_ref> projection_out;
+  generalize(type, m, projection_out);
+  return d_tm.mk_and(projection_out);
+}
+
 expr::term_ref solver::interpolate() {
   std::vector<expr::term_ref> interpolation_out;
   interpolate(interpolation_out);

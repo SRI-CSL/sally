@@ -20,13 +20,16 @@
 
 #ifdef WITH_YICES2
 
-#define __STDC_LIMIT_MACROS 1
+#ifndef __STDC_LIMIT_MACROS
+#  define __STDC_LIMIT_MACROS 1
+#endif
 
 #include <gmp.h>
 #include <yices.h>
 #include <vector>
 
 #include "expr/term_manager.h"
+#include "expr/model.h"
 #include "smt/solver.h"
 
 namespace sally {
@@ -65,12 +68,15 @@ class yices2_internal {
 
   /** A variables */
   std::vector<expr::term_ref> d_A_variables;
+  std::set<expr::term_ref> d_A_variables_set;
 
   /** B variables */
   std::vector<expr::term_ref> d_B_variables;
+  std::set<expr::term_ref> d_B_variables_set;
 
   /** T variables */
   std::vector<expr::term_ref> d_T_variables;
+  std::set<expr::term_ref> d_T_variables_set;
 
   /** Term conversion cache */
   yices2_term_cache* d_conversion_cache;
@@ -116,6 +122,9 @@ public:
   /** Make a term given yices operator and children */
   expr::term_ref mk_term(term_constructor_t constructor, const std::vector<expr::term_ref>& children);
 
+  /** If Boolean convert to bitvector, otherwise keep. */
+  expr::term_ref bool_term_to_bv(expr::term_ref t);
+
   /** Make a yices term with given operator and children */
   term_t mk_yices2_term(expr::term_op op, size_t n, term_t* children);
 
@@ -132,7 +141,10 @@ public:
   solver::result check();
 
   /** Returns the model */
-  expr::model::ref get_model(const std::set<expr::term_ref>& x_variables, const std::set<expr::term_ref>& T_variables, const std::set<expr::term_ref>& y_variables);
+  expr::model::ref get_model();
+
+  /** Returns yices model from sally model */
+  model_t* get_yices_model(expr::model::ref m);
 
   /** Push the context */
   void push();
@@ -142,6 +154,9 @@ public:
 
   /** Return the generalization */
   void generalize(smt::solver::generalization_type type, std::vector<expr::term_ref>& projection_out);
+
+  /** Return the generalization */
+  void generalize(smt::solver::generalization_type type, expr::model::ref, std::vector<expr::term_ref>& projection_out);
 
   /** Returns the instance id */
   size_t instance() const { return d_instance; }

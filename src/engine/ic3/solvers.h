@@ -74,6 +74,9 @@ class solvers {
   /** Solver for induction queries */
   smt::solver* d_induction_solver;
 
+  /** Solver for induction generalization */
+  smt::solver* d_induction_generalizer;
+
   /** Depth of the induction solver */
   size_t d_induction_solver_depth;
 
@@ -98,8 +101,11 @@ class solvers {
   /** Initialize the reachability solver for frame k */
   void init_reachability_solver(size_t k);
 
-  /** Generalize the SAT result at k */
+  /** Generalize the SAT result */
   expr::term_ref generalize_sat(smt::solver* solver);
+
+  /** Generalize the given model that satisfies assertions */
+  expr::term_ref generalize_sat(smt::solver* solver, expr::model::ref m);
 
   /** Get the enabling varibale of frame k */
   expr::term_ref get_frame_variable(size_t k);
@@ -178,16 +184,29 @@ public:
    */
   void reset_induction_solver(size_t depth);
 
+  enum induction_assertion_type {
+    // First frame
+    INDUCTION_FIRST,
+    // Intermediate frames
+    INDUCTION_INTERMEDIATE
+  };
+
   /**
    * Add a formula to induction solver. Formulas will be added to frames < depth.
    */
-  void add_to_induction_solver(expr::term_ref f);
+  void add_to_induction_solver(expr::term_ref f, induction_assertion_type type);
 
   /**
    * Check if f is inductive, i.e. !f is added at frame depth and check for
    * satisfiability.
    */
   query_result check_inductive(expr::term_ref f);
+
+  /**
+   * Check if the given model from induction check satisfies f at frame depth.
+   * If yes, returns generalization.
+   */
+  query_result check_inductive_model(expr::model::ref m, expr::term_ref f);
 
   /** Learn forward to refute G at k from k-1 and initial state using reachability solvers */
   expr::term_ref learn_forward(size_t k, expr::term_ref G);
@@ -217,10 +236,18 @@ public:
   void output_efsmt(expr::term_ref f, expr::term_ref g) const;
 
   /** Print formulas */
-  void print_formulas(const formula_set& set, std::ostream& out) const;
+  template<typename container>
+  void print_formulas(const container& set, std::ostream& out) const;
 
 };
 
+template <typename container>
+void solvers::print_formulas(const container& set, std::ostream& out) const {
+  typename container::const_iterator it = set.begin();
+  for (; it != set.end(); ++ it) {
+    out << *it << std::endl;
+  }
+}
 
 }
 }

@@ -55,7 +55,19 @@ term_ref mcmt_state::get_type(std::string id) const {
   return d_types.get_entry(id);
 }
 
+term_ref mcmt_state::get_bitvector_type(size_t size) const {
+  return tm().bitvector_type(size);
+}
+
 term_ref mcmt_state::get_variable(std::string id) const {
+  int i = 0;
+  for(std::pair<std::string, expr::term_ref> s : lambda_variables) {
+    i++;
+    if(s.first == id) {
+      auto result = tm().mk_quantified_constant(i, s.second);
+	  return result;
+    }
+  }
   if (!d_variables.has_entry(id)) {
     throw parser_exception(id + "undeclared");
   }
@@ -168,6 +180,8 @@ bool mcmt_state::is_declared(std::string id, mcmt_object type) const {
   case MCMT_OBJECT_LAST:
     // Always no op
     return false;
+  case MCMT_PROCESS_TYPE:
+    return false;
   default:
     assert(false);
   }
@@ -177,6 +191,11 @@ bool mcmt_state::is_declared(std::string id, mcmt_object type) const {
 
 void mcmt_state::ensure_declared(std::string id, mcmt_object type, bool declared) const {
   if (declared != is_declared(id, type)) {
+  	for(std::pair<std::string, expr::term_ref> s : lambda_variables) {
+		if(s.first == id) {
+			return;
+		}
+	}
     if (declared) throw parser_exception(id + " not declared");
     else throw parser_exception(id + " already declared");
   }
@@ -211,4 +230,23 @@ bool mcmt_state::no_input_namespace() const {
 void mcmt_state::gc_collect(const expr::gc_relocator& gc_reloc) {
   d_variables.gc_relocate(gc_reloc);
   d_types.gc_relocate(gc_reloc);
+}
+
+void mcmt_state::mk_process_type(std::string id) {
+  term_manager& tm = d_context.tm();
+  d_types.add_entry(id, term_ref_strong(tm, tm.mk_process_type(id)));
+}
+
+std::string mcmt_state::mk_array_type(std::string from, std::string to) {
+  term_manager& tm = d_context.tm();
+  d_types.add_entry(from + "^" + to, term_ref_strong(tm, tm.mk_array_type(d_types.get_entry(from), d_types.get_entry(to))));
+  return from + "^" + to;
+}
+
+void mcmt_state::push_lambda(std::string v, expr::term_ref type) {
+	lambda_variables.push_front(std::make_pair(v, type));
+}
+
+void mcmt_state::pop_lambda() {
+	lambda_variables.pop_front();
 }

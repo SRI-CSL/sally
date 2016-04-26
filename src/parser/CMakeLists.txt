@@ -58,6 +58,12 @@ set_source_files_properties(
     COMPILE_FLAGS "-Wno-parentheses-equality -Wno-sign-compare -Wno-unused-function -Wno-unused-variable -Wno-tautological-compare -x c++"
 )
 
+set_source_fileS_properties(
+  aiger/aiger-1.9.4/aiger.c
+  PROPERTIES
+    LANGUAGE C
+)
+
 add_library(parser 
   mcmt/mcmtParser.c 
   mcmt/mcmtLexer.c 
@@ -71,6 +77,8 @@ add_library(parser
   sal/salLexer.c 
   sal/sal_state.cpp
   sal/sal.cpp
-  command.cpp 
+  aiger/aiger.cpp
+  aiger/aiger-1.9.4/aiger.c
+  command.cpp
   parser.cpp
 )

@@ -113,6 +113,11 @@ void y2m5::generalize(generalization_type type, std::vector<expr::term_ref>& out
   d_yices2->generalize(type, out);
 }
 
+void y2m5::generalize(generalization_type type, expr::model::ref m, std::vector<expr::term_ref>& out) {
+  TRACE("y2m5") << "y2m5[" << s_instance << "]: generalizing" << std::endl;
+  d_yices2->generalize(type, m, out);
+}
+
 void y2m5::interpolate(std::vector<expr::term_ref>& out) {
   TRACE("y2m5") << "y2m5[" << s_instance << "]: interpolating" << std::endl;
   if (d_last_mathsat5_result == UNKNOWN) {

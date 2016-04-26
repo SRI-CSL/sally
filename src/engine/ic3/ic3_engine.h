@@ -43,17 +43,19 @@ class solvers;
  */
 struct induction_obligation {
 
-  /** The formula in question */
-  expr::term_ref formula;
-  /** The available budget */
-  size_t budget;
+  /** The formula thar refutes the counter-example */
+  expr::term_ref F_fwd;
+  /** The counter-example generalization */
+  expr::term_ref F_cex;
+  /** Depth to the real counter-example */
+  size_t d;
   /** Score of the obligation */
   double score;
-  /** Depth of inductive reasoning */
-  size_t breadth;
+  /** How many times has this obligation been refined */
+  size_t refined;
 
   /** Construct the obligation */
-  induction_obligation(expr::term_manager& tm, expr::term_ref P, size_t budget, double score, size_t breadth);
+  induction_obligation(expr::term_manager& tm, expr::term_ref F_fwd, expr::term_ref F_cex, size_t d, double score, size_t refined = 0);
 
   /** Compare for equality */
   bool operator == (const induction_obligation& o) const;
@@ -66,8 +68,14 @@ struct induction_obligation {
 
 };
 
+struct induction_obligation_cmp {
+  bool operator() (const induction_obligation& ind1, const induction_obligation& ind2) const;
+};
+
+std::ostream& operator << (std::ostream& out, const induction_obligation& ind);
+
 /** Priority queue for obligations (max-heap) */
-typedef boost::heap::fibonacci_heap<induction_obligation> induction_obligation_queue;
+typedef boost::heap::fibonacci_heap<induction_obligation, boost::heap::compare<induction_obligation_cmp> > induction_obligation_queue;
 
 /**
  * Information on formulas. A formula is found in a frame because it refutes a
@@ -142,70 +150,45 @@ class ic3_engine : public engine {
   enum induction_result {
     // Formula is inductive
     INDUCTION_SUCCESS,
-    // Formula is not inductive with counter-example)
+    // Formula is not inductive with counter-example
     INDUCTION_FAIL,
-    // Formula is not directly inductive but the check decided to give up
-    INDUCTION_INCONCLUSIVE,
     // Formula was not proven inductive, but new facts were added so we can try again
     INDUCTION_RETRY
   };
 
   /** Push the formula forward if its inductive. Returns true if inductive. */
-  induction_result push_if_inductive(induction_obligation& o);
+  induction_result push_obligation(induction_obligation& o);
 
   /** The current frame we are trying to push */
   size_t d_induction_frame_index;
 
-  /** THe current induction depth */
+  /** The current induction depth */
   size_t d_induction_frame_depth;
 
+  /** How many times we've used the current depth */
+  size_t d_induction_frame_depth_count;
+
+  /** Cutoff for the counter-examples */
+  size_t d_induction_cutoff;
+
   /** The content of the induction frame */
-  formula_set d_induction_frame;
-
-  /** Map from frame formulas to information about them */
-  expr::term_ref_map<frame_formula_parent_info> d_frame_formula_parent_info;
-
-  /** Sets the refutation info */
-  void set_refutes_info(expr::term_ref f, expr::term_ref g, expr::term_ref l);
-
-  /** Get the formula l refutes */
-  expr::term_ref get_refutes(expr::term_ref l) const;
-
-  /** Get the parent of l */
-  expr::term_ref get_parent(expr::term_ref l) const;
-
-  /** Get the depth of refutation */
-  size_t get_refutes_depth(expr::term_ref l) const;
-
-  /** Does l have a parent */
-  bool has_parent(expr::term_ref l) const;
-
-  /** Map from formulas to frame where its invalid */
-  expr::term_ref_map<size_t> d_frame_formula_invalid_info;
-
-  /** Mark the formula as invalid (not necessarily in the current frame) */
-  void set_invalid(expr::term_ref f, size_t frame);
-
-  /** Returns true if formula marked as invalid */
-  bool is_invalid(expr::term_ref f) const;
+  typedef std::set<induction_obligation> induction_frame_type;
+  induction_frame_type d_induction_frame;
 
   /** Queue of induction obligations at the current frame */
   induction_obligation_queue d_induction_obligations;
 
   /** Map from formulas to their positions in the queue */
-  expr::term_ref_hash_map<induction_obligation_queue::handle_type> d_induction_obligations_handles;
+  std::map<induction_obligation, induction_obligation_queue::handle_type> d_induction_obligations_handles;
 
   /** Set of obligations for the next frame */
   std::vector<induction_obligation> d_induction_obligations_next;
 
-  /** Next frame it's safe to muve to */
-  size_t d_induction_frame_index_next;
+  /** Where are the obligations valid */
+  size_t d_induction_frame_next_index;
 
   /** Count of obligations per frame */
   std::vector<size_t> d_induction_obligations_count;
-
-  /** Add to induction frame and solver */
-  void add_to_induction_frame(expr::term_ref F);
 
   /** Get the next induction obligations */
   induction_obligation pop_induction_obligation();
@@ -214,16 +197,13 @@ class ic3_engine : public engine {
   void enqueue_induction_obligation(const induction_obligation& ind);
 
   /** Bump the score of the obligation */
-  void bump_induction_obligation(expr::term_ref ind, double amount);
+  void bump_induction_obligation(const induction_obligation& ind, double amount);
 
   /** Returns the frame variable */
   expr::term_ref get_frame_variable(size_t i);
 
   /** Add property to 0 frame, returns true if not immediately refuted */
   bool add_property(expr::term_ref P);
-
-  /** Add the initial states to 0 frame */
-  void add_initial_states(expr::term_ref I);
 
   /** Property components */
   std::set<expr::term_ref> d_properties;

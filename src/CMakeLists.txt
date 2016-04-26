@@ -1,5 +1,7 @@
 set(sally_SRC_DIRS utils expr smt system parser ai engine)
 
+add_definitions(-std=c++11)
+
 # Add all the subdirectories
 foreach(DIR ${sally_SRC_DIRS})
   add_subdirectory(${DIR})
@@ -29,6 +31,9 @@ if (YICES2_FOUND)
 endif()
 if (MATHSAT5_FOUND)
   target_link_libraries(sally ${MATHSAT5_LIBRARY})
+endif()
+if (Z3_FOUND)
+  target_link_libraries(sally ${Z3_LIBRARY})
 endif()
 target_link_libraries(sally ${Boost_LIBRARIES} ${ANTLR3C_LIBRARY} ${GMP_LIBRARY})
 

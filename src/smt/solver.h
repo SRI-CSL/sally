@@ -204,9 +204,32 @@ public:
   }
 
   /**
+   * Generalize the given model M i.e. return the a formula G satisfiable in the
+   * current model M such that.
+   *
+   *   G(x) => \exists y . (T(x, y) and B(y)).
+   *
+   * This is the dual of interpolation, i.e. we get a G such that
+   *
+   *   A and G are consistent (both satisfied by the model M)
+   *   G implies \exists y . (T(x, y) and B(y)).
+   *
+   * Variables of class T and B are eliminated from the assertions.
+   */
+  virtual
+  void generalize(generalization_type type, expr::model::ref m, std::vector<expr::term_ref>& projection_out) {
+    throw exception("generalize() not supported by solver " + d_name);
+  }
+
+  /**
    * Same as above, but returns a single expressions.
    */
   expr::term_ref generalize(generalization_type type);
+
+  /**
+   * Same as above, but returns a single expressions.
+   */
+  expr::term_ref generalize(generalization_type type, expr::model::ref m);
 
   /**
    * Interpolate an unsatisfiable answer, i.e. return the formula such that
@@ -272,14 +295,6 @@ public:
 };
 
 std::ostream& operator << (std::ostream& out, solver::formula_class fc);
-
-/** Name transformer for any output to smt2 */
-class smt2_name_transformer : public utils::name_transformer {
-public:
-  std::string apply(std::string id) const {
-    return "|" + id + "|";
-  }
-};
 
 }
 }

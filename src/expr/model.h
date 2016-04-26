@@ -147,5 +147,7 @@ private:
 
 std::ostream& operator << (std::ostream& out, const model& m);
 
+std::ostream& operator << (std::ostream& out, const model::ref& m);
+
 }
 }

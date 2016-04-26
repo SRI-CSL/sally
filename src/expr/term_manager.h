@@ -42,9 +42,6 @@ class term_manager {
 
   friend struct set_tm;
 
-  /** Whether to rewrite equalities to inequalities */
-  bool d_eq_rewrite;
-
   /** Participants in garbage collection */
   std::set<gc_participant*> d_gc_participants;
 
@@ -85,7 +82,7 @@ public:
 
   /** Get the Real type */
   term_ref real_type() const;
-
+  
   /** Get the type of bitvectors of given size > 0. */
   term_ref bitvector_type(size_t size);
 
@@ -93,7 +90,7 @@ public:
   size_t get_bitvector_type_size(term_ref bv_type) const;
 
   /** Get the size of a bitvector term */
-  size_t get_bitvector_size(term_ref bv_type) const;
+  size_t get_bitvector_size(term_ref bv_term) const;
 
   /** Make a term, given children */
   term_ref mk_term(term_op op, term_ref c);
@@ -109,6 +106,11 @@ public:
 
   /** Make a term, given children */
   term_ref mk_term(term_op op, const term_ref* children_begin, const term_ref* children_end);
+  term_ref mk_array_type(term_ref children_begin, term_ref children_end);
+  
+  term_ref mk_process_type(std::string id);
+
+  term_ref mk_array_type(std::string index_id, std::string to_id);
 
   /** Make a term, given children */
   term_ref mk_term(term_op op, const term_ref* children, size_t n) {
@@ -122,7 +124,7 @@ public:
   term_ref mk_variable(std::string name, term_ref type);
 
   /** Get the name of this variable */
-  std::string get_variable_name(expr::term_ref t) const;
+  std::string get_variable_name(term_ref t) const;
 
   /** Get the name of this variable */
   std::string get_variable_name(const term& t) const;
@@ -139,8 +141,29 @@ public:
   /** Returns the boolan constant value */
   bool get_boolean_constant(const term& t) const;
 
+  /** Make a new integer constant */
+  term_ref mk_integer_constant(bool value);
+  
+  /** Make a new quantified constant */
+  term_ref mk_quantified_constant(int value, term_ref type);
+
+  /** Returns the quantifier or integer constant value */
+  int get_integer_constant(const term& t) const;
+
   /** Returns the default value for the given type */
   term_ref get_default_value(term_ref type) const;
+
+  /** Returns the conjuncts of the formula */
+  void get_conjuncts(term_ref f, std::set<term_ref>& out);
+
+  /** Returns the conjuncts of the formula */
+  void get_disjuncts(term_ref f, std::set<term_ref>& out);
+
+  /** Make a negation (simplifies a bit) */
+  term_ref mk_not(term_ref f1);
+
+  /** Make a conjunction (simplifies a bit). */
+  term_ref mk_and(term_ref f1, term_ref f2);
 
   /** Make a conjunction. If no children => true. One child => child. */
   term_ref mk_and(const std::vector<term_ref>& conjuncts);
@@ -166,8 +189,14 @@ public:
   /** Make a new bitvector extract operator */
   term_ref mk_bitvector_extract(term_ref t, const bitvector_extract& extract);
 
+  /** Make a new bitvector sgn extend */
+  term_ref mk_bitvector_sgn_extend(term_ref t, const bitvector_sgn_extend& extend);
+
   /** Get the extract of the extract term */
   bitvector_extract get_bitvector_extract(const term& t) const;
+
+  /** Get the sgn extend of the extend term */
+  bitvector_sgn_extend get_bitvector_sgn_extend(const term& t) const;
 
   /** Make a new string constant */
   term_ref mk_string_constant(std::string value);
@@ -194,7 +223,7 @@ public:
   term_ref get_struct_field(const term& t, size_t i) const;
 
   /** Get all fields of a struct variable */
-  void get_struct_fields(const term& t, std::vector<expr::term_ref>& out) const;
+  void get_struct_fields(const term& t, std::vector<term_ref>& out) const;
 
   /** Get a reference for the term */
   term_ref ref_of(const term& term) const;
@@ -274,9 +303,6 @@ public:
 
   /** Get the current name transformer */
   const utils::name_transformer* get_name_transformer() const;
-
-  /** Mark whether to rewrite all equlities to inequalities at construction */
-  void set_eq_rewrite(bool flag);
 
   /** Perform garbage collection */
   void gc();

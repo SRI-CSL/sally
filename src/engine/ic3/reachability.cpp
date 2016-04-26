@@ -69,38 +69,27 @@ public:
   expr::model::ref model() const { return d_P_model; }
 };
 
-reachability::status reachability::check_reachable(size_t start, size_t end, expr::term_ref f, expr::model::ref f_model, size_t& budget) {
-  assert(budget > 0);
+reachability::status reachability::check_reachable(size_t start, size_t end, expr::term_ref f, expr::model::ref f_model) {
   assert(start <= end);
 
-  status result = UNREACHABLE;
+  status result;
 
-  for (size_t k = start; k <= end; ++ k) {
+  for (result.k = start; result.k <= end; ++ result.k) {
     // Check reachability at k
-    result = check_reachable(k, f, f_model, budget);
+    result.r = check_reachable(result.k, f, f_model);
     // Check result of the current one
-    switch (result) {
-    case REACHABLE:
-      return REACHABLE;
-    case UNREACHABLE:
+    if (result.r == REACHABLE) {
       break;
-    case BUDGET_EXCEEDED:
-      return BUDGET_EXCEEDED;
-    }
-    // Did we exceed the budget for the next call
-    if (k < end && budget == 0) {
-      return BUDGET_EXCEEDED;
     }
   }
 
-  return UNREACHABLE;
+  return result;
 }
 
-reachability::status reachability::check_reachable(size_t k, expr::term_ref f, expr::model::ref f_model, size_t& budget) {
+reachability::result reachability::check_reachable(size_t k, expr::term_ref f, expr::model::ref f_model) {
 
   TRACE("ic3") << "ic3: checking reachability at " << k << std::endl;
 
-  assert(budget > 0);
   ensure_frame(k);
 
   // Special case for k = 0
@@ -161,12 +150,6 @@ reachability::status reachability::check_reachable(size_t k, expr::term_ref f, e
       } else {
         // The only frame where we don't know consistency with formula
         assert(reach.frame() == k && reach.formula() == f);
-      }
-      // Use the budget unless we succeeded
-      budget --;
-      if (budget == 0 && !reachability_obligations.empty()) {
-        TRACE("ic3") << "ic3: checking reachability at " << k << ": budget exceeded" << std::endl;
-        return BUDGET_EXCEEDED;
       }
     } else {
       // New obligation to reach the counterexample

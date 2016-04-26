@@ -99,6 +99,19 @@ define_transition_command::define_transition_command(std::string id, system::tra
 {
 }
 
+void define_process_type_command::run(system::context* ctx, engine* e) {
+	/* FIXME something should go there */
+}
+
+define_process_type_command::~define_process_type_command() {
+}
+
+void define_process_type_command::to_stream(std::ostream& out) const  {
+  out << "[" << get_command_type_string() << "(" << d_id << "): ";
+  out << "]";
+}
+
+
 void define_transition_system_command::run(system::context* ctx, engine* e) {
   ctx->add_transition_system(d_id, d_system);
   d_system = 0;

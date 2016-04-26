@@ -26,6 +26,7 @@ options {
   #include <string>
   #include "parser/command.h"
   #include "parser/mcmt/mcmt_state.h"
+  #include <iostream>
   using namespace sally;
 }
 
@@ -54,6 +55,7 @@ internal_command
 /** Parses a system definition command */  
 system_command returns [parser::command* cmd = 0] 
   : c = declare_state_type       { $cmd = c; }
+  | c = declare_process_type     { $cmd = c; }
   | c = define_states            { $cmd = c; }
   | c = define_transition        { $cmd = c; }
   | c = define_transition_system { $cmd = c; }
@@ -82,6 +84,26 @@ declare_state_type returns [parser::command* cmd = 0]
       $cmd = new parser::declare_state_type_command(id, STATE->mk_state_type(id, state_vars, state_types, input_vars, input_types));
     }
   ; 
+
+/** Declaration of a process type */
+declare_process_type returns [parser::command* cmd = 0]
+@declarations {
+  std::string id;
+  std::vector<std::string> state_vars;  
+  std::vector<expr::term_ref> state_types;
+  std::vector<std::string> input_vars;  
+  std::vector<expr::term_ref> input_types;
+}
+  : '(' 'define-process-type' 
+        // Name of the type
+        symbol[id, parser::MCMT_PROCESS_TYPE, false]
+    ')' 
+    {
+      STATE->mk_process_type(id);
+      $cmd = new parser::define_process_type_command(id);
+    }
+  ; 
+
 
 /** Definition of a state set  */
 define_states returns [parser::command* cmd = 0]
@@ -227,6 +249,8 @@ term returns [expr::term_ref t = expr::term_ref()]
 @declarations {
   std::string id;
   std::vector<expr::term_ref> children;
+  std::vector<std::string> out_vars;
+  std::vector<expr::term_ref> out_types;
 } 
   : symbol[id, parser::MCMT_VARIABLE, true] { t = STATE->get_variable(id); }                
   | c = constant { t = c; }
@@ -236,11 +260,53 @@ term returns [expr::term_ref t = expr::term_ref()]
        let_t = term { t = let_t; }
        { STATE->pop_scope(); }
     ')' 
+  | '(' 'forall' variable_list[out_vars, out_types]
+       {
+	   std::vector<expr::term_ref>::iterator it_types = out_types.begin();
+	   for (std::vector<std::string>::iterator it_vars=out_vars.begin(); it_vars != out_vars.end() && it_types != out_types.end(); ++it_vars) {
+	   		STATE->push_lambda(*it_vars, *it_types);
+			++it_types;
+		}
+		if(out_vars.size() != 1) {
+			std::cout << "Several variables in a forall is unsupported" << std::endl;
+		}
+		}
+       for_t = term { t = STATE->tm().mk_term(expr::TERM_FORALL, *(out_types.begin()), for_t); }
+       { for(std::string& s: out_vars) {
+	   		STATE->pop_lambda();
+		}}
+	 ')'
+  | '(' 'exists' variable_list[out_vars, out_types]
+       {
+	   std::vector<expr::term_ref>::iterator it_types = out_types.begin();
+	   for (std::vector<std::string>::iterator it_vars=out_vars.begin(); it_vars != out_vars.end() && it_types != out_types.end(); ++it_vars) {
+	   		STATE->push_lambda(*it_vars, *it_types);
+			++it_types;
+		}
+		if(out_vars.size() != 1) {
+			std::cout << "Several variables in a forall is unsupported" << std::endl;
+		}
+		}
+       for_t = term { t = STATE->tm().mk_term(expr::TERM_EXISTS, *(out_types.begin()), for_t); }
+       { for(std::string& s: out_vars) {
+	   		STATE->pop_lambda();
+		}}
+	 ')'
   | '(' 
         op = term_op 
         term_list[children] 
      ')'   
      { t = STATE->tm().mk_term(op, children); }
+  | '(' 
+       '(_' 'extract' high = NUMERAL low = NUMERAL ')'
+       s = term
+    ')' 
+    {
+     expr::integer hi_value(STATE->token_text(high), 10);
+     expr::integer lo_value(STATE->token_text(low), 10);
+     expr::bitvector_extract extract(hi_value.get_unsigned(), lo_value.get_unsigned());
+     t = STATE->tm().mk_bitvector_extract(s, extract);
+    }
   | '(' 'cond' { STATE->lsal_extensions() }?
        ( '(' term_list[children] ')' )+
        '(' 'else' else_term = term ')'
@@ -294,6 +360,7 @@ term_list[std::vector<expr::term_ref>& out]
 constant returns [expr::term_ref t = expr::term_ref()] 
   : bc = bool_constant     { t = bc; } 
   | dc = decimal_constant  { t = dc; } 
+  | bvc = bitvector_constant { t = bvc; }
   ; 
 
 bool_constant returns [expr::term_ref t = expr::term_ref()]
@@ -308,14 +375,40 @@ decimal_constant returns [expr::term_ref t = expr::term_ref()]
     }
   ; 
 
+bitvector_constant returns [expr::term_ref t = expr::term_ref()]
+  : HEX_NUMERAL {
+     std::string hex_number(STATE->token_text($HEX_NUMERAL));
+     hex_number = hex_number.substr(2); 
+     expr::integer int_value(hex_number, 16);
+     expr::bitvector value(hex_number.size()*4, int_value);
+     t = STATE->tm().mk_bitvector_constant(value);
+    }
+  | BIN_NUMERAL {
+     std::string bin_number(STATE->token_text($BIN_NUMERAL));
+     bin_number = bin_number.substr(2);
+     expr::integer int_value(bin_number, 2);
+     expr::bitvector value(bin_number.size(), int_value);
+     t = STATE->tm().mk_bitvector_constant(value);
+    }
+  | '(_' v = BV_NUMERAL s = NUMERAL ')' {
+     expr::integer int_value(STATE->token_text(v).substr(2), 10);
+     expr::integer size_value(STATE->token_text(s), 10);
+     expr::bitvector value(size_value.get_unsigned(), int_value);
+     t = STATE->tm().mk_bitvector_constant(value);     
+    }
+  ;
+
 term_op returns [expr::term_op op = expr::OP_LAST]
-  : 'and'            { op = expr::TERM_AND; } 
+  : // Boolean
+    'and'            { op = expr::TERM_AND; } 
   | 'or'             { op = expr::TERM_OR; }
   | 'not'            { op = expr::TERM_NOT; }
-  | '=>'        { op = expr::TERM_IMPLIES; } 
+  | '=>'             { op = expr::TERM_IMPLIES; } 
   | 'xor'            { op = expr::TERM_XOR; }
   | 'ite'            { op = expr::TERM_ITE; }
+    // Equeality
   | '='              { op = expr::TERM_EQ;  }
+    // Arithmetic
   | '+'              { op = expr::TERM_ADD; }
   | '-'              { op = expr::TERM_SUB; }
   | '*'              { op = expr::TERM_MUL; }
@@ -324,7 +417,59 @@ term_op returns [expr::term_op op = expr::OP_LAST]
   | '>='             { op = expr::TERM_GEQ; }
   | '<'              { op = expr::TERM_LT; }
   | '<='             { op = expr::TERM_LEQ; }
+    // Bitvectors
+  | 'bvadd' { op = expr::TERM_BV_ADD; }
+  | 'bvsub' { op = expr::TERM_BV_SUB; }
+  | 'bvmul' { op = expr::TERM_BV_MUL; }
+  | 'bvudiv' { op = expr::TERM_BV_UDIV; }
+  | 'bvsdiv' { op = expr::TERM_BV_SDIV; }
+  | 'bvurem' { op = expr::TERM_BV_UREM; }
+  | 'bvsrem' { op = expr::TERM_BV_SREM; }
+  | 'bvsmod' { op = expr::TERM_BV_SMOD; }
+  | 'bvxor' { op = expr::TERM_BV_XOR; }
+  | 'bvshl' { op = expr::TERM_BV_SHL; }
+  | 'bvlshr' { op = expr::TERM_BV_LSHR; }
+  | 'bvashr' { op = expr::TERM_BV_ASHR; }
+  | 'bvnot' { op = expr::TERM_BV_NOT; }
+  | 'bvand' { op = expr::TERM_BV_AND; }
+  | 'bvor' { op = expr::TERM_BV_OR; }
+  | 'bvnand' { op = expr::TERM_BV_NAND; }
+  | 'bvnor' { op = expr::TERM_BV_NOR; }
+  | 'bvxnor' { op = expr::TERM_BV_XNOR; }
+  | 'concat' { op = expr::TERM_BV_CONCAT; }
+  | 'bvule' { op = expr::TERM_BV_ULEQ; }
+  | 'bvsle' { op = expr::TERM_BV_SLEQ; }
+  | 'bvult' { op = expr::TERM_BV_ULT; }
+  | 'bvslt' { op = expr::TERM_BV_SLT; }
+  | 'bvuge' { op = expr::TERM_BV_UGEQ; }
+  | 'bvsge' { op = expr::TERM_BV_SGEQ; }
+  | 'bvugt' { op = expr::TERM_BV_UGT; }
+  | 'bvsgt' { op = expr::TERM_BV_SGT; }
+  | 'select'         { op = expr::TERM_SELECT; }
+  | 'store'          { op = expr::TERM_SELECT; }
   ;
+
+type_declaration[std::string& id]
+@declarations {
+	std::string type_id;
+	std::string index_id;
+	std::string content_id;
+}
+	: ('(' 'Array' WHITESPACE* type_declaration[index_id] type_declaration [content_id]
+         { 
+      		id = STATE->mk_array_type(index_id, content_id);
+        }
+	')')
+	| ('('
+        symbol[type_id, parser::MCMT_TYPE, true] { 
+			id = type_id;
+        }
+	')')
+	|
+        symbol[type_id, parser::MCMT_TYPE, true] { 
+			id = type_id;
+        }
+	;
 
 /** Parse a list of variables with types */
 variable_list[std::vector<std::string>& out_vars, std::vector<expr::term_ref>& out_types]
@@ -334,16 +479,31 @@ variable_list[std::vector<std::string>& out_vars, std::vector<expr::term_ref>& o
 } 
   : '(' 
     ( '(' 
+        // Variable name
         symbol[var_id, parser::MCMT_OBJECT_LAST, false] { 
         	out_vars.push_back(var_id); 
         } 
-        symbol[type_id, parser::MCMT_TYPE, true] { 
+        // Type: either basic or composite (TODO: bitvector) 
+        type_declaration[type_id] { 
         	out_types.push_back(STATE->get_type(type_id)); 
         }
     ')' )*
     ')'
   ; 
         
+type returns [expr::term_ref type]
+@declarations {
+  std::string type_id;
+}
+  : // Primitive types
+    symbol[type_id, parser::MCMT_TYPE, true] { type = STATE->get_type(type_id); }  
+  | // Bitvector types 
+    '(_' 'BitVec' size = NUMERAL ')' { 
+       expr::integer int_value(STATE->token_text(size), 10);
+       type = STATE->get_bitvector_type(int_value.get_unsigned());       
+    }
+  ;
+      
 /** Comments (skip) */
 COMMENT
   : ';' (~('\n' | '\r'))* { SKIP(); }
@@ -353,6 +513,9 @@ COMMENT
 WHITESPACE
   : (' ' | '\t' | '\f' | '\r' | '\n')+ { SKIP(); }
   ;
+
+/** Bitvector numeral */
+BV_NUMERAL: 'bv' DIGIT+;
 
 /** Matches a symbol. */
 SYMBOL
@@ -366,7 +529,17 @@ ALPHA : 'a'..'z' | 'A'..'Z';
 /** Matches a numeral (sequence of digits) */
 NUMERAL: DIGIT+;
 
+/** Matches a binary numeral (sequence of digits) */
+BIN_NUMERAL: '#b' ('0'|'1')+;
+
+/** Matches a binary numeral (sequence of digits) */
+HEX_NUMERAL: '#h' ('0'|'1')+;
+
 /** Matches a digit */
 fragment 
 DIGIT : '0'..'9';  
+
+/** MAthces a hexadecimal digit */
+fragment 
+HEX_DIGIT : DIGIT | 'a'..'f' | 'A'..'F';
  

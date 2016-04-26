@@ -70,6 +70,15 @@ public:
   bool operator > (const integer& other) const;
   bool operator >= (const integer& other) const;
 
+  /** Get the sign */
+  int sgn() const;
+
+  /** Get unsigned value */
+  unsigned long get_unsigned() const;
+
+  /** Get signed value */
+  signed long get_signed() const;
+
   /** Returns the hash of the integer */
   size_t hash() const { return d_gmp_int.get_si(); }
 

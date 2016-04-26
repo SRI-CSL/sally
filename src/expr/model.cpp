@@ -17,6 +17,7 @@
  */
 
 #include "expr/model.h"
+#include "expr/term_visitor.h"
 #include "utils/exception.h"
 #include "utils/trace.h"
 
@@ -165,28 +166,78 @@ value model::get_term_value(expr::term_ref t, const expr::term_manager::substitu
   return get_term_value_internal(t, var_renaming, cache);
 }
 
-value model::get_term_value_internal(expr::term_ref t, const expr::term_manager::substitution_map& var_renaming, term_to_value_map& cache) const {
+class evaluation_visitor {
 
-  TRACE("expr::model") << "get_term_value_internal(" << t << ")" << std::endl;
+  term_manager& d_tm;
+  const expr::term_manager::substitution_map& d_var_renaming;
+  model::term_to_value_map& d_cache;
+  const model& d_model;
 
-  // If a variable and not in the model, we don't know how to evaluate
-  expr::term_op op = d_tm.term_of(t).op();
-  if (op == expr::VARIABLE) {
-    return get_variable_value(t, var_renaming);
-  } else {
-    // Proper term, we have to evaluate, if not in the cache already
-    const_iterator find = cache.find(t);
-    if (find != cache.end()) {
-      TRACE("expr::model") << "get_term_value_internal(" << t << ") => " << find->second << std::endl;
-      return find->second;
+  value d_true;
+  value d_false;
+
+  std::vector<value> children_values;
+
+public:
+
+  evaluation_visitor(expr::term_manager& tm, const expr::term_manager::substitution_map& var_renaming, model::term_to_value_map& cache, const model& model)
+  : d_tm(tm)
+  , d_var_renaming(var_renaming)
+  , d_cache(cache)
+  , d_model(model)
+  , d_true(true)
+  , d_false(false)
+  {}
+
+  ~evaluation_visitor() {}
+
+  // Get the children of t
+  void get_children(expr::term_ref t, std::vector<expr::term_ref>& children) {
+    const expr::term& t_term = d_tm.term_of(t);
+    for (size_t i = 0; i < t_term.size(); ++ i) {
+      children.push_back(t_term[i]);
+    }
+  }
+
+  // We visit only nodes that have not been evaluated yet, i.e. terms not in
+  // the cache yet
+  visitor_match_result match(term_ref t) {
+    term_op op = d_tm.term_of(t).op();
+    if (d_cache.find(t) == d_cache.end()) {
+      // Visit children then this node
+      if (op == VARIABLE) {
+        // Don't go into the variable children (types)
+        return VISIT_AND_BREAK;
+      } else {
+        return VISIT_AND_CONTINUE;
+      }
+    } else {
+      // Don't visit children or this node
+      return DONT_VISIT_AND_BREAK;
+    }
+  }
+
+  void visit(term_ref t) {
+
+    const term& t_term = d_tm.term_of(t);
+    size_t t_size = t_term.size();
+    term_op op = t_term.op();
+
+    // Variables have children (type) but we don't want to evaluate them */
+    if (op == VARIABLE) {
+       d_cache[t] = d_model.get_variable_value(t, d_var_renaming);
+       return;
     }
 
+    // At this point, children have values, so we can evaluate
     // Not cached, evaluate children
-    size_t t_size = d_tm.term_of(t).size();
-    std::vector<value> children_values;
+    children_values.clear();
+
     for (size_t i = 0; i < t_size; ++ i) {
       expr::term_ref child = d_tm.term_of(t)[i];
-      children_values.push_back(get_term_value_internal(child, var_renaming, cache));
+      model::term_to_value_map::const_iterator find = d_cache.find(child);
+      assert(find != d_cache.end());
+      children_values.push_back(find->second);
     }
 
     // Now, compute the value
@@ -201,7 +252,7 @@ value model::get_term_value_internal(expr::term_ref t, const expr::term_manager:
         v = children_values[2];
       }
       break;
-      // Equality
+    // Equality
     case TERM_EQ:
       if (!children_values[0].is_null() && !children_values[1].is_null()) {
         v = value(children_values[0] == children_values[1]);
@@ -209,7 +260,11 @@ value model::get_term_value_internal(expr::term_ref t, const expr::term_manager:
       break;
     // Boolean terms
     case CONST_BOOL:
-      v = d_tm.get_boolean_constant(d_tm.term_of(t));
+      v = d_tm.get_boolean_constant(t_term);
+      break;
+    // Quantified variable terms
+    case TERM_QUANTIFIED_VARIABLE:
+      v = d_tm.get_integer_constant(t_term);
       break;
     case TERM_AND:
       v = d_true;
@@ -297,34 +352,200 @@ value model::get_term_value_internal(expr::term_ref t, const expr::term_manager:
 
     // Bit-vector terms
     case CONST_BITVECTOR:
-    case TERM_BV_ADD:
-    case TERM_BV_SUB:
-    case TERM_BV_MUL:
-    case TERM_BV_UDIV: // NOTE: semantics of division is x/0 = 111...111
-    case TERM_BV_SDIV:
-    case TERM_BV_UREM:
-    case TERM_BV_SREM:
-    case TERM_BV_SMOD:
-    case TERM_BV_XOR:
-    case TERM_BV_SHL:
-    case TERM_BV_LSHR:
-    case TERM_BV_ASHR:
+      v = d_tm.get_bitvector_constant(t_term);
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
+      break;
+    case TERM_BV_ADD: {
+      bitvector bv = children_values[0].get_bitvector();
+      for (size_t i = 1; i < children_values.size(); ++ i) {
+        bv = bv.add(children_values[i].get_bitvector());
+      }
+      v = bv;
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
+      break;
+    }
+    case TERM_BV_SUB: {
+      if (children_values.size() == 1) {
+        v = children_values[0].get_bitvector().neg();
+      } else if (children_values.size() == 2) {
+        const bitvector& lhs = children_values[0].get_bitvector();
+        const bitvector& rhs = children_values[1].get_bitvector();
+        v = lhs.sub(rhs);
+        assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
+      } else {
+        assert(false);
+      }
+      break;
+    }
+    case TERM_BV_MUL: {
+      bitvector bv = children_values[0].get_bitvector();
+      for (size_t i = 1; i < children_values.size(); ++ i) {
+        bv = bv.mul(children_values[i].get_bitvector());
+      }
+      v = bv;
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
+      break;
+    }
+    case TERM_BV_UDIV: { // NOTE: semantics of division is x/0 = 111...111
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
+      v = lhs.udiv(rhs);
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
+      break;
+    }
+    case TERM_BV_SDIV: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
+      v = lhs.sdiv(rhs);
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
+      break;
+    }
+    case TERM_BV_UREM: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
+      v = lhs.urem(rhs);
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
+      break;
+    }
+    case TERM_BV_SREM: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
+      v = lhs.srem(rhs);
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
+      break;
+    }
+    case TERM_BV_SMOD: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
+      v = lhs.smod(rhs);
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
+      break;
+    }
+    case TERM_BV_XOR: {
+      bitvector bv = children_values[0].get_bitvector();
+      for (size_t i = 1; i < children_values.size(); ++ i) {
+        bv = bv.bvxor(children_values[i].get_bitvector());
+      }
+      v = bv;
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
+      break;
+    }
+    case TERM_BV_SHL: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
+      v = lhs.shl(rhs);
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
+      break;
+    }
+    case TERM_BV_LSHR: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
+      v = lhs.lshr(rhs);
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
+      break;
+    }
+    case TERM_BV_ASHR: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
+      v = lhs.ashr(rhs);
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
+      break;
+    }
     case TERM_BV_NOT:
-    case TERM_BV_AND:
-    case TERM_BV_OR:
+      v = children_values[0].get_bitvector().bvnot();
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
+      break;
+    case TERM_BV_AND: {
+      bitvector bv = children_values[0].get_bitvector();
+      for (size_t i = 1; i < children_values.size(); ++ i) {
+        bv = bv.bvand(children_values[i].get_bitvector());
+      }
+      v = bv;
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
+      break;
+    }
+    case TERM_BV_OR: {
+      bitvector bv = children_values[0].get_bitvector();
+      for (size_t i = 1; i < children_values.size(); ++ i) {
+        bv = bv.bvor(children_values[i].get_bitvector());
+      }
+      v = bv;
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
+      break;
+    }
     case TERM_BV_NAND:
+      assert(false);
+      break;
     case TERM_BV_NOR:
+      assert(false);
+      break;
     case TERM_BV_XNOR:
-    case TERM_BV_CONCAT:
-    case TERM_BV_EXTRACT:
-    case TERM_BV_ULEQ:
-    case TERM_BV_SLEQ:
-    case TERM_BV_ULT:
-    case TERM_BV_SLT:
-    case TERM_BV_UGEQ:
-    case TERM_BV_SGEQ:
-    case TERM_BV_UGT:
-    case TERM_BV_SGT:
+      assert(false);
+      break;
+    case TERM_BV_CONCAT: {
+      bitvector bv = children_values[0].get_bitvector();
+      for (size_t i = 1; i < children_values.size(); ++ i) {
+        bv = bv.concat(children_values[i].get_bitvector());
+      }
+      v = bv;
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
+      break;
+    }
+    case TERM_BV_EXTRACT: {
+      size_t low = d_tm.get_bitvector_extract(t_term).low;
+      size_t high = d_tm.get_bitvector_extract(t_term).high;
+      v = children_values[0].get_bitvector().extract(low, high);
+      assert(v.get_bitvector().size() == d_tm.get_bitvector_size(t));
+      break;
+    }
+    case TERM_BV_ULEQ: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
+      v = lhs.uleq(rhs);
+      break;
+    }
+    case TERM_BV_SLEQ: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
+      v = lhs.sleq(rhs);
+      break;
+    }
+    case TERM_BV_ULT: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
+      v = lhs.ult(rhs);
+      break;
+    }
+    case TERM_BV_SLT: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
+      v = lhs.slt(rhs);
+      break;
+    }
+    case TERM_BV_UGEQ: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
+      v = lhs.ugeq(rhs);
+      break;
+    }
+    case TERM_BV_SGEQ: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
+      v = lhs.sgeq(rhs);
+      break;
+    }
+    case TERM_BV_UGT: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
+      v = lhs.ugt(rhs);
+      break;
+    }
+    case TERM_BV_SGT: {
+      const bitvector& lhs = children_values[0].get_bitvector();
+      const bitvector& rhs = children_values[1].get_bitvector();
+      v = lhs.sgt(rhs);
+      break;
+    }
     default:
       assert(false);
     }
@@ -334,10 +555,16 @@ value model::get_term_value_internal(expr::term_ref t, const expr::term_manager:
     TRACE("expr::model") << "get_term_value_internal(" << t << ") => " << v << std::endl;
 
     // Remember the cache
-    cache[t] = v;
-
-    return v;
+    d_cache[t] = v;
   }
+};
+
+
+value model::get_term_value_internal(expr::term_ref t, const expr::term_manager::substitution_map& var_renaming, term_to_value_map& cache) const {
+  evaluation_visitor visitor(d_tm, var_renaming, cache, *this);
+  term_visit_topological<evaluation_visitor, term_ref, term_ref_hasher> visit_topological(visitor);
+  visit_topological.run(t);
+  return cache[t];
 }
 
 bool model::is_true(expr::term_ref f) const {
@@ -406,6 +633,11 @@ void model::to_stream(std::ostream& out) const {
 
 std::ostream& operator << (std::ostream& out, const model& m) {
   m.to_stream(out);
+  return out;
+}
+
+std::ostream& operator << (std::ostream& out, const model::ref& m_ref) {
+  m_ref->to_stream(out);
   return out;
 }
 

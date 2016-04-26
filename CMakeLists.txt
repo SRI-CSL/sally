@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-project(sally CXX)
+project(sally CXX C)
 enable_testing()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wall")
@@ -63,6 +63,15 @@ endif()
 
 find_package(OCaml)
 add_subdirectory(frontend)
+
+# Find Z3
+SET(Z3_HOME CACHE STRING "Z3 installation directory")
+find_package(Z3 4.4.1)
+if (Z3_FOUND)
+  add_definitions(-DWITH_Z3)
+  include_directories(${Z3_INCLUDE_DIR})
+endif()
+
 
 # Make sure antlr C runtime is here
 include(ExternalProject) 

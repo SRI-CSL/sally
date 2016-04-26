@@ -23,7 +23,9 @@
 #include "system/context.h"
 #include "utils/symbol_table.h"
 
+
 #include <iosfwd>
+#include <stack>
 
 #include <antlr3.h>
 
@@ -38,6 +40,7 @@ enum mcmt_object {
   MCMT_STATE_FORMULA,
   MCMT_TRANSITION_FORMULA,
   MCMT_TRANSITION_SYSTEM,
+  MCMT_PROCESS_TYPE,
   MCMT_OBJECT_LAST
 };
 
@@ -52,6 +55,8 @@ class mcmt_state {
 
   /** Symbol table for types */
   utils::symbol_table<expr::term_ref_strong> d_types;
+
+  std::list<std::pair<std::string, expr::term_ref>> lambda_variables;
 
 public:
 
@@ -95,6 +100,9 @@ public:
   /** Returns the type with the given id */
   expr::term_ref get_type(std::string id) const;
 
+  /** Returns the bit-vector type of the given size */
+  expr::term_ref get_bitvector_type(size_t size) const;
+
   /** Returns the a variable with the given id */
   expr::term_ref get_variable(std::string id) const;
 
@@ -128,6 +136,13 @@ public:
 
   /** Collect terms */
   void gc_collect(const expr::gc_relocator& gc_reloc);
+
+  void mk_process_type(std::string id);
+
+  std::string mk_array_type(std::string from, std::string to);
+
+  void push_lambda(std::string, expr::term_ref);
+  void pop_lambda();
 
 };
 

@@ -36,11 +36,15 @@ namespace expr {
 enum term_op {
 
   // Types
+  TYPE_TYPE, // Type of types
   TYPE_BOOL,
   TYPE_INTEGER,
   TYPE_REAL,
+  TYPE_STRING,
   TYPE_BITVECTOR,
   TYPE_STRUCT,
+  TYPE_PROCESS,
+  TYPE_ARRAY,
 
   // Variables
   VARIABLE,
@@ -100,9 +104,19 @@ enum term_op {
   TERM_BV_SGEQ,
   TERM_BV_UGT,
   TERM_BV_SGT,
+  TERM_BV_SGN_EXTEND,
 
   // Constant strings
   CONST_STRING,
+
+  // Quantifiers
+  TERM_FORALL,
+  TERM_EXISTS,
+  TERM_QUANTIFIED_VARIABLE,
+
+  // Arrays
+  TERM_SELECT,
+  TERM_STORE,
 
   // Marker for the last
   OP_LAST
@@ -133,14 +147,26 @@ struct term_op_traits<TYPE_BITVECTOR> {
   typedef size_t payload_type;
 };
 
+template<>
+struct term_op_traits<TYPE_PROCESS> {
+  typedef alloc::empty_type payload_type;
+};
+
 /**
- * Bitvector extract has a payload of type pair<size_t, size_t>.
+ * Bitvector extract.
  */
 template<>
 struct term_op_traits<TERM_BV_EXTRACT> {
   typedef expr::bitvector_extract payload_type;
 };
 
+/**
+ * Bitvector sign extend.
+ */
+template<>
+struct term_op_traits<TERM_BV_SGN_EXTEND> {
+  typedef expr::bitvector_sgn_extend payload_type;
+};
 
 /**
  * Boolean constant terms have a payload of type bool and no children.
@@ -149,6 +175,15 @@ template<>
 struct term_op_traits<CONST_BOOL> {
   typedef bool payload_type;
 };
+
+/**
+ * Quantified variables have a payload of type int.
+ */
+template<>
+struct term_op_traits<TERM_QUANTIFIED_VARIABLE> {
+  typedef int payload_type;
+};
+
 
 /**
  * Rational constants terms have a payload of type rational (gmp) and no children.

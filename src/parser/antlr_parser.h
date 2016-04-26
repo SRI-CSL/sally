@@ -30,17 +30,8 @@ namespace parser {
 template<input_language lang>
 struct antlr_parser_traits {};
 
-class antlr_parser_interface {
-public:
- virtual ~antlr_parser_interface() {};
- virtual command* parse_command() = 0;
- virtual int get_current_parser_line() const = 0;
- virtual int get_current_parser_position() const = 0;
- virtual std::string get_filename() const = 0;
-};
-
 template <input_language lang>
-class antlr_parser : public antlr_parser_interface, public expr::gc_participant {
+class antlr_parser : public internal_parser_interface, public expr::gc_participant {
 
   /** The input */
   pANTLR3_INPUT_STREAM d_input;

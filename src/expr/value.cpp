@@ -37,6 +37,12 @@ value::value(bool b)
 {
 }
 
+value::value(int b)
+: d_type(VALUE_QUANTIFIED)
+, d_i(b)
+{
+}
+
 value::value(const value& v)
 : d_type(v.d_type)
 , d_b(v.d_b)
@@ -69,6 +75,10 @@ value::value(const term_manager& tm, term_ref t)
   case CONST_BOOL:
     d_b = tm.get_boolean_constant(t_term);
     d_type = VALUE_BOOL;
+    break;
+  case TERM_QUANTIFIED_VARIABLE:
+    d_i = tm.get_integer_constant(t_term);
+    d_type = VALUE_QUANTIFIED;
     break;
   case CONST_BITVECTOR:
     d_bv = tm.get_bitvector_constant(t_term);
@@ -146,6 +156,8 @@ void value::to_stream(std::ostream& out) const {
   case VALUE_RATIONAL:
     out << d_q;
     break;
+  case VALUE_QUANTIFIED:
+    out << d_q;
   }
 }
 
@@ -174,6 +186,9 @@ term_ref value::to_term(term_manager& tm) const {
     return tm.mk_bitvector_constant(d_bv);
   case VALUE_RATIONAL:
     return tm.mk_rational_constant(d_q);
+  case VALUE_QUANTIFIED:
+  	assert(false);
+    //return tm.mk_quantified_constant(d_i);
   }
   return term_ref();
 }

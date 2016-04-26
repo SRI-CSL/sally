@@ -35,7 +35,8 @@ class value {
     VALUE_NONE,
     VALUE_BOOL,
     VALUE_RATIONAL,
-    VALUE_BITVECTOR
+    VALUE_BITVECTOR,
+	VALUE_QUANTIFIED
   };
 
   type d_type;
@@ -43,6 +44,7 @@ class value {
   bool d_b;
   bitvector d_bv;
   rational d_q;
+  int d_i;
 
 public:
 
@@ -52,6 +54,7 @@ public:
   value(const rational& q);
   value(const bitvector& bv);
   value(const term_manager& tm, term_ref t);
+  value(int i);
 
   value& operator = (const value& v);
 
@@ -66,10 +69,12 @@ public:
   bool is_bool() const { return d_type == VALUE_BOOL; }
   bool is_bitvector() const { return d_type == VALUE_BITVECTOR; }
   bool is_rational() const { return d_type == VALUE_RATIONAL; }
+  bool is_quantified() const { return d_type == VALUE_QUANTIFIED; }
 
   bool get_bool() const;
   const bitvector& get_bitvector() const;
   const rational& get_rational() const;
+  int get_integer() const;
 
   term_ref to_term(term_manager& tm) const;
 };

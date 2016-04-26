@@ -69,6 +69,7 @@ void mathsat5_term_cache::set_term_cache(expr::term_ref t, msat_term t_msat) {
   if (d_tm.term_of(t).op() == expr::VARIABLE) {
     d_permanent_terms.push_back(t);
     d_permanent_terms_msat.push_back(t_msat);
+    d_msat_to_term_cache[t_msat] = t;
   } else {
     // Mark cache as dirty
     d_cache_is_clean = false;
@@ -80,8 +81,6 @@ void mathsat5_term_cache::set_term_cache(expr::term_ref t, msat_term t_msat) {
     static size_t k = 0;
     std::stringstream ss;
     ss << "mathsat5_term_query_" << std::setfill('0') << std::setw(5) << k++ << ".smt2";
-    smt2_name_transformer name_transformer;
-    d_tm.set_name_transformer(&name_transformer);
     std::ofstream query(ss.str().c_str());
     output::set_term_manager(query, &d_tm);
     output::set_output_language(query, output::MCMT);
@@ -108,6 +107,7 @@ void mathsat5_term_cache::set_term_cache(msat_term t_msat, expr::term_ref t) {
   if (d_tm.term_of(t).op() == expr::VARIABLE) {
     d_permanent_terms.push_back(t);
     d_permanent_terms_msat.push_back(t_msat);
+    d_term_to_msat_cache[t] = t_msat;
   } else {
     // Mark cache as dirty
     d_cache_is_clean = false;
@@ -119,8 +119,6 @@ void mathsat5_term_cache::set_term_cache(msat_term t_msat, expr::term_ref t) {
     static size_t k = 0;
     std::stringstream ss;
     ss << "mathsat5_term_query_" << std::setfill('0') << std::setw(5) << k++ << ".smt2";
-    smt2_name_transformer name_transformer;
-    d_tm.set_name_transformer(&name_transformer);
     std::ofstream query(ss.str().c_str());
     output::set_term_manager(query, &d_tm);
     output::set_output_language(query, output::MCMT);

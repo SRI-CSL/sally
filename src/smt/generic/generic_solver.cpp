@@ -201,7 +201,8 @@ public:
 
     // SMT2 preamble
     *d_solver_input << "(set-info :smt-lib-version 2.0)" << std::endl;
-    *d_solver_input << "(set-logic " << solver_logic << ")" << std::endl;
+
+    //*d_solver_input << "(set-logic " << solver_logic << ")" << std::endl;
   }
 
   ~generic_solver_internal() {

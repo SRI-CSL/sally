@@ -66,6 +66,7 @@ public:
   void push();
   void pop();
   void generalize(generalization_type type, std::vector<expr::term_ref>& projection_out);
+  void generalize(generalization_type type, expr::model::ref m, std::vector<expr::term_ref>& projection_out);
   void interpolate(std::vector<expr::term_ref>& out);
   void get_unsat_core(std::vector<expr::term_ref>& out);
   void add_variable(expr::term_ref var, variable_class f_class);

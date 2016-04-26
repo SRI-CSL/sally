@@ -63,6 +63,11 @@ int main(int argc, char* argv[]) {
     output::set_output_language(cout, out_lang);
     output::set_output_language(cerr, out_lang);
 
+    // Set whether to use lets in printouts
+    bool use_lets = boost_opts.count("no-lets") == 0;
+    output::set_use_lets(cout, use_lets);
+    output::set_use_lets(cerr, use_lets);
+
     // Set any trace tags if passed in
     if (boost_opts.count("debug") > 0) {
       vector<string>& tags = boost_opts.at("debug").as<vector<string> >();
@@ -79,9 +84,6 @@ int main(int argc, char* argv[]) {
     expr::term_manager tm(stats);
     cout << expr::set_tm(tm);
     cerr << expr::set_tm(tm);
-
-    // Rewrite inequalities if asked to
-    tm.set_eq_rewrite(opts.get_bool("arith-eq-to-ineq"));
 
     // Create the context
     system::context ctx(tm, opts, stats);
@@ -220,13 +222,13 @@ void parse_options(int argc, char* argv[], variables_map& variables)
       ("solver", value<string>()->default_value(smt::factory::get_default_solver_id()), get_solver_list().c_str())
       ("solver-logic", value<string>(), "Optional smt2 logic to set to the solver (e.g. QF_LRA, QF_LIA, ...).")
       ("output-language", value<string>()->default_value("mcmt"), get_output_languages_list().c_str())
-      ("arith-eq-to-ineq", "Rewrite equalities into inqualities.")
       ("lsal-extensions", "Use lsal extensions to the MCMT language")
       ("no-input-namespace", "Don't use input namespace in the the MCMT language")
       ("live-stats", value<string>(), "Output live statistic to the given file (- for stdout).")
       ("live-stats-time", value<unsigned>()->default_value(100), "Time period for statistics output (in miliseconds)")
       ("smt2-output", value<string>(), "Generate smt2 logs of solver queries with given prefix.")
       ("ai", value<string>(), get_analyzer_list().c_str())
+      ("no-lets", "Don't use let expressions in printouts.");
       ;
 
   // Get the individual engine options

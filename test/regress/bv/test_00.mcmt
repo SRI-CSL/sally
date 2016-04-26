@@ -1,0 +1,17 @@
+(define-state-type vars ((x (_ BitVec 4))))
+
+(define-states init vars
+  (or
+    (= x #b0000)
+    (= x #h0)
+    (= x (_ bv0 4))
+  )
+)
+
+(define-transition trans vars
+  (= next.x (bvadd state.x #b0010))
+)
+
+(define-transition-system T vars init trans)
+
+(query T (not (= ( (_ extract 0 0) x) #b1)))

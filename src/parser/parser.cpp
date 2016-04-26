@@ -22,6 +22,7 @@
 #include "parser/mcmt/mcmt.h"
 #include "parser/btor/btor.h"
 #include "parser/sal/sal.h"
+#include "parser/aiger/aiger.h"
 
 #include <iostream>
 
@@ -78,6 +79,9 @@ parser::parser(const system::context& ctx, input_language lang, const char* file
   case INPUT_SAL:
     d_internal = new_sal_parser(ctx, filename);
     break;
+  case INPUT_AIGER:
+    d_internal = new_aiger_parser(ctx, filename);
+    break;
   default:
     assert(false);
   }
@@ -114,6 +118,9 @@ input_language parser::guess_language(std::string filename) {
     }
     if (extension == "sal") {
       return INPUT_SAL;
+    }
+    if (extension == "aig") {
+      return INPUT_AIGER;
     }
     return INPUT_MCMT;
   }

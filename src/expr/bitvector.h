@@ -25,7 +25,7 @@
 namespace sally {
 namespace expr {
 
-class bitvector : public integer {
+class bitvector : protected integer {
 
   /** The size in bits */
   size_t d_size;
@@ -34,6 +34,9 @@ public:
 
   /** Construct 0 of size 1 */
   bitvector(): d_size(1) {}
+
+  /** Copy constructor */
+  bitvector(const bitvector& other);
 
   /** Construct 0 */
   explicit bitvector(size_t size);
@@ -53,6 +56,14 @@ public:
   /** Get the size of the bitvector */
   size_t size() const { return d_size; }
 
+  /** Return bitvector 1..1 */
+  static bitvector one(size_t size);
+
+  /** Get the integer */
+  const mpz_class& mpz() const {
+    return d_gmp_int;
+  }
+
   /** Hash */
   size_t hash() const;
 
@@ -61,8 +72,52 @@ public:
     return d_size == other.d_size && cmp(other) == 0;
   }
 
-  /** Output ot stream */
+  /** Output to stream */
   void to_stream(std::ostream& out) const;
+
+  /** Get signed integer */
+  integer get_signed() const;
+
+  /** Set the bit to value (returns self-reference) */
+  bitvector& set_bit(size_t i, bool value);
+
+  /** Get the bit value */
+  bool get_bit(size_t i) const;
+
+  /** Get the most significant bit */
+  bool msb() const { return get_bit(d_size-1); }
+
+  bitvector concat(const bitvector& rhs) const;
+  bitvector extract(size_t low, size_t high) const;
+
+  bitvector add(const bitvector& rhs) const;
+  bitvector sub(const bitvector& rhs) const;
+  bitvector neg() const;
+  bitvector mul(const bitvector& rhs) const;
+
+  bitvector udiv(const bitvector& rhs) const;
+  bitvector sdiv(const bitvector& rhs) const;
+  bitvector urem(const bitvector& rhs) const;
+  bitvector srem(const bitvector& rhs) const;
+  bitvector smod(const bitvector& rhs) const;
+
+  bitvector shl(const bitvector& rhs) const;
+  bitvector lshr(const bitvector& rhs) const;
+  bitvector ashr(const bitvector& rhs) const;
+
+  bitvector bvxor(const bitvector& rhs) const;
+  bitvector bvand(const bitvector& rhs) const;
+  bitvector bvor(const bitvector& rhs) const;
+  bitvector bvnot() const;
+
+  bool uleq(const bitvector& rhs) const;
+  bool sleq(const bitvector& rhs) const;
+  bool ult(const bitvector& rhs) const;
+  bool slt(const bitvector& rhs) const;
+  bool ugeq(const bitvector& rhs) const;
+  bool sgeq(const bitvector& rhs) const;
+  bool ugt(const bitvector& rhs) const;
+  bool sgt(const bitvector& rhs) const;
 };
 
 /**
@@ -79,6 +134,23 @@ struct bitvector_extract {
 
   /** Comparison */
   bool operator == (const bitvector_extract& other) const;
+
+  /** Hash */
+  size_t hash() const;
+};
+
+/**
+ * Payload for bitvector sign-extend operation.
+ */
+struct bitvector_sgn_extend {
+  /** How many bits */
+  size_t size;
+
+  bitvector_sgn_extend(size_t size)
+  : size(size) {}
+
+  /** Comparison */
+  bool operator == (const bitvector_sgn_extend& other) const;
 
   /** Hash */
   size_t hash() const;
@@ -101,6 +173,13 @@ template<>
 struct hash<expr::bitvector_extract> {
   size_t operator()(const expr::bitvector_extract& extract) const {
     return extract.hash();
+  }
+};
+
+template<>
+struct hash<expr::bitvector_sgn_extend> {
+  size_t operator()(const expr::bitvector_sgn_extend& extend) const {
+    return extend.hash();
   }
 };
 

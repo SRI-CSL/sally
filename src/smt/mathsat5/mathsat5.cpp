@@ -211,7 +211,8 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
   msat_set_option(d_cfg, "interpolation", "true");
   msat_set_option(d_cfg, "theory.la.split_rat_eq", "false");
   msat_set_option(d_cfg, "theory.bv.eager", "false");
-  msat_set_option(d_cfg, "theory.euf.enabled", "false");
+  msat_set_option(d_cfg, "theory.bv.div_by_zero_mode", "0");
+  msat_set_option(d_cfg, "theory.euf.enabled", "true");
   msat_set_option(d_cfg, "preprocessor.simplification", "0");
 
   if (opts.get_bool("mathsat5-unsat-cores")) {
@@ -536,7 +537,6 @@ msat_term mathsat5_internal::to_mathsat5_term(expr::term_ref ref) {
     result = msat_make_constant(d_env, var);
     // Remember, for model construction
     d_variables.push_back(ref);
-    d_term_cache->set_term_cache(result, ref);
     break;
   }
   case expr::CONST_BOOL:
