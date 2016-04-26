@@ -212,12 +212,15 @@ public:
     case TYPE_BOOL:
     case TYPE_INTEGER:
     case TYPE_REAL:
-	case TYPE_ARRAY:
 	case TYPE_PROCESS:
     case TYPE_STRING:
       d_ok = t.size() == 0;
       if (d_ok) t_type = d_tm.type_type();
       break;
+	case TYPE_ARRAY:
+      t_type = d_tm.type_type();
+	  d_ok = true;
+	  break;
     case TERM_QUANTIFIED_VARIABLE:
 	  t_type = d_tm.integer_type();
 	  break;
