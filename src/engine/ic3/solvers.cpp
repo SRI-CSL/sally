@@ -705,18 +705,6 @@ void solvers::reset_induction_solver(size_t depth) {
   }
 }
 
-bool solvers::redundant_in_induction(expr::term_ref f) {
-  assert(d_induction_solver != 0);
-
-  d_induction_solver->push();
-  f = d_tm.mk_term(expr::TERM_NOT, f);
-  d_induction_solver->add(f, smt::solver::CLASS_A);
-  smt::solver::result r = d_induction_solver->check();
-  d_induction_solver->pop();
-
-  return r == smt::solver::UNSAT;
-}
-
 void solvers::add_to_induction_solver(expr::term_ref f, induction_assertion_type type) {
   assert(d_induction_solver != 0);
   assert(d_induction_generalizer != 0);
@@ -885,6 +873,60 @@ void solvers::output_efsmt(expr::term_ref f, expr::term_ref g) const {
 
   out << std::endl;
   out << "(check-sat)" << std::endl;
+}
+
+void solvers::quickxplain_frame(smt::solver* solver, const std::vector<induction_obligation>& frame, size_t begin, size_t end, std::vector<induction_obligation>& out) {
+  smt::solver_scope solver_scope(solver);
+
+  assert(begin < end);
+
+  if (begin == end) {
+    return;
+  }
+
+  if (begin + 1 == end) {
+    // Keep the properties
+    if (frame[begin].d == 0) {
+      out.push_back(frame[begin]);
+      return;
+    }
+    // Only one left, we keep it, check if we need it
+    solver_scope.push();
+    expr::term_ref f_not = d_tm.mk_not(frame[begin].F_fwd);
+    solver->add(f_not, smt::solver::CLASS_A);
+    if (solver->check() != smt::solver::UNSAT) {
+      out.push_back(frame[begin]);
+    }
+    return;
+  }
+
+  // Split: how many in first half?
+  size_t n = (end - begin) / 2;
+
+  // Assert first half and minimize the second
+  solver_scope.push();
+  for (size_t i = begin; i < begin + n; ++ i) {
+    solver->add(frame[i].F_fwd, smt::solver::CLASS_A);
+  }
+  size_t old_out_size = out.size();
+  quickxplain_frame(solver, frame, begin + n, end, out);
+  solver_scope.pop();
+
+  // Now, assert the minimized second half, and minimize the first half
+  solver_scope.push();
+  for (size_t i = old_out_size; i < out.size(); ++ i) {
+    solver->add(out[i].F_fwd, smt::solver::CLASS_A);
+  }
+  quickxplain_frame(solver, frame, begin, begin + n, out);
+  solver_scope.pop();
+
+}
+
+void solvers::minimize_frame(std::vector<induction_obligation>& frame) {
+  std::vector<induction_obligation> out;
+  smt::solver* solver = get_minimization_solver();
+  quickxplain_frame(solver, frame, 0, frame.size(), out);
+  frame.swap(out);
 }
 
 }

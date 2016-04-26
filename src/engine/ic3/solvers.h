@@ -28,6 +28,8 @@
 #include "system/state_trace.h"
 #include "system/context.h"
 
+#include "induction_obligation.h"
+
 namespace sally {
 namespace ic3 {
 
@@ -151,6 +153,9 @@ class solvers {
   /** Use quickxplain to minimize the generalization */
   void quickxplain_generalization(smt::solver* solver, const std::vector<expr::term_ref>& disjuncts, size_t begin, size_t end, std::vector<expr::term_ref>& out);
 
+  /** Use quickxplain to minimize the frame */
+  void quickxplain_frame(smt::solver* solver, const std::vector<induction_obligation>& frame, size_t begin, size_t end, std::vector<induction_obligation>& out);
+
 public:
 
   /** Create solvers for the given transition system */
@@ -203,8 +208,8 @@ public:
     INDUCTION_INTERMEDIATE
   };
 
-  /** Check if formulas is redundant in induction solver */
-  bool redundant_in_induction(expr::term_ref f);
+  /** Minimize the frame */
+  void minimize_frame(std::vector<induction_obligation>& frame);
 
   /**
    * Add a formula to induction solver. Formulas will be added to frames < depth.

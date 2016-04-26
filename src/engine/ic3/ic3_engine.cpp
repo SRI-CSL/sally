@@ -37,55 +37,6 @@
 namespace sally {
 namespace ic3 {
 
-// Fibonacci heap returns the top element in the order, so this should
-bool induction_obligation_cmp::operator() (const induction_obligation& ind1, const induction_obligation& ind2) const {
-  // Prefer deeper ones
-  if (ind1.d != ind2.d) {
-    return ind1.d > ind2.d;
-  }
-  // Prefer higher scores
-  if (ind1.score != ind2.score) {
-    return ind1.score < ind2.score;
-  }
-  // Otherwise just break ties, basically term id's => created earlier wins
-  if (ind1.F_cex < ind2.F_cex) {
-    return ind1.F_cex > ind2.F_cex;
-  }
-  return ind1.F_fwd > ind2.F_fwd;
-}
-
-induction_obligation::induction_obligation(expr::term_manager& tm, expr::term_ref F_fwd, expr::term_ref F_cex, size_t d, double score, size_t refined)
-: F_fwd(F_fwd)
-, F_cex(F_cex)
-, d(d)
-, score(score)
-, refined(refined)
-{}
-
-bool induction_obligation::operator == (const induction_obligation& o) const {
-  return F_cex == o.F_cex && F_fwd == o.F_fwd;
-}
-
-void induction_obligation::bump_score(double amount) {
-  if (score + amount >= 0) {
-    score += amount;
-  } else {
-    score = 0;
-  }
-}
-
-bool induction_obligation::operator < (const induction_obligation& o) const {
-  if (F_cex == o.F_cex) {
-    return F_fwd < o.F_fwd;
-  }
-  return F_cex < o.F_cex;
-}
-
-std::ostream& operator << (std::ostream& out, const induction_obligation& ind) {
-  out << ind.F_fwd;
-  return out;
-}
-
 ic3_engine::ic3_engine(const system::context& ctx)
 : engine(ctx)
 , d_transition_system(0)
@@ -388,6 +339,10 @@ engine::result ic3_engine::search() {
     }
     d_smt->reset_induction_solver(d_induction_frame_depth);
 
+    if (ctx().get_options().get_bool("ic3-minimize-frames")) {
+      d_smt->minimize_frame(d_induction_obligations_next);
+    }
+
     // Add formulas to the new frame
     d_induction_frame.clear();
     std::vector<induction_obligation>::const_iterator next_it = d_induction_obligations_next.begin();
@@ -396,13 +351,11 @@ engine::result ic3_engine::search() {
       induction_obligation ind = *next_it;
       ind.score = ind.score/2 + 1; // Keep old score and add 1 for effort
       assert(d_induction_frame.find(ind) == d_induction_frame.end());
-      if (d_properties.count(ind.F_fwd) > 0 || !d_smt->redundant_in_induction(ind.F_fwd)) {
-        d_smt->add_to_induction_solver(ind.F_fwd, solvers::INDUCTION_FIRST);
-        d_smt->add_to_induction_solver(ind.F_fwd, solvers::INDUCTION_INTERMEDIATE);
-        d_induction_frame.insert(ind);
-        d_stats.frame_size->get_value() = d_induction_frame.size();
-        enqueue_induction_obligation(ind);
-      }
+      d_smt->add_to_induction_solver(ind.F_fwd, solvers::INDUCTION_FIRST);
+      d_smt->add_to_induction_solver(ind.F_fwd, solvers::INDUCTION_INTERMEDIATE);
+      d_induction_frame.insert(ind);
+      d_stats.frame_size->get_value() = d_induction_frame.size();
+      enqueue_induction_obligation(ind);
     }
 
     // Clear next frame info
