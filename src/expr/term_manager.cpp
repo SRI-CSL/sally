@@ -349,6 +349,12 @@ void term_manager::get_variables(term_ref ref, std::set<term_ref>& out) const {
   d_tm->get_subterms(ref, variable_matcher(), out);
 }
 
+size_t term_manager::get_variables_count(term_ref ref) const {
+  std::vector<expr::term_ref> vars;
+  d_tm->get_subterms(ref, variable_matcher(), vars);
+  return vars.size();
+}
+
 struct all_matcher {
   bool operator() (const term& t) const {
     return true;

@@ -705,6 +705,17 @@ void solvers::reset_induction_solver(size_t depth) {
   }
 }
 
+bool solvers::redundant_in_induction(expr::term_ref f) {
+  assert(d_induction_solver != 0);
+
+  d_induction_solver->push();
+  f = d_tm.mk_term(expr::TERM_NOT, f);
+  d_induction_solver->add(f, smt::solver::CLASS_A);
+  smt::solver::result r = d_induction_solver->check();
+  d_induction_solver->pop();
+
+  return r == smt::solver::UNSAT;
+}
 
 void solvers::add_to_induction_solver(expr::term_ref f, induction_assertion_type type) {
   assert(d_induction_solver != 0);

@@ -203,6 +203,9 @@ public:
     INDUCTION_INTERMEDIATE
   };
 
+  /** Check if formulas is redundant in induction solver */
+  bool redundant_in_induction(expr::term_ref f);
+
   /**
    * Add a formula to induction solver. Formulas will be added to frames < depth.
    */

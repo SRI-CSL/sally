@@ -263,6 +263,9 @@ public:
   /** Get the variables of the term */
   void get_variables(term_ref ref, std::set<term_ref>& out) const;
 
+  /** Get number of variables that the term has */
+  size_t get_variables_count(term_ref ref) const;
+
   /** Get the subterms of the term */
   void get_subterms(term_ref ref, std::vector<term_ref>& out) const;
 

@@ -28,7 +28,6 @@
 #define __STDC_LIMIT_MACROS 1
 
 #include <gmp.h>
-#include <yices.h>
 #include <boost/unordered_map.hpp>
 
 #include <iostream>

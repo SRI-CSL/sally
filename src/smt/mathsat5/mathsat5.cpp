@@ -209,6 +209,9 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
 
   msat_set_option(d_cfg, "model_generation", "true");
   msat_set_option(d_cfg, "interpolation", "true");
+  // msat_set_option(d_cfg, "dpll.interpolation_mode", "2");
+  // msat_set_option(d_cfg, "dpll.proof_simplification", "true");
+  // msat_set_option(d_cfg, "theory.la.interpolation_mode", "0");
   msat_set_option(d_cfg, "theory.la.split_rat_eq", "false");
   msat_set_option(d_cfg, "theory.bv.eager", "false");
   msat_set_option(d_cfg, "theory.bv.div_by_zero_mode", "0");

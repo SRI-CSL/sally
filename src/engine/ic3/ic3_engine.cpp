@@ -396,11 +396,15 @@ engine::result ic3_engine::search() {
       induction_obligation ind = *next_it;
       ind.score = ind.score/2 + 1; // Keep old score and add 1 for effort
       assert(d_induction_frame.find(ind) == d_induction_frame.end());
-      d_smt->add_to_induction_solver(ind.F_fwd, solvers::INDUCTION_FIRST);
-      d_smt->add_to_induction_solver(ind.F_fwd, solvers::INDUCTION_INTERMEDIATE);
-      d_induction_frame.insert(ind);
-      d_stats.frame_size->get_value() = d_induction_frame.size();
-      enqueue_induction_obligation(ind);
+      if (d_properties.count(ind.F_fwd) > 0 || !d_smt->redundant_in_induction(ind.F_fwd)) {
+        d_smt->add_to_induction_solver(ind.F_fwd, solvers::INDUCTION_FIRST);
+        d_smt->add_to_induction_solver(ind.F_fwd, solvers::INDUCTION_INTERMEDIATE);
+        d_induction_frame.insert(ind);
+        d_stats.frame_size->get_value() = d_induction_frame.size();
+        enqueue_induction_obligation(ind);
+      } else {
+        std::cerr << "Redundant" << std::endl;
+      }
     }
 
     // Clear next frame info
