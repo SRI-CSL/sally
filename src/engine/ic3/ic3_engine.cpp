@@ -402,8 +402,6 @@ engine::result ic3_engine::search() {
         d_induction_frame.insert(ind);
         d_stats.frame_size->get_value() = d_induction_frame.size();
         enqueue_induction_obligation(ind);
-      } else {
-        std::cerr << "Redundant" << std::endl;
       }
     }
 
