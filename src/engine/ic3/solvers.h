@@ -77,6 +77,9 @@ class solvers {
   /** Solver for induction generalization */
   smt::solver* d_induction_generalizer;
 
+  /** Solver for minimization */
+  smt::solver* d_minimization_solver;
+
   /** Depth of the induction solver */
   size_t d_induction_solver_depth;
 
@@ -116,6 +119,9 @@ class solvers {
   /** Returns the k-th reachability solver */
   smt::solver* get_reachability_solver(size_t k);
 
+  /** Returns the minimization solver */
+  smt::solver* get_minimization_solver();
+
   /** Notify class to reset the cex solver to its previous depth */
   class cex_destruct_notify : public smt::solver_scope::destructor_notify {
     solvers* d_solvers;
@@ -138,6 +144,12 @@ class solvers {
 
   /** Whether to generate models for queries */
   bool d_generate_models_for_queries;
+
+  /** Use quickxplain to minimize the interpolant */
+  void quickxplain_interpolant(smt::solver* I_solver, smt::solver* T_solver, const std::vector<expr::term_ref>& disjuncts, size_t begin, size_t end, std::vector<expr::term_ref>& out);
+
+  /** Use quickxplain to minimize the generalization */
+  void quickxplain_generalization(smt::solver* solver, const std::vector<expr::term_ref>& disjuncts, size_t begin, size_t end, std::vector<expr::term_ref>& out);
 
 public:
 

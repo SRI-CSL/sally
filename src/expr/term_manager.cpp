@@ -206,7 +206,9 @@ term_ref term_manager::mk_bitvector_extract(term_ref t, const bitvector_extract&
 }
 
 term_ref term_manager::mk_bitvector_sgn_extend(term_ref t, const bitvector_sgn_extend& extend) {
-  return d_tm->mk_term<TERM_BV_SGN_EXTEND>(extend, t);
+  term_ref result = d_tm->mk_term<TERM_BV_SGN_EXTEND>(extend, t);
+  d_tm->typecheck(result);
+  return result;
 }
 
 term_ref term_manager::mk_string_constant(std::string value) {
@@ -454,6 +456,13 @@ term_ref term_manager::mk_and(term_ref f1, term_ref f2) {
   conjuncts.push_back(f1);
   conjuncts.push_back(f2);
   return mk_and(conjuncts);
+}
+
+term_ref term_manager::mk_or(term_ref f1, term_ref f2) {
+  std::vector<term_ref> disjuncts;
+  disjuncts.push_back(f1);
+  disjuncts.push_back(f2);
+  return mk_or(disjuncts);
 }
 
 term_ref term_manager::mk_and(const std::set<term_ref>& conjuncts) {

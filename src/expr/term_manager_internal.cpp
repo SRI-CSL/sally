@@ -215,14 +215,16 @@ public:
 	case TYPE_ARRAY:
 	case TYPE_PROCESS:
     case TYPE_STRING:
-      t_type = d_tm.type_type();
+      d_ok = t.size() == 0;
+      if (d_ok) t_type = d_tm.type_type();
       break;
     case TERM_QUANTIFIED_VARIABLE:
 	  t_type = d_tm.integer_type();
 	  break;
     case VARIABLE:
       // Type in payload
-      t_type = t[0];
+      d_ok = t.size() == 1;
+      if (d_ok) t_type = t[0];
       break;
     case TYPE_BITVECTOR:
       d_ok = t.size() == 0 && d_tm.payload_of<size_t>(t) > 0;
@@ -299,7 +301,8 @@ public:
 	  break;
     // Boolean terms
     case CONST_BOOL:
-      t_type = d_tm.boolean_type();
+      d_ok = t.size() == 0;
+      if (d_ok) t_type = d_tm.boolean_type();
       break;
     case TERM_AND:
     case TERM_OR:
@@ -334,8 +337,8 @@ public:
       break;
     // Arithmetic terms
     case CONST_RATIONAL:
-      d_ok = true;
-      t_type = d_tm.real_type();
+      d_ok = t.size() == 0;
+      if (d_ok) t_type = d_tm.real_type();
       break;
     case TERM_ADD:
     case TERM_MUL:
@@ -420,7 +423,7 @@ public:
       if (t.size() == 1) {
         term_ref t0 = type_of(t[0]);
         d_ok = d_tm.is_bitvector_type(t0);
-        t_type = t0;
+        if (d_ok) t_type = t0;
       } else if (t.size() == 2) {
         term_ref t0 = type_of(t[0]);
         term_ref t1 = type_of(t[1]);
@@ -542,24 +545,25 @@ public:
         }
       }
       break;
-  case TERM_BV_SGN_EXTEND:
-    if (t.size() != 1) {
-      d_ok = false;
-    } else {
-      term_ref t0 = type_of(t[0]);
-      if (!d_tm.is_bitvector_type(t0)) {
+    case TERM_BV_SGN_EXTEND:
+      if (t.size() != 1) {
         d_ok = false;
       } else {
-        const bitvector_sgn_extend& extend = d_tm.payload_of<bitvector_sgn_extend>(t);
-        size_t child_size = d_tm.bitvector_type_size(t0); 
-        d_ok = extend.size > 0;
-        if (d_ok) t_type = d_tm.bitvector_type(child_size + extend.size);
+        term_ref t0 = type_of(t[0]);
+        if (!d_tm.is_bitvector_type(t0)) {
+          d_ok = false;
+        } else {
+          size_t child_size = d_tm.bitvector_type_size(t0);
+          const bitvector_sgn_extend extend = d_tm.payload_of<
+              bitvector_sgn_extend>(t);
+          d_ok = extend.size > 0;
+          if (d_ok) t_type = d_tm.bitvector_type(child_size + extend.size);
+        }
       }
-    }
-    break;
-  case CONST_STRING:
-      d_ok = true;
-      t_type = d_tm.string_type();
+      break;
+    case CONST_STRING:
+      d_ok = t.size() == 0;
+      if (d_ok) t_type = d_tm.string_type();
       break;
     default:
       assert(false);
@@ -679,6 +683,12 @@ term_ref term_manager_internal::substitute(term_ref t, substitution_map& subst) 
     // Make a copy, in case we resize on construction
     bitvector_extract extract = payload_of<bitvector_extract>(t);
     t_new = mk_term<TERM_BV_EXTRACT>(extract, children[0]);
+    break;
+  }
+  case TERM_BV_SGN_EXTEND: {
+    // Make a copy, in case we resize on construction
+    bitvector_sgn_extend extend = payload_of<bitvector_sgn_extend>(t);
+    t_new = mk_term<TERM_BV_SGN_EXTEND>(extend, children[0]);
     break;
   }
   default:

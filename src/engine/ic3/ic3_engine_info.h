@@ -35,6 +35,8 @@ struct ic3_engine_info {
         ("ic3-add-backward", "Add learnts to previous frames in reachability checks.")
         ("ic3-check-deadlock", "Check for deadlocks throughout the algorighm.")
         ("ic3-induction-max", value<unsigned>()->default_value(0), "Max induction depth")
+        ("ic3-minimize-interpolants", "Try to minimize interpolants")
+        ("ic3-minimize-generalizations", "Try to minimize generalizations")
         ;
   }
 
