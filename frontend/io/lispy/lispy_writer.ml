@@ -162,7 +162,7 @@ let print_query f q =
 	print_expr f q.condition;
 	Format.fprintf f "@])"
 
-let output_context_to_channel ch c =
+let output_context_to_channel c ch =
 	let f = Format.formatter_of_out_channel ch in
 	List.iter (fun parametrized_type ->
 		Format.fprintf f "(define-process-type %s)@\n" parametrized_type;
