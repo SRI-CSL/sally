@@ -137,8 +137,9 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
     return INDUCTION_FAIL;
   }
 
-  expr::term_ref F_fwd_not = tm().mk_term(expr::TERM_NOT, ind.F_fwd);
-  expr::term_ref F_cex_not = tm().mk_term(expr::TERM_NOT, ind.F_cex);
+  expr::term_ref F_fwd_not = tm().mk_not(ind.F_fwd);
+  expr::term_ref F_cex_not = tm().mk_not(ind.F_cex);
+  F_cex_not = tm().mk_or(F_cex_not);
 
   // We have a model for
   //
@@ -423,9 +424,9 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 }
 
 bool ic3_engine::add_property(expr::term_ref P) {
-  smt::solver::result result = d_smt->query_at_init(tm().mk_term(expr::TERM_NOT, P));
+  smt::solver::result result = d_smt->query_at_init(tm().mk_not(P));
   if (result == smt::solver::UNSAT) {
-    induction_obligation ind(tm(), P, tm().mk_term(expr::TERM_NOT, P), /* cex depth */ 0, /* score */ 1);
+    induction_obligation ind(tm(), P, tm().mk_not(P), /* cex depth */ 0, /* score */ 1);
     if (d_induction_frame.find(ind) == d_induction_frame.end()) {
       // Add to induction frame, we know it holds at 0
       assert(d_induction_frame_depth == 1);
