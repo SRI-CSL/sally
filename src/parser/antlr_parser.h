@@ -22,6 +22,11 @@
 #include "expr/gc_participant.h"
 
 #include <iostream>
+#include <string>
+#include <iostream>
+#include <istream>
+#include <ostream>
+#include <iterator>
 #include <antlr3.h>
 
 namespace sally {
@@ -35,6 +40,8 @@ class antlr_parser : public internal_parser_interface, public expr::gc_participa
 
   /** The input */
   pANTLR3_INPUT_STREAM d_input;
+
+  char* str_stdin = 0;
 
   /** The lexer */
   typename antlr_parser_traits<lang>::pLangLexer d_lexer;
@@ -55,18 +62,37 @@ class antlr_parser : public internal_parser_interface, public expr::gc_participa
   void sally_lexer_reportError(pANTLR3_BASE_RECOGNIZER recognizer);
 
 public:
-
+  
   antlr_parser(const system::context& ctx, const char* file_to_parse)
   : gc_participant(ctx.tm())
   , d_state(ctx)
   {
-    // Create the input stream for the file
-    d_input = antlr3FileStreamNew((pANTLR3_UINT8) file_to_parse, ANTLR3_ENC_8BIT);
-    if (d_input == 0) {
-      throw parser_exception(std::string("can't open ") + file_to_parse);
-    }
+  	if(file_to_parse == 0) {
+		// Create the input stream for stdin
+		// don't skip the whitespace while reading
+		std::cin >> std::noskipws;
 
-    // Create a lexer
+		// use stream iterators to copy the stream to a string
+		std::istream_iterator<char> it(std::cin);
+		std::istream_iterator<char> end;
+		std::string results(it, end);
+
+		str_stdin = new char [results.length()+1];
+		std::strcpy (str_stdin, results.c_str());
+
+		
+		d_input = antlr3StringStreamNew((pANTLR3_UINT8)str_stdin, ANTLR3_ENC_8BIT,strlen(str_stdin), (pANTLR3_UINT8)"stdin");
+	}
+	else {
+		// Create the input stream for the file
+		d_input = antlr3FileStreamNew((pANTLR3_UINT8) file_to_parse, ANTLR3_ENC_8BIT);
+		
+		if (d_input == 0) {
+		  throw parser_exception(std::string("can't open ") + file_to_parse);
+		}
+	}
+    
+	// Create a lexer
     d_lexer = antlr_parser_traits<lang>::newLexer(d_input);
     if (d_lexer == 0) {
       throw parser_exception("can't create the lexer");
@@ -96,6 +122,7 @@ public:
 
     // Add error reporting
     d_parser->pParser->rec->reportError = sally_parser_reportError;
+
   }
 
   ~antlr_parser() {
@@ -103,6 +130,9 @@ public:
     d_token_stream->free(d_token_stream);
     d_lexer->free(d_lexer);
     d_input->free(d_input);
+	if(str_stdin != 0) {
+		free(str_stdin);
+	}
   }
 
   command* parse_command() {
