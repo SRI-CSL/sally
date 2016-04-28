@@ -927,6 +927,7 @@ void solvers::quickxplain_frame(smt::solver* solver, const std::vector<induction
 void solvers::minimize_frame(std::vector<induction_obligation>& frame) {
   std::vector<induction_obligation> out;
   smt::solver* solver = get_minimization_solver();
+  std::sort(frame.begin(), frame.end(), induction_obligation_cmp_better());
   quickxplain_frame(solver, frame, 0, frame.size(), out);
   frame.swap(out);
 }

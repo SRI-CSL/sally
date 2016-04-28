@@ -37,8 +37,8 @@ namespace ic3 {
 
 class solvers;
 
-/** Priority queue for obligations (max-heap) */
-typedef boost::heap::fibonacci_heap<induction_obligation, boost::heap::compare<induction_obligation_cmp> > induction_obligation_queue;
+/** Priority queue for obligations (NOTE: max-heap, so we use worse comparison) */
+typedef boost::heap::fibonacci_heap<induction_obligation, boost::heap::compare<induction_obligation_cmp_worse> > induction_obligation_queue;
 
 /**
  * Information on formulas. A formula is found in a frame because it refutes a

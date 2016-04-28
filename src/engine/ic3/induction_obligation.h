@@ -57,8 +57,15 @@ struct induction_obligation {
 
 };
 
-struct induction_obligation_cmp {
+struct induction_obligation_cmp_better {
   bool operator() (const induction_obligation& ind1, const induction_obligation& ind2) const;
+};
+
+struct induction_obligation_cmp_worse {
+  induction_obligation_cmp_better cmp_better;
+  bool operator() (const induction_obligation& ind1, const induction_obligation& ind2) const {
+    return cmp_better(ind2, ind1);
+  }
 };
 
 std::ostream& operator << (std::ostream& out, const induction_obligation& ind);
