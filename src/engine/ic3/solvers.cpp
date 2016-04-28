@@ -542,6 +542,13 @@ void solvers::quickxplain_generalization(smt::solver* solver, const std::vector<
   solver_scope.pop();
 }
 
+struct interpolant_cmp {
+  expr::term_manager& tm;
+  interpolant_cmp(expr::term_manager& tm): tm(tm) {}
+  bool operator () (const expr::term_ref& t1, const expr::term_ref& t2) {
+    return t1 < t2;
+  }
+};
 
 expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
 
@@ -562,6 +569,8 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
   if (d_ctx.get_options().get_bool("ic3-minimize-interpolants")) {
     std::vector<expr::term_ref> G_conjuncts, G_conjuncts_min;
     d_tm.get_conjuncts(G, G_conjuncts);
+    interpolant_cmp cmp(d_tm);
+    std::sort(G_conjuncts.begin(), G_conjuncts.end(), cmp);
     quickxplain_interpolant(false, I_solver, T_solver, G_conjuncts, 0, G_conjuncts.size(), G_conjuncts_min);
     G = d_tm.mk_and(G_conjuncts_min);
   }
@@ -602,12 +611,18 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
     if (I_solver) d_tm.get_disjuncts(I_I, disjuncts);
     if (T_solver) d_tm.get_disjuncts(T_I, disjuncts);
     std::vector<expr::term_ref> disjuncts_vec(disjuncts.begin(), disjuncts.end()), minimized_vec;
+    interpolant_cmp cmp(d_tm);
+    std::sort(disjuncts_vec.begin(), disjuncts_vec.end(), cmp);
     quickxplain_interpolant(true, I_solver, T_solver, disjuncts_vec, 0, disjuncts_vec.size(), minimized_vec);
     TRACE("ic3::min") << "min: old_size = " << disjuncts_vec.size() << ", new_size = " << minimized_vec.size() << std::endl;
     learnt = d_tm.mk_or(minimized_vec);
   } else {
     // Result is the disjunction of the two
-    learnt = d_tm.mk_or(T_I, I_I);
+    if (T_I.is_null()) {
+      learnt = d_tm.mk_or(I_I);
+    } else {
+      learnt = d_tm.mk_or(T_I, I_I);
+    }
   }
 
   TRACE("ic3") << "learned: " << learnt << std::endl;
