@@ -299,7 +299,6 @@ engine::result ic3_engine::search() {
     MSG(1) << "ic3: working on induction frame " << d_induction_frame_index << " (" << d_induction_frame.size() << ") with induction depth " << d_induction_frame_depth << " and cutoff " << d_induction_cutoff << std::endl;
 
     // Push the current induction frame forward
-    size_t previous_frame_size = d_induction_frame.size();
     push_current_frame();
 
     // If we've disproved the property, we're done
@@ -318,9 +317,7 @@ engine::result ic3_engine::search() {
     }
 
     // Set depth of induction for next time
-    if (previous_frame_size < d_induction_frame.size()) {
-      d_induction_frame_depth = d_induction_frame_next_index + 1;
-    }
+    d_induction_frame_depth ++;
 
     // Clear induction obligations queue and the frame
     d_induction_obligations.clear();
