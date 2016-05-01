@@ -188,7 +188,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
     enqueue_induction_obligation(new_ind);
 
     // We have to learn :(, decrease the score, let others go for a change
-    ind.score *= 0.99;
+    ind.score *= 0.9;
 
     // Now, retry
     return INDUCTION_RETRY;
@@ -225,7 +225,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
 
     // We know that CEX is not reachable (FULL CHECK ABOVE), otherwise we wouldn't be here.
     // Therefore !CEX is k-inductive modulo current assumptions and we can just push it
-    induction_obligation new_ind(tm(), F_cex_not, ind.F_cex, ind.d, ind.score);
+    induction_obligation new_ind(tm(), F_cex_not, ind.F_cex, ind.d, ind.d);
     assert(d_induction_frame.find(new_ind) == d_induction_frame.end());
     d_induction_frame.insert(new_ind);
     d_stats.frame_size->get_value() = d_induction_frame.size();
@@ -248,7 +248,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
 
   // We know what F_fwd removes the CTI, and F_fwd => !CEX, so we can add it
   d_induction_frame.erase(ind);
-  ind = induction_obligation(tm(), F_fwd, ind.F_cex, ind.d, ind.score*0.99, ind.refined + 1);
+  ind = induction_obligation(tm(), F_fwd, ind.F_cex, ind.d, ind.score*0.9, ind.refined + 1);
   d_induction_frame.insert(ind);
 
   // Current obligation has failed, but we replaced it
@@ -347,7 +347,7 @@ engine::result ic3_engine::search() {
     for (; next_it != d_induction_obligations_next.end(); ++ next_it) {
       // The formula
       induction_obligation ind = *next_it;
-      ind.score = ind.score/2 + 1; // Keep old score and add 1 for effort
+      ind.score = ind.score/2 + 0.5; // Keep old score and add 1 for effort
       assert(d_induction_frame.find(ind) == d_induction_frame.end());
       d_smt->add_to_induction_solver(ind.F_fwd, solvers::INDUCTION_FIRST);
       d_smt->add_to_induction_solver(ind.F_fwd, solvers::INDUCTION_INTERMEDIATE);
