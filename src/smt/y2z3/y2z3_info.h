@@ -19,7 +19,7 @@
 #pragma once
 
 #ifdef WITH_YICES2
-#ifdef WITH_MATHSAT5
+#ifdef WITH_Z3
 
 #include "smt/y2z3/y2z3.h"
 
