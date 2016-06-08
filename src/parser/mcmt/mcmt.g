@@ -272,7 +272,7 @@ term returns [expr::term_ref t = expr::term_ref()]
 		}
 		}
        for_t = term { t = STATE->tm().mk_term(expr::TERM_FORALL, *(out_types.begin()), for_t); }
-       { for(std::string& s: out_vars) {
+       { for(size_t i = 0; i < out_vars.size(); ++ i) {
 	   		STATE->pop_lambda();
 		}}
 	 ')'
@@ -288,7 +288,7 @@ term returns [expr::term_ref t = expr::term_ref()]
 		}
 		}
        for_t = term { t = STATE->tm().mk_term(expr::TERM_EXISTS, *(out_types.begin()), for_t); }
-       { for(std::string& s: out_vars) {
+       { for(size_t i = 0; i < out_vars.size(); ++ i) {
 	   		STATE->pop_lambda();
 		}}
 	 ')'

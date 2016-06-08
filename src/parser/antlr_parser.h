@@ -41,7 +41,8 @@ class antlr_parser : public internal_parser_interface, public expr::gc_participa
   /** The input */
   pANTLR3_INPUT_STREAM d_input;
 
-  char* str_stdin = 0;
+  // TODO: FIX
+  char* str_stdin;
 
   /** The lexer */
   typename antlr_parser_traits<lang>::pLangLexer d_lexer;
@@ -65,6 +66,7 @@ public:
   
   antlr_parser(const system::context& ctx, const char* file_to_parse)
   : gc_participant(ctx.tm())
+  , str_stdin(0)
   , d_state(ctx)
   {
   	if(file_to_parse == 0) {

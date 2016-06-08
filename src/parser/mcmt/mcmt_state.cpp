@@ -61,11 +61,12 @@ term_ref mcmt_state::get_bitvector_type(size_t size) const {
 
 term_ref mcmt_state::get_variable(std::string id) const {
   int i = 0;
-  for(std::pair<std::string, expr::term_ref> s : lambda_variables) {
+  lambda_variables_list::const_iterator it = lambda_variables.begin();
+  for(; it != lambda_variables.end(); ++ it) {
     i++;
-    if(s.first == id) {
-      auto result = tm().mk_quantified_constant(i, s.second);
-	  return result;
+    if(it->first == id) {
+      term_ref result = tm().mk_quantified_constant(i, it->second);
+      return result;
     }
   }
   if (!d_variables.has_entry(id)) {
@@ -191,11 +192,12 @@ bool mcmt_state::is_declared(std::string id, mcmt_object type) const {
 
 void mcmt_state::ensure_declared(std::string id, mcmt_object type, bool declared) const {
   if (declared != is_declared(id, type)) {
-  	for(std::pair<std::string, expr::term_ref> s : lambda_variables) {
-		if(s.first == id) {
-			return;
-		}
-	}
+    lambda_variables_list::const_iterator it = lambda_variables.begin();
+    for(; it != lambda_variables.end(); ++ it) {
+      if (it->first == id) {
+	return;
+      }
+    }
     if (declared) throw parser_exception(id + " not declared");
     else throw parser_exception(id + " already declared");
   }
