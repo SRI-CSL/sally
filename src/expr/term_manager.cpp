@@ -359,6 +359,12 @@ void term_manager::get_variables(term_ref ref, std::set<term_ref>& out) const {
   d_tm->get_subterms(ref, variable_matcher(), out);
 }
 
+size_t term_manager::get_variables_count(term_ref ref) const {
+  std::vector<expr::term_ref> vars;
+  d_tm->get_subterms(ref, variable_matcher(), vars);
+  return vars.size();
+}
+
 struct all_matcher {
   bool operator() (const term& t) const {
     return true;
@@ -412,6 +418,13 @@ void term_manager::get_conjuncts(term_ref f, std::set<term_ref>& out) {
   }
 }
 
+void term_manager::get_conjuncts(term_ref f, std::vector<term_ref>& out) {
+  std::set<term_ref> conjuncts;
+  get_conjuncts(f, conjuncts);
+  std::copy(conjuncts.begin(), conjuncts.end(), std::back_inserter(out));
+}
+
+
 void term_manager::get_disjuncts(term_ref f, std::set<term_ref>& out) {
   term_op op = d_tm->term_of(f).op();
   switch (op) {
@@ -462,6 +475,12 @@ term_ref term_manager::mk_or(term_ref f1, term_ref f2) {
   std::vector<term_ref> disjuncts;
   disjuncts.push_back(f1);
   disjuncts.push_back(f2);
+  return mk_or(disjuncts);
+}
+
+term_ref term_manager::mk_or(term_ref f) {
+  std::vector<term_ref> disjuncts;
+  disjuncts.push_back(f);
   return mk_or(disjuncts);
 }
 

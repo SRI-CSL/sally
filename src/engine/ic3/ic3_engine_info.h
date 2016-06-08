@@ -37,6 +37,7 @@ struct ic3_engine_info {
         ("ic3-induction-max", value<unsigned>()->default_value(0), "Max induction depth")
         ("ic3-minimize-interpolants", "Try to minimize interpolants")
         ("ic3-minimize-generalizations", "Try to minimize generalizations")
+        ("ic3-minimize-frames", "Try to minimize frames")
         ;
   }
 

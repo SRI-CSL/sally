@@ -6,6 +6,7 @@ add_library(engine
   ic3/reachability.cpp  
   ic3/ic3_engine.cpp  
   ic3/solvers.cpp
+  ic3/induction_obligation.cpp
   translator/translator.cpp
 )
 

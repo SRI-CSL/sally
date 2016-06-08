@@ -157,6 +157,9 @@ public:
   void get_conjuncts(term_ref f, std::set<term_ref>& out);
 
   /** Returns the conjuncts of the formula */
+  void get_conjuncts(term_ref f, std::vector<term_ref>& out);
+
+  /** Returns the conjuncts of the formula */
   void get_disjuncts(term_ref f, std::set<term_ref>& out);
 
   /** Make a negation (simplifies a bit) */
@@ -167,6 +170,9 @@ public:
 
   /** Make a disjunction (simplifies a bit). */
   term_ref mk_or(term_ref f1, term_ref f2);
+
+  /** Name a disjunction (simplifies a bit). */
+  term_ref mk_or(term_ref f);
 
   /** Make a conjunction. If no children => true. One child => child. */
   term_ref mk_and(const std::vector<term_ref>& conjuncts);
@@ -276,6 +282,9 @@ public:
 
   /** Get the variables of the term */
   void get_variables(term_ref ref, std::set<term_ref>& out) const;
+
+  /** Get number of variables that the term has */
+  size_t get_variables_count(term_ref ref) const;
 
   /** Get the subterms of the term */
   void get_subterms(term_ref ref, std::vector<term_ref>& out) const;

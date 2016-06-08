@@ -37,55 +37,6 @@
 namespace sally {
 namespace ic3 {
 
-// Fibonacci heap returns the top element in the order, so this should
-bool induction_obligation_cmp::operator() (const induction_obligation& ind1, const induction_obligation& ind2) const {
-  // Prefer deeper ones
-  if (ind1.d != ind2.d) {
-    return ind1.d > ind2.d;
-  }
-  // Prefer higher scores
-  if (ind1.score != ind2.score) {
-    return ind1.score < ind2.score;
-  }
-  // Otherwise just break ties, basically term id's => created earlier wins
-  if (ind1.F_cex < ind2.F_cex) {
-    return ind1.F_cex > ind2.F_cex;
-  }
-  return ind1.F_fwd > ind2.F_fwd;
-}
-
-induction_obligation::induction_obligation(expr::term_manager& tm, expr::term_ref F_fwd, expr::term_ref F_cex, size_t d, double score, size_t refined)
-: F_fwd(F_fwd)
-, F_cex(F_cex)
-, d(d)
-, score(score)
-, refined(refined)
-{}
-
-bool induction_obligation::operator == (const induction_obligation& o) const {
-  return F_cex == o.F_cex && F_fwd == o.F_fwd;
-}
-
-void induction_obligation::bump_score(double amount) {
-  if (score + amount >= 0) {
-    score += amount;
-  } else {
-    score = 0;
-  }
-}
-
-bool induction_obligation::operator < (const induction_obligation& o) const {
-  if (F_cex == o.F_cex) {
-    return F_fwd < o.F_fwd;
-  }
-  return F_cex < o.F_cex;
-}
-
-std::ostream& operator << (std::ostream& out, const induction_obligation& ind) {
-  out << ind.F_fwd;
-  return out;
-}
-
 ic3_engine::ic3_engine(const system::context& ctx)
 : engine(ctx)
 , d_transition_system(0)
@@ -186,8 +137,9 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
     return INDUCTION_FAIL;
   }
 
-  expr::term_ref F_fwd_not = tm().mk_term(expr::TERM_NOT, ind.F_fwd);
-  expr::term_ref F_cex_not = tm().mk_term(expr::TERM_NOT, ind.F_cex);
+  expr::term_ref F_fwd_not = tm().mk_not(ind.F_fwd);
+  expr::term_ref F_cex_not = tm().mk_not(ind.F_cex);
+  F_cex_not = tm().mk_or(F_cex_not);
 
   // We have a model for
   //
@@ -236,7 +188,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
     enqueue_induction_obligation(new_ind);
 
     // We have to learn :(, decrease the score, let others go for a change
-    ind.score *= 0.99;
+    ind.score *= 0.9;
 
     // Now, retry
     return INDUCTION_RETRY;
@@ -273,7 +225,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
 
     // We know that CEX is not reachable (FULL CHECK ABOVE), otherwise we wouldn't be here.
     // Therefore !CEX is k-inductive modulo current assumptions and we can just push it
-    induction_obligation new_ind(tm(), F_cex_not, ind.F_cex, ind.d, ind.score);
+    induction_obligation new_ind(tm(), F_cex_not, ind.F_cex, ind.d, ind.d);
     assert(d_induction_frame.find(new_ind) == d_induction_frame.end());
     d_induction_frame.insert(new_ind);
     d_stats.frame_size->get_value() = d_induction_frame.size();
@@ -296,7 +248,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
 
   // We know what F_fwd removes the CTI, and F_fwd => !CEX, so we can add it
   d_induction_frame.erase(ind);
-  ind = induction_obligation(tm(), F_fwd, ind.F_cex, ind.d, ind.score*0.99, ind.refined + 1);
+  ind = induction_obligation(tm(), F_fwd, ind.F_cex, ind.d, ind.score*0.9, ind.refined + 1);
   d_induction_frame.insert(ind);
 
   // Current obligation has failed, but we replaced it
@@ -347,7 +299,6 @@ engine::result ic3_engine::search() {
     MSG(1) << "ic3: working on induction frame " << d_induction_frame_index << " (" << d_induction_frame.size() << ") with induction depth " << d_induction_frame_depth << " and cutoff " << d_induction_cutoff << std::endl;
 
     // Push the current induction frame forward
-    size_t previous_frame_size = d_induction_frame.size();
     push_current_frame();
 
     // If we've disproved the property, we're done
@@ -366,9 +317,7 @@ engine::result ic3_engine::search() {
     }
 
     // Set depth of induction for next time
-    if (previous_frame_size < d_induction_frame.size()) {
-      d_induction_frame_depth = d_induction_frame_next_index + 1;
-    }
+    d_induction_frame_depth ++;
 
     // Clear induction obligations queue and the frame
     d_induction_obligations.clear();
@@ -388,13 +337,17 @@ engine::result ic3_engine::search() {
     }
     d_smt->reset_induction_solver(d_induction_frame_depth);
 
+    if (ctx().get_options().get_bool("ic3-minimize-frames")) {
+      d_smt->minimize_frame(d_induction_obligations_next);
+    }
+
     // Add formulas to the new frame
     d_induction_frame.clear();
     std::vector<induction_obligation>::const_iterator next_it = d_induction_obligations_next.begin();
     for (; next_it != d_induction_obligations_next.end(); ++ next_it) {
       // The formula
       induction_obligation ind = *next_it;
-      ind.score = ind.score/2 + 1; // Keep old score and add 1 for effort
+      ind.score = ind.score/2 + 0.5; // Keep old score and add 1 for effort
       assert(d_induction_frame.find(ind) == d_induction_frame.end());
       d_smt->add_to_induction_solver(ind.F_fwd, solvers::INDUCTION_FIRST);
       d_smt->add_to_induction_solver(ind.F_fwd, solvers::INDUCTION_INTERMEDIATE);
@@ -468,9 +421,9 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 }
 
 bool ic3_engine::add_property(expr::term_ref P) {
-  smt::solver::result result = d_smt->query_at_init(tm().mk_term(expr::TERM_NOT, P));
+  smt::solver::result result = d_smt->query_at_init(tm().mk_not(P));
   if (result == smt::solver::UNSAT) {
-    induction_obligation ind(tm(), P, tm().mk_term(expr::TERM_NOT, P), /* cex depth */ 0, /* score */ 1);
+    induction_obligation ind(tm(), P, tm().mk_not(P), /* cex depth */ 0, /* score */ 1);
     if (d_induction_frame.find(ind) == d_induction_frame.end()) {
       // Add to induction frame, we know it holds at 0
       assert(d_induction_frame_depth == 1);

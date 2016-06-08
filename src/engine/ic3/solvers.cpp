@@ -428,7 +428,7 @@ expr::term_ref solvers::generalize_sat(smt::solver* solver, expr::model::ref m) 
   return G;
 }
 
-void solvers::quickxplain_interpolant(smt::solver* I_solver, smt::solver* T_solver, const std::vector<expr::term_ref>& disjuncts, size_t begin, size_t end, std::vector<expr::term_ref>& out) {
+void solvers::quickxplain_interpolant(bool negate, smt::solver* I_solver, smt::solver* T_solver, const std::vector<expr::term_ref>& formulas, size_t begin, size_t end, std::vector<expr::term_ref>& out) {
 
   // TRACE("ic3::min") << "min: begin = " << begin << ", end = " << end << std::endl;
 
@@ -454,7 +454,7 @@ void solvers::quickxplain_interpolant(smt::solver* I_solver, smt::solver* T_solv
 
   if (begin + 1 == end) {
     // Only one left, we keep it, since we're SAT in one of the solvers
-    out.push_back(disjuncts[begin]);
+    out.push_back(formulas[begin]);
     return;
   }
 
@@ -465,7 +465,7 @@ void solvers::quickxplain_interpolant(smt::solver* I_solver, smt::solver* T_solv
   if (I_solver) I_solver_scope.push();
   if (T_solver) T_solver_scope.push();
   for (size_t i = begin; i < begin + n; ++ i) {
-    expr::term_ref to_assert = d_tm.mk_term(expr::TERM_NOT, disjuncts[i]);
+    expr::term_ref to_assert = negate ? d_tm.mk_term(expr::TERM_NOT, formulas[i])  : formulas[i];
     // Add to initial solver
     if (I_solver) {
       I_solver->add(to_assert, smt::solver::CLASS_A);
@@ -477,7 +477,7 @@ void solvers::quickxplain_interpolant(smt::solver* I_solver, smt::solver* T_solv
     }
   }
   size_t old_out_size = out.size();
-  quickxplain_interpolant(I_solver, T_solver, disjuncts, begin + n, end, out);
+  quickxplain_interpolant(negate, I_solver, T_solver, formulas, begin + n, end, out);
   if (I_solver) I_solver_scope.pop();
   if (T_solver) T_solver_scope.pop();
 
@@ -485,7 +485,7 @@ void solvers::quickxplain_interpolant(smt::solver* I_solver, smt::solver* T_solv
   if (I_solver) I_solver_scope.push();
   if (T_solver) T_solver_scope.push();
   for (size_t i = old_out_size; i < out.size(); ++ i) {
-    expr::term_ref to_assert = d_tm.mk_term(expr::TERM_NOT, out[i]);
+    expr::term_ref to_assert = negate ? d_tm.mk_term(expr::TERM_NOT, out[i]) : out[i];
     // Add to initial solver
     if (I_solver) {
       I_solver->add(to_assert, smt::solver::CLASS_A);
@@ -496,7 +496,7 @@ void solvers::quickxplain_interpolant(smt::solver* I_solver, smt::solver* T_solv
       T_solver->add(to_assert, smt::solver::CLASS_A);
     }
   }
-  quickxplain_interpolant(I_solver, T_solver, disjuncts, begin, begin + n, out);
+  quickxplain_interpolant(negate, I_solver, T_solver, formulas, begin, begin + n, out);
   if (I_solver) I_solver_scope.pop();
   if (T_solver) T_solver_scope.pop();
 }
@@ -542,15 +542,37 @@ void solvers::quickxplain_generalization(smt::solver* solver, const std::vector<
   solver_scope.pop();
 }
 
+struct interpolant_cmp {
+  expr::term_manager& tm;
+  interpolant_cmp(expr::term_manager& tm): tm(tm) {}
+  bool operator () (const expr::term_ref& t1, const expr::term_ref& t2) {
+    return t1 < t2;
+  }
+};
 
 expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
 
   TRACE("ic3") << "learning forward to refute: " << G << std::endl;
 
-  // Get the interpolant I2 for I => I2, I2 and G unsat
+  expr::term_ref I_I; // Interpolant from initial states
+  expr::term_ref T_I; // Interpolant from precious states
+
   smt::solver* I_solver = get_initial_solver();
+  smt::solver* T_solver = k > 0 ? get_reachability_solver(k-1) : 0;
+
+  // Get the interpolant I2 for I => I2, I2 and G unsat
   if (!I_solver->supports(smt::solver::INTERPOLATION)) {
     return d_tm.mk_term(expr::TERM_NOT, G);
+  }
+
+  // Minimize G
+  if (d_ctx.get_options().get_bool("ic3-minimize-interpolants")) {
+    std::vector<expr::term_ref> G_conjuncts, G_conjuncts_min;
+    d_tm.get_conjuncts(G, G_conjuncts);
+    interpolant_cmp cmp(d_tm);
+    std::sort(G_conjuncts.begin(), G_conjuncts.end(), cmp);
+    quickxplain_interpolant(false, I_solver, T_solver, G_conjuncts, 0, G_conjuncts.size(), G_conjuncts_min);
+    G = d_tm.mk_and(G_conjuncts_min);
   }
 
   I_solver->push();
@@ -558,57 +580,52 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
   smt::solver::result I_result = I_solver->check();
   unused_var(I_result);
   assert(I_result == smt::solver::UNSAT);
-  expr::term_ref I_I = I_solver->interpolate();
+  I_I = I_solver->interpolate();
   I_solver->pop();
 
   TRACE("ic3") << "I_I: " << I_I << std::endl;
 
-  if (k == 0) {
-    // If refuting at 0, it's just I
-    return I_I;
-  }
+  if (k > 0) {
+    // Get the interpolant T_I for: (R_{k-1} and T => T_I, T_I and G unsat
+    T_solver->push();
+    if (d_ctx.get_options().get_bool("ic3-single-solver")) {
+      assert_frame_selection(k-1, T_solver);
+    }
+    expr::term_ref G_next = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, G);
+    T_solver->add(G_next, smt::solver::CLASS_B);
+    smt::solver::result T_result = T_solver->check();
+    unused_var(T_result);
+    assert(T_result == smt::solver::UNSAT);
+    T_I = T_solver->interpolate();
+    T_I = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_NEXT, system::state_type::STATE_CURRENT, T_I);
+    T_solver->pop();
 
-  // Transition solver
-  smt::solver* T_solver = 0;
-  if (d_ctx.get_options().get_bool("ic3-single-solver")) {
-    T_solver = get_reachability_solver();
-  } else {
-    T_solver = get_reachability_solver(k-1);
+    TRACE("ic3") << "T_I: " << T_I << std::endl;
   }
-
-  // Get the interpolant T_I for: (R_{k-1} and T => T_I, T_I and G unsat
-  T_solver->push();
-  if (d_ctx.get_options().get_bool("ic3-single-solver")) {
-    assert_frame_selection(k-1, T_solver);
-  }
-  expr::term_ref G_next = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, G);
-  T_solver->add(G_next, smt::solver::CLASS_B);
-  smt::solver::result T_result = T_solver->check();
-  unused_var(T_result);
-  assert(T_result == smt::solver::UNSAT);
-  expr::term_ref T_I = T_solver->interpolate();
-  T_I = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_NEXT, system::state_type::STATE_CURRENT, T_I);
-  T_solver->pop();
-
-  TRACE("ic3") << "T_I: " << T_I << std::endl;
 
   expr::term_ref learnt;
 
   if (d_ctx.get_options().get_bool("ic3-minimize-interpolants")) {
     // Get all the disjuncts
     std::set<expr::term_ref> disjuncts;
-    d_tm.get_disjuncts(I_I, disjuncts);
-    d_tm.get_disjuncts(T_I, disjuncts);
+    if (I_solver) d_tm.get_disjuncts(I_I, disjuncts);
+    if (T_solver) d_tm.get_disjuncts(T_I, disjuncts);
     std::vector<expr::term_ref> disjuncts_vec(disjuncts.begin(), disjuncts.end()), minimized_vec;
-    quickxplain_interpolant(I_solver, T_solver, disjuncts_vec, 0, disjuncts_vec.size(), minimized_vec);
+    interpolant_cmp cmp(d_tm);
+    std::sort(disjuncts_vec.begin(), disjuncts_vec.end(), cmp);
+    quickxplain_interpolant(true, I_solver, T_solver, disjuncts_vec, 0, disjuncts_vec.size(), minimized_vec);
     TRACE("ic3::min") << "min: old_size = " << disjuncts_vec.size() << ", new_size = " << minimized_vec.size() << std::endl;
     learnt = d_tm.mk_or(minimized_vec);
   } else {
     // Result is the disjunction of the two
-    learnt = d_tm.mk_or(T_I, I_I);
+    if (T_I.is_null()) {
+      learnt = d_tm.mk_or(I_I);
+    } else {
+      learnt = d_tm.mk_or(T_I, I_I);
+    }
   }
 
-  TRACE("ic3") << "leaned: " << learnt << std::endl;
+  TRACE("ic3") << "learned: " << learnt << std::endl;
 
   return learnt;
 }
@@ -704,7 +721,6 @@ void solvers::reset_induction_solver(size_t depth) {
     }
   }
 }
-
 
 void solvers::add_to_induction_solver(expr::term_ref f, induction_assertion_type type) {
   assert(d_induction_solver != 0);
@@ -874,6 +890,61 @@ void solvers::output_efsmt(expr::term_ref f, expr::term_ref g) const {
 
   out << std::endl;
   out << "(check-sat)" << std::endl;
+}
+
+void solvers::quickxplain_frame(smt::solver* solver, const std::vector<induction_obligation>& frame, size_t begin, size_t end, std::vector<induction_obligation>& out) {
+  smt::solver_scope solver_scope(solver);
+
+  assert(begin < end);
+
+  if (begin == end) {
+    return;
+  }
+
+  if (begin + 1 == end) {
+    // Keep the properties
+    if (frame[begin].d == 0) {
+      out.push_back(frame[begin]);
+      return;
+    }
+    // Only one left, we keep it, check if we need it
+    solver_scope.push();
+    expr::term_ref f_not = d_tm.mk_not(frame[begin].F_fwd);
+    solver->add(f_not, smt::solver::CLASS_A);
+    if (solver->check() != smt::solver::UNSAT) {
+      out.push_back(frame[begin]);
+    }
+    return;
+  }
+
+  // Split: how many in first half?
+  size_t n = (end - begin) / 2;
+
+  // Assert first half and minimize the second
+  solver_scope.push();
+  for (size_t i = begin; i < begin + n; ++ i) {
+    solver->add(frame[i].F_fwd, smt::solver::CLASS_A);
+  }
+  size_t old_out_size = out.size();
+  quickxplain_frame(solver, frame, begin + n, end, out);
+  solver_scope.pop();
+
+  // Now, assert the minimized second half, and minimize the first half
+  solver_scope.push();
+  for (size_t i = old_out_size; i < out.size(); ++ i) {
+    solver->add(out[i].F_fwd, smt::solver::CLASS_A);
+  }
+  quickxplain_frame(solver, frame, begin, begin + n, out);
+  solver_scope.pop();
+
+}
+
+void solvers::minimize_frame(std::vector<induction_obligation>& frame) {
+  std::vector<induction_obligation> out;
+  smt::solver* solver = get_minimization_solver();
+  std::sort(frame.begin(), frame.end(), induction_obligation_cmp_better());
+  quickxplain_frame(solver, frame, 0, frame.size(), out);
+  frame.swap(out);
 }
 
 }
