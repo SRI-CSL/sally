@@ -39,8 +39,12 @@ install:
   - if [[ $ENABLE_COVERAGE == ON ]]; then 
       pip install --user cpp-coveralls;
     fi
+
+before_script:
+  - opam install -y ocamlbuild ounit menhir ocamlfind
   
 script:
+  - eval $(opam config env)
   - mkdir build
   - cd build
   - cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DENABLE_COVERAGE=${ENABLE_COVERAGE} -DYICES2_HOME=$HOME/yices2 ..
