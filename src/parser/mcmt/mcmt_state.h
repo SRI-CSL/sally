@@ -141,7 +141,7 @@ public:
 
   void mk_process_type(std::string id);
 
-  std::string mk_array_type(std::string from, std::string to);
+  expr::term_ref mk_array_type(expr::term_ref from, expr::term_ref to);
 
   void push_lambda(std::string, expr::term_ref);
   void pop_lambda();
