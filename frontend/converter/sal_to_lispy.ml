@@ -448,7 +448,7 @@ let sal_context_to_lisp ctx =
 			sally_module::transition_systems, queries, sally_ctx
 		| Assertion(a,b,c,d) ->
 			let q = sal_query_to_lisp sally_ctx transition_systems (a,b,c,d) in
-			transition_systems, q::queries, sally_ctx
+            transition_systems, queries @ [q], sally_ctx
 		| Constant_def(name, sal_type, expr) ->
 			transition_systems, queries,
 			StrMap.add name (Expr(sal_expr_to_lisp sally_ctx expr, sal_type_to_sally_type sally_ctx sal_type)) sally_ctx
