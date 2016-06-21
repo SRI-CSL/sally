@@ -48,7 +48,7 @@ script:
   - mkdir build
   - cd build
   - cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DENABLE_COVERAGE=${ENABLE_COVERAGE} -DYICES2_HOME=$HOME/yices2 ..
-  - make 
+  - make -j16
   - make check
 
 after_script:
