@@ -289,6 +289,7 @@ let sal_assignments_to_condition ?only_define_type:(only_type=false) ?vars_to_de
           | Ident(name) -> forget_variable name; name
           | _ -> raise Bad_left_hand_side
         in
+        (* check equality_type *)
         match expr with
         | Array_literal(name, type_data, expr) ->
           begin
@@ -296,20 +297,34 @@ let sal_assignments_to_condition ?only_define_type:(only_type=false) ?vars_to_de
             | Range(a, b) ->
               List.fold_left (fun l i ->
                   let type_infered = infer_type ctx expr in
-                  let tmp_ctx = ctx_add_substition ctx name (Expr(Value(string_of_int i), Real)) in
-                  let tmp_ctx = ctx_add_substition tmp_ctx (lhs_name ^ "!" ^ string_of_int i) (Expr(Ident(lhs_name ^ "!" ^ string_of_int i, type_infered), type_infered)) in
+                  let variable_value = Value(string_of_int i) in
+                  let cell_value = lhs_name ^ "!" ^ string_of_int i in
+                  let tmp_ctx = ctx_add_substition ctx name (Expr(variable_value, Real)) in
+                  let tmp_ctx = ctx_add_substition tmp_ctx cell_value (Expr(Ident(cell_value, type_infered), type_infered)) in
                   let constraint_i = to_condition tmp_ctx (Assign(Ident(lhs_name ^ "!" ^ (string_of_int i)), expr)) in
                   Lispy_ast.And(l, constraint_i)
                 ) Lispy_ast.True (seq a b)
             | _ -> failwith "unsupported index type for array literal"
           end
-        | _ -> Equality(sal_expr_to_lisp ctx n, sal_expr_to_lisp ctx expr)
+        | _ ->
+          match ctx_var lhs_name ctx with
+          | Expr(Ident(sally_lhs, _), Array(Range(a, b), t)) ->
+            List.map (fun i ->
+                let cell_name = sally_lhs ^ "!" ^ string_of_int i in
+                let ctx = ctx_add_substition ctx cell_name (Expr(Ident(cell_name, t), t)) in
+                to_condition ctx (Assign(Ident cell_name, Array_access(expr, Decimal i)))
+              ) (seq a b)
+            |> List.fold_left Lispy_ast.and_ Lispy_ast.True
+          | Expr(_, Array(_, _)) ->
+            failwith "equality not supported for every arrays"
+          | _ -> Equality(sal_expr_to_lisp ctx n, sal_expr_to_lisp ctx expr)
       end
     | Member(n, Set_literal(in_name, t, expr)) ->
-      let () = (match n with
+      let () = 
+        match n with
           | Ident(name) -> forget_variable name
-          | _ -> raise
-                   Bad_left_hand_side) in
+          | _ -> raise Bad_left_hand_side
+      in
       let intermediate_context = StrMap.add in_name (Expr(sal_expr_to_lisp ctx n, sal_type_to_sally_type ctx t)) ctx in
       sal_expr_to_lisp intermediate_context expr
     | Member(_) -> raise Member_without_set
