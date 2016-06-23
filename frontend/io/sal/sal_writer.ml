@@ -349,7 +349,10 @@ let get_formatter ch =
 
 let print_type ch = pp_type (get_formatter ch)
 
-let print_expr ch = pp_expr (get_formatter ch)
+let print_expr ch e =
+    let pp = get_formatter ch in
+    pp_expr pp e;
+    F.fprintf pp "@."
 
 let print_module ch = pp_module (get_formatter ch)
 

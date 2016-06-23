@@ -23,11 +23,12 @@ open Ast.Sal_ast
 module StrMap = Map.Make(String)
 
 type sally_substitution =
-  | Expr 	of sally_condition * sally_type
-  | Fun 	of (string * sally_type) list * sal_expr
-  | Type 	of sally_type
-
-type sally_context = sally_substitution StrMap.t
+  | Expr     of sally_condition * sally_type
+  | Fun      of (string * sally_type) list * sal_expr
+  | Type     of sally_type
+  | Array of sal_expr * sally_context * sally_type
+and
+sally_context = sally_substitution StrMap.t
 
 exception Not_implemented
 exception Cannot_use_function_as_expression
@@ -47,6 +48,10 @@ exception Variable_not_found of string
   * the one in b *)
 let ctx_union a b =
   StrMap.fold (fun k v c -> StrMap.add k v c) a b
+
+(** Add a substitution in the context *)
+let ctx_add_substition ctx a b =
+  StrMap.add a b ctx
 
 (** Tries to statically evaluate a sally expression.
   * This is used to handle parametrized systems: as of now, sally can not handle generalized array,
@@ -79,7 +84,10 @@ let next_var name ctx =
 
 (** Convert a sal type to a lispy one, based on the information contained in ctx *)
 let rec sal_type_to_sally_type ctx ?name:(name="anonymous") = function
-  | Base_type("NATURAL") -> (* FIXME: need a real natural type *) Real
+  | Base_type("NATURAL" as e) | Base_type ("INTEGER" as e) ->
+    (* FIXME: need a real natural type *)
+    Format.eprintf "Warning: %s converted to real automatically.@." e;
+    Real
   | Base_type("BOOLEAN") -> Bool
   | Base_type("REAL") -> Real
   | Base_type(e) -> (
@@ -88,7 +96,10 @@ let rec sal_type_to_sally_type ctx ?name:(name="anonymous") = function
         | _ -> raise (Unknown_type(e))
       with | Not_found -> raise (Unknown_type e)
     )
-  | Array(t1, t2) -> Lispy_ast.Array(sal_type_to_sally_type ctx t1, sal_type_to_sally_type ctx t2)
+  | Array(t1, t2) ->
+    let t1 = sal_type_to_sally_type ctx t1 in
+    let t2 = sal_type_to_sally_type ctx t2 in
+    Lispy_ast.Array(t1, t2)
   | Enum(l) -> Real
   | Subtype(_) -> Real
   | IntegerRange -> IntegerRange name
@@ -103,17 +114,33 @@ and
   get_disjonctions_from_array ctx = function
   | Array_access(Ident(s), a) ->
     begin
+      let open Lispy_ast in
       let index_expr = sal_expr_to_lisp ctx a in
-      match index_expr, StrMap.find s ctx with
-      | Value(s), Expr(Ident(n, _), Array(Range(array_start, array_end), dest_type)) ->
-        [(Lispy_ast.True, Lispy_ast.Ident(n ^ "!" ^ s, dest_type))]
-      | _, Expr(Ident(n, _), Array(Range(array_start, array_end), dest_type)) ->
-        let l = seq array_start array_end in
-        List.map (fun i ->
-            (Equality(index_expr, Value(string_of_int i)), Lispy_ast.Ident(n ^ "!" ^ string_of_int i, dest_type))) l
-      | index_expr, Expr(a, Array(IntegerRange(_), dest_type)) ->
+      match StrMap.find s ctx with
+      | Expr(Ident(n, _), Array(Range(array_start, array_end), dest_type)) ->
+        begin
+          match index_expr with
+          | Value(s) ->
+            let s' = int_of_string s in
+            assert(array_start <= s' && s' <= array_end);
+            [True, Ident(n ^ "!" ^ s, dest_type)]
+          | a ->
+            let l = seq array_start array_end in
+            List.map (fun i ->
+                (Equality(index_expr, Value(string_of_int i)), Lispy_ast.Ident(n ^ "!" ^ string_of_int i, dest_type))) l
+        end
+      | Expr(a, Array(IntegerRange(_), dest_type)) ->
         [True, Lispy_ast.Select(a, index_expr)]
-      | _, Expr(Ident(n, _), _) -> raise Inadequate_array_index
+      | Expr(Ident(n, _), t) ->
+        Io.Sal_writer.print_expr stdout a;
+        Format.printf "%s %s@." n (Io.Lispy_writer.sally_type_to_debug t);
+        raise Inadequate_array_index
+      | Array(Array_literal(name, data_type, expr), old_ctx, _) ->
+        let old_ctx = ctx_add_substition old_ctx name (Expr(index_expr, sal_type_to_sally_type ctx data_type)) in
+        [True, sal_expr_to_lisp old_ctx expr]
+      | Array(sal_expr, old_ctx, data_type) ->
+        let tmp_ctx = ctx_add_substition ctx s (Expr (sal_expr_to_lisp old_ctx sal_expr, data_type)) in
+        get_disjonctions_from_array tmp_ctx (Array_access(Ident(s), a))
       | _ -> raise Inadequate_array_use
     end
   | Array_access(Array_access(a, b), index) ->
@@ -138,6 +165,7 @@ and
 
   | Ident(s) -> (match ctx_var s ctx with
       | Expr(s, _) -> s
+      | Array(e, old_ctx, _) -> sal_expr_to_lisp old_ctx e
       | _ -> raise Cannot_use_function_as_expression)
 
   | Eq(a, b) -> Equality(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
@@ -151,15 +179,19 @@ and
   | Next(s) -> (failwith ("Next ? " ^ s))
 
   | Funcall("G", [l]) -> sal_expr_to_lisp ctx l
-  | Funcall(name, args_expr) -> (match  StrMap.find name ctx with
+  | Funcall(name, args_expr) ->
+    begin
+      match  StrMap.find name ctx with
       | Fun(decls, expr) ->
-        let args = List.combine decls (List.map (sal_expr_to_lisp ctx) args_expr) in
-        let inside_function_ctx = List.fold_left (fun ctx ((arg_name, arg_type), arg_value) ->
-            StrMap.add arg_name (Expr(arg_value, arg_type)) ctx) ctx args in
+        let args = List.combine decls args_expr in
+        let inside_function_ctx = List.fold_left (fun nctx ((arg_name, arg_type), arg_value) ->
+            match arg_type with
+            | Real | Bool -> StrMap.add arg_name (Expr(sal_expr_to_lisp ctx arg_value, arg_type)) nctx
+            | Array(Range(a, b), dest_type) -> StrMap.add arg_name (Array(arg_value, ctx, arg_type)) nctx
+          ) ctx args in
         sal_expr_to_lisp inside_function_ctx expr
       | _ -> raise (Cannot_use_expression_as_function name)
-    )
-
+    end
   | Cond([], else_term) -> sal_expr_to_lisp ctx else_term
   | Cond((a,b)::q, else_term) ->
     let a = sal_expr_to_lisp ctx a in
@@ -179,7 +211,8 @@ and
         List.fold_left (fun l (dsj, result) -> Ite(dsj, result, l)) last_result q
     end
   | Set_literal(_) -> failwith "set"
-  | Array_literal(n, e, e2) -> (failwith "Unsupported Array_literal")
+  | Array_literal(n, e, e2) ->
+    failwith "Unsupported Array_literal"
   | Forall(t::q, expr) ->
     begin
       match t with
@@ -238,22 +271,38 @@ let sal_state_vars_to_state_type (ctx:sally_context) name vars =
 
   type_init_ctx, transition_ctx, ((name, sally_vars):state_type)
 
+let rec infer_type ctx = function
+  | Array_literal(_, a, expr) -> Ast.Lispy_ast.Array(sal_type_to_sally_type ctx a, infer_type ctx expr)
+  | _ -> Real
+
 (** Converts a list of sal_assignments to a single big lispy condition *) 
 let sal_assignments_to_condition ?only_define_type:(only_type=false) ?vars_to_define:(s=[]) ctx assignment =
   let variables_to_init = ref s in
   let forget_variable n =
     variables_to_init := List.filter (fun (name, _) -> (name ^ "'") <> n) !variables_to_init
   in
-  let to_condition = function
+  let rec to_condition ctx = function
     | Assign(n, expr) ->
       begin
-        (match n with 
-         | Ident(name) -> forget_variable name
-         | _ -> raise Bad_left_hand_side);
+        let lhs_name =
+          match n with 
+          | Ident(name) -> forget_variable name; name
+          | _ -> raise Bad_left_hand_side
+        in
         match expr with
         | Array_literal(name, type_data, expr) ->
-          failwith "literal"
-
+          begin
+            match sal_type_to_sally_type ctx type_data with
+            | Range(a, b) ->
+              List.fold_left (fun l i ->
+                  let type_infered = infer_type ctx expr in
+                  let tmp_ctx = ctx_add_substition ctx name (Expr(Value(string_of_int i), Real)) in
+                  let tmp_ctx = ctx_add_substition tmp_ctx (lhs_name ^ "!" ^ string_of_int i) (Expr(Ident(lhs_name ^ "!" ^ string_of_int i, type_infered), type_infered)) in
+                  let constraint_i = to_condition tmp_ctx (Assign(Ident(lhs_name ^ "!" ^ (string_of_int i)), expr)) in
+                  Lispy_ast.And(l, constraint_i)
+                ) Lispy_ast.True (seq a b)
+            | _ -> failwith "unsupported index type for array literal"
+          end
         | _ -> Equality(sal_expr_to_lisp ctx n, sal_expr_to_lisp ctx expr)
       end
     | Member(n, Set_literal(in_name, t, expr)) ->
@@ -267,7 +316,7 @@ let sal_assignments_to_condition ?only_define_type:(only_type=false) ?vars_to_de
   in
   let explicit_condition = List.fold_left (
       fun l a ->
-        Lispy_ast.And(l, to_condition a)
+        Lispy_ast.And(l, to_condition ctx a)
     ) True assignment in
   let rec get_equality_term equality_function ctx = function
     | (name, Lispy_ast.Array(Range(a,b), t)) ->
