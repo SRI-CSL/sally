@@ -178,29 +178,6 @@ and
            * get_disjonctions_from_array suggests it is the last array cell) chosen *)
         List.fold_left (fun l (dsj, result) -> Ite(dsj, result, l)) last_result q
     end
-
-  (*| Array_access(a, b) ->
-    let sally_a = sal_expr_to_lisp ctx a in
-    let sally_b = sal_expr_to_lisp ctx b in
-    (match sally_a, sally_b with
-    | Ident(sa, Array(index_type, dest_type)), Value(sb) ->
-    Ident(sa ^ "!" ^ sb, dest_type)
-    | Ident(sa, Array(index_type, dest_type)), selector ->
-    (match index_type with
-    | Range(a, b) ->
-    List.fold_left (fun l n ->
-    Ite(Equality(selector, Value(string_of_int n)),
-    Ident(sa ^ "!" ^ (string_of_int n), dest_type), l)
-    ) (Ident(sa ^ "!" ^ (string_of_int a), dest_type)) (seq (a+1) b)
-    | _ -> raise Inadequate_array_index)
-
-    | Ident(sa, mytype), _ -> (Format.printf "%s@." (Io.Lispy_writer.sally_type_to_debug mytype); raise Inadequate_array_index)
-    | expr, _ -> (
-
-    let f = Format.formatter_of_out_channel stdout in
-    Io.Lispy_writer.print_expr f expr; raise Inadequate_array_index)
-    | _ -> raise Inadequate_array_use
-    )*)
   | Set_literal(_) -> failwith "set"
   | Array_literal(n, e, e2) -> (failwith "Unsupported Array_literal")
   | Forall(t::q, expr) ->
@@ -275,6 +252,7 @@ let sal_assignments_to_condition ?only_define_type:(only_type=false) ?vars_to_de
          | _ -> raise Bad_left_hand_side);
         match expr with
         | Array_literal(name, type_data, expr) ->
+          failwith "literal"
 
         | _ -> Equality(sal_expr_to_lisp ctx n, sal_expr_to_lisp ctx expr)
       end
