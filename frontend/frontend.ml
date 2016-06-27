@@ -60,3 +60,6 @@ let _ =
 		()
 
 
+(* Local Variables: *)
+(* compile-command: "make -C ../build/" *)
+(* End: *)

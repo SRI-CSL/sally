@@ -184,3 +184,6 @@ let output_context_to_channel c ch =
 	) [] c.queries
 	in ()
 
+(* Local Variables: *)
+(* compile-command: "make -C ../../../build/" *)
+(* End: *)

@@ -115,3 +115,7 @@ rule token =
 	  failwith "Syntax error" in
       ctx
 }
+
+(* Local Variables: *)
+(* compile-command: "make -C ../../../build/" *)
+(* End: *)

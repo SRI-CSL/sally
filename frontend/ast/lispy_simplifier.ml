@@ -122,3 +122,6 @@ let simplify_context c =
 	{ c with queries = List.map simplify_query c.queries }
 
 
+(* Local Variables: *)
+(* compile-command: "make -C ../../build/" *)
+(* End: *)

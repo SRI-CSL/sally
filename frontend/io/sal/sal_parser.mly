@@ -462,3 +462,7 @@ guarded_command:
 | ELSE ARROW assignments           { Default($3) }
 | ELSE ARROW                       { Default([]) }
 ;
+
+/* Local Variables:
+ * compile-command: "make -C ../../../build/"
+ * End: */

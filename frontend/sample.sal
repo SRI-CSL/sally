@@ -7,11 +7,14 @@ BEGIN
   plusone(x: NATURAL): NATURAL =
     x+1;
 
+  plusone(x: NATURAL): NATURAL =
+    x+1;
+
   OM: MODULE =
   BEGIN
     OUTPUT
       round:NATURAL
-	INITIALIZATION
+    INITIALIZATION
       round = 0;
 
     TRANSITION

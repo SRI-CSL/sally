@@ -112,3 +112,6 @@ type sal_context = {
   definitions: sal_def list;
 }
 
+(* Local Variables: *)
+(* compile-command: "make -C ../../build/" *)
+(* End: *)

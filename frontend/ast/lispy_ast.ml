@@ -82,3 +82,6 @@ type context = {
 	parametrized_types: parametrized_type list;
 }
 
+(* Local Variables: *)
+(* compile-command: "make -C ../../build/" *)
+(* End: *)

@@ -112,3 +112,7 @@ type sal_context = {
   ctx_name: string;
   definitions: sal_def list;
 }
+
+(* Local Variables: *)
+(* compile-command: "make -C ../../build/" *)
+(* End: *)

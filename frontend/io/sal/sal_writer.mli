@@ -35,3 +35,6 @@ val print_expr: out_channel -> sal_expr -> unit
 val print_module: out_channel -> sal_module -> unit
 val print_context: out_channel -> sal_context -> unit
 
+(* Local Variables: *)
+(* compile-command: "make -C ../../../build/" *)
+(* End: *)
