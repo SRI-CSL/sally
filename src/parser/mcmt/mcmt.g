@@ -115,10 +115,10 @@ define_states returns [parser::command* cmd = 0]
   : '(' 'define-states'
         symbol[id, parser::MCMT_STATE_FORMULA, false]       
         symbol[type_id, parser::MCMT_STATE_TYPE, true] {
-        	state_type = STATE->ctx().get_state_type(type_id); 
+          state_type = STATE->ctx().get_state_type(type_id); 
         }
         sf = state_formula[state_type] { 
-        	$cmd = new parser::define_states_command(id, sf); 
+          $cmd = new parser::define_states_command(id, sf); 
         }
     ')'
   ; 
@@ -156,7 +156,7 @@ define_transition_system returns [parser::command* cmd = 0]
       initial_states = state_formula[state_type]
       transition_relation = state_transition_formula[state_type]    
       {  
-      	system::transition_system* T = new system::transition_system(state_type, initial_states, transition_relation); 
+        system::transition_system* T = new system::transition_system(state_type, initial_states, transition_relation); 
         $cmd = new parser::define_transition_system_command(id, T);
       } 
     ')'
@@ -173,7 +173,7 @@ assume returns [parser::command* cmd = 0]
         state_type = STATE->ctx().get_transition_system(id)->get_state_type();
     }
     f = state_formula[state_type] { 
-    	$cmd = new parser::assume_command(STATE->ctx(), id, f);
+      $cmd = new parser::assume_command(STATE->ctx(), id, f);
     }
     ')'
   ; 
@@ -189,7 +189,7 @@ query returns [parser::command* cmd = 0]
         state_type = STATE->ctx().get_transition_system(id)->get_state_type();
     }
     f = state_formula[state_type] { 
-    	$cmd = new parser::query_command(STATE->ctx(), id, f);
+      $cmd = new parser::query_command(STATE->ctx(), id, f);
     }
     ')'
   ; 
@@ -219,8 +219,8 @@ state_formula[const system::state_type* state_type] returns [system::state_formu
     sf_term = term  
     // Undeclare the variables and return the formula
     { 
-   		STATE->pop_scope(); 
-   		$sf = new system::state_formula(STATE->tm(),  state_type, sf_term);
+       STATE->pop_scope(); 
+       $sf = new system::state_formula(STATE->tm(),  state_type, sf_term);
     }
   ;
 
@@ -262,36 +262,36 @@ term returns [expr::term_ref t = expr::term_ref()]
     ')' 
   | '(' 'forall' variable_list[out_vars, out_types]
        {
-	   std::vector<expr::term_ref>::iterator it_types = out_types.begin();
-	   for (std::vector<std::string>::iterator it_vars=out_vars.begin(); it_vars != out_vars.end() && it_types != out_types.end(); ++it_vars) {
-	   		STATE->push_lambda(*it_vars, *it_types);
-			++it_types;
-		}
-		if(out_vars.size() != 1) {
-			std::cout << "Several variables in a forall is unsupported" << std::endl;
-		}
-		}
+     std::vector<expr::term_ref>::iterator it_types = out_types.begin();
+     for (std::vector<std::string>::iterator it_vars=out_vars.begin(); it_vars != out_vars.end() && it_types != out_types.end(); ++it_vars) {
+         STATE->push_lambda(*it_vars, *it_types);
+      ++it_types;
+    }
+    if(out_vars.size() != 1) {
+      std::cout << "Several variables in a forall is unsupported" << std::endl;
+    }
+    }
        for_t = term { t = STATE->tm().mk_term(expr::TERM_FORALL, *(out_types.begin()), for_t); }
        { for(size_t i = 0; i < out_vars.size(); ++ i) {
-	   		STATE->pop_lambda();
-		}}
-	 ')'
+         STATE->pop_lambda();
+    }}
+   ')'
   | '(' 'exists' variable_list[out_vars, out_types]
        {
-	   std::vector<expr::term_ref>::iterator it_types = out_types.begin();
-	   for (std::vector<std::string>::iterator it_vars=out_vars.begin(); it_vars != out_vars.end() && it_types != out_types.end(); ++it_vars) {
-	   		STATE->push_lambda(*it_vars, *it_types);
-			++it_types;
-		}
-		if(out_vars.size() != 1) {
-			std::cout << "Several variables in a forall is unsupported" << std::endl;
-		}
-		}
+     std::vector<expr::term_ref>::iterator it_types = out_types.begin();
+     for (std::vector<std::string>::iterator it_vars=out_vars.begin(); it_vars != out_vars.end() && it_types != out_types.end(); ++it_vars) {
+         STATE->push_lambda(*it_vars, *it_types);
+      ++it_types;
+    }
+    if(out_vars.size() != 1) {
+      std::cout << "Several variables in a forall is unsupported" << std::endl;
+    }
+    }
        for_t = term { t = STATE->tm().mk_term(expr::TERM_EXISTS, *(out_types.begin()), for_t); }
        { for(size_t i = 0; i < out_vars.size(); ++ i) {
-	   		STATE->pop_lambda();
-		}}
-	 ')'
+         STATE->pop_lambda();
+    }}
+   ')'
   | '(' 
         op = term_op 
         term_list[children] 
@@ -311,14 +311,14 @@ term returns [expr::term_ref t = expr::term_ref()]
        ( '(' term_list[children] ')' )+
        '(' 'else' else_term = term ')'
        { 
-       	 children.push_back(else_term);
-       	 t = STATE->mk_cond(children);
+          children.push_back(else_term);
+          t = STATE->mk_cond(children);
        }
     ')'
   | '(' '/=' { STATE->lsal_extensions() }? term_list[children] 
     {
-  	  t = STATE->tm().mk_term(expr::TERM_EQ, children);
-  	  t = STATE->tm().mk_term(expr::TERM_NOT, t);
+      t = STATE->tm().mk_term(expr::TERM_EQ, children);
+      t = STATE->tm().mk_term(expr::TERM_NOT, t);
     }   
     ')'
   ; 
@@ -346,7 +346,7 @@ symbol[std::string& id, parser::mcmt_object obj_type, bool declared]
   bool is_next = false;
 }
   : SYMBOL ('\'' { STATE->lsal_extensions() }? { is_next = true; })? { 
-  	    id = STATE->token_text($SYMBOL);
+        id = STATE->token_text($SYMBOL);
         if (is_next) { id = "next." + id; }
         id.erase(std::remove(id.begin(), id.end(), '|'), id.end());
         STATE->ensure_declared(id, obj_type, declared);
@@ -449,28 +449,6 @@ term_op returns [expr::term_op op = expr::OP_LAST]
   | 'store'          { op = expr::TERM_SELECT; }
   ;
 
-type_declaration[std::string& id]
-@declarations {
-	std::string type_id;
-	std::string index_id;
-	std::string content_id;
-}
-	: ('(' 'Array' WHITESPACE* type_declaration[index_id] type_declaration [content_id]
-         { 
-      		id = STATE->mk_array_type(index_id, content_id);
-        }
-	')')
-	| ('('
-        symbol[type_id, parser::MCMT_TYPE, true] { 
-			id = type_id;
-        }
-	')')
-	|
-        symbol[type_id, parser::MCMT_TYPE, true] { 
-			id = type_id;
-        }
-	;
-
 /** Parse a list of variables with types */
 variable_list[std::vector<std::string>& out_vars, std::vector<expr::term_ref>& out_types]
 @declarations {
@@ -481,21 +459,32 @@ variable_list[std::vector<std::string>& out_vars, std::vector<expr::term_ref>& o
     ( '(' 
         // Variable name
         symbol[var_id, parser::MCMT_OBJECT_LAST, false] { 
-        	out_vars.push_back(var_id); 
+          out_vars.push_back(var_id); 
         } 
         // Type: either basic or composite (TODO: bitvector) 
-        type_declaration[type_id] { 
-        	out_types.push_back(STATE->get_type(type_id)); 
+        t = type_decl { 
+          out_types.push_back(t); 
         }
     ')' )*
     ')'
   ; 
         
-type returns [expr::term_ref type]
+type_decl returns [expr::term_ref type = expr::term_ref() ]
 @declarations {
-  std::string type_id;
+    std::string type_id;
 }
-  : // Primitive types
+  : '(' 'Array'
+  index_id = type_decl
+  content_id = type_decl ')' {
+    type = STATE->mk_array_type(index_id, content_id);
+    }
+  | '('
+        symbol[type_id, parser::MCMT_TYPE, true]
+  ')'
+        { 
+            type = STATE->get_type(type_id);
+        }
+  | // Primitive types
     symbol[type_id, parser::MCMT_TYPE, true] { type = STATE->get_type(type_id); }  
   | // Bitvector types 
     '(_' 'BitVec' size = NUMERAL ')' { 

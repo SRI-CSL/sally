@@ -82,6 +82,8 @@ type context = {
 	parametrized_types: parametrized_type list;
 }
 
+let and_ a b = And(a, b)
+
 (* Local Variables: *)
 (* compile-command: "make -C ../../build/" *)
 (* End: *)

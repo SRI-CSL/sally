@@ -24,6 +24,8 @@
 
 #include <cassert>
 
+#include <sstream> 
+
 using namespace sally;
 using namespace parser;
 using namespace expr;
@@ -239,10 +241,14 @@ void mcmt_state::mk_process_type(std::string id) {
   d_types.add_entry(id, term_ref_strong(tm, tm.mk_process_type(id)));
 }
 
-std::string mcmt_state::mk_array_type(std::string from, std::string to) {
+expr::term_ref mcmt_state::mk_array_type(expr::term_ref from, expr::term_ref to) {
+  /* FIXME: not very elegant way to get a unique but reproducible id for the array type */
+  std::stringstream ss;
   term_manager& tm = d_context.tm();
-  d_types.add_entry(from + "^" + to, term_ref_strong(tm, tm.mk_array_type(d_types.get_entry(from), d_types.get_entry(to))));
-  return from + "^" + to;
+  ss << term_ref_strong(tm, from).hash() << "^" << term_ref_strong(tm, to).hash();
+  term_ref_strong array = term_ref_strong(tm, tm.mk_array_type(from, to));
+  d_types.add_entry(ss.str(), array);
+  return array;
 }
 
 void mcmt_state::push_lambda(std::string v, expr::term_ref type) {

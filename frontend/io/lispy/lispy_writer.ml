@@ -109,6 +109,7 @@ and sally_type_to_string = function
 	| Bool -> "Bool"
 	| Range(_, _) -> "Real"
 	| Array(IntegerRange(n), t) -> "(Array (" ^ sally_type_to_string (IntegerRange n) ^ ") ("^ sally_type_to_string t ^ "))"
+| Array(a, b) -> Format.sprintf "(Array (%s) (%s))" (sally_type_to_string a) (sally_type_to_string b)
 	| Array(_, _) -> failwith "Cannot instanciate arbitrary arrays"
 	| IntegerRange(n) -> n
 

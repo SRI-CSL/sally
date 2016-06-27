@@ -37,12 +37,6 @@ value::value(bool b)
 {
 }
 
-value::value(int b)
-: d_type(VALUE_QUANTIFIED)
-, d_i(b)
-{
-}
-
 value::value(const value& v)
 : d_type(v.d_type)
 , d_b(v.d_b)

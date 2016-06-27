@@ -54,7 +54,6 @@ public:
   value(const rational& q);
   value(const bitvector& bv);
   value(const term_manager& tm, term_ref t);
-  value(int i);
 
   value& operator = (const value& v);
 
