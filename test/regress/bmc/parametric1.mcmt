@@ -1,0 +1,41 @@
+(define-process-type PID)
+
+(define-state-type state 
+  ((val Bool)
+   (source PID)
+   (cx (Array (PID) (Bool)))
+   (good_p (Array (PID) (Bool)))
+   (round Real)
+   ))
+
+(define-states init state 
+  (and
+    (= round 0)
+    (= (select cx source) val)
+    (> #PID (* 3 (- #PID (# (x PID) (select cx x)))))))
+
+(define-transition trans state 
+  (or
+    (and
+      (> 2 state.round)
+      (= (# (x PID) (=> (select state.good_p x) (= (select next.cx x) (select state.cx source)))) #PID)
+      (= next.round (+ state.round 1))
+      (= state.val next.val)
+      (= state.source next.source)
+      (= state.good_p next.good_p))
+    (and
+      (= state.round 2)
+      (= state.val next.val)
+      (= state.source next.source)
+      (= state.cx next.cx)
+      (= state.good_p next.good_p)
+      (= state.round next.round))))
+
+(define-transition-system OM state init trans)
+
+
+(query OM (or
+            (not (and
+                   (>= round 3)
+                   (select good_p source)))
+            (= (# (x PID) (=> (select good_p x) (= (select cx x) val))) #PID)))

@@ -47,7 +47,7 @@ BEGIN
 
     TRANSITION
      [ round < 2 -->
-         cx' IN { a: ARRAY PID OF DATA | #{i:PID | good_p[i] => (a[i] = cx[source])} = N};
+         cx' IN { a: ARRAY PID OF DATA | #{i:PID | good_p[i] => (a[i] = cx'[source])} = N};
          round' = round + 1;
     []
        round = 2 -->
