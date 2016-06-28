@@ -251,6 +251,7 @@ term returns [expr::term_ref t = expr::term_ref()]
   std::vector<expr::term_ref> children;
   std::vector<std::string> out_vars;
   std::vector<expr::term_ref> out_types;
+  expr::term_ref variable = expr::term_ref();
 } 
   : symbol[id, parser::MCMT_VARIABLE, true] { t = STATE->get_variable(id); }                
   | c = constant { t = c; }
@@ -292,6 +293,21 @@ term returns [expr::term_ref t = expr::term_ref()]
          STATE->pop_lambda();
     }}
    ')'
+  | '(' '#' '(' symbol[id, parser::MCMT_VARIABLE, false] mytype = type_decl ')' 
+  {
+  STATE->push_scope();
+  variable = STATE->tm().mk_quantified_constant(1, mytype);
+  STATE->set_variable(id, variable);
+  }
+  counting_t = term ')'
+    {
+        t = STATE->tm().mk_term(expr::TERM_COUNTING, variable, counting_t);
+        STATE->pop_scope();
+    }
+  | '(' 'size' mytype = type_decl
+  {
+    t = STATE->tm().mk_term(expr::TERM_TYPE_SIZE, mytype);
+  } ')'
   | '(' 
         op = term_op 
         term_list[children] 
@@ -400,53 +416,53 @@ bitvector_constant returns [expr::term_ref t = expr::term_ref()]
 
 term_op returns [expr::term_op op = expr::OP_LAST]
   : // Boolean
-    'and'            { op = expr::TERM_AND; } 
-  | 'or'             { op = expr::TERM_OR; }
-  | 'not'            { op = expr::TERM_NOT; }
-  | '=>'             { op = expr::TERM_IMPLIES; } 
-  | 'xor'            { op = expr::TERM_XOR; }
-  | 'ite'            { op = expr::TERM_ITE; }
+    'and'           { op = expr::TERM_AND; } 
+  | 'or'            { op = expr::TERM_OR; }
+  | 'not'           { op = expr::TERM_NOT; }
+  | '=>'            { op = expr::TERM_IMPLIES; } 
+  | 'xor'           { op = expr::TERM_XOR; }
+  | 'ite'           { op = expr::TERM_ITE; }
     // Equeality
-  | '='              { op = expr::TERM_EQ;  }
+  | '='             { op = expr::TERM_EQ;  }
     // Arithmetic
-  | '+'              { op = expr::TERM_ADD; }
-  | '-'              { op = expr::TERM_SUB; }
-  | '*'              { op = expr::TERM_MUL; }
-  | '/'              { op = expr::TERM_DIV; }
-  | '>'              { op = expr::TERM_GT; }
-  | '>='             { op = expr::TERM_GEQ; }
-  | '<'              { op = expr::TERM_LT; }
-  | '<='             { op = expr::TERM_LEQ; }
+  | '+'             { op = expr::TERM_ADD; }
+  | '-'             { op = expr::TERM_SUB; }
+  | '*'             { op = expr::TERM_MUL; }
+  | '/'             { op = expr::TERM_DIV; }
+  | '>'             { op = expr::TERM_GT; }
+  | '>='            { op = expr::TERM_GEQ; }
+  | '<'             { op = expr::TERM_LT; }
+  | '<='            { op = expr::TERM_LEQ; }
     // Bitvectors
-  | 'bvadd' { op = expr::TERM_BV_ADD; }
-  | 'bvsub' { op = expr::TERM_BV_SUB; }
-  | 'bvmul' { op = expr::TERM_BV_MUL; }
-  | 'bvudiv' { op = expr::TERM_BV_UDIV; }
-  | 'bvsdiv' { op = expr::TERM_BV_SDIV; }
-  | 'bvurem' { op = expr::TERM_BV_UREM; }
-  | 'bvsrem' { op = expr::TERM_BV_SREM; }
-  | 'bvsmod' { op = expr::TERM_BV_SMOD; }
-  | 'bvxor' { op = expr::TERM_BV_XOR; }
-  | 'bvshl' { op = expr::TERM_BV_SHL; }
-  | 'bvlshr' { op = expr::TERM_BV_LSHR; }
-  | 'bvashr' { op = expr::TERM_BV_ASHR; }
-  | 'bvnot' { op = expr::TERM_BV_NOT; }
-  | 'bvand' { op = expr::TERM_BV_AND; }
-  | 'bvor' { op = expr::TERM_BV_OR; }
-  | 'bvnand' { op = expr::TERM_BV_NAND; }
-  | 'bvnor' { op = expr::TERM_BV_NOR; }
-  | 'bvxnor' { op = expr::TERM_BV_XNOR; }
-  | 'concat' { op = expr::TERM_BV_CONCAT; }
-  | 'bvule' { op = expr::TERM_BV_ULEQ; }
-  | 'bvsle' { op = expr::TERM_BV_SLEQ; }
-  | 'bvult' { op = expr::TERM_BV_ULT; }
-  | 'bvslt' { op = expr::TERM_BV_SLT; }
-  | 'bvuge' { op = expr::TERM_BV_UGEQ; }
-  | 'bvsge' { op = expr::TERM_BV_SGEQ; }
-  | 'bvugt' { op = expr::TERM_BV_UGT; }
-  | 'bvsgt' { op = expr::TERM_BV_SGT; }
-  | 'select'         { op = expr::TERM_SELECT; }
-  | 'store'          { op = expr::TERM_SELECT; }
+  | 'bvadd'         { op = expr::TERM_BV_ADD; }
+  | 'bvsub'         { op = expr::TERM_BV_SUB; }
+  | 'bvmul'         { op = expr::TERM_BV_MUL; }
+  | 'bvudiv'        { op = expr::TERM_BV_UDIV; }
+  | 'bvsdiv'        { op = expr::TERM_BV_SDIV; }
+  | 'bvurem'        { op = expr::TERM_BV_UREM; }
+  | 'bvsrem'        { op = expr::TERM_BV_SREM; }
+  | 'bvsmod'        { op = expr::TERM_BV_SMOD; }
+  | 'bvxor'         { op = expr::TERM_BV_XOR; }
+  | 'bvshl'         { op = expr::TERM_BV_SHL; }
+  | 'bvlshr'        { op = expr::TERM_BV_LSHR; }
+  | 'bvashr'        { op = expr::TERM_BV_ASHR; }
+  | 'bvnot'         { op = expr::TERM_BV_NOT; }
+  | 'bvand'         { op = expr::TERM_BV_AND; }
+  | 'bvor'          { op = expr::TERM_BV_OR; }
+  | 'bvnand'        { op = expr::TERM_BV_NAND; }
+  | 'bvnor'         { op = expr::TERM_BV_NOR; }
+  | 'bvxnor'        { op = expr::TERM_BV_XNOR; }
+  | 'concat'        { op = expr::TERM_BV_CONCAT; }
+  | 'bvule'         { op = expr::TERM_BV_ULEQ; }
+  | 'bvsle'         { op = expr::TERM_BV_SLEQ; }
+  | 'bvult'         { op = expr::TERM_BV_ULT; }
+  | 'bvslt'         { op = expr::TERM_BV_SLT; }
+  | 'bvuge'         { op = expr::TERM_BV_UGEQ; }
+  | 'bvsge'         { op = expr::TERM_BV_SGEQ; }
+  | 'bvugt'         { op = expr::TERM_BV_UGT; }
+  | 'bvsgt'         { op = expr::TERM_BV_SGT; }
+  | 'select'        { op = expr::TERM_SELECT; }
+  | 'store'         { op = expr::TERM_SELECT; }
   ;
 
 /** Parse a list of variables with types */
@@ -506,9 +522,15 @@ WHITESPACE
 /** Bitvector numeral */
 BV_NUMERAL: 'bv' DIGIT+;
 
+/** Matches a binary numeral (sequence of digits) */
+BIN_NUMERAL: '#b' ('0'|'1')+;
+
+/** Matches a binary numeral (sequence of digits) */
+HEX_NUMERAL: '#h' ('0'|'1')+;
+
 /** Matches a symbol. */
 SYMBOL
-  : (ALPHA | ('|' (~'|')* '|')) (ALPHA | ('|' (~'|')* '|') | DIGIT | '_' | '@' | '.' | '!' | '%' )* 
+  : (ALPHA | ('|' (~'|')* '|' )) (ALPHA | ('|' (~'|')* '|') | DIGIT | '_' | '@' | '.' | '!' | '%' )* 
   ;
 
 /** Matches a letter. */
@@ -517,12 +539,6 @@ ALPHA : 'a'..'z' | 'A'..'Z';
 
 /** Matches a numeral (sequence of digits) */
 NUMERAL: DIGIT+;
-
-/** Matches a binary numeral (sequence of digits) */
-BIN_NUMERAL: '#b' ('0'|'1')+;
-
-/** Matches a binary numeral (sequence of digits) */
-HEX_NUMERAL: '#h' ('0'|'1')+;
 
 /** Matches a digit */
 fragment 

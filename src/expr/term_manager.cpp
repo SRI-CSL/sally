@@ -574,8 +574,10 @@ size_t term_manager::id() const {
   return d_id;
 }
 
-term_ref term_manager::mk_process_type(std::string) {
-  return d_tm->mk_process_type();
+term_ref term_manager::mk_process_type(std::string id) {
+  expr::term_ref t =  d_tm->mk_process_type();
+  mk_variable(id, t);
+  return t;
 }
 
 term_ref term_manager::mk_array_type(term_ref from, term_ref to) {

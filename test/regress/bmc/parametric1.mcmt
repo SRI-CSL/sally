@@ -12,13 +12,13 @@
   (and
     (= round 0)
     (= (select cx source) val)
-    (> #PID (* 3 (- #PID (# (x PID) (select cx x)))))))
+    (> (size PID) (* 3 (- (size PID) (# (x PID) (select cx x)))))))
 
 (define-transition trans state 
   (or
     (and
       (> 2 state.round)
-      (= (# (x PID) (=> (select state.good_p x) (= (select next.cx x) (select state.cx source)))) #PID)
+      (= (# (x PID) (=> (select state.good_p x) (= (select next.cx x) (select state.cx state.source)))) (size PID))
       (= next.round (+ state.round 1))
       (= state.val next.val)
       (= state.source next.source)
@@ -38,4 +38,4 @@
             (not (and
                    (>= round 3)
                    (select good_p source)))
-            (= (# (x PID) (=> (select good_p x) (= (select cx x) val))) #PID)))
+            (= (# (x PID) (=> (select good_p x) (= (select cx x) val))) (size PID))))
