@@ -55,6 +55,6 @@ BEGIN
   END;
 
   agreement: LEMMA
-    OM |- G(round >= 3 AND good_p(source) => #{i: PID | good_p(i) => cx[i] = val} = N);
+    OM |- G(round >= 3 AND good_p[source] => #{i: PID | good_p[i] => cx[i] = val} = N);
 
 END

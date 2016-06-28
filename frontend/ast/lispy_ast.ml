@@ -22,64 +22,65 @@ type state_type_identifier = string
 type transition_identifier = string
 
 type sally_type = 
-	| Real
-	| Bool
-	| Array of sally_type * sally_type
-	| Range of int * int
-	| IntegerRange of string
+  | Real
+  | Bool
+  | Array of sally_type * sally_type
+  | Range of int * int
+  | IntegerRange of string
 
 type sally_condition =
-	| Equality of sally_condition * sally_condition
-	| GreaterEqual of sally_condition * sally_condition
-	| Greater of sally_condition * sally_condition
-	| Or of sally_condition * sally_condition
-	| And of sally_condition * sally_condition
-	| Not of sally_condition
-	| Add of sally_condition * sally_condition
-	| Sub of sally_condition * sally_condition
-	| Div of sally_condition * sally_condition
-	| Value of string
-	| Ident of string * sally_type
-	| Ite of sally_condition * sally_condition * sally_condition
-	| Forall of string * sally_type * sally_condition
-	| Select of sally_condition * sally_condition
-	| Exists of string * sally_type * sally_condition
-	| True
-	| False
+  | Equality of sally_condition * sally_condition
+  | GreaterEqual of sally_condition * sally_condition
+  | Greater of sally_condition * sally_condition
+  | Or of sally_condition * sally_condition
+  | And of sally_condition * sally_condition
+  | Not of sally_condition
+  | Add of sally_condition * sally_condition
+  | Sub of sally_condition * sally_condition
+  | Div of sally_condition * sally_condition
+  | Mul of sally_condition * sally_condition
+  | Value of string
+  | Ident of string * sally_type
+  | Ite of sally_condition * sally_condition * sally_condition
+  | Forall of string * sally_type * sally_condition
+  | Select of sally_condition * sally_condition
+  | Exists of string * sally_type * sally_condition
+  | True
+  | False
 
 type variable_declaration = string * sally_type
 
 type state_type = state_type_identifier * (variable_declaration list)
 
 type state = {
-	id: state_identifier;
-	state_type_id: state_type_identifier;
-	condition: sally_condition;
+  id: state_identifier;
+  state_type_id: state_type_identifier;
+  condition: sally_condition;
 }
 
 type transition = {
-	id: transition_identifier;
-	state_type_id: state_type_identifier;
-	formula: sally_condition;
+  id: transition_identifier;
+  state_type_id: state_type_identifier;
+  formula: sally_condition;
 }
 
 type parametrized_type = string
 
 type transition_system = {
-	id: system_identifier;
-	state_type: state_type;
-	initial_state: state;
-	transition: transition;
+  id: system_identifier;
+  state_type: state_type;
+  initial_state: state;
+  transition: transition;
 }
 
 type query = {
-	transition_system: transition_system;
-	condition: sally_condition;
+  transition_system: transition_system;
+  condition: sally_condition;
 }
 
 type context = {
-	queries: query list;
-	parametrized_types: parametrized_type list;
+  queries: query list;
+  parametrized_types: parametrized_type list;
 }
 
 let and_ a b = And(a, b)

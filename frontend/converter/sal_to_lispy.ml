@@ -187,7 +187,7 @@ and
         let inside_function_ctx = List.fold_left (fun nctx ((arg_name, arg_type), arg_value) ->
             match arg_type with
             | Real | Bool -> StrMap.add arg_name (Expr(sal_expr_to_lisp ctx arg_value, arg_type)) nctx
-            | Array(Range(a, b), dest_type) -> StrMap.add arg_name (Array(arg_value, ctx, arg_type)) nctx
+            | Array(_, dest_type) -> StrMap.add arg_name (Array(arg_value, ctx, arg_type)) nctx
           ) ctx args in
         sal_expr_to_lisp inside_function_ctx expr
       | _ -> raise (Cannot_use_expression_as_function name)
@@ -244,7 +244,7 @@ and
 
   | Opp(_) -> failwith "opp"
   | Sub(a,b) -> Sub(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
-  | Mul(_) -> failwith "mul"
+  | Mul(a, b) -> Mul(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
   | Div(a,b) -> Div(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
   | And(a, b) -> And(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
   | Or(a, b) -> Or(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
