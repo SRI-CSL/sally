@@ -151,7 +151,7 @@ struct term_op_traits<TYPE_BITVECTOR> {
 
 template<>
 struct term_op_traits<TYPE_PROCESS> {
-  typedef alloc::empty_type payload_type;
+  typedef utils::string payload_type;
 };
 
 /**

@@ -728,8 +728,8 @@ term_ref term_manager_internal::bitvector_type(size_t size) {
    return new_type;
 }
 
-term_ref term_manager_internal::mk_process_type() {
-   term_ref new_type = mk_term<TYPE_PROCESS>(alloc::empty_type());
+term_ref term_manager_internal::mk_process_type(std::string u) {
+   term_ref new_type = mk_term<TYPE_PROCESS>(u);
    return new_type;
 }
 
