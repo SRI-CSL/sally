@@ -18,8 +18,10 @@ BEGIN
   %
   % Fault assumptions
   %
-  faults(a: ARRAY PID OF BOOLEAN): N - #{x:PID | a[x]}
-  all_good(a: ARRAY PID OF BOOLEAN): faults(a) = 0
+  faults(a: ARRAY PID OF BOOLEAN): INTEGER =
+  	N - #{x:PID | a[x]};
+  all_good(a: ARRAY PID OF BOOLEAN): BOOL =
+  	faults(a) = 0;
 
 
   %
@@ -45,7 +47,7 @@ BEGIN
 
     TRANSITION
      [ round < 2 -->
-         cx' = [[i:PID] c IN { v | good_p[i] => (v = cx[source]) }]
+         cx' IN { a: ARRAY PID OF DATA | #{i:PID | good_p[i] => (a[i] = cx'[source])} = N};
          round' = round + 1;
     []
        round = 2 -->
@@ -53,6 +55,6 @@ BEGIN
   END;
 
   agreement: LEMMA
-    OM |- G(round >= 3 /\ good_p(source) => #{i: PID | good_p(i) => cx[i] = val} = N)
+    OM |- G(round >= 3 AND good_p[source] => #{i: PID | good_p[i] => cx[i] = val} = N);
 
 END

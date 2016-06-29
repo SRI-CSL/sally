@@ -632,6 +632,8 @@ term_ref term_manager_internal::mk_term(term_op op, iterator begin, iterator end
 	SWITCH_TO_TERM(TERM_FORALL)
 	SWITCH_TO_TERM(TERM_EXISTS)
 	SWITCH_TO_TERM(TERM_SELECT)
+	SWITCH_TO_TERM(TERM_COUNTING)
+	SWITCH_TO_TERM(TERM_TYPE_SIZE)
   default:
     assert(false);
   }

@@ -24,7 +24,6 @@ let create_channel_out = function
   | Some filename -> open_out filename
   | None -> stdout
 
-
 let _ =
   let mcmt_output = ref None in
   let only_convert = ref false in
@@ -42,7 +41,7 @@ let _ =
    ] (fun f ->
        input_file := Some f) "Frontend for Sally, use '-- options' to give options to Sally.");
   if !sally_cmd = "" then
-    sally_cmd := Find_binary.find "sally" ["./sally"; "src/sally"; "../src/sally"];
+    sally_cmd := Find_binary.find "sally" ["./sally"; "src/sally"; "../src/sally"; Sys.executable_name ^ "/../../src/sally"];
   create_channel_in !input_file
   |> Io.Sal_lexer.parse
   |> Converter.Sal_to_lispy.sal_context_to_lisp

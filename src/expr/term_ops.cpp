@@ -92,6 +92,8 @@ std::ostream& operator << (std::ostream& out, term_op op) {
     SWITCH_TO_STRING(TERM_FORALL)
     SWITCH_TO_STRING(TERM_EXISTS)
     SWITCH_TO_STRING(TERM_QUANTIFIED_VARIABLE)
+	SWITCH_TO_STRING(TERM_COUNTING)
+	SWITCH_TO_STRING(TERM_TYPE_SIZE)
 
   default:
     assert(false);

@@ -302,6 +302,23 @@ public:
 		t_type = d_tm.boolean_type();
 	  }
 	  break;
+	case TERM_COUNTING:
+      if (t.size() != 2) {
+        d_ok = false;
+      } else {
+        d_ok = true;
+        t_type = d_tm.real_type();
+      }
+      break;
+	case TERM_TYPE_SIZE:
+      if (t.size() != 1) {
+        d_ok = false;
+      } else {
+        d_ok = true;
+        t_type = d_tm.real_type();
+      }
+      break;
+    
     // Boolean terms
     case CONST_BOOL:
       d_ok = t.size() == 0;
