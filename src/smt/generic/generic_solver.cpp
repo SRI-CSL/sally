@@ -84,7 +84,9 @@ class generic_solver_internal {
   /** Declares a variable to the solver */
   void declare(expr::term_ref var) {
     if(d_tm.term_of(var).op() == expr::TYPE_PROCESS) {
-      // Declare in the solver
+      // Declare in the solver the maximum index
+      *d_solver_input << "(declare-fun N_" << var << " () Int)" << std::endl;
+      // And then the actual sort
       *d_solver_input << "(declare-range " << var << " (0 N_" << var << "))" << std::endl;
     }
     else {
