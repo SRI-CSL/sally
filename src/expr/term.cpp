@@ -224,8 +224,6 @@ std::string get_smt_keyword(term_op op) {
     return "ite";
   case TERM_COUNTING:
     return "#";
-  case TERM_TYPE_SIZE:
-    return "size";
   case TERM_SELECT:
     return "select";
   case TERM_FORALL:
@@ -401,6 +399,10 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
     out << (tm_internal.payload_of<utils::string>(*this));
     break;
   case TERM_TYPE_SIZE:
+    assert(size() == 1);
+    out << "N_";
+    SMT_REF_OUT(child(0));
+    break;
   case TERM_COUNTING:
   case TERM_FORALL:
   case TYPE_ARRAY:
@@ -451,7 +453,7 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
     }
     out << get_smt_keyword(d_op);
 	const term_ref* it = begin();
-	if(d_op == TERM_FORALL || d_op == TERM_EXISTS) {
+	if(d_op == TERM_FORALL || d_op == TERM_EXISTS || d_op == TERM_COUNTING) {
 		out << " ((|var!!" << level << "| ";
 		SMT_REF_OUT(*it);
 		out << "))";
