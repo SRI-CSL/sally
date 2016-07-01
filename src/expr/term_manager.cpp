@@ -345,11 +345,22 @@ void term_manager::pop_namespace() {
   d_tm->pop_namespace();
 }
 
+struct process_matcher {
+  bool operator() (const term& t) const {
+    return t.op() == TYPE_PROCESS;
+  }
+};
+
+
 struct variable_matcher {
   bool operator() (const term& t) const {
     return t.op() == VARIABLE;
   }
 };
+
+void term_manager::get_process_types(term_ref ref, std::vector<term_ref>& out) const {
+  d_tm->get_subterms(ref, process_matcher(), out);
+}
 
 void term_manager::get_variables(term_ref ref, std::vector<term_ref>& out) const {
   d_tm->get_subterms(ref, variable_matcher(), out);
@@ -575,7 +586,7 @@ size_t term_manager::id() const {
 }
 
 term_ref term_manager::mk_process_type(std::string id) {
-  expr::term_ref t =  d_tm->mk_process_type();
+  expr::term_ref t =  d_tm->mk_process_type(id);
   mk_variable(id, t);
   return t;
 }

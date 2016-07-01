@@ -79,7 +79,6 @@ void term::mk_let_cache(term_manager& tm, expr_let_cache& let_cache, std::vector
   case TYPE_STRING:
   case TYPE_TYPE:
   case TYPE_ARRAY:
-  case TYPE_PROCESS:
   case VARIABLE:
   case CONST_BOOL:
   case CONST_RATIONAL:
@@ -89,6 +88,7 @@ void term::mk_let_cache(term_manager& tm, expr_let_cache& let_cache, std::vector
     record_let = false;
     break;
   case TERM_EQ:
+  case TYPE_PROCESS:
   case TERM_AND:
   case TERM_OR:
   case TERM_NOT:
@@ -224,8 +224,6 @@ std::string get_smt_keyword(term_op op) {
     return "ite";
   case TERM_COUNTING:
     return "#";
-  case TERM_TYPE_SIZE:
-    return "size";
   case TERM_SELECT:
     return "select";
   case TERM_FORALL:
@@ -354,7 +352,6 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
   case TYPE_INTEGER:
   case TYPE_REAL:
   case TYPE_STRING:
-  case TYPE_PROCESS:
   case TYPE_TYPE:
     out << get_smt_keyword(d_op);
     break;
@@ -398,7 +395,14 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
   case CONST_BOOL:
     out << (tm_internal.payload_of<bool>(*this) ? "true" : "false");
     break;
+  case TYPE_PROCESS:
+    out << (tm_internal.payload_of<utils::string>(*this));
+    break;
   case TERM_TYPE_SIZE:
+    assert(size() == 1);
+    out << "N_";
+    SMT_REF_OUT(child(0));
+    break;
   case TERM_COUNTING:
   case TERM_FORALL:
   case TYPE_ARRAY:
@@ -449,7 +453,7 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
     }
     out << get_smt_keyword(d_op);
 	const term_ref* it = begin();
-	if(d_op == TERM_FORALL || d_op == TERM_EXISTS) {
+	if(d_op == TERM_FORALL || d_op == TERM_EXISTS || d_op == TERM_COUNTING) {
 		out << " ((|var!!" << level << "| ";
 		SMT_REF_OUT(*it);
 		out << "))";

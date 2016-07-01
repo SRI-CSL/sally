@@ -301,7 +301,7 @@ term returns [expr::term_ref t = expr::term_ref()]
   }
   counting_t = term ')'
     {
-        t = STATE->tm().mk_term(expr::TERM_COUNTING, variable, counting_t);
+        t = STATE->tm().mk_term(expr::TERM_COUNTING, mytype, counting_t);
         STATE->pop_scope();
     }
   | '(' 'size' mytype = type_decl

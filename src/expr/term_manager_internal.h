@@ -273,7 +273,7 @@ public:
   /** Get the Bitvector type */
   term_ref bitvector_type(size_t size);
   
-  term_ref mk_process_type();
+  term_ref mk_process_type(std::string name);
 
 
   /** Is t the bitvector type */

@@ -83,8 +83,16 @@ class generic_solver_internal {
 
   /** Declares a variable to the solver */
   void declare(expr::term_ref var) {
-    // Declare in the solver
-    *d_solver_input << "(declare-fun " << var << " () " << d_tm.type_of(var) << ")" << std::endl;
+    if(d_tm.term_of(var).op() == expr::TYPE_PROCESS) {
+      // Declare in the solver the maximum index
+      *d_solver_input << "(declare-fun N_" << var << " () Int)" << std::endl;
+      // And then the actual sort
+      *d_solver_input << "(declare-range " << var << " (0 N_" << var << "))" << std::endl;
+    }
+    else {
+      // Declare in the solver
+      *d_solver_input << "(declare-fun " << var << " () " << d_tm.type_of(var) << ")" << std::endl;
+    }
     // Add to the list/set of declared variables
     d_vars_list.push_back(var);
     d_vars_set.insert(var);
@@ -202,7 +210,7 @@ public:
     // SMT2 preamble
     *d_solver_input << "(set-info :smt-lib-version 2.0)" << std::endl;
 
-    //*d_solver_input << "(set-logic " << solver_logic << ")" << std::endl;
+    *d_solver_input << "(set-logic " << solver_logic << ")" << std::endl;
   }
 
   ~generic_solver_internal() {
@@ -217,6 +225,15 @@ public:
   }
 
   void add(expr::term_ref f) {
+    // Declare any undeclared type
+    std::vector<expr::term_ref> vars_type;
+    d_tm.get_process_types(f, vars_type);
+    for (unsigned i = 0; i < vars_type.size(); ++ i) {
+      if (!is_declared(vars_type[i])) {
+        declare(vars_type[i]);
+      }
+    }
+    
     // Declare any undeclared variables
     std::vector<expr::term_ref> vars;
     d_tm.get_variables(f, vars);
