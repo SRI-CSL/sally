@@ -39,4 +39,4 @@
             (not (and
                    (>= round 2)
                    (select good_p source)))
-            (= (# (x PID) (=> (select good_p x) (= (select cx x) val))) (size PID))))
+            (= (# (x PID) (=> true (= (select cx x) val))) (size PID))))

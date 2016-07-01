@@ -1,0 +1,32 @@
+(define-process-type PID)
+
+(define-state-type state 
+  (
+   (cx (Array (PID) (Bool)))
+   (round Real)
+   ))
+
+(define-states init state 
+  (and
+    (= round 0)
+	(> (size PID) 3)
+	))
+
+(define-transition trans state 
+  (or
+    (and
+      (> 2 state.round)
+      (= (# (x PID) (select next.cx x)) (size PID))
+      (= next.round (+ state.round 1))
+	  )
+    (and
+      (= state.round 2)
+      (= state.cx next.cx)
+      (= state.round next.round))))
+
+(define-transition-system OM state init trans)
+
+
+(query OM (=> 
+                   (>= round 2)
+            (= (# (x PID) (select cx x)) (size PID))))
