@@ -2,7 +2,7 @@
 % Byzantine fault tolerant OM protocol without relays
 %
 
-test_parametric1: CONTEXT =
+om_parametric: CONTEXT =
 BEGIN
 
   N: NATURAL;  % number of processes
@@ -18,10 +18,8 @@ BEGIN
   %
   % Fault assumptions
   %
-  faults(a: ARRAY PID OF BOOLEAN): INTEGER =
-  	N - #{x:PID | a[x]};
-  all_good(a: ARRAY PID OF BOOLEAN): BOOL =
-  	faults(a) = 0;
+  faults(a: ARRAY PID OF BOOLEAN): N - #{x:PID | a[x]}
+  all_good(a: ARRAY PID OF BOOLEAN): faults(a) = 0
 
 
   %
@@ -37,24 +35,34 @@ BEGIN
   OM: MODULE =
   BEGIN
     OUTPUT
-      cx: ARRAY PID OF DATA,
+      cx: ARRAY PID OF ARRAY PID OF DATA,
       good_p: ARRAY PID OF BOOLEAN,
+      v:  ARRAY PID OF DATA,
       round: NATURAL
     INITIALIZATION
       round = 0;
-      cx[source] = val;
+      cx[source][source] = val;
       good_p IN { a: ARRAY PID OF BOOLEAN | 3*faults(a) < N  };
 
     TRANSITION
      [ round < 2 -->
-         cx' IN { a: ARRAY PID OF DATA | #{i:PID | good_p[i] => (a[i] = cx'[source])} = N};
+         cx' = [[i:PID] [j: PID] 
+		 			c IN { v | good_p[i] => (v = cx[source][i]) }
+				]
          round' = round + 1;
     []
        round = 2 -->
+         v' = [[i:PID] v[i] = majority(cx[i])]
+         round' = 3;
+    []
+       round = 3 --> %% done
      ]
   END;
 
   agreement: LEMMA
-    OM |- G(round >= 3 AND good_p[source] => #{i: PID | good_p[i] => cx[i] = val} = N);
+    OM |- G(round >= 3 /\ good_p(source) => #{i: PID | good_p(i) => v[i] = val} = N)
+
+  agreement_traitor_general: LEMMA
+    OM |- G(round >= 3 #{i: PID | good_p(i) AND (NOT good_p(source)) => v[i] = majority(v)} = N)
 
 END
