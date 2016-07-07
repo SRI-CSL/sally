@@ -462,7 +462,7 @@ term_op returns [expr::term_op op = expr::OP_LAST]
   | 'bvugt'         { op = expr::TERM_BV_UGT; }
   | 'bvsgt'         { op = expr::TERM_BV_SGT; }
   | 'select'        { op = expr::TERM_SELECT; }
-  | 'store'         { op = expr::TERM_SELECT; }
+  | 'store'         { op = expr::TERM_STORE; }
   ;
 
 /** Parse a list of variables with types */
