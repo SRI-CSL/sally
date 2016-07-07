@@ -21,7 +21,7 @@ let rec apply_to_condition g c =
   | Ident(a, b) -> g (Ident(a, b))
   | LProc_cardinal s -> g (LProc_cardinal s)
   | Store(a, b, c) -> g (Store (f a, f b, f c))
-  | Set_cardinal (a, b, c) -> g (Set_cardinal (a, b, f c))
+  | LSet_cardinal (a, b, c) -> g (LSet_cardinal (a, b, f c))
   | Ite(a, b, c) -> g (Ite(f a, f b, f c))
   | Forall(a, b, c) -> g (Forall(a, b, f c))
   | Select(a, b) -> g (Select(f a, f b))

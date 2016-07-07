@@ -107,7 +107,7 @@ let rec print_expr f =
   | Store (a, b, c) -> 
     Format.fprintf f "@[(store %a %a %a)@]"
       print_expr a print_expr b print_expr c
-  | Set_cardinal (n, t, expr) -> 
+  | LSet_cardinal (n, t, expr) -> 
     print_folded_exists "#" (Ident("((" ^ n ^ " " ^ sally_type_to_string t ^ "))", Real)) expr
   | True -> Format.fprintf f "true"
   | False -> Format.fprintf f "false"

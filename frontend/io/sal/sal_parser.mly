@@ -391,7 +391,7 @@ set_literal:
 set_cardinal:
 | HASH set_literal
    { match $2 with
-     | Set_literal (id, t, e) -> Set_cardinal (id, t, e)
+     | Set_literal (id, t, e) -> SSet_cardinal (id, t, e)
      | _ -> assert false }
 ;
 

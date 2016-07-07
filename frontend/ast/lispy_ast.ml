@@ -47,7 +47,7 @@ type sally_condition =
   | Select of sally_condition * sally_condition
   | Store of sally_condition * sally_condition * sally_condition
   | Exists of string * sally_type * sally_condition
-  | Set_cardinal of string * sally_type * sally_condition
+  | LSet_cardinal of string * sally_type * sally_condition
   | True
   | False
 
