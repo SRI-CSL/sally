@@ -101,6 +101,7 @@ type sal_module = {
 type sal_def = 
   | Type_decl of string
   | Type_def of string * sal_type
+  | Proctype_decl of string
   | Constant_decl of string * sal_type
   | Constant_def of string * sal_type * sal_expr
   | Function_def of string * (sal_decl list) * sal_type * sal_expr

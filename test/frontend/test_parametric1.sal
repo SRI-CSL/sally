@@ -5,12 +5,10 @@
 om_parametric: CONTEXT =
 BEGIN
 
-  N: NATURAL;  % number of processes
+  PID: PROCESS_TYPE;
 
-  PID: TYPE = [1 .. N];
-
-  DATA: TYPE = BOOL;
-  val: BOOL;
+  DATA: TYPE = BOOLEAN;
+  val: BOOLEAN;
 
   % Data from the source
   source: PID;
@@ -18,7 +16,7 @@ BEGIN
   %
   % Fault assumptions
   %
-  faults(a: ARRAY PID OF BOOLEAN): N - #{x:PID | a[x]}
+  faults(a: ARRAY PID OF BOOLEAN): #PID - #{x:PID | a[x]}
   all_good(a: ARRAY PID OF BOOLEAN): faults(a) = 0
 
 
@@ -42,14 +40,14 @@ BEGIN
     INITIALIZATION
       round = 0;
       cx[source][source] = val;
-      good_p IN { a: ARRAY PID OF BOOLEAN | 3*faults(a) < N  };
+      good_p IN { a: ARRAY PID OF BOOLEAN | 3*faults(a) < #PID };
 
     TRANSITION
      [ round < 2 -->
-         cx' = [[i:PID] [j: PID] 
-		 			c IN { v | good_p[i] => (v = cx[source][i]) }
-				]
-         round' = round + 1;
+       cx' = [[i:PID] [j: PID] 
+         c IN { v | good_p[i] => (v = cx[source][i]) }
+       ]
+       round' = round + 1;
     []
        round = 2 -->
          v' = [[i:PID] v[i] = majority(cx[i])]

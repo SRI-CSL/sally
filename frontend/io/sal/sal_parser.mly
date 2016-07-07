@@ -103,6 +103,7 @@ declaration:
 type_declaration:
 | IDENT COLUMN TYPE                 { Type_decl($1) }
 | IDENT COLUMN TYPE EQUAL stype     { Type_def($1,$5) }
+| IDENT COLUMN PROCESS_TYPE         { Proctype_decl ($1) }
 ;
 
 constant_declaration:
