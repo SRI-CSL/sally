@@ -217,10 +217,10 @@ and
         List.fold_left (fun l (dsj, result) -> Ite(dsj, result, l)) last_result q
     end
   | Set_literal(_) -> failwith "set" 
-  | Set_cardinal(in_name, t, expr) ->
+  | SSet_cardinal(in_name, t, expr) ->
     let st = sal_type_to_sally_type ctx t in
     let intermediate_context = StrMap.add in_name (Expr(Ident (in_name, st), st)) ctx in
-    sal_expr_to_lisp intermediate_context expr
+    LSet_cardinal (in_name, st, sal_expr_to_lisp intermediate_context expr)
   | Array_literal(n, e, e2) ->
     failwith "Unsupported Array_literal"
   | Forall(t::q, expr) ->
