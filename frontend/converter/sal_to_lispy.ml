@@ -82,6 +82,13 @@ let next_var name ctx =
   | Not_found ->
     ctx_var name ctx
 
+let prev_var name ctx =
+  let l = String.length name - 1 in
+  if name.[l] = '\'' then
+    let sname = String.sub name 0 l in
+    ctx_var sname ctx
+  else ctx_var name ctx
+               
 (** Convert a sal type to a lispy one, based on the information contained in ctx *)
 let rec sal_type_to_sally_type ctx ?name:(name="anonymous") = function
   | Base_type("NATURAL" as e) | Base_type ("INTEGER" as e) ->
@@ -162,12 +169,11 @@ and
   sal_expr_to_lisp (ctx:sally_context) = function
   | Decimal(i) -> Value (string_of_int i)
   | Float(i) -> Value(string_of_float i)
-
   | Ident(s) -> (match ctx_var s ctx with
       | Expr(s, _) -> s
       | Array(e, old_ctx, _) -> sal_expr_to_lisp old_ctx e
       | _ -> raise Cannot_use_function_as_expression)
-
+  | SProc_cardinal s -> LProc_cardinal s
   | Eq(a, b) -> Equality(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
   | Ge(a, b) -> GreaterEqual(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
   | Gt(a, b) -> Greater(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
@@ -210,7 +216,11 @@ and
            * get_disjonctions_from_array suggests it is the last array cell) chosen *)
         List.fold_left (fun l (dsj, result) -> Ite(dsj, result, l)) last_result q
     end
-  | Set_literal(_) -> failwith "set"
+  | Set_literal(_) -> failwith "set" 
+  | Set_cardinal(in_name, t, expr) ->
+    let st = sal_type_to_sally_type ctx t in
+    let intermediate_context = StrMap.add in_name (Expr(Ident (in_name, st), st)) ctx in
+    sal_expr_to_lisp intermediate_context expr
   | Array_literal(n, e, e2) ->
     failwith "Unsupported Array_literal"
   | Forall(t::q, expr) ->
@@ -282,13 +292,9 @@ let sal_assignments_to_condition ?only_define_type:(only_type=false) ?vars_to_de
     variables_to_init := List.filter (fun (name, _) -> (name ^ "'") <> n) !variables_to_init
   in
   let rec to_condition ctx = function
-    | Assign(n, expr) ->
+    | Assign ((Ident lhs_name) as n, expr) ->
       begin
-        let lhs_name =
-          match n with 
-          | Ident(name) -> forget_variable name; name
-          | _ -> raise Bad_left_hand_side
-        in
+        forget_variable lhs_name;
         (* check equality_type *)
         match expr with
         | Array_literal(name, type_data, expr) ->
@@ -296,12 +302,13 @@ let sal_assignments_to_condition ?only_define_type:(only_type=false) ?vars_to_de
             match sal_type_to_sally_type ctx type_data with
             | Range(a, b) ->
               List.fold_left (fun l i ->
+                  let si = string_of_int i in
                   let type_infered = infer_type ctx expr in
-                  let variable_value = Value(string_of_int i) in
-                  let cell_value = lhs_name ^ "!" ^ string_of_int i in
+                  let variable_value = Value(si) in
+                  let cell_value = lhs_name ^ "!" ^ si in
                   let tmp_ctx = ctx_add_substition ctx name (Expr(variable_value, Real)) in
                   let tmp_ctx = ctx_add_substition tmp_ctx cell_value (Expr(Ident(cell_value, type_infered), type_infered)) in
-                  let constraint_i = to_condition tmp_ctx (Assign(Ident(lhs_name ^ "!" ^ (string_of_int i)), expr)) in
+                  let constraint_i = to_condition tmp_ctx (Assign(Ident(lhs_name ^ "!" ^ (si)), expr)) in
                   Lispy_ast.And(l, constraint_i)
                 ) Lispy_ast.True (seq a b)
             | _ -> failwith "unsupported index type for array literal"
@@ -318,6 +325,16 @@ let sal_assignments_to_condition ?only_define_type:(only_type=false) ?vars_to_de
           | Expr(_, Array(_, _)) ->
             failwith "equality not supported for every arrays"
           | _ -> Equality(sal_expr_to_lisp ctx n, sal_expr_to_lisp ctx expr)
+      end
+    | Assign(Array_access(Ident id, index), expr) ->
+      forget_variable id;
+      begin
+        match ctx_var id ctx, prev_var id ctx with
+        | Expr(i, Array _), Expr(pi, Array _) ->
+          let lexpr = sal_expr_to_lisp ctx expr in
+          let lindex  = sal_expr_to_lisp ctx index in
+          Lispy_ast.Equality(i, Lispy_ast.Store (pi, lindex, lexpr))
+        | _ -> assert false
       end
     | Member(n, Set_literal(in_name, t, expr)) ->
       let () = 
@@ -528,3 +545,7 @@ let sal_context_to_lisp ctx =
   { queries = (queries:query list);
     parametrized_types = extract_integer_ranges sally_env; }
 
+(* Local Variables: *)
+(* compile-command: "make -C ../../build/ -j 4" *)
+(* caml-annot-dir: "../../build/frontend/converter/" *)
+(* End: *)

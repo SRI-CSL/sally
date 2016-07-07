@@ -50,6 +50,8 @@ and sal_expr =
   | Array_access of sal_expr * sal_expr
   | Array_literal of string * sal_type * sal_expr
   | Set_literal of string * sal_type * sal_expr
+  | Set_cardinal of string * sal_type * sal_expr
+  | SProc_cardinal of string
   | Cond of ((sal_expr * sal_expr) list) * sal_expr  (* if-then-else *)
   | Opp of sal_expr
   | Add of sal_expr * sal_expr
@@ -101,6 +103,7 @@ type sal_module = {
 type sal_def = 
   | Type_decl of string
   | Type_def of string * sal_type
+  | Proctype_decl of string
   | Constant_decl of string * sal_type
   | Constant_def of string * sal_type * sal_expr
   | Function_def of string * (sal_decl list) * sal_type * sal_expr
@@ -112,3 +115,7 @@ type sal_context = {
   definitions: sal_def list;
 }
 
+(* Local Variables: *)
+(* compile-command: "make -C ../../build/ -j 4" *)
+(* caml-annot-dir: "../../build/frontend/ast/" *)
+(* End: *)

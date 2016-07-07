@@ -7,22 +7,25 @@ let (>>) f g x = g (f x)
 let rec apply_to_condition g c =
   let f = apply_to_condition g in
   match c with
-  | Equality(a, b) 		-> g (Equality (f a, f b))
-  | GreaterEqual(a, b) 	-> g (GreaterEqual(f a, f b))
-  | Greater(a, b) 		-> g (Greater(f a, f b))
-  | Or(a, b) 			-> g (Or(f a, f b))
-  | And(a, b) 			-> g (And(f a, f b))
-  | Not(a) 				-> g (Not(f a))
-  | Add(a, b) 			-> g (Add(f a, f b))
-  | Sub(a, b) 			-> g (Sub(f a, f b))
-  | Div(a, b) 			-> g (Div(f a, f b))
-  | Mul(a, b)           -> g (Mul(f a, f b))
-  | Value(s) 			-> g (Value s)
-  | Ident(a, b) 		-> g (Ident(a, b))
-  | Ite(a, b, c) 		-> g (Ite(f a, f b, f c))
-  | Forall(a, b, c) 	-> g (Forall(a, b, f c))
-  | Select(a, b) 		-> g (Select(f a, f b))
-  | Exists(a, b, c) 	-> g (Exists(a, b, f c))
+  | Equality(a, b) -> g (Equality (f a, f b))
+  | GreaterEqual(a, b) -> g (GreaterEqual(f a, f b))
+  | Greater(a, b) -> g (Greater(f a, f b))
+  | Or(a, b) -> g (Or(f a, f b))
+  | And(a, b) -> g (And(f a, f b))
+  | Not a -> g (Not(f a))
+  | Add(a, b) -> g (Add(f a, f b))
+  | Sub(a, b) -> g (Sub(f a, f b))
+  | Div(a, b) -> g (Div(f a, f b))
+  | Mul(a, b) -> g (Mul(f a, f b))
+  | Value s -> g (Value s)
+  | Ident(a, b) -> g (Ident(a, b))
+  | LProc_cardinal s -> g (LProc_cardinal s)
+  | Store(a, b, c) -> g (Store (f a, f b, f c))
+  | Set_cardinal (a, b, c) -> g (Set_cardinal (a, b, f c))
+  | Ite(a, b, c) -> g (Ite(f a, f b, f c))
+  | Forall(a, b, c) -> g (Forall(a, b, f c))
+  | Select(a, b) -> g (Select(f a, f b))
+  | Exists(a, b, c) -> g (Exists(a, b, f c))
   | True -> True
   | False -> False
 
@@ -123,3 +126,7 @@ let simplify_context c =
   { c with queries = List.map simplify_query c.queries }
 
 
+(* Local Variables: *)
+(* compile-command: "make -C ../../build/ -j 4" *)
+(* caml-annot-dir: "../../build/frontend/ast/" *)
+(* End: *)

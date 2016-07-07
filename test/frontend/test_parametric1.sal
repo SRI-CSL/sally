@@ -4,24 +4,24 @@
 
 test_parametric1: CONTEXT =
 BEGIN
-
+  
   PID: TYPE = PROCESS_TYPE;
-
+  
   DATA: TYPE = BOOLEAN;
-  val: BOOLEAN;
-
+  val: DATA;
+   
   % Data from the source
   source: PID;
-
+    
   %
   % Fault assumptions
   %
   faults(a: ARRAY PID OF BOOLEAN): INTEGER =
-  	#PID - #{x:PID | a[x]};
-
+    #PID - #{x:PID | a[x]};
+  
   all_good(a: ARRAY PID OF BOOLEAN): BOOLEAN =
-  	faults(a) = 0;
-
+    faults(a) = 0;
+  
 
   %
   % OM protocol: flat representation
@@ -43,17 +43,20 @@ BEGIN
       round = 0;
       cx[source] = val;
       good_p IN { a: ARRAY PID OF BOOLEAN | 3*faults(a) < #PID  };
-
+      
     TRANSITION
-     [ round < 2 -->
-         cx' = [[i:PID] c IN { a: DATA | good_p[i] => c = cx[source]}];
-         round' = round + 1;
-    []
-       round = 2 -->
-     ]
+      [ round < 2 -->
+        cx' IN { c: ARRAY PID OF DATA |
+          FORALL (i: PID):
+            (good_p[i] => c[i] = val)
+        };
+        round' = round + 1;
+      []
+        round = 2 -->
+      ]
   END;
 
   agreement: LEMMA
-    OM |- G(round >= 3 AND good_p[source] => #{i: PID | good_p[i] => cx[i] = val} = N);
+    OM |- G(round >= 3 AND good_p[source] => #{i: PID | good_p[i] => cx[i] = val} = #PID);
 
 END

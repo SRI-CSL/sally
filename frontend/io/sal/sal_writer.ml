@@ -66,38 +66,38 @@ let pp_string_list pp l =
     | [] -> ()
     | [x] -> F.fprintf pp "%s" x
     | x :: r ->
-	F.fprintf pp "%s,@ " x;
-	loop r
+      F.fprintf pp "%s,@ " x;
+      loop r
   in
-    F.fprintf pp "@[";
-    loop l;
-    F.fprintf pp "@]"
+  F.fprintf pp "@[";
+  loop l;
+  F.fprintf pp "@]"
 
 
 let rec pp_type pp = function
   | Base_type(name) ->
-      F.fprintf pp "%s" name
+    F.fprintf pp "%s" name
   | Range(low,high) -> 
-      F.fprintf pp "@[[%a .. %a]@]" pp_expr low pp_expr high
+    F.fprintf pp "@[[%a .. %a]@]" pp_expr low pp_expr high
   | Enum(list) ->
-      F.fprintf pp "@[{ %a }@]" pp_string_list list
+    F.fprintf pp "@[{ %a }@]" pp_string_list list
   | Array(index,elem) ->
-      F.fprintf pp "@[ARRAY %a OF %a@]" pp_type index pp_type elem
+    F.fprintf pp "@[ARRAY %a OF %a@]" pp_type index pp_type elem
   | Subtype(var,base,pred) -> 
-      F.fprintf pp "@[{ %s: %a |@ %a@ }@]" var pp_type base pp_expr pred
+    F.fprintf pp "@[{ %s: %a |@ %a@ }@]" var pp_type base pp_expr pred
 
 and pp_decls pp l =
   let rec loop = function
     | [] -> ()
     | [(vlist, ty)] -> F.fprintf pp "@[%a: %a@]" pp_string_list vlist pp_type ty
     | (vlist, ty) :: r ->
-	F.fprintf pp "@[%a: %a@],@ " pp_string_list vlist pp_type ty;
-	loop r
+      F.fprintf pp "@[%a: %a@],@ " pp_string_list vlist pp_type ty;
+      loop r
   in
-    F.fprintf pp "@[";
-    loop l;
-    F.fprintf pp "@]"
-	
+  F.fprintf pp "@[";
+  loop l;
+  F.fprintf pp "@]"
+	    
 and pp_expr pp expr =
   (*
    * pp ch l flg e:
@@ -114,19 +114,19 @@ and pp_expr pp expr =
     | Ident(name) -> F.fprintf pp "%s" name
     | Next(name) -> F.fprintf pp "%s'" name
     | Funcall(name, arglist) ->
-	F.fprintf pp "@[<hov2>%s(%a)@]" name pp_expr_list arglist
+      F.fprintf pp "@[<hov2>%s(%a)@]" name pp_expr_list arglist
     | Array_access(array, index) ->
-	F.fprintf pp "@[<hov2>%a[%a]@]" pr0 array pr0 index
+      F.fprintf pp "@[<hov2>%a[%a]@]" pr0 array pr0 index
     | Array_literal(var, ty, e) ->
-	F.fprintf pp "@[<hov2>[[%s: %a]@ %a]@]" var pp_type ty pr0 e
+      F.fprintf pp "@[<hov2>[[%s: %a]@ %a]@]" var pp_type ty pr0 e
     | Set_literal(var, ty, e) ->
-	F.fprintf pp "@[<hov4>{ %s : %a |@ %a }@]" var pp_type ty pr0 e
+      F.fprintf pp "@[<hov4>{ %s : %a |@ %a }@]" var pp_type ty pr0 e
     | Cond((c, e)::r, els) ->
-	F.fprintf pp "@[<hv>";
-	F.fprintf pp "@[IF %a@ THEN@;<1 2>%a@]@ " pr0 c pr0 e;
-	List.iter (fun (c, e) -> F.fprintf pp "@[ELSIF %a@ THEN@;<1 2>%a@]@ "pr0 c pr0 e) r;
-	F.fprintf pp "@[ELSE %a@ ENDIF@]" pr0 els;
-        F.fprintf pp "@]"
+      F.fprintf pp "@[<hv>";
+      F.fprintf pp "@[IF %a@ THEN@;<1 2>%a@]@ " pr0 c pr0 e;
+      List.iter (fun (c, e) -> F.fprintf pp "@[ELSIF %a@ THEN@;<1 2>%a@]@ "pr0 c pr0 e) r;
+      F.fprintf pp "@[ELSE %a@ ENDIF@]" pr0 els;
+      F.fprintf pp "@]"
     | Opp(e)      -> pp_unary pp l flg Op.negate e
     | Add(e1, e2) -> pp_binary pp l flg Op.plus e1 e2
     | Sub(e1, e2) -> pp_binary pp l flg Op.minus e1 e2
@@ -145,20 +145,20 @@ and pp_expr pp expr =
     | Implies(e1, e2) -> pp_binary pp l flg Op.implies e1 e2
     | Iff(e1, e2) -> pp_binary pp l flg Op.iff e1 e2
     | Exists(decls, e) ->
-	if flg then
-	  F.fprintf pp "@[<hov2>EXISTS (%a):@ %a@]" pp_decls decls pr0 e
-	else
-	  F.fprintf pp "@[<hov2>(EXISTS (%a):@ %a)@]" pp_decls decls pr0 e
+      if flg then
+	F.fprintf pp "@[<hov2>EXISTS (%a):@ %a@]" pp_decls decls pr0 e
+      else
+	F.fprintf pp "@[<hov2>(EXISTS (%a):@ %a)@]" pp_decls decls pr0 e
     | Forall(decls, e) ->
-	if flg then 
-	  F.fprintf pp "@[<hov2>FORALL (%a):@ %a@]" pp_decls decls pr0 e
-	else
-	  F.fprintf pp "@[<hov2>(FORALL (%a):@ %a)@]" pp_decls decls pr0 e
+      if flg then 
+	F.fprintf pp "@[<hov2>FORALL (%a):@ %a@]" pp_decls decls pr0 e
+      else
+	F.fprintf pp "@[<hov2>(FORALL (%a):@ %a)@]" pp_decls decls pr0 e
     | Let(decls, e) ->
-	if flg then 
-	  F.fprintf pp "@[<hov2>LET %a IN@ %a@]" pp_let_decls decls pr0 e
-	else
-	  F.fprintf pp "@[<hov2>(LET %a IN@ %a)@]" pp_let_decls decls pr0 e
+      if flg then 
+	F.fprintf pp "@[<hov2>LET %a IN@ %a@]" pp_let_decls decls pr0 e
+      else
+	F.fprintf pp "@[<hov2>(LET %a IN@ %a)@]" pp_let_decls decls pr0 e
     | _ -> failwith "Print_expr: invalid expression"
 
   and pp_expr_list pp l =
@@ -166,41 +166,41 @@ and pp_expr pp expr =
       | [] -> ()
       | [x] -> pr0 pp x
       | x :: r ->
-	  pr0 pp x;
-	  F.fprintf pp ",@ ";
-	  loop r
+	pr0 pp x;
+	F.fprintf pp ",@ ";
+	loop r
     in
-      F.fprintf pp "@[";
-      loop l;
-      F.fprintf pp "@]"
+    F.fprintf pp "@[";
+    loop l;
+    F.fprintf pp "@]"
 
   and pp_unary pp l flg op e = 
     let sub_pr x = fun pp -> pr pp op.Op.precedence x in
-      if need_par op l then
-	F.fprintf pp "@[<hov1>(%s@ %a)@]" op.Op.name (sub_pr true) e
-      else
-	F.fprintf pp "@[<hov1>%s@ %a@]" op.Op.name (sub_pr flg) e
+    if need_par op l then
+      F.fprintf pp "@[<hov1>(%s@ %a)@]" op.Op.name (sub_pr true) e
+    else
+      F.fprintf pp "@[<hov1>%s@ %a@]" op.Op.name (sub_pr flg) e
 
   and pp_binary pp l flg op e1 e2 = 
     let sub_pr x = fun pp -> pr pp op.Op.precedence x in
-      if need_par op l then
-	F.fprintf pp "@[<hov1>(%a@ %s@ %a)@]" (sub_pr false) e1 op.Op.name (sub_pr true) e2
-      else
-	F.fprintf pp "@[<hov1>%a@ %s@ %a@]" (sub_pr false) e1 op.Op.name (sub_pr flg) e2
+    if need_par op l then
+      F.fprintf pp "@[<hov1>(%a@ %s@ %a)@]" (sub_pr false) e1 op.Op.name (sub_pr true) e2
+    else
+      F.fprintf pp "@[<hov1>%a@ %s@ %a@]" (sub_pr false) e1 op.Op.name (sub_pr flg) e2
 
   and pp_let_decls pp l =
     let rec loop = function
       | [] -> ()
       | [(name, ty, e)] -> F.fprintf pp "@[%s: %a = %a@]" name pp_type ty pr0 e
       | (name, ty, e) :: r ->
-	  F.fprintf pp "@[%s: %a = %a@],@ " name pp_type ty pr0 e;
-	  loop r
+	F.fprintf pp "@[%s: %a = %a@],@ " name pp_type ty pr0 e;
+	loop r
     in
-      F.fprintf pp "@[<v>";
-      loop l;
-      F.fprintf pp "@]"
+    F.fprintf pp "@[<v>";
+    loop l;
+    F.fprintf pp "@]"
   in
-    pr0 pp expr
+  pr0 pp expr
 
 
 (*
@@ -225,13 +225,13 @@ let rec pp_svar_decls pp l =
     | [] -> ()
     | [(vlist, ty)] -> F.fprintf pp "@[%a: %a@]" pp_string_list vlist pp_type ty
     | (vlist, ty) :: r ->
-	F.fprintf pp "@[%a: %a@],@ " pp_string_list vlist pp_type ty;
-	loop r
+      F.fprintf pp "@[%a: %a@],@ " pp_string_list vlist pp_type ty;
+      loop r
   in
-    F.fprintf pp "@[<v>";
-    loop l;
-    F.fprintf pp "@]"
-    
+  F.fprintf pp "@[<v>";
+  loop l;
+  F.fprintf pp "@]"
+            
 let pp_var_decl_section pp (section, decls) =
   F.fprintf pp "@[<v2>%s@," (state_var_tag_to_string section);
   pp_svar_decls pp decls;
@@ -249,56 +249,56 @@ let rec pp_list_of_assignments pp = function
   | [] -> ()
   | [a] -> pp_assignment pp a
   | a :: r ->
-      pp_assignment pp a;
-      F.fprintf pp "@ ";
-      pp_list_of_assignments pp r
+    pp_assignment pp a;
+    F.fprintf pp "@ ";
+    pp_list_of_assignments pp r
 
 let pp_assignments pp section = function
   | [] -> ()
   | l -> 
-      F.fprintf pp "@[<v2>%s@,@[<v>" section;
-      pp_list_of_assignments pp l;
-      F.fprintf pp "@]@]@ "
-	
+    F.fprintf pp "@[<v2>%s@,@[<v>" section;
+    pp_list_of_assignments pp l;
+    F.fprintf pp "@]@]@ "
+	      
 let pp_invariant pp = function
   | None -> ()
   | Some(e) ->
-      F.fprintf pp "@[<v2>INVARIANT@s%a@]@ " pp_expr e
+    F.fprintf pp "@[<v2>INVARIANT@s%a@]@ " pp_expr e
 
 let pp_guarded_command pp = function
   | Guarded(e, []) ->
-      F.fprintf pp "  @[%a -->@]" pp_expr e
+    F.fprintf pp "  @[%a -->@]" pp_expr e
   | Default([]) ->
-      F.fprintf pp "  ELSE -->"
+    F.fprintf pp "  ELSE -->"
   | Guarded(e, l) -> 
-      F.fprintf pp "  @[<v3>%a -->@," pp_expr e;
-      pp_list_of_assignments pp l;
-      F.fprintf pp "@]"
+    F.fprintf pp "  @[<v3>%a -->@," pp_expr e;
+    pp_list_of_assignments pp l;
+    F.fprintf pp "@]"
   | Default(l) ->
-      F.fprintf pp "  @[<v3>ELSE -->@,";
-      pp_list_of_assignments pp l;
-      F.fprintf pp "@]"
+    F.fprintf pp "  @[<v3>ELSE -->@,";
+    pp_list_of_assignments pp l;
+    F.fprintf pp "@]"
 
 let pp_guarded_commands pp cmds = 
   let rec loop = function
     | [] -> ()
     | [cmd] -> pp_guarded_command pp cmd
     | cmd :: r ->
-	pp_guarded_command pp cmd;
-	F.fprintf pp "@ []@ ";
-	loop r
+      pp_guarded_command pp cmd;
+      F.fprintf pp "@ []@ ";
+      loop r
   in
-    F.fprintf pp "@[<v>";
-    loop cmds;
-    F.fprintf pp "@]"
+  F.fprintf pp "@[<v>";
+  loop cmds;
+  F.fprintf pp "@]"
 
 let pp_transition pp = function
   | NoTransition -> ()   (* nothing to do *)
   | Assignments(l) -> pp_assignments pp "TRANSITION" l
   | GuardedCommands(l) ->
-      F.fprintf pp "@[<v2>TRANSITION@ [@ ";
-      pp_guarded_commands pp l;
-      F.fprintf pp "@ ]@]@,"
+    F.fprintf pp "@[<v2>TRANSITION@ [@ ";
+    pp_guarded_commands pp l;
+    F.fprintf pp "@ ]@]@,"
 
 let pp_module pp m = 
   F.fprintf pp "@[<v1>BEGIN@,";
@@ -315,21 +315,21 @@ let pp_module pp m =
  *)
 let pp_def pp = function    
   | Type_decl(x) ->
-      F.fprintf pp "@[<h>%s:@ TYPE;@]@," x
+    F.fprintf pp "@[<h>%s:@ TYPE;@]@," x
   | Type_def(x, ty) ->
-      F.fprintf pp "@[<h>%s:@ TYPE@ =@ %a;@]@,@\n" x pp_type ty
+    F.fprintf pp "@[<h>%s:@ TYPE@ =@ %a;@]@,@\n" x pp_type ty
   | Constant_decl(x, ty) ->
-      F.fprintf pp "@[<h>%s:@ %a;@]@,@\n" x pp_type ty
+    F.fprintf pp "@[<h>%s:@ %a;@]@,@\n" x pp_type ty
   | Constant_def(x, ty, v) -> 
-      F.fprintf pp "@[<h>%s:@ %a@ =@ %a;@]@,@\n" x pp_type ty pp_expr v
+    F.fprintf pp "@[<h>%s:@ %a@ =@ %a;@]@,@\n" x pp_type ty pp_expr v
   | Function_def(x, p, ty, v) ->
-      pp_fun_def pp x p ty v;
-      F.fprintf pp "@,@\n"
+    pp_fun_def pp x p ty v;
+    F.fprintf pp "@,@\n"
   | Assertion(x, tg, m, v) ->
-      pp_assertion pp x tg m v;
-      F.fprintf pp "@,@\n"
+    pp_assertion pp x tg m v;
+    F.fprintf pp "@,@\n"
   | Module_def(x, m) -> 
-      F.fprintf pp "@[<hov1>%s:@ MODULE@ =@,%a;@]@,@\n" x pp_module m
+    F.fprintf pp "@[<hov1>%s:@ MODULE@ =@,%a;@]@,@\n" x pp_module m
 
 let pp_context pp ctx =
   F.fprintf pp "@[<hov2>%s: CONTEXT =@\n" ctx.ctx_name;
@@ -344,8 +344,8 @@ let pp_context pp ctx =
  *)
 let get_formatter ch =
   let pp = F.formatter_of_out_channel ch in
-    F.pp_set_margin pp 120;
-    pp
+  F.pp_set_margin pp 120;
+  pp
 
 let print_type ch = pp_type (get_formatter ch)
 
@@ -355,5 +355,10 @@ let print_expr ch e =
     F.fprintf pp "@."
 
 let print_module ch = pp_module (get_formatter ch)
-
+                                
 let print_context ch = pp_context (get_formatter ch)
+                                  
+(* Local Variables: *)
+(* compile-command: "make -C ../../../build/ -j 4" *)
+(* caml-annot-dir: "../../../build/frontend/sal/" *)
+(* End: *)

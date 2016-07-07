@@ -11,7 +11,7 @@
 (define-states init state 
   (and
     (= round 0)
-    (= (select cx source) val)
+    (= cx (store cx source val))
 	(> (size PID) 1)
     (> (size PID) (* 3 (- (size PID) (# (x PID) (select good_p x)))))))
 
