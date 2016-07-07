@@ -359,5 +359,6 @@ let print_module ch = pp_module (get_formatter ch)
 let print_context ch = pp_context (get_formatter ch)
                                   
 (* Local Variables: *)
-(* compile-command: "make -C ../../../build/" *)
+(* compile-command: "make -C ../../../build/ -j 4" *)
+(* caml-annot-dir: "../../../build/frontend/sal/" *)
 (* End: *)

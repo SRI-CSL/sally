@@ -5,5 +5,6 @@ let get_fresh_variable () =
 	"v!!" ^ string_of_int !count
 
 (* Local Variables: *)
-(* compile-command: "make -C ../../build/" *)
+(* compile-command: "make -C ../../build/ -j 4" *)
+(* caml-annot-dir: "../../build/frontend/ast/" *)
 (* End: *)

@@ -118,5 +118,6 @@ rule token =
 }
 
 (* Local Variables: *)
-(* compile-command: "make -C ../../../build/" *)
+(* compile-command: "make -C ../../../build/ -j 4" *)
+(* caml-annot-dir: "../../../build/frontend/sal/" *)
 (* End: *)

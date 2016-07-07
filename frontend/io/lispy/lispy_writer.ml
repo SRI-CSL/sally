@@ -103,6 +103,12 @@ let rec print_expr f =
       print_expr f a;
       Format.fprintf f ")@]";
     end
+  | LProc_cardinal s -> Format.fprintf f "@[(size %s)@]" s
+  | Store (a, b, c) -> 
+    Format.fprintf f "@[(store %a %a %a)@]"
+      print_expr a print_expr b print_expr c
+  | Set_cardinal (n, t, expr) -> 
+    print_folded_exists "#" (Ident("((" ^ n ^ " " ^ sally_type_to_string t ^ "))", Real)) expr
   | True -> Format.fprintf f "true"
   | False -> Format.fprintf f "false"
 
@@ -187,5 +193,6 @@ let output_context_to_channel c ch =
   in ()
 
 (* Local Variables: *)
-(* compile-command: "make -C ../../../build/" *)
+(* compile-command: "make -C ../../../build/ -j 4" *)
+(* caml-annot-dir: "../../../build/frontend/io/lispy/" *)
 (* End: *)

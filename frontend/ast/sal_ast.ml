@@ -51,7 +51,7 @@ and sal_expr =
   | Array_literal of string * sal_type * sal_expr
   | Set_literal of string * sal_type * sal_expr
   | Set_cardinal of string * sal_type * sal_expr
-  | Proc_cardinal of string
+  | SProc_cardinal of string
   | Cond of ((sal_expr * sal_expr) list) * sal_expr  (* if-then-else *)
   | Opp of sal_expr
   | Add of sal_expr * sal_expr
@@ -116,5 +116,6 @@ type sal_context = {
 }
 
 (* Local Variables: *)
-(* compile-command: "make -C ../../build/" *)
+(* compile-command: "make -C ../../build/ -j 4" *)
+(* caml-annot-dir: "../../build/frontend/ast/" *)
 (* End: *)

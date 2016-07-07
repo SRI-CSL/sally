@@ -36,5 +36,6 @@ val print_module: out_channel -> sal_module -> unit
 val print_context: out_channel -> sal_context -> unit
 
 (* Local Variables: *)
-(* compile-command: "make -C ../../../build/" *)
+(* compile-command: "make -C ../../../build/ -j 4" *)
+(* caml-annot-dir: "../../../build/frontend/sal/" *)
 (* End: *)

@@ -397,7 +397,7 @@ set_cardinal:
 
 proc_cardinal:
 | HASH IDENT
-   { Proc_cardinal $2 }
+   { SProc_cardinal $2 }
 ;
 
 /*
@@ -458,7 +458,7 @@ assignments:
 ;
 
 assignment:
-| array_access EQUAL expr         { Assign($1,$3) }
+| array_access EQUAL expr         { Assign($1, $3) }
 | var_or_next IN set_literal      { Member($1, $3) }
 ;
 
@@ -477,7 +477,3 @@ guarded_command:
 | ELSE ARROW assignments           { Default($3) }
 | ELSE ARROW                       { Default([]) }
 ;
-
-  /* Local Variables:
-       compile-command: "make -C ../../../build/"
-                          End: */

@@ -40,11 +40,14 @@ type sally_condition =
   | Div of sally_condition * sally_condition
   | Mul of sally_condition * sally_condition
   | Value of string
+  | LProc_cardinal of string
   | Ident of string * sally_type
   | Ite of sally_condition * sally_condition * sally_condition
   | Forall of string * sally_type * sally_condition
   | Select of sally_condition * sally_condition
+  | Store of sally_condition * sally_condition * sally_condition
   | Exists of string * sally_type * sally_condition
+  | Set_cardinal of string * sally_type * sally_condition
   | True
   | False
 
@@ -86,5 +89,6 @@ type context = {
 let and_ a b = And(a, b)
 
 (* Local Variables: *)
-(* compile-command: "make -C ../../build/" *)
+(* compile-command: "make -C ../../build/ -j 4" *)
+(* caml-annot-dir: "../../build/frontend/ast/" *)
 (* End: *)
