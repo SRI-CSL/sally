@@ -162,12 +162,11 @@ and
   sal_expr_to_lisp (ctx:sally_context) = function
   | Decimal(i) -> Value (string_of_int i)
   | Float(i) -> Value(string_of_float i)
-
   | Ident(s) -> (match ctx_var s ctx with
       | Expr(s, _) -> s
       | Array(e, old_ctx, _) -> sal_expr_to_lisp old_ctx e
       | _ -> raise Cannot_use_function_as_expression)
-
+                  
   | Eq(a, b) -> Equality(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
   | Ge(a, b) -> GreaterEqual(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
   | Gt(a, b) -> Greater(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
@@ -211,6 +210,7 @@ and
         List.fold_left (fun l (dsj, result) -> Ite(dsj, result, l)) last_result q
     end
   | Set_literal(_) -> failwith "set"
+  | Set_cardinal(_) -> failwith "set cardinal"
   | Array_literal(n, e, e2) ->
     failwith "Unsupported Array_literal"
   | Forall(t::q, expr) ->
@@ -528,3 +528,6 @@ let sal_context_to_lisp ctx =
   { queries = (queries:query list);
     parametrized_types = extract_integer_ranges sally_env; }
 
+(* Local Variables: *)
+(* compile-command: "make -C ../../build/ -j 4" *)
+(* End: *)

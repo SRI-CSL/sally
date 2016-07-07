@@ -50,6 +50,8 @@ and sal_expr =
   | Array_access of sal_expr * sal_expr
   | Array_literal of string * sal_type * sal_expr
   | Set_literal of string * sal_type * sal_expr
+  | Set_cardinal of string * sal_type * sal_expr
+  | Proc_cardinal of string
   | Cond of ((sal_expr * sal_expr) list) * sal_expr  (* if-then-else *)
   | Opp of sal_expr
   | Add of sal_expr * sal_expr

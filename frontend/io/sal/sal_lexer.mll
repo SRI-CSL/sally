@@ -23,39 +23,39 @@
   let _ =
     List.iter (fun (kwd, tok) -> Hashtbl.add keyword_table kwd tok)
       [
-	"CONTEXT", CONTEXT;
-	"BEGIN", BEGIN;
-	"END", END;
-	"MODULE", MODULE;
-	"INPUT", INPUT;
-	"OUTPUT", OUTPUT;
-	"GLOBAL", GLOBAL;
-	"LOCAL", LOCAL;
-	"INVARIANT", INVARIANT;
-	"INITIALIZATION", INITIALIZATION;
-	"DEFINITION", DEFINITION;
-	"TRANSITION", TRANSITION;
-	"ARRAY", ARRAY;
-	"TYPE", TYPE;
-	"OF", OF;
-	"LEMMA", LEMMA;
-	"THEOREM", THEOREM;
-	"LET", LET;
-	"IN", IN;
-	"FORALL", FORALL;
-	"EXISTS", EXISTS;
-	"IF", IF;
-	"THEN", THEN;
-	"ELSE", ELSE;
-	"ELSIF", ELSIF;
-	"ENDIF", ENDIF;
-	"XOR", XOR;
-	"OR", OR;
 	"AND", AND;
-	"NOT", NOT;
-	"PROCESS_TYPE", PROCESS_TYPE;
-	"TRUE", TRUE;
-	"FALSE", FALSE;
+        "ARRAY", ARRAY;
+        "BEGIN", BEGIN;
+        "CONTEXT", CONTEXT;
+        "DEFINITION", DEFINITION;
+        "ELSE", ELSE;
+        "ELSIF", ELSIF;
+        "END", END;
+        "ENDIF", ENDIF;
+        "EXISTS", EXISTS;
+        "FALSE", FALSE;
+        "FORALL", FORALL;
+        "GLOBAL", GLOBAL;
+        "IF", IF;
+        "IN", IN;
+        "INITIALIZATION", INITIALIZATION;
+        "INPUT", INPUT;
+        "INVARIANT", INVARIANT;
+        "LEMMA", LEMMA;
+        "LET", LET;
+        "LOCAL", LOCAL;
+        "MODULE", MODULE;
+        "NOT", NOT;
+        "OF", OF;
+        "OR", OR;
+        "OUTPUT", OUTPUT;
+        "PROCESS_TYPE", PROCESS_TYPE;
+        "THEN", THEN;
+        "THEOREM", THEOREM;
+        "TRANSITION", TRANSITION;
+        "TRUE", TRUE;
+        "TYPE", TYPE;
+        "XOR", XOR
       ]
 }
 
@@ -72,6 +72,7 @@ rule token =
      | alpha alphanum*             { keyword (Lexing.lexeme lexbuf) }
      | digit+ '.' digit+ (['e' 'E'] plusminus? digit+)? { FLOAT (Lexing.lexeme lexbuf) }
      | digit+                      { DECIMAL (Lexing.lexeme lexbuf) }
+     | '#'                         { HASH }
      | '+'                         { PLUS }
      | '-'                         { MINUS }
      | '*'                         { TIMES }

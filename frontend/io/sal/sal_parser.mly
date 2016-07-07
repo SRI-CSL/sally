@@ -71,6 +71,7 @@
 %token EQUAL DISEQUAL GT LT GE LE
 %token FORALL EXISTS
 %token PLUS MINUS TIMES DIV
+%token HASH
 
 
 %token EOF
@@ -143,7 +144,7 @@ stype:
 
 simple_type:
 | IDENT                                           { Base_type($1) }
-| PROCESS_TYPE   { IntegerRange }
+| PROCESS_TYPE                                    { IntegerRange }
 | OPEN_BRACKET expr ELLIPSIS expr CLOSE_BRACKET   { Range($2,$4) }
 | OPEN_BRACE enumlist CLOSE_BRACE                 { Enum($2) }
 ;
@@ -338,6 +339,8 @@ simple_expression:
 | if_then_else                { $1 }
 | array_literal               { $1 }
 | set_literal                 { $1 }
+| set_cardinal                { $1 }
+| proc_cardinal               { $1 }
 | OPEN_PAR expr CLOSE_PAR     { $2 }
 ;
 
@@ -370,6 +373,7 @@ array_access:
 if_then_else:
 | IF expr THEN expr elsif ELSE expr ENDIF     { Cond(($2,$4)::$5,$7) }
 ;
+
 elsif:
 | ELSIF expr THEN expr elsif     { ($2,$4)::$5 }
 |                                { [] }
@@ -383,8 +387,18 @@ array_literal:
 set_literal:
 | OPEN_BRACE IDENT COLUMN stype BAR expr CLOSE_BRACE
    { Set_literal($2,$4,$6) }
+
+set_cardinal:
+| HASH set_literal
+   { match $2 with
+     | Set_literal (id, t, e) -> Set_cardinal (id, t, e)
+     | _ -> assert false }
 ;
 
+proc_cardinal:
+| HASH IDENT
+   { Proc_cardinal $2 }
+;
 
 /*
  * MODULES
@@ -445,7 +459,7 @@ assignments:
 
 assignment:
 | array_access EQUAL expr         { Assign($1,$3) }
-| var_or_next IN set_literal     { Member($1, $3) }
+| var_or_next IN set_literal      { Member($1, $3) }
 ;
 
 guarded_commands:
@@ -464,6 +478,6 @@ guarded_command:
 | ELSE ARROW                       { Default([]) }
 ;
 
-/* Local Variables:
- * compile-command: "make -C ../../../build/"
- * End: */
+  /* Local Variables:
+       compile-command: "make -C ../../../build/"
+                          End: */
