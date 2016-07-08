@@ -134,6 +134,7 @@ void term::mk_let_cache(term_manager& tm, expr_let_cache& let_cache, std::vector
   case TERM_BV_SGN_EXTEND:
   case TERM_FORALL:
   case TERM_SELECT:
+  case TERM_STORE:
   case TERM_COUNTING:
   case TERM_TYPE_SIZE:
   case TERM_EXISTS:
@@ -225,6 +226,8 @@ std::string get_smt_keyword(term_op op) {
   case TERM_COUNTING:
     return "#";
   case TERM_SELECT:
+    return "select";
+  case TERM_STORE:
     return "select";
   case TERM_FORALL:
     return "forall";
@@ -446,6 +449,7 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
   case TERM_BV_UREM:
   case TERM_BV_SREM:
   case TERM_SELECT:
+  case TERM_STORE:
   case TERM_BV_SMOD:
   {
     if (size() > 0) {

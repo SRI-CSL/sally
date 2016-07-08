@@ -302,6 +302,15 @@ public:
 		t_type = d_tm.boolean_type();
 	  }
 	  break;
+	case TERM_STORE:
+	  if (t.size() != 3) {
+	    d_ok = false;
+	  } else {
+		// TODO: check types
+		d_ok = true;
+		t_type = type_of(t[0]);
+	  }
+	  break;
 	case TERM_COUNTING:
       if (t.size() != 2) {
         d_ok = false;
