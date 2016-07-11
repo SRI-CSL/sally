@@ -293,7 +293,7 @@ term returns [expr::term_ref t = expr::term_ref()]
          STATE->pop_lambda();
     }}
    ')'
-  | '(' '#' '(' symbol[id, parser::MCMT_VARIABLE, false] mytype = type_decl ')' 
+  | '(' '#' '(' '('? symbol[id, parser::MCMT_VARIABLE, false] mytype = type_decl ')'? ')' 
   {
   STATE->push_scope();
   variable = STATE->tm().mk_quantified_constant(1, mytype);

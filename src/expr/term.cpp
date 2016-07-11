@@ -228,7 +228,7 @@ std::string get_smt_keyword(term_op op) {
   case TERM_SELECT:
     return "select";
   case TERM_STORE:
-    return "select";
+    return "store";
   case TERM_FORALL:
     return "forall";
   case TERM_EXISTS:
