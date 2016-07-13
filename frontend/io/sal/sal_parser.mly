@@ -104,7 +104,7 @@ declaration:
 type_declaration:
 | IDENT COLUMN TYPE                 { Type_decl($1) }
 | IDENT COLUMN TYPE EQUAL stype     { Type_def($1,$5) }
-| IDENT COLUMN PROCESS_TYPE         { Proctype_decl ($1) }
+| IDENT COLUMN PROCESS_TYPE         { Proctype_decl $1 }
 ;
 
 constant_declaration:
@@ -144,7 +144,7 @@ stype:
 
 simple_type:
 | IDENT                                           { Base_type($1) }
-| PROCESS_TYPE                                    { IntegerRange }
+| PROCESS_TYPE                                    { ProcessType }
 | OPEN_BRACKET expr ELLIPSIS expr CLOSE_BRACKET   { Range($2,$4) }
 | OPEN_BRACE enumlist CLOSE_BRACE                 { Enum($2) }
 ;

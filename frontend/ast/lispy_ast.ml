@@ -23,12 +23,13 @@ type transition_identifier = string
 
 type sally_type = 
   | Real
+  | LEnum of string list
   | Bool
   | Array of sally_type * sally_type
   | Range of int * int
-  | IntegerRange of string
+  | ProcessType of string
 
-type sally_condition =
+and sally_condition =
   | Equality of sally_condition * sally_condition
   | GreaterEqual of sally_condition * sally_condition
   | Greater of sally_condition * sally_condition
@@ -40,6 +41,7 @@ type sally_condition =
   | Div of sally_condition * sally_condition
   | Mul of sally_condition * sally_condition
   | Value of string
+  | LEnumItem of string
   | LProc_cardinal of string
   | Ident of string * sally_type
   | Ite of sally_condition * sally_condition * sally_condition
@@ -68,6 +70,7 @@ type transition = {
 }
 
 type parametrized_type = string
+type enum_type = string list
 
 type transition_system = {
   id: system_identifier;
@@ -84,6 +87,7 @@ type query = {
 type context = {
   queries: query list;
   parametrized_types: parametrized_type list;
+  enum_types: enum_type list;
 }
 
 let and_ a b = And(a, b)

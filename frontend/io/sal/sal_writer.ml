@@ -79,6 +79,8 @@ let rec pp_type pp = function
     F.fprintf pp "%s" name
   | Range(low,high) -> 
     F.fprintf pp "@[[%a .. %a]@]" pp_expr low pp_expr high
+  | ProcessType ->
+    F.fprintf pp "@[PROCESS_TYPE@]"
   | Enum(list) ->
     F.fprintf pp "@[{ %a }@]" pp_string_list list
   | Array(index,elem) ->
@@ -315,7 +317,9 @@ let pp_module pp m =
  *)
 let pp_def pp = function    
   | Type_decl(x) ->
-    F.fprintf pp "@[<h>%s:@ TYPE;@]@," x
+    F.fprintf pp "@[<h>%s:@ TYPE;@]@," x 
+  | Proctype_decl x ->
+    F.fprintf pp "@[<h>%s:@ PROCTYPE;@]@," x
   | Type_def(x, ty) ->
     F.fprintf pp "@[<h>%s:@ TYPE@ =@ %a;@]@,@\n" x pp_type ty
   | Constant_decl(x, ty) ->

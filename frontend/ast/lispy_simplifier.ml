@@ -18,6 +18,7 @@ let rec apply_to_condition g c =
   | Div(a, b) -> g (Div(f a, f b))
   | Mul(a, b) -> g (Mul(f a, f b))
   | Value s -> g (Value s)
+  | LEnumItem s -> g (LEnumItem s)
   | Ident(a, b) -> g (Ident(a, b))
   | LProc_cardinal s -> g (LProc_cardinal s)
   | Store(a, b, c) -> g (Store (f a, f b, f c))

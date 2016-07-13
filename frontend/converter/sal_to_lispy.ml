@@ -23,9 +23,10 @@ open Ast.Sal_ast
 module StrMap = Map.Make(String)
 
 type sally_substitution =
-  | Expr     of sally_condition * sally_type
-  | Fun      of (string * sally_type) list * sal_expr
-  | Type     of sally_type
+  | Expr of sally_condition * sally_type
+  | Fun of (string * sally_type) list * sal_expr
+  | Type of sally_type
+  | SubLEnumItem of sally_condition
   | Array of sal_expr * sally_context * sally_type
 and
 sally_context = sally_substitution StrMap.t
@@ -43,6 +44,7 @@ exception Bad_left_hand_side
 exception Unsupported_array_type
 exception Variable_not_found of string
 
+let cst_tbl = Hashtbl.create 17
 
 (** Union of two contexts, if a key is present in both a and b, the association in a in on top of
   * the one in b *)
@@ -72,9 +74,10 @@ let ctx_add_expr name v ty ctx =
 let ctx_var name ctx =
   try
     StrMap.find name ctx
-  with
-  | Not_found -> raise (Variable_not_found name)
-
+  with Not_found ->
+    try Hashtbl.find cst_tbl name
+    with Not_found -> raise (Variable_not_found name)
+                            
 let next_var name ctx =
   try
     StrMap.find (name ^ "'") ctx
@@ -95,9 +98,9 @@ let rec sal_type_to_sally_type ctx ?name:(name="anonymous") = function
     (* FIXME: need a real natural type *)
     Format.eprintf "Warning: %s converted to real automatically.@." e;
     Real
-  | Base_type("BOOLEAN") -> Bool
-  | Base_type("REAL") -> Real
-  | Base_type(e) -> (
+  | Base_type "BOOLEAN" -> Bool
+  | Base_type "REAL" -> Real
+  | Base_type e -> (
       try match StrMap.find e ctx with
         | Type(t) -> t
         | _ -> raise (Unknown_type(e))
@@ -107,13 +110,13 @@ let rec sal_type_to_sally_type ctx ?name:(name="anonymous") = function
     let t1 = sal_type_to_sally_type ctx t1 in
     let t2 = sal_type_to_sally_type ctx t2 in
     Lispy_ast.Array(t1, t2)
-  | Enum(l) -> Real
-  | Subtype(_) -> Real
-  | IntegerRange -> IntegerRange name
+  | Enum l -> Real
+  | Subtype _ -> Real
+  | ProcessType -> ProcessType name
   | Range(i1, i2) -> (* FIXME: need to check it stays natural and inside the range *)
     let sally_expr_from = sal_expr_to_lisp ctx i1
     and sally_expr_to = sal_expr_to_lisp ctx i2 in
-
+    
     let from_as_string = eval_sally ctx sally_expr_from
     and to_as_string = eval_sally ctx sally_expr_to in
     Lispy_ast.Range (int_of_string from_as_string, int_of_string to_as_string)
@@ -123,32 +126,34 @@ and
     begin
       let open Lispy_ast in
       let index_expr = sal_expr_to_lisp ctx a in
-      match StrMap.find s ctx with
-      | Expr(Ident(n, _), Array(Range(array_start, array_end), dest_type)) ->
-        begin
-          match index_expr with
-          | Value(s) ->
-            let s' = int_of_string s in
-            assert(array_start <= s' && s' <= array_end);
-            [True, Ident(n ^ "!" ^ s, dest_type)]
-          | a ->
-            let l = seq array_start array_end in
-            List.map (fun i ->
-                (Equality(index_expr, Value(string_of_int i)), Lispy_ast.Ident(n ^ "!" ^ string_of_int i, dest_type))) l
-        end
-      | Expr(a, Array(IntegerRange(_), dest_type)) ->
-        [True, Lispy_ast.Select(a, index_expr)]
-      | Expr(Ident(n, _), t) ->
-        Io.Sal_writer.print_expr stdout a;
-        Format.printf "%s %s@." n (Io.Lispy_writer.sally_type_to_debug t);
-        raise Inadequate_array_index
-      | Array(Array_literal(name, data_type, expr), old_ctx, _) ->
-        let old_ctx = ctx_add_substition old_ctx name (Expr(index_expr, sal_type_to_sally_type ctx data_type)) in
-        [True, sal_expr_to_lisp old_ctx expr]
-      | Array(sal_expr, old_ctx, data_type) ->
-        let tmp_ctx = ctx_add_substition ctx s (Expr (sal_expr_to_lisp old_ctx sal_expr, data_type)) in
-        get_disjonctions_from_array tmp_ctx (Array_access(Ident(s), a))
-      | _ -> raise Inadequate_array_use
+      try
+        match StrMap.find s ctx with
+        | Expr(Ident(n, _), Array(Range(array_start, array_end), dest_type)) ->
+           begin
+             match index_expr with
+             | Value(s) ->
+                let s' = int_of_string s in
+                assert(array_start <= s' && s' <= array_end);
+                [True, Ident(n ^ "!" ^ s, dest_type)]
+             | a ->
+                let l = seq array_start array_end in
+                List.map (fun i ->
+                    (Equality(index_expr, Value(string_of_int i)), Lispy_ast.Ident(n ^ "!" ^ string_of_int i, dest_type))) l
+           end
+        | Expr(a, Array(ProcessType _, dest_type)) ->
+           [True, Lispy_ast.Select(a, index_expr)]
+        | Expr(Ident(n, _), t) ->
+           Io.Sal_writer.print_expr stdout a;
+           Format.printf "%s %s@." n (Io.Lispy_writer.sally_type_to_debug t);
+           raise Inadequate_array_index
+        | Array(Array_literal(name, data_type, expr), old_ctx, _) ->
+           let old_ctx = ctx_add_substition old_ctx name (Expr(index_expr, sal_type_to_sally_type ctx data_type)) in
+           [True, sal_expr_to_lisp old_ctx expr]
+        | Array(sal_expr, old_ctx, data_type) ->
+           let tmp_ctx = ctx_add_substition ctx s (Expr (sal_expr_to_lisp old_ctx sal_expr, data_type)) in
+           get_disjonctions_from_array tmp_ctx (Array_access(Ident(s), a))
+        | _ -> raise Inadequate_array_use
+      with Not_found -> assert false
     end
   | Array_access(Array_access(a, b), index) ->
     let sub_array = Array_access(a,b) in
@@ -170,7 +175,7 @@ and
   | Decimal(i) -> Value (string_of_int i)
   | Float(i) -> Value(string_of_float i)
   | Ident(s) -> (match ctx_var s ctx with
-      | Expr(s, _) -> s
+      | Expr(s, _) | SubLEnumItem s -> s
       | Array(e, old_ctx, _) -> sal_expr_to_lisp old_ctx e
       | _ -> raise Cannot_use_function_as_expression)
   | SProc_cardinal s -> LProc_cardinal s
@@ -187,16 +192,18 @@ and
   | Funcall("G", [l]) -> sal_expr_to_lisp ctx l
   | Funcall(name, args_expr) ->
     begin
-      match  StrMap.find name ctx with
-      | Fun(decls, expr) ->
-        let args = List.combine decls args_expr in
-        let inside_function_ctx = List.fold_left (fun nctx ((arg_name, arg_type), arg_value) ->
-            match arg_type with
-            | Real | Bool -> StrMap.add arg_name (Expr(sal_expr_to_lisp ctx arg_value, arg_type)) nctx
-            | Array(_, dest_type) -> StrMap.add arg_name (Array(arg_value, ctx, arg_type)) nctx
-          ) ctx args in
-        sal_expr_to_lisp inside_function_ctx expr
-      | _ -> raise (Cannot_use_expression_as_function name)
+      try
+        match  StrMap.find name ctx with
+        | Fun(decls, expr) ->
+           let args = List.combine decls args_expr in
+           let inside_function_ctx = List.fold_left (fun nctx ((arg_name, arg_type), arg_value) ->
+                                         match arg_type with
+                                         | Real | Bool -> StrMap.add arg_name (Expr(sal_expr_to_lisp ctx arg_value, arg_type)) nctx
+                                         | Array(_, dest_type) -> StrMap.add arg_name (Array(arg_value, ctx, arg_type)) nctx
+                                       ) ctx args in
+           sal_expr_to_lisp inside_function_ctx expr
+        | _ -> raise (Cannot_use_expression_as_function name)
+      with Not_found -> assert false
     end
   | Cond([], else_term) -> sal_expr_to_lisp ctx else_term
   | Cond((a,b)::q, else_term) ->
@@ -239,7 +246,7 @@ and
             done;
             !cond
           end
-        | IntegerRange(n) ->
+        | ProcessType n ->
           let tmp_ctx = ctx_add_expr t (Ident(t, sally_type)) sally_type ctx in
           Lispy_ast.Forall(t, sally_type, sal_expr_to_lisp tmp_ctx (Forall((end_decl, sal_type)::q, expr)))
         | _ -> raise Iteration_on_non_range_type
@@ -353,7 +360,9 @@ let sal_assignments_to_condition ?only_define_type:(only_type=false) ?vars_to_de
   let rec get_equality_term equality_function ctx = function
     | (name, Lispy_ast.Array(Range(a,b), t)) ->
       let cond = ref Lispy_ast.True in
-      let lispy_ident, lispy_next_ident = StrMap.find name ctx, next_var name ctx
+      let lispy_ident, lispy_next_ident = 
+        try StrMap.find name ctx, next_var name ctx 
+        with Not_found -> assert false
       in
       (match lispy_ident, lispy_next_ident with
        | Expr(Ident(lispy_ident,_), _), Expr(Ident(lispy_next_ident, _), _) ->
@@ -369,7 +378,7 @@ let sal_assignments_to_condition ?only_define_type:(only_type=false) ?vars_to_de
            !cond
          end
        | _ -> raise Not_found)
-    | (name, Array(IntegerRange(s), t)) -> equality_function ctx (name, Lispy_ast.Array(IntegerRange(s), t))
+    | (name, Array(ProcessType s, t)) -> equality_function ctx (name, Lispy_ast.Array(ProcessType s, t))
     | (name, Array(_, t)) -> raise Unsupported_array_type
     | (name, ty) -> equality_function ctx (name, ty)
   in
@@ -448,9 +457,9 @@ let sal_transition_to_transition ((type_name, variables):state_type) ctx transit
                   let tmp_ctx = ctx_add_expr t (Value (string_of_int i)) Real ctx in
                   compute_condition tmp_ctx l (ExistentialGuarded((end_decl, sal_type), guard))
                 ) l (seq a b)
-            | IntegerRange(s) ->
-              let tmp_ctx = ctx_add_expr t (Ident (t, IntegerRange(s))) Real ctx in
-              Lispy_ast.Or(l, Lispy_ast.Exists(t, IntegerRange(s), compute_condition tmp_ctx False (ExistentialGuarded((end_decl, sal_type), guard))))
+            | ProcessType s ->
+              let tmp_ctx = ctx_add_expr t (Ident (t, ProcessType s)) Real ctx in
+              Lispy_ast.Or(l, Lispy_ast.Exists(t, ProcessType s, compute_condition tmp_ctx False (ExistentialGuarded((end_decl, sal_type), guard))))
 
             | _ -> raise Iteration_on_non_range_type
         end
@@ -493,7 +502,10 @@ let sal_module_to_lisp undefined_constants ctx (name, sal_module) =
   * ignored.
 *)
 let sal_query_to_lisp ctx systems (name, _, model_name, expr) =
-  let type_init_ctx, transition_system = List.find (fun (_, ts) -> ts.id = model_name) systems in
+  let type_init_ctx, transition_system = 
+    try List.find (fun (_, ts) -> ts.id = model_name) systems 
+    with Not_found -> assert false
+  in
   { transition_system = transition_system;
     condition = sal_expr_to_lisp (ctx_union ctx type_init_ctx) expr; }
 
@@ -527,23 +539,33 @@ let sal_context_to_lisp ctx =
               map (fun s -> s, sally_type) arg_list) l) in
           transition_systems, queries,
           StrMap.add name (Fun(var_list, expr)) sally_ctx
+        | Type_def(name, Enum l) ->
+           List.iter (fun a ->
+               let la = SubLEnumItem (LEnumItem a) in
+               Hashtbl.add cst_tbl a la
+             ) l;
+           transition_systems, queries,
+           StrMap.add name (Type (LEnum l)) sally_ctx
         | Type_def(name, sal_type) ->
           transition_systems, queries,
           StrMap.add name (Type(sal_type_to_sally_type ~name sally_ctx sal_type)) sally_ctx
-        | Type_decl(n) -> raise Not_implemented
+        | Type_decl n -> raise Not_implemented
       ) ([], [], sally_ctx) defs in
 
-  let extract_integer_ranges s =
-    StrMap.fold (fun k v param_types ->
+  let extract_ptypes_etypes s =
+    StrMap.fold (fun k v (ptypes, etypes) ->
         match v with
-        | Type(IntegerRange(s)) -> s::param_types
-        | _ -> param_types
-      ) s []
+        | Type(ProcessType s) -> (s::ptypes, etypes)
+        | Type(LEnum s) -> (ptypes, s::etypes)
+        | _ -> ptypes, etypes
+      ) s ([], [])
   in
-
-
+  let ptypes, etypes = extract_ptypes_etypes sally_env in
+  
   { queries = (queries:query list);
-    parametrized_types = extract_integer_ranges sally_env; }
+    parametrized_types = ptypes;
+    enum_types = etypes;
+  }
 
 (* Local Variables: *)
 (* compile-command: "make -C ../../build/ -j 4" *)

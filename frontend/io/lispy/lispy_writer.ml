@@ -22,37 +22,40 @@ open Ast.Lispy_ast
 
 type indentation = In | Out | None
 
+let print_enum =
+  let c = ref 0 in
+  fun f l ->
+  List.iter (fun a ->
+      Format.fprintf f "(define-constant %s %d)@\n" a !c;
+      incr c;
+    ) l
+      
+                 
 let rec print_expr f =
-  let print_folded s a b =
-    Format.fprintf f "(%s @[<v>" s;
-    print_expr f a; Format.fprintf f " "; print_expr f b;
-    Format.fprintf f "@])"
+  let print_nosep s a b =
+    Format.fprintf f "(%s @[<v>%a %a@])" s print_expr a print_expr b;
   in
-  let print_folded_exists s a b =
-    Format.fprintf f "(%s " s;
-    print_expr f a;
-    Format.fprintf f "@\n  @[<v>";
-    print_expr f b;
-    Format.fprintf f "@])"
+  let print_nosep_3 s a b c =
+    Format.fprintf f "(%s @[<v>%a@;%a@;%a@])" s print_expr a print_expr b print_expr c;
   in
-  let print_folded3 s a b c =
-    Format.fprintf f "(%s @[<v>" s;
-    print_expr f a; Format.fprintf f "@;";
-    print_expr f b; Format.fprintf f "@;";
-    print_expr f c;
-    Format.fprintf f "@])"
+  let print_sep s n t e =
+    Format.fprintf f "(%s @[<v>((%s %a))@\n%a@])" s n print_sally_type t print_expr e;
   in
   function
-  | Forall(n, t, expr) -> print_folded_exists "forall " (Ident("((" ^ n ^ " " ^ sally_type_to_string t ^ "))", Real)) expr
-  | Exists(n, t, expr) -> print_folded_exists "exists" (Ident("((" ^ n ^ " " ^ sally_type_to_string t ^ "))", Real)) expr
-  | Select(expr, index) -> print_folded "select" expr index
-  | Equality(a, b) -> print_folded "=" a b
+  | Forall(n, t, expr) -> 
+     print_sep "forall" n t expr;
+  | Exists(n, t, expr) -> 
+     print_sep "exists" n t expr;
+  | Select(expr, index) -> 
+     print_nosep "select" expr index
+  | Equality(a, b) -> print_nosep "=" a b
   | Value(s) -> Format.fprintf f "%s" s
+  | LEnumItem s -> Format.fprintf f "%s" s
   | Ident(s, _) -> Format.fprintf f "%s" s
   | GreaterEqual(a, b) ->
-    print_folded ">=" a b
+    print_nosep ">=" a b
   | Greater(a, b) ->
-    print_folded ">" a b
+    print_nosep ">" a b
   | Or(a, b) ->
     begin
       Format.fprintf f "@[(or@\n  @[<v>";
@@ -71,13 +74,13 @@ let rec print_expr f =
       Format.fprintf f "@])@]";
     end
   | Add(a, b) ->
-    print_folded "+" a b
+    print_nosep "+" a b
   | Sub(a, b) ->
-    print_folded "-" a b
+    print_nosep "-" a b
   | Div(a, b) ->
-    print_folded "/" a b
+    print_nosep "/" a b
   | Mul(a, b) ->
-    print_folded "*" a b
+    print_nosep "*" a b
   | And(a, b) ->
     begin
       Format.fprintf f "@[(and@\n  @[<v>";
@@ -95,8 +98,7 @@ let rec print_expr f =
       expand_and b;
       Format.fprintf f "@])@]";
     end
-  | Ite(a, b, c) ->
-    print_folded3 "ite" a b c
+  | Ite(a, b, c) -> print_nosep_3 "ite" a b c
   | Not(a) ->
     begin
       Format.fprintf f "@[(not ";
@@ -107,18 +109,18 @@ let rec print_expr f =
   | Store (a, b, c) -> 
     Format.fprintf f "@[(store %a %a %a)@]"
       print_expr a print_expr b print_expr c
-  | LSet_cardinal (n, t, expr) -> 
-    print_folded_exists "#" (Ident("((" ^ n ^ " " ^ sally_type_to_string t ^ "))", Real)) expr
+  | LSet_cardinal (n, t, expr) -> print_sep "#" n t expr
   | True -> Format.fprintf f "true"
   | False -> Format.fprintf f "false"
 
-and sally_type_to_string = function
-  | Real -> "Real"
-  | Bool -> "Bool"
-  | Range(_, _) -> "Real"
-  | Array(IntegerRange(n), t) -> "(Array (" ^ sally_type_to_string (IntegerRange n) ^ ") ("^ sally_type_to_string t ^ "))"
-  | Array(a, b) -> Format.sprintf "(Array (%s) (%s))" (sally_type_to_string a) (sally_type_to_string b)
-  | IntegerRange(n) -> n
+and print_sally_type f = function
+  | Real -> Format.fprintf f "Real"
+  | LEnum l -> Format.fprintf f "Real"
+  | Bool -> Format.fprintf f "Bool"
+  | Range(_, _) -> Format.fprintf f "Real"
+  | Array(a, b) -> Format.fprintf f "(Array (%a) (%a))" 
+                     print_sally_type a print_sally_type b
+  | ProcessType n -> Format.fprintf f "%s" n
 
 
 let print_transition f (transition:transition) =
@@ -134,10 +136,11 @@ let print_state f (state:state) =
 
 let rec sally_type_to_debug = function
   | Real -> "Real"
+  | LEnum l -> Format.sprintf "{Enum}" 
   | Bool -> "Bool"
   | Range(b, a) -> "[" ^ string_of_int b ^ ".." ^ string_of_int a ^ "]"
   | Array(a, b) -> sally_type_to_debug a ^ " -> " ^ sally_type_to_debug b
-  | IntegerRange(n) -> n ^ ":[..]"
+  | ProcessType n -> n
 
 
 let print_state_type f (ident, var_list) =
@@ -151,7 +154,7 @@ let print_state_type f (ident, var_list) =
         done;
       end
     | _ ->
-      Format.fprintf f "(%s %s)@\n" name (sally_type_to_string sally_type)
+      Format.fprintf f "(%s %a)@\n" name print_sally_type sally_type
   in
   List.iter print_variable var_list;
   Format.fprintf f "@]))@]@\n"
@@ -175,6 +178,10 @@ let output_context_to_channel c ch =
   List.iter (fun parametrized_type ->
       Format.fprintf f "(define-process-type %s)@\n" parametrized_type;
     ) c.parametrized_types;
+  List.iter (fun enum_type ->
+      Format.fprintf f "%a@\n" print_enum enum_type;
+    ) c.enum_types;
+
   Format.fprintf f "@\n";
   let _ = List.fold_left (fun ts_written q ->
       let ts_written = 
@@ -190,7 +197,7 @@ let output_context_to_channel c ch =
       Format.fprintf f "@;@\n";
       ts_written
     ) [] c.queries
-  in ()
+  in Format.fprintf f "@."
 
 (* Local Variables: *)
 (* compile-command: "make -C ../../../build/ -j 4" *)
