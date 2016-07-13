@@ -110,7 +110,7 @@ let rec sal_type_to_sally_type ctx ?name:(name="anonymous") = function
     let t1 = sal_type_to_sally_type ctx t1 in
     let t2 = sal_type_to_sally_type ctx t2 in
     Lispy_ast.Array(t1, t2)
-  | Enum l -> Real
+  | Enum _ -> Real
   | Subtype _ -> Real
   | ProcessType -> ProcessType name
   | Range(i1, i2) -> (* FIXME: need to check it stays natural and inside the range *)
