@@ -1,0 +1,36 @@
+germanish: CONTEXT =
+BEGIN
+  PR: TYPE = PROCESS_TYPE;
+  MSG : TYPE = {Empty, Reqs, Reqe};
+  STATE : TYPE = {Invalid, Shared, Exclusive};
+
+  germanish: MODULE =
+  BEGIN
+    OUTPUT
+      cache: ARRAY PR OF STATE,
+      shrset: ARRAY PR OF BOOLEAN,
+      exgntd : BOOLEAN,
+      curcmd : MSG,
+      curptr : PR,
+      i: PR
+    
+    INITIALIZATION
+      cache IN {c : ARRAY PR OF STATE | FORALL (j : PR) : c[j] = Invalid};
+      shrset IN {s : ARRAY PR OF BOOLEAN | FORALL (j : PR) : NOT s[j]};
+      exgntd = FALSE;
+      curcmd = Empty;
+
+    TRANSITION
+    [
+      curcmd = Empty AND cache[i] = Invalid -->
+        curcmd' = Reqs;
+        curptr' = i;
+    []
+      curcmd = Empty AND cache[i] /= Exclusive -->
+        curcmd' = Reqe;
+        curptr' = i;
+    ]
+  END;
+  safe : LEMMA
+    germanish |- G(FORALL (j : PR) : (cache[i] = Exclusive => cache[j] = Invalid));
+END
