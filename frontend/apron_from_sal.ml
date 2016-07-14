@@ -90,15 +90,15 @@ let rec get_def st v =
     | Base_type("BOOL") -> Some (Bool v)
     | _ -> None;;
 
-(* convert a sal_def to an def *)
-let sal_to_apron_def sd =
+(* convert a sal_def to a def *)
+let sal_to_def sd =
   match sd with
     | Type_def (v, st) -> get_def st v
     | Constant_decl (v, st) -> get_def st v
     | Constant_def (v, st, se) ->
-        match (get_def st v, arith_to_str se) with
+        (match (get_def st v, arith_to_str se) with
         | (Some d, Some e) -> Some (Const (d, v ^ "=" ^ e))
-        | _ -> None
+        | _ -> None)
     | _ -> None;;
 
 (* convert a sal_assignment list (only Assign assignments) to a pair of an abstract variable and
@@ -107,9 +107,9 @@ let get_assigns assigns man env =
   let rec to_str_list a assign_strs assigned =
     match a with
       | [] -> (assign_strs, assigned)
-      | (Assign (Ident v, e))::ls ->
+      | (Assign (Ident v, e))::ls -> printf "ident = %s, " v;
           (match arith_to_str e with
-          | Some expr -> to_str_list ls ((v ^ "=" ^ expr)::assign_strs) (v::assigned)
+          | Some expr -> printf "expr = %s, " expr; to_str_list ls ((v ^ "=" ^ expr)::assign_strs) (v::assigned)
           | None -> to_str_list ls assign_strs assigned)
       | _::ls -> to_str_list ls assign_strs assigned in
   let (assign_strs, assigned) = to_str_list assigns [] [] in
@@ -144,16 +144,12 @@ let get_conds cond man env =
 let get_guardeds gls (next_vars: string list) man env =
   let rec sal_to_apron_guarded gc =
     match gc with
-      | ExistentialGuarded (decl, gc2) -> sal_to_apron_guarded gc2 (* ignore quantifier *)
-      | Guarded (expr, assigns) ->
-          let assigns_abs = get_full_assigns assigns next_vars man env in
-          let expr_abs = get_conds expr man env in
-          let abs = Abstract1.meet man assigns_abs expr_abs in
-          printf "tr=%a@." Abstract1.print assigns_abs;
-          printf "cond=%a@." Abstract1.print expr_abs;
-          printf "abs=%a@." Abstract1.print abs;
-          abs
-      | Default assigns -> get_full_assigns assigns next_vars man env in
+    | ExistentialGuarded (decl, gc2) -> sal_to_apron_guarded gc2 (* ignore quantifier *)
+    | Guarded (expr, assigns) ->
+        let assigns_abs = get_full_assigns assigns next_vars man env in
+        let expr_abs = get_conds expr man env in
+          Abstract1.meet man assigns_abs expr_abs
+    | Default assigns -> get_full_assigns assigns next_vars man env in
   Abstract1.join_array man (Array.of_list (List.map sal_to_apron_guarded gls))
 
 type state_vars =
@@ -163,10 +159,8 @@ type state_vars =
   ; next_reals    : Var.t list
   ; constraints   : string list }
 
-(* get state_vars from a list of sal_decls *)
-let get_state_vars sds =
-  let make_vars (names, st) =
-    List.map (get_def st) names in
+(* get state_vars from a list of defs *)
+let get_state_vars ds =
   let rec get_svs vs { current_ints; next_ints; current_reals; next_reals; constraints } =
     match vs with
     | [] -> { current_ints; next_ints; current_reals; next_reals; constraints }
@@ -191,9 +185,16 @@ let get_state_vars sds =
           ; current_reals = (Var.of_string v)::current_reals
           ; next_reals = (Var.of_string (v^"'"))::next_reals
           ; constraints }
+    | (Some (Const (d ,expr)))::vs ->
+        get_svs (Some d::vs)
+          { current_ints; next_ints; current_reals; next_reals; constraints = expr::constraints }
     | _::vs -> get_svs vs { current_ints; next_ints; current_reals; next_reals; constraints } in
-  get_svs (List.flatten (List.map make_vars sds))
-          { current_ints = []; next_ints = []; current_reals = []; next_reals = []; constraints = []};;
+  get_svs ds { current_ints = []; next_ints = []; current_reals = []; next_reals = []; constraints = []};;
+
+(* get state_vars from a list of sal_decls *)
+let sal_decls_to_state_vars sds =
+  let make_vars (names, st) = List.map (get_def st) names in
+  get_state_vars (List.flatten (List.map make_vars sds));;
 
 (* a transition system's Apron components *)
 type ('a, 'b) trans_sys =
@@ -209,12 +210,13 @@ let print_trans_sys { vars; env; invs; init; transition } =
 
 (* convert a string and sal_module to a trans_sys *)
 let sal_to_apron_module str sal_mod man =
-  let vars = get_state_vars (List.flatten (List.map snd (sal_mod.state_vars))) in
-  let env = Environment.make
+  let vars = sal_decls_to_state_vars (List.flatten (List.map snd (sal_mod.state_vars))) in
+  let env = List.map (fun x -> printf "%s " (Var.to_string x)) (vars.current_ints @ vars.next_ints @ vars.current_reals @ vars.next_reals);
+            Environment.make
               (Array.of_list (vars.current_ints @ vars.next_ints))
               (Array.of_list (vars.current_reals @ vars.next_reals)) in
   let invs = Abstract1.of_tcons_array man env (Parser.tcons1_of_lstring env vars.constraints) in
-  let init = fst (get_assigns (sal_mod.initialization) man env) in
+  let init = printf "%s " "init "; fst (get_assigns (sal_mod.initialization) man env) in
   let transition =
     let next_names = List.map Var.to_string (vars.next_ints @ vars.next_reals) in
     match sal_mod.transition with
@@ -225,13 +227,15 @@ let sal_to_apron_module str sal_mod man =
 
 (* process sal_def list into apron_defs and apron_modules *)
 let handle_sal_defs sal_defs man =
-  let rec handler defs (ads, ams) =
+  printf "%s " "handle"; let rec handler defs (ads, ams) =
     match defs with
       | [] -> (ads, ams)
       | ((Module_def (str, sal_mod))::ds) ->
+          let vars = get_state_vars ads in
+          let env = Environment.make (Array.of_list vars.current_ints) (Array.of_list vars.current_reals) in
           let am = sal_to_apron_module str sal_mod man in
             handler ds (ads, am::ams)
-      | (d::ds) -> handler ds (ads, ams) (* not handled right now *) in
+      | (d::ds) -> handler ds ((sal_to_def d)::ads, ams) (* not handled right now *) in
   let (ads, ams) = handler sal_defs ([],[]) in
     List.map print_trans_sys ams; ams;;
 
@@ -279,4 +283,4 @@ let _ =
   |> Io.Sal_lexer.parse
   |> fun x -> handle_sal_defs x.definitions manpk
   |> List.map (fun ts -> step ts ts.init)
-  |> List.map (printf "%a@." Abstract1.print)
+  |> List.map (printf "constraints found: %a@." Abstract1.print)
