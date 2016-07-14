@@ -33,7 +33,7 @@ let rec arith_to_str se =
         | _ -> None)
   | _ -> None;;
 
-(* convert conditional sal_expr into texpr string for parsing *)
+(* convert simple conditional sal_expr into texpr string for parsing *)
 let cond_to_str se =
   match se with
   | Ge (e1, e2) -> 
@@ -308,21 +308,10 @@ let create_channel_out = function
   | None -> stdout
 
 let _ =
-  let mcmt_output = ref None in
-  let only_convert = ref false in
-  let engine = ref "kind" in
-  let rest = ref "" in
   let input_file = ref None in
-  let sally_cmd = ref "" in
   (let open Arg in
-   Arg.parse [
-     "--to-mcmt", String (fun s -> mcmt_output := Some s; only_convert := true), "Only convert input file to mcmt, and exit.";
-     "--output-mcmt", Set only_convert, "Only convert input files to mcmt, print the result to stdout or to the file given with -to-mcmt, and exit.";
-     "--engine", Set_string engine, "Use the given engine in Sally";
-     "--", Rest (fun s -> rest := !rest ^ " " ^ s), "Give these options to Sally";
-     "--sally-bin", Set_string sally_cmd, "Sally binary path";
-   ] (fun f ->
-       input_file := Some f) "Frontend for Sally, use '-- options' to give options to Sally.");
+   Arg.parse [] (fun f ->
+       input_file := Some f) "");
   create_channel_in !input_file
   |> Io.Sal_lexer.parse
   |> fun x -> handle_sal_defs x.definitions manpk
