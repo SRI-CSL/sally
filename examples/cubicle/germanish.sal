@@ -1,7 +1,7 @@
 germanish: CONTEXT =
 BEGIN
   PR: TYPE = PROCESS_TYPE;
-  MSG : TYPE = {Empty, Reqs, Reqe};
+  MSG : TYPE = {Empty, ReqShared, ReqExclusive};
   STATE : TYPE = {Invalid, Shared, Exclusive};
 
   germanish: MODULE =
@@ -9,28 +9,29 @@ BEGIN
     OUTPUT
       cache: ARRAY PR OF STATE,
       shrset: ARRAY PR OF BOOLEAN,
-      exgntd : BOOLEAN,
-      curcmd : MSG,
-      curptr : PR,
-      i: PR
-    
+      exclusivity_granted : BOOLEAN,
+      current_command : MSG,
+      current_process : PR
+    INPUT
+      i : PR
+      
     INITIALIZATION
-      cache IN {c : ARRAY PR OF STATE | FORALL (j : PR) : c[j] = Invalid};
-      shrset IN {s : ARRAY PR OF BOOLEAN | FORALL (j : PR) : NOT s[j]};
-      exgntd = FALSE;
-      curcmd = Empty;
+      cache IN {c : ARRAY PR OF STATE | FORALL (i : PR) : c[i] = Invalid};
+      shrset IN {s : ARRAY PR OF BOOLEAN | FORALL (i : PR) : NOT s[i]};
+      exclusivity_granted = FALSE;
+      current_command = Empty;
 
     TRANSITION
     [
-      curcmd = Empty AND cache[i] = Invalid -->
-        curcmd' = Reqs;
-        curptr' = i;
+      current_command = Empty AND cache[i] = Invalid -->
+        current_command' = ReqShared;
+        current_process' = i;
     []
-      curcmd = Empty AND cache[i] /= Exclusive -->
-        curcmd' = Reqe;
-        curptr' = i;
+      current_command = Empty AND cache[i] /= Exclusive -->
+        current_command' = ReqExclusive;
+        current_process' = i;
     ]
   END;
   safe : LEMMA
-    germanish |- G(FORALL (j : PR) : (cache[i] = Exclusive => cache[j] = Invalid));
+    germanish |- G(FORALL (i, j : PR) : (i /= j AND cache[i] = Exclusive => cache[j] = Invalid));
 END
