@@ -121,7 +121,7 @@ let get_full_assigns assigns next_vars man env =
   printf "full: %a@." Abstract1.print (Abstract1.meet man explicit implicit);
   Abstract1.meet man explicit implicit;;
 
-(* convert a conditional sal_expr to an abstract variable *)
+(* convert a conditional sal_expr to a cond *)
 let get_conds cond man env =
   let rec to_str_list c =
     match c with

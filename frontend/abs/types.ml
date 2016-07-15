@@ -29,3 +29,13 @@ type ('a, 'b) trans_sys =
   ; invs       : 'a Abstract1.t
   ; init       : 'a Abstract1.t
   ; transition : 'a Abstract1.t }
+
+(* a condition *)
+type 'a cond =
+  { constrained : Var.t list
+  ; abs         : 'a Abstract1.t }
+
+(* a condition/guard and an expression *)
+type 'a guarded =
+  { guard : 'a cond
+  ; expr  : 'a Abstract1.t }
