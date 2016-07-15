@@ -8,58 +8,77 @@ open Format;;
 
 exception Unimplemented of string;;
 
-(* convert arithmetic sal_expr into texpr string for parsing *)
-let rec arith_to_str se =
+(* convert sal_expr into texpr string for parsing *)
+let rec to_str se =
   match se with
   | Ident s -> Some s
   | Decimal i -> Some (string_of_int i)
   | Float f -> Some (string_of_float f)
   | Add (e1, e2) -> 
-      (match (arith_to_str e1, arith_to_str e2) with
+      (match (to_str e1, to_str e2) with
         | (Some e1, Some e2) -> Some ("("^e1^"+"^e2^")")
         | _ -> None)
   | Sub (e1, e2) -> 
-      (match (arith_to_str e1, arith_to_str e2) with
+      (match (to_str e1, to_str e2) with
         | (Some e1, Some e2) -> Some ("("^e1^"-"^e2^")")
         | _ -> None)
   | Mul (e1, e2) -> 
-      (match (arith_to_str e1, arith_to_str e2) with
+      (match (to_str e1, to_str e2) with
         | (Some e1, Some e2) -> Some ("("^e1^"*"^e2^")")
         | _ -> None)
   | Div (e1, e2) -> 
-      (match (arith_to_str e1, arith_to_str e2) with
+      (match (to_str e1, to_str e2) with
         | (Some e1, Some e2) -> Some ("("^e1^"/"^e2^")")
         | _ -> None)
-  | _ -> None;;
-
-(* convert simple conditional sal_expr into texpr string for parsing *)
-let cond_to_str se =
-  match se with
   | Ge (e1, e2) -> 
-      (match (arith_to_str e1, arith_to_str e2) with
+      (match (to_str e1, to_str e2) with
         | (Some e1, Some e2) -> Some (e1^">="^e2)
         | _ -> None)
   | Gt (e1, e2) -> 
-      (match (arith_to_str e1, arith_to_str e2) with
+      (match (to_str e1, to_str e2) with
         | (Some e1, Some e2) -> Some (e1^">"^e2)
         | _ -> None)
   | Le (e1, e2) -> 
-      (match (arith_to_str e1, arith_to_str e2) with
+      (match (to_str e1, to_str e2) with
         | (Some e1, Some e2) -> Some (e1^"<="^e2)
         | _ -> None)
   | Lt (e1, e2) -> 
-      (match (arith_to_str e1, arith_to_str e2) with
+      (match (to_str e1, to_str e2) with
         | (Some e1, Some e2) -> Some (e1^"<"^e2)
         | _ -> None)
   | Eq (e1, e2) -> 
-      (match (arith_to_str e1, arith_to_str e2) with
+      (match (to_str e1, to_str e2) with
         | (Some e1, Some e2) -> Some (e1^"="^e2)
         | _ -> None)
   | Neq (e1, e2) ->
-      (match (arith_to_str e1, arith_to_str e2) with
+      (match (to_str e1, to_str e2) with
         | (Some e1, Some e2) -> Some (e1^"!="^e2)
         | _ -> None)
   | _ -> None
+
+(* make a guarded from a sal_expr pair *)
+let rec make_guarded man env (e1, e2) =
+  { guard = flatten (to_expr e1 man env); expr = to_expr e2 man env }
+and
+(* convert a sal_expr into an expression *)
+to_expr expr man env =
+  match expr with
+  | Cond (es, e) -> 
+      let gs = List.map (make_guarded man env) es in
+      Guardeds (cond_guard gs (to_expr e man env) man env)
+  | Not e -> Abs (not_cond (flatten (to_expr e man env)))
+  | And (e1, e2) -> Abs (and_cond (flatten (to_expr e1 man env)) (flatten (to_expr e2 man env)))
+  | Or  (e1, e2) -> Abs (or_cond (flatten (to_expr e1 man env)) (flatten (to_expr e2 man env)))
+  | Xor (e1, e2) -> to_expr (Or (And (Not e1, e2), (And (e1, Not e2)))) man env
+  | Implies (e1, e2) -> to_expr (Or (Not e1, e2)) man env
+  | Iff (e1, e2) -> to_expr (Or (And (e1, e2), And (Not e1, Not e2))) man env
+  | True -> Abs (Abstract1.top man env)
+  | False -> Abs (Abstract1.bottom man env)
+  | other ->
+      (match to_str other with
+      | Some str -> Abs (Abstract1.of_tcons_array man env (Parser.tcons1_of_lstring env [str]))
+      | None -> raise (Unimplemented "Could not create expression"));;
+
 
 (* get a def as a string *)
 let def_to_string ad =
@@ -89,7 +108,7 @@ let sal_to_def sd =
         | Some d -> Some (Const d)
         | _ -> None)
     | Constant_def (v, st, se) ->
-        (match (get_def st v, arith_to_str se) with
+        (match (get_def st v, to_str se) with
         | (Some d, Some e) -> Some (Const_val (d, v ^ "=" ^ e))
         | _ -> None)
     | _ -> None;;
@@ -101,7 +120,7 @@ let get_assigns assigns man env =
     match a with
       | [] -> (assign_strs, assigned)
       | (Assign (Ident v, e))::ls -> printf "ident = %s, " v;
-          (match arith_to_str e with
+          (match to_str e with
           | Some expr -> printf "expr = %s, " expr; to_str_list ls ((v ^ "=" ^ expr)::assign_strs) (v::assigned)
           | None -> to_str_list ls assign_strs (v::assigned))
       | _::ls -> to_str_list ls assign_strs assigned in
@@ -130,7 +149,7 @@ let get_conds cond man env =
       | True -> Abstract1.top man env
       | False -> Abstract1.bottom man env
       | _ ->
-        (match cond_to_str c with
+        (match to_str c with
           | Some expr -> Abstract1.of_tcons_array man env (Parser.tcons1_of_lstring env [expr])
           | None -> Abstract1.top man env) in
   to_str_list cond

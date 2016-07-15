@@ -33,7 +33,11 @@ type ('a, 'b) trans_sys =
 (* a condition *)
 type 'a cond = 'a Abstract1.t
 
-(* a condition/guard and an expression *)
-type 'a guarded =
+(* an expression and a condition/guard *)
+type 'a expression =
+  Abs of 'a Abstract1.t | Guarded of 'a guarded | Guardeds of 'a guarded list
+and
+'a guarded =
   { guard : 'a cond
-  ; expr  : 'a Abstract1.t }
+  ; expr  : 'a expression }
+
