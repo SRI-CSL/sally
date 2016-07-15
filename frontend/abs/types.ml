@@ -31,9 +31,7 @@ type ('a, 'b) trans_sys =
   ; transition : 'a Abstract1.t }
 
 (* a condition *)
-type 'a cond =
-  { constrained : Var.t list
-  ; abs         : 'a Abstract1.t }
+type 'a cond = 'a Abstract1.t
 
 (* a condition/guard and an expression *)
 type 'a guarded =
