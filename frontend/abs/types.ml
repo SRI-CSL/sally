@@ -21,23 +21,26 @@ type state_vars =
   ; constant_reals : Var.t list
   ; constraints    : string list }
 
+
 (* a transition system's Apron components *)
 type ('a, 'b) trans_sys =
-  { man        : 'b Manager.t
-  ; vars       : state_vars
-  ; env        : Environment.t
-  ; invs       : 'a Abstract1.t
-  ; init       : 'a Abstract1.t
-  ; transition : 'a Abstract1.t }
-
-(* a condition *)
-type 'a cond = 'a Abstract1.t
-
-(* an expression and a condition/guard *)
-type 'a expression =
-  Abs of 'a Abstract1.t | Guarded of 'a guarded | Guardeds of 'a guarded list
+  { man   : 'b Manager.t
+  ; vars  : state_vars
+  ; env   : Environment.t
+  ; invs  : 'a Abstract1.t
+  ; init  : 'a Abstract1.t
+  ; trans : 'a transition }
 and
+(* transition *)
+'a transition =
+  | Assignment of 'a Abstract1.t
+  | Guarded of 'a guard_list
+and
+(* a guarded expression *)
 'a guarded =
-  { guard : 'a cond
-  ; expr  : 'a expression }
+  { guard : 'a Abstract1.t
+  ; expr  : 'a Abstract1.t }
+and
+(* guarded expression list - a pair of a guarded list and an else expression *)
+'a guard_list = 'a guarded list * 'a Abstract1.t
 

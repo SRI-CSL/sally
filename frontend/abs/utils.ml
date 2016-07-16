@@ -2,8 +2,21 @@ open Types;;
 open Apron;;
 open Format;;
 
-let print_trans_sys { vars; env; invs; init; transition } =
-  printf "invs=%a@.init=%a@.transition=%a@." Abstract1.print invs Abstract1.print init Abstract1.print transition;;
+(* printing *)
+let print_guarded g =
+  printf "guard: %a@, expr: %a@." Abstract1.print g.guard Abstract1.print g.expr;;
+
+let print_transition trans =
+  match trans with
+  | Assignment a    -> printf "transition = %a@." Abstract1.print a
+  | Guarded (gs, e) ->
+      printf "%s =" "transition";
+      List.map print_guarded gs;
+      printf "else = %a@." Abstract1.print e;;
+
+let print_trans_sys { vars; env; invs; init; trans } =
+  printf "invs=%a@.init=%a@." Abstract1.print invs Abstract1.print;
+  print_transition trans;;
 
 (* effectively map over a lincons earray *)
 let earray_map f arr =
@@ -26,7 +39,7 @@ let negate_coeffs lincons =
   let negated_coeff lincons v = (Coeff.neg (Lincons1.get_coeff lincons v), v) in
   let negated_coeffs = List.map (negated_coeff lincons) vars in
   let negated_cst = Coeff.neg (Lincons1.get_cst lincons) in
-  Lincons1.set_list lincons [] (Some negated_cst);;
+  Lincons1.set_list lincons negated_coeffs (Some negated_cst);;
 
 (* invert linear constraints (except for EQMOD) *)
 exception Cannot_invert of string;;
@@ -59,45 +72,5 @@ let or_conds cs =
   Abstract1.join_array (Abstract1.manager cs_arr.(0)) cs_arr;;
 
 (* operations on guardeds *)
-
-(* guardeds with ELSE *)
-let else_guard guardeds else_expr man env =
-  let len = List.length guardeds in
-  let neg_arr = Array.make len (Abstract1.top man env) in
-  let rec fill_neg_arr gs i =
-    match gs with
-    | [] -> ()
-    | g::gs -> neg_arr.(i) <- not_cond (g.guard); fill_neg_arr gs ( i + 1 ) in
-  { guard = Abstract1.meet_array man neg_arr; expr = else_expr }::guardeds;;
-
-(* nested if-then-else *)
-let cond_guard guardeds else_expr man env =
-  let rec add_negated gs negs added =
-    match gs with
-    | []    -> { guard = negs; expr = else_expr }::added
-    | g::gs -> 
-        add_negated gs (and_cond (not_cond g.guard) negs)
-          ({ g with guard = and_cond negs g.guard }::added) in
-  add_negated guardeds (Abstract1.top man env) [];;
-
-(* operations on expressions *)
-exception Cannot_extract of string;;
-
-let extract_guarded expr =
-  match expr with
-  | Guarded g -> g
-  | _ -> raise (Cannot_extract "Not a Guarded expression");;
-
-let extract_abs expr =
-  match expr with
-  | Abs a -> a
-  | _ -> raise (Cannot_extract "Not an Abs expression");;
-
-(* turn expression into an abstract variable *)
-let rec flatten expr =
-  let to_abs g = and_cond g.guard (flatten g.expr) in
-  match expr with
-  | Guarded g -> to_abs g
-  | Guardeds gs -> or_conds (List.map to_abs gs)
-  | Abs a -> a;;
-   
+let flatten_guarded g =
+  and_cond g.guard g.expr;;
