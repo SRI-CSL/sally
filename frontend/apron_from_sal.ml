@@ -41,8 +41,9 @@ let step_guardeds ts pred lim =
     let guards_passed = List.filter (guard_passed) gs in
     let get_next assigns = Abstract1.meet ts.man ts.invs
                (Abstract1.join ts.man pred (next_abs ts.vars ts.man (Abstract1.meet ts.man assigns pred))) in
-    let nexts = List.map get_next (List.map (fun x -> x.expr) guards_passed) in
+    let nexts = List.map get_next (List.map flatten_guarded guards_passed) in
     let next = if guards_passed = [] then get_next e else or_conds nexts in
+    List.map (printf "nexts=%a@." Abstract1.print) nexts;
     printf "step=%a@." Abstract1.print next;
     if (l > 0) then
       if Abstract1.is_eq ts.man next pred
