@@ -32,31 +32,40 @@ let rec arith_to_str se =
         | _ -> None)
   | _ -> None;;
 
-let rec cond_to_str se =
+let rec cond_to_tcons se env =
   match se with
   | Ge (e1, e2) -> 
       (match (arith_to_str e1, arith_to_str e2) with
-        | (Some e1, Some e2) -> Some (e1^">="^e2)
+        | (Some e1, Some e2) -> Some (Parser.tcons1_of_string env (e1^">="^e2))
         | _ -> None)
   | Gt (e1, e2) -> 
       (match (arith_to_str e1, arith_to_str e2) with
-        | (Some e1, Some e2) -> Some (e1^">"^e2)
+        | (Some e1, Some e2) -> Some (Parser.tcons1_of_string env (e1^">"^e2))
         | _ -> None)
   | Le (e1, e2) -> 
       (match (arith_to_str e1, arith_to_str e2) with
-        | (Some e1, Some e2) -> Some (e1^"<="^e2)
+        | (Some e1, Some e2) -> Some (Parser.tcons1_of_string env (e1^"<="^e2))
         | _ -> None)
   | Lt (e1, e2) -> 
       (match (arith_to_str e1, arith_to_str e2) with
-        | (Some e1, Some e2) -> Some (e1^"<"^e2)
+        | (Some e1, Some e2) -> Some (Parser.tcons1_of_string env (e1^"<"^e2))
         | _ -> None)
   | Eq (e1, e2) -> 
       (match (arith_to_str e1, arith_to_str e2) with
-        | (Some e1, Some e2) -> Some (e1^"="^e2)
+        | (Some e1, Some e2) -> Some (Parser.tcons1_of_string env (e1^"="^e2))
         | _ -> None)
   | Neq (e1, e2) ->
-      (match (arith_to_str e1, arith_to_str e2) with
-        | (Some e1, Some e2) -> Some (e1^"!="^e2)
+      (match (arith_to_str (Sub (e1, e2))) with
+        | Some e -> Some (Tcons1.make (Parser.texpr1_of_string env e) Tcons1.DISEQ)
+        | _ -> None)
+  | Not se ->
+      (match se with
+        | Ge (e1, e2) -> cond_to_tcons (Lt (e2, e1)) env
+        | Gt (e1, e2) -> cond_to_tcons (Le (e2, e1)) env
+        | Le (e1, e2) -> cond_to_tcons (Gt (e2, e1)) env
+        | Lt (e1, e2) -> cond_to_tcons (Ge (e2, e1)) env
+        | Eq (e1, e2) -> cond_to_tcons (Neq (e2, e1)) env
+        | Neq (e1, e2) -> cond_to_tcons (Eq (e2, e1)) env
         | _ -> None)
   | _ -> None;;
 
@@ -99,9 +108,9 @@ let get_assigns assigns man env =
   let rec to_str_list a assign_strs assigned =
     match a with
       | [] -> (assign_strs, assigned)
-      | (Assign (Ident v, e))::ls -> printf "ident = %s, " v;
+      | (Assign (Ident v, e))::ls ->
           (match arith_to_str e with
-          | Some expr -> printf "expr = %s, " expr; to_str_list ls ((v ^ "=" ^ expr)::assign_strs) (v::assigned)
+          | Some expr -> to_str_list ls ((v ^ "=" ^ expr)::assign_strs) (v::assigned)
           | None -> to_str_list ls assign_strs (v::assigned))
       | _::ls -> to_str_list ls assign_strs assigned in
   let (assign_strs, assigned) = to_str_list assigns [] [] in
@@ -117,22 +126,21 @@ let get_full_assigns assigns next_vars man env =
   let listdiff ls1 ls2 = List.filter (fun x -> not (List.mem x ls2)) ls1 in
   let (explicit, assigned) = get_assigns assigns man env in
   let implicit = get_unchanged (listdiff next_vars assigned) man env in
-  printf "full: %a@." Abstract1.print (Abstract1.meet man explicit implicit);
   Abstract1.meet man explicit implicit;;
 
 (* convert a conditional sal_expr to a cond *)
 let get_conds cond man env =
-  let rec to_str_list c =
+  let rec to_abs c =
     match c with
-      | And (e1, e2) -> Abstract1.meet man (to_str_list e1) (to_str_list e2)
-      | Or (e1, e2) -> Abstract1.join man (to_str_list e1) (to_str_list e2)
+      | And (e1, e2) -> printf "and (%a, %a)@." Abstract1.print (to_abs e1) Abstract1.print (to_abs e2); Abstract1.meet man (to_abs e1) (to_abs e2)
+      | Or (e1, e2) -> printf "or (%a, %a)@." Abstract1.print (to_abs e1) Abstract1.print (to_abs e2); Abstract1.join man (to_abs e1) (to_abs e2)
       | True -> Abstract1.top man env
       | False -> Abstract1.bottom man env
       | _ ->
-        (match cond_to_str c with
-          | Some expr -> Abstract1.of_tcons_array man env (Parser.tcons1_of_lstring env [expr])
+        (match cond_to_tcons c env with
+          | Some tcons -> Abstract1.of_tcons_array man env {Tcons1.tcons0_array = [|tcons.tcons0|]; Tcons1.array_env = tcons.env}
           | None -> Abstract1.top man env) in
-  to_str_list cond
+  to_abs cond
 
 let get_guardeds gls (next_vars: string list) man env invs =
   let rec to_guardeds gcs res =
@@ -146,30 +154,6 @@ let get_guardeds gls (next_vars: string list) man env invs =
     | [] -> to_guardeds [Default []] res
     | _ -> raise (Unimplemented "Default not at end.") in
   to_guardeds gls [];;
-  
-
-
-(*
-  let is_def gc = match gc with Default _ -> true | _ -> false in
-  let rec sal_to_apron_guarded gc =
-    match gc with
-    | ExistentialGuarded (decl, gc2) -> sal_to_apron_guarded gc2 (* ignore quantifier *)
-    | Guarded (expr, assigns) ->
-        let assigns_abs = Abstract1.meet man invs (get_full_assigns assigns next_vars man env) in
-          printf "assigns_abs: %a@." Abstract1.print assigns_abs;
-        let expr_abs = get_conds expr man env in
-          printf "conds: %a@." Abstract1.print expr_abs;
-          printf "meet: %a@." Abstract1.print (Abstract1.meet man assigns_abs expr_abs);
-          Abstract1.meet_array man [|invs; assigns_abs; expr_abs|]
-    | Default assigns -> Abstract1.meet man invs (get_full_assigns assigns next_vars man env) in
-  let ls = List.map sal_to_apron_guarded gls in
-  let ls' = if (List.fold_left (||) false (List.map is_def gls)) then ls else ls@[get_unchanged [] man env] in
-    List.map (printf "to join: %a@." Abstract1.print) ls';
-    let joined = Abstract1.join_array man (Array.of_list ls') in
-    printf "joined all: %a@." Abstract1.print joined;
-    printf "meet invs: %a@." Abstract1.print (Abstract1.meet man invs joined);
-  Abstract1.join_array man (Array.of_list (List.map sal_to_apron_guarded gls));;
-*)
 
 (* get state_vars from a list of defs *)
 let get_state_vars ds =
@@ -234,7 +218,7 @@ let sal_decls_to_state_vars sds =
 (* convert a string and sal_module to a trans_sys *)
 let sal_to_apron_module str sal_mod man ctx_vars =
   let vars = sal_decls_to_state_vars (List.flatten (List.map snd (sal_mod.state_vars))) in
-  let env = List.map (fun x -> printf "%s " (Var.to_string x)) (vars.current_ints @ vars.next_ints @ vars.current_reals @ vars.next_reals);
+  let env = (*List.iter (fun x -> printf "%s " (Var.to_string x)) (vars.current_ints @ vars.next_ints @ vars.current_reals @ vars.next_reals);*)
             Environment.make
               (Array.of_list (vars.current_ints @ vars.next_ints @ vars.constant_ints @ ctx_vars.constant_ints))
               (Array.of_list (vars.current_reals @ vars.next_reals @ vars.constant_reals @ ctx_vars.constant_reals)) in
@@ -250,7 +234,7 @@ let sal_to_apron_module str sal_mod man ctx_vars =
 
 (* process sal_def list into apron_defs and apron_modules *)
 let handle_sal_defs sal_defs man =
-  printf "%s " "handle"; let rec handler defs (ads, ams) =
+  let rec handler defs (ads, ams) =
     match defs with
       | [] -> (ads, ams)
       | ((Module_def (str, sal_mod))::ds) ->
@@ -259,4 +243,4 @@ let handle_sal_defs sal_defs man =
             handler ds (ads, am::ams)
       | (d::ds) -> handler ds ((sal_to_def d)::ads, ams) (* not handled right now *) in
   let (ads, ams) = handler sal_defs ([],[]) in
-    List.map print_trans_sys ams; ams;;
+    List.iter print_trans_sys ams; ams;;

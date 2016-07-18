@@ -9,34 +9,55 @@ type to_inline = Type of sal_type | Val of sal_expr | Fun of string list * sal_e
 
 let get_conds ifs = List.map fst ifs
 
-(* turn an i b_1 then b_2 else if ... then b_n-1 else b_n expression into a list of
-booleans *)
+let rec cond_ast_to_str ast =
+  match ast with
+  | And(e1, e2) -> "and("^(cond_ast_to_str e1)^", "^(cond_ast_to_str e2)^")"
+  | Or(e1, e2) -> "or("^(cond_ast_to_str e1)^", "^(cond_ast_to_str e2)^")"
+  | Not e -> "not("^(cond_ast_to_str e)^")"
+  | True -> "true"
+  | False -> "false"
+  | _ -> "expr"
+
+(* turn an i b_1 then b_2 else if ... then b_n-1 else b_n expression into a disjunction *)
 let flatten_cond ifs els =
-  let rec expand_conds conds res =
-    match conds with
-    | [c] -> Not c::res
-    | c::cs -> expand_conds (List.map (fun x -> And (Not c, x)) cs) (c::res) in
-  List.rev_map2 (fun x y -> And(x, y)) (expand_conds (List.map fst ifs) []) (els::(List.rev_map snd ifs))
+  let rec conjunction ls =
+    match ls with
+    | l::l'::ls -> conjunction (And(l, l')::ls)
+    | [res] -> res in
+  let expand_conds conds =
+    let rec ec prev conds res =
+      (match conds with
+      | [] -> (conjunction (List.map (fun x -> Not x) prev))::res
+      | c::cs ->
+          ec (c::prev) cs ((And (conjunction (List.map (fun x -> Not x) prev), c))::res)) in
+    (match conds with
+     | [] -> []
+     | c::cs -> ec [c] cs [c]) in
+  let ls = List.rev_map2 (fun x y -> And(x, y)) (expand_conds (List.map fst ifs)) (els::(List.rev_map snd ifs)) in
+  let res = List.fold_left (fun x y -> Or (x, y)) (List.hd ls) (List.tl ls) in
+  printf "flat: %s@." (cond_ast_to_str res); res;;
+
+let rec add_kvs ctx ks vs =
+  match (ks,vs) with
+    | ([],[]) -> ctx
+    | (k::ks, v::vs) -> add_kvs (StrMap.add k (Val v) ctx) ks vs;;
 
 let rec preproc_expr expr ctx =
   match expr with
-  | Ident str -> printf "ident_p: %s\n" str;
+  | Ident str ->
       if StrMap.mem str ctx
       then
         match StrMap.find str ctx with
           Val expr -> preproc_expr expr ctx
       else Ident str
-  | Funcall (str, exprs) -> printf "funcall: %s\n" str;
+  | Funcall (str, exprs) ->
       if StrMap.mem str ctx
       then match StrMap.find str ctx with
         Fun (strs, expr) ->
           List.iter (printf "repl: %s\n") strs;
-          let rec add_kvs ctx ks vs =
-            (match (ks,vs) with
-            | ([],[]) -> ctx
-            | (k::ks, v::vs) -> add_kvs (StrMap.add k (Val v) ctx) ks vs) in
           preproc_expr expr (add_kvs ctx strs exprs)
       else Funcall (str, exprs)
+  | Cond (ifs, els) -> flatten_cond ifs els
   | Add (e1, e2) -> Add (preproc_expr e1 ctx, preproc_expr e2 ctx)
   | Sub (e1, e2) -> Sub (preproc_expr e1 ctx, preproc_expr e2 ctx)
   | Mul (e1, e2) -> Mul (preproc_expr e1 ctx, preproc_expr e2 ctx)
@@ -54,7 +75,10 @@ let rec preproc_expr expr ctx =
   | Implies (e1, e2) ->
       Or (Not (preproc_expr e1 ctx), (preproc_expr e2 ctx))
   | Iff (e1, e2) -> Iff (preproc_expr e1 ctx, preproc_expr e2 ctx)
-  (* need to handle lets *)
+  | Let (decls, e) ->
+      let strs = List.map (fun (str, _, _) -> str) decls in
+      let exprs = List.map (fun (_, _, expr) -> expr) decls in
+      preproc_expr e (add_kvs ctx strs exprs)
   | other -> other;;
 
 let preproc_assigns assigns ctx =
@@ -66,7 +90,7 @@ let preproc_assigns assigns ctx =
 
 let rec preproc_guarded gc ctx =
   match gc with
-  | ExistentialGuarded (decl, gc) -> ExistentialGuarded (decl,(preproc_guarded gc ctx))
+  | ExistentialGuarded (decl, gc) -> ExistentialGuarded (decl, preproc_guarded gc ctx)
   | Guarded (cond, assigns) -> Guarded (preproc_expr cond ctx, preproc_assigns assigns ctx)
   | Default assigns -> Default (preproc_assigns assigns ctx);;
 
