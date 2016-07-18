@@ -2,6 +2,7 @@ open Ast.Sal_ast;;
 open Abs.Types;;
 open Abs.Utils;;
 open Abs.Conversion;;
+open Abs.Preproc;;
 
 open Apron;;
 open Mpqf;;
@@ -43,8 +44,8 @@ let step_guardeds ts pred lim =
                (Abstract1.join ts.man pred (next_abs ts.vars ts.man (Abstract1.meet ts.man assigns pred))) in
     let nexts = List.map get_next (List.map flatten_guarded guards_passed) in
     let next = if guards_passed = [] then get_next e else or_conds nexts in
-    List.map (printf "nexts=%a@." Abstract1.print) nexts;
-    printf "step=%a@." Abstract1.print next;
+    (*
+    printf "step=%a@." Abstract1.print next;*)
     if (l > 0) then
       if Abstract1.is_eq ts.man next pred
       then (Abstract1.forget_array ts.man next (Array.of_list (ts.vars.next_ints @ ts.vars.next_reals)) false)
@@ -75,6 +76,7 @@ let _ =
        input_file := Some f) "");
   create_channel_in !input_file
   |> Io.Sal_lexer.parse
+  |> preproc
   |> fun x -> handle_sal_defs x.definitions manpk
   |> List.map (fun ts -> step ts ts.init 100)
   |> List.map (printf "constraints found: %a@." Abstract1.print)
