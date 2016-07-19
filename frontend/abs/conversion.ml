@@ -132,8 +132,8 @@ let get_full_assigns assigns next_vars man env =
 let get_conds cond man env =
   let rec to_abs c =
     match c with
-      | And (e1, e2) -> printf "and (%a, %a)@." Abstract1.print (to_abs e1) Abstract1.print (to_abs e2); Abstract1.meet man (to_abs e1) (to_abs e2)
-      | Or (e1, e2) -> printf "or (%a, %a)@." Abstract1.print (to_abs e1) Abstract1.print (to_abs e2); Abstract1.join man (to_abs e1) (to_abs e2)
+      | And (e1, e2) -> Abstract1.meet man (to_abs e1) (to_abs e2)
+      | Or (e1, e2) -> Abstract1.join man (to_abs e1) (to_abs e2)
       | True -> Abstract1.top man env
       | False -> Abstract1.bottom man env
       | _ ->

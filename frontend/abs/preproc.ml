@@ -7,8 +7,6 @@ module StrMap = Map.Make (struct type t = string let compare = compare end)
 
 type to_inline = Type of sal_type | Val of sal_expr | Fun of string list * sal_expr
 
-let get_conds ifs = List.map fst ifs
-
 let rec cond_ast_to_str ast =
   match ast with
   | And(e1, e2) -> "and("^(cond_ast_to_str e1)^", "^(cond_ast_to_str e2)^")"
@@ -18,21 +16,23 @@ let rec cond_ast_to_str ast =
   | False -> "false"
   | _ -> "expr"
 
+let rec conjunction ls =
+  match ls with
+  | l::l'::ls -> conjunction (And(l, l')::ls)
+  | [res] -> res;;
+
+let expand_conds conds =
+  let rec ec prev conds res =
+    (match conds with
+    | [] -> (conjunction (List.map (fun x -> Not x) prev))::res
+    | c::cs ->
+        ec (c::prev) cs ((And (conjunction (List.map (fun x -> Not x) prev), c))::res)) in
+  match conds with
+   | [] -> []
+   | c::cs -> ec [c] cs [c];;
+
 (* turn an i b_1 then b_2 else if ... then b_n-1 else b_n expression into a disjunction *)
 let flatten_cond ifs els =
-  let rec conjunction ls =
-    match ls with
-    | l::l'::ls -> conjunction (And(l, l')::ls)
-    | [res] -> res in
-  let expand_conds conds =
-    let rec ec prev conds res =
-      (match conds with
-      | [] -> (conjunction (List.map (fun x -> Not x) prev))::res
-      | c::cs ->
-          ec (c::prev) cs ((And (conjunction (List.map (fun x -> Not x) prev), c))::res)) in
-    (match conds with
-     | [] -> []
-     | c::cs -> ec [c] cs [c]) in
   let ls = List.rev_map2 (fun x y -> And(x, y)) (expand_conds (List.map fst ifs)) (els::(List.rev_map snd ifs)) in
   let res = List.fold_left (fun x y -> Or (x, y)) (List.hd ls) (List.tl ls) in
   printf "flat: %s@." (cond_ast_to_str res); res;;
@@ -54,7 +54,6 @@ let rec preproc_expr expr ctx =
       if StrMap.mem str ctx
       then match StrMap.find str ctx with
         Fun (strs, expr) ->
-          List.iter (printf "repl: %s\n") strs;
           preproc_expr expr (add_kvs ctx strs exprs)
       else Funcall (str, exprs)
   | Cond (ifs, els) -> flatten_cond ifs els
@@ -90,15 +89,21 @@ let preproc_assigns assigns ctx =
 
 let rec preproc_guarded gc ctx =
   match gc with
-  | ExistentialGuarded (decl, gc) -> ExistentialGuarded (decl, preproc_guarded gc ctx)
-  | Guarded (cond, assigns) -> Guarded (preproc_expr cond ctx, preproc_assigns assigns ctx)
-  | Default assigns -> Default (preproc_assigns assigns ctx);;
+  | ExistentialGuarded (decl, gc) -> List.map (fun gc -> ExistentialGuarded (decl, gc)) (preproc_guarded gc ctx)
+  | Guarded (cond, assigns) ->
+      (match cond with
+       | Cond (ifs, els) ->
+           let conds' = List.rev_map2 (fun x y -> And(x, y)) (expand_conds (List.map fst ifs)) (els::(List.rev_map snd ifs)) in
+           List.flatten (List.map (fun c -> preproc_guarded (Guarded (c, assigns)) ctx) conds')
+       | _ -> [Guarded (preproc_expr cond ctx, preproc_assigns assigns ctx)])
+  | Default assigns -> [Default (preproc_assigns assigns ctx)];;
 
-let preproc_transition st ctx =
+let rec preproc_transition st ctx =
   match st with
   | NoTransition -> NoTransition
-  | Assignments als -> Assignments als
-  | GuardedCommands gls -> GuardedCommands (List.map (fun x -> preproc_guarded x ctx) gls);;
+  | Assignments als -> Assignments (preproc_assigns als ctx)
+  | GuardedCommands gls ->
+      GuardedCommands (List.flatten (List.map (fun x -> preproc_guarded x ctx) gls));;
 
 let rec preproc_defs ds ctx res =
   match ds with
