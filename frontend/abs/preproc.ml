@@ -87,15 +87,38 @@ let preproc_assigns assigns ctx =
     | other -> other in
   List.map preproc_assign assigns;;
 
+let rec preproc_guarded_guard (Guarded (guard, assigns)) =
+  match guard with 
+    | Cond (ifs, els) -> (* convert a guarded command with conditionals in its guard into separate guarded commands *)
+        let conds = List.rev_map2 (fun x y -> And(x, y)) (expand_conds (List.map fst ifs)) (els::(List.rev_map snd ifs)) in
+        List.map (fun c -> Guarded (c, assigns)) conds
+    | other -> [Guarded (other, assigns)];;
+
+(* convert a guarded command with conditionals in its assignments into separate
+guarded commands *)
+let rec preproc_guarded_assigns (Guarded (guard, finished)) = function
+  | (Assign (e, Cond (ifs, els)))::rest ->
+      let conds = expand_conds (List.map fst ifs) in
+      let exprs = els::(List.rev_map snd ifs) in
+      let guardeds =
+        List.rev_map2
+          (fun x y -> preproc_guarded_assigns
+             (Guarded (And (guard, x), (Assign (e, y))::finished))
+             rest)
+          conds exprs in
+      List.flatten guardeds
+  | assign::assigns ->
+      preproc_guarded_assigns (Guarded (guard, assign::finished)) assigns
+  | [] -> [Guarded (guard, finished)];;
+
 let rec preproc_guarded gc ctx =
   match gc with
   | ExistentialGuarded (decl, gc) -> List.map (fun gc -> ExistentialGuarded (decl, gc)) (preproc_guarded gc ctx)
-  | Guarded (cond, assigns) ->
-      (match cond with
-       | Cond (ifs, els) ->
-           let conds' = List.rev_map2 (fun x y -> And(x, y)) (expand_conds (List.map fst ifs)) (els::(List.rev_map snd ifs)) in
-           List.flatten (List.map (fun c -> preproc_guarded (Guarded (c, assigns)) ctx) conds')
-       | _ -> [Guarded (preproc_expr cond ctx, preproc_assigns assigns ctx)])
+  | Guarded (guard, assigns) ->
+      (List.map (fun (Guarded (g, a)) -> preproc_guarded_assigns (Guarded (g, [])) a)
+               (preproc_guarded_guard (Guarded (guard, assigns)))
+      |> List.flatten
+      |> List.map (fun (Guarded (g, a)) -> Guarded (preproc_expr g ctx, preproc_assigns a ctx)))
   | Default assigns -> [Default (preproc_assigns assigns ctx)];;
 
 let rec preproc_transition st ctx =
