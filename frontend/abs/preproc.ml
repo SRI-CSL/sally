@@ -1,11 +1,8 @@
 open Ast.Sal_ast;;
+open Inline;;
 open Format;;
 
-(* Inline functions, constant declarations, let-statements *)
-
-module StrMap = Map.Make (struct type t = string let compare = compare end)
-
-type to_inline = Type of sal_type | Val of sal_expr | Fun of string list * sal_expr
+(* call inline function and remove conditional expressions *)
 
 let rec cond_ast_to_str ast =
   match ast with
@@ -37,56 +34,6 @@ let flatten_cond ifs els =
   let res = List.fold_left (fun x y -> Or (x, y)) (List.hd ls) (List.tl ls) in
   printf "flat: %s@." (cond_ast_to_str res); res;;
 
-let rec add_kvs ctx ks vs =
-  match (ks,vs) with
-    | ([],[]) -> ctx
-    | (k::ks, v::vs) -> add_kvs (StrMap.add k (Val v) ctx) ks vs;;
-
-let rec preproc_expr expr ctx =
-  match expr with
-  | Ident str ->
-      if StrMap.mem str ctx
-      then
-        match StrMap.find str ctx with
-          Val expr -> preproc_expr expr ctx
-      else Ident str
-  | Funcall (str, exprs) ->
-      if StrMap.mem str ctx
-      then match StrMap.find str ctx with
-        Fun (strs, expr) ->
-          preproc_expr expr (add_kvs ctx strs exprs)
-      else Funcall (str, exprs)
-  | Cond (ifs, els) -> flatten_cond ifs els
-  | Add (e1, e2) -> Add (preproc_expr e1 ctx, preproc_expr e2 ctx)
-  | Sub (e1, e2) -> Sub (preproc_expr e1 ctx, preproc_expr e2 ctx)
-  | Mul (e1, e2) -> Mul (preproc_expr e1 ctx, preproc_expr e2 ctx)
-  | Div (e1, e2) -> Div (preproc_expr e1 ctx, preproc_expr e2 ctx)
-  | Ge (e1, e2) -> Ge (preproc_expr e1 ctx, preproc_expr e2 ctx)
-  | Gt (e1, e2) -> Gt (preproc_expr e1 ctx, preproc_expr e2 ctx)
-  | Le (e1, e2) -> Le (preproc_expr e1 ctx, preproc_expr e2 ctx)
-  | Lt (e1, e2) -> Lt (preproc_expr e1 ctx, preproc_expr e2 ctx)
-  | Eq (e1, e2) -> Eq (preproc_expr e1 ctx, preproc_expr e2 ctx)
-  | Neq (e1, e2) -> Neq (preproc_expr e1 ctx, preproc_expr e2 ctx)
-  | Not e -> Not (preproc_expr e ctx)
-  | And (e1, e2) -> And (preproc_expr e1 ctx, preproc_expr e2 ctx)
-  | Or (e1, e2) -> Or (preproc_expr e1 ctx, preproc_expr e2 ctx)
-  | Xor (e1, e2) -> Xor (preproc_expr e1 ctx, preproc_expr e2 ctx)
-  | Implies (e1, e2) ->
-      Or (Not (preproc_expr e1 ctx), (preproc_expr e2 ctx))
-  | Iff (e1, e2) -> Iff (preproc_expr e1 ctx, preproc_expr e2 ctx)
-  | Let (decls, e) ->
-      let strs = List.map (fun (str, _, _) -> str) decls in
-      let exprs = List.map (fun (_, _, expr) -> expr) decls in
-      preproc_expr e (add_kvs ctx strs exprs)
-  | other -> other;;
-
-let preproc_assigns assigns ctx =
-  let preproc_assign assign =
-    match assign with
-    | Assign (e1, e2) -> Assign (e1, preproc_expr e2 ctx)
-    | other -> other in
-  List.map preproc_assign assigns;;
-
 let rec preproc_guarded_guard (Guarded (guard, assigns)) =
   match guard with 
     | Cond (ifs, els) -> (* convert a guarded command with conditionals in its guard into separate guarded commands *)
@@ -111,42 +58,34 @@ let rec preproc_guarded_assigns (Guarded (guard, finished)) = function
       preproc_guarded_assigns (Guarded (guard, assign::finished)) assigns
   | [] -> [Guarded (guard, finished)];;
 
-let rec preproc_guarded gc ctx =
-  match gc with
-  | ExistentialGuarded (decl, gc) -> List.map (fun gc -> ExistentialGuarded (decl, gc)) (preproc_guarded gc ctx)
+let rec preproc_guarded = function
+  | ExistentialGuarded (decl, gc) -> List.map (fun gc -> ExistentialGuarded (decl, gc)) (preproc_guarded gc)
   | Guarded (guard, assigns) ->
       (List.map (fun (Guarded (g, a)) -> preproc_guarded_assigns (Guarded (g, [])) a)
-               (preproc_guarded_guard (Guarded (guard, assigns)))
+               (preproc_guarded_guard (Guarded (guard, assigns))))
       |> List.flatten
-      |> List.map (fun (Guarded (g, a)) -> Guarded (preproc_expr g ctx, preproc_assigns a ctx)))
-  | Default assigns -> [Default (preproc_assigns assigns ctx)];;
+  | other -> [other];;
 
-let rec preproc_transition st ctx =
+let rec preproc_transition st =
   match st with
   | NoTransition -> NoTransition
-  | Assignments als -> Assignments (preproc_assigns als ctx)
+  | Assignments assigns ->
+      (match preproc_guarded_assigns (Guarded (True, [])) assigns with
+        | [g] -> Assignments assigns
+        | gs -> GuardedCommands gs)
   | GuardedCommands gls ->
-      GuardedCommands (List.flatten (List.map (fun x -> preproc_guarded x ctx) gls));;
+      GuardedCommands (List.flatten (List.map preproc_guarded gls));;
 
-let rec preproc_defs ds ctx res =
+let rec preproc_defs ds res =
   match ds with
   | [] -> res
-  | (Type_def (str, st))::ds -> preproc_defs ds (StrMap.add str (Type st) ctx) res
-  | (Constant_def (str, st, expr))::ds -> preproc_defs ds (StrMap.add str (Val (preproc_expr expr ctx)) ctx) res
-  | (Function_def (str, sdl, st, expr))::ds ->
-      preproc_defs ds (StrMap.add str (Fun (List.flatten (List.map fst sdl), preproc_expr expr ctx)) ctx) res
   | (Module_def (str, sal_mod))::ds ->
-      preproc_defs ds ctx
+      preproc_defs ds
         ((Module_def (str, { sal_mod with
-          initialization = preproc_assigns (sal_mod.initialization) ctx;
-          definition = preproc_assigns (sal_mod.definition) ctx;
-          invariant =
-            ( match sal_mod.invariant with
-              | Some e -> Some (preproc_expr e ctx)
-              | None -> None );
-          transition = preproc_transition (sal_mod.transition) ctx }))::res)
-  | _::ds -> preproc_defs ds ctx res;;
+          transition = preproc_transition (sal_mod.transition) }))::res)
+  | _::ds -> preproc_defs ds res;;
   
 let preproc sal_ctx =
-  let defs = preproc_defs sal_ctx.definitions StrMap.empty [] in
-  { sal_ctx with definitions = defs };;
+  let ctx' = inline sal_ctx in
+  let defs = preproc_defs ctx'.definitions [] in
+  { ctx' with definitions = defs };;
