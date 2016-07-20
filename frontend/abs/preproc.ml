@@ -1,25 +1,53 @@
 open Ast.Sal_ast;;
 open Inline;;
+open Utils;;
 open Format;;
 
+exception Unimplemented of string;;
+exception Expected_guarded_command of string;;
 exception Duplicate_else_guarded_commands;;
 
 (* call inline function and remove conditional expressions *)
 
-let rec cond_ast_to_str ast =
-  match ast with
-  | And(e1, e2) -> "and("^(cond_ast_to_str e1)^", "^(cond_ast_to_str e2)^")"
-  | Or(e1, e2) -> "or("^(cond_ast_to_str e1)^", "^(cond_ast_to_str e2)^")"
-  | Not e -> "not("^(cond_ast_to_str e)^")"
+(*
+let rec expr_ast_to_str = function
+  | Ge (e1, e2) -> "ge("^(expr_ast_to_str e1)^" , "^(expr_ast_to_str e2)^")"
+  | Gt (e1, e2) -> "gt("^(expr_ast_to_str e1)^" , "^(expr_ast_to_str e2)^")"
+  | Le (e1, e2) -> "le("^(expr_ast_to_str e1)^" , "^(expr_ast_to_str e2)^")"
+  | Lt (e1, e2) -> "lt("^(expr_ast_to_str e1)^" , "^(expr_ast_to_str e2)^")"
+  | Eq (e1, e2) -> "eq("^(expr_ast_to_str e1)^" , "^(expr_ast_to_str e2)^")"
+  | Neq (e1, e2) -> "neq("^(expr_ast_to_str e1)^" , "^(expr_ast_to_str e2)^")"
+  | And(e1, e2) -> "and("^(expr_ast_to_str e1)^", "^(expr_ast_to_str e2)^")"
+  | Or(e1, e2) -> "or("^(expr_ast_to_str e1)^", "^(expr_ast_to_str e2)^")"
+  | Not e -> "not("^(expr_ast_to_str e)^")"
   | True -> "true"
   | False -> "false"
-  | _ -> "expr"
+  | Decimal i -> string_of_int i
+  | Float f -> string_of_float f
+  | Ident str -> str
+  | _ -> "expr";;
+
+let guard_ast_to_str = function
+  | Guarded (expr, assigns) -> "guard: "^(expr_ast_to_str expr)
+  | Default assigns -> "default"
+  | _ -> "existential";;
+*)
 
 let rec conjunction ls =
   match ls with
   | l::l'::ls -> conjunction (And(l, l')::ls)
-  | [res] -> res;;
+  | [res] -> res
+  | _ -> False;;
 
+(*
+  given a list of conditions [c1; c2; c3; ...; cn],
+  returns the list [ce; cn'; ... ; c3'; c2'; c1'],
+  where c1', c2', ..., cn', ce are conditions such that
+  the expression
+  if c1 then e1 elif c2 then e2 elif ... elif cn then en else e
+  is equivalent to
+  if c1' then e1; if c2' then e2; ...; if cn' then en; if ce then e
+*)
 let expand_conds conds =
   let rec ec prev conds res =
     (match conds with
@@ -173,35 +201,42 @@ let preproc_assign = function
   | Member (e1, e2) -> Member (e1, flatten_cond e2);;
 
 (* convert a guarded command with conditionals in its guard into separate guarded commands *)
-let rec preproc_guarded_guard (Guarded (guard, assigns)) =
-  match flatten_cond guard with 
-    | Cond (ifs, els) ->
-        let conds = List.rev_map2 (fun x y -> And(x, y)) (expand_conds (List.map fst ifs)) (els::(List.rev_map snd ifs)) in
-        List.map (fun c -> Guarded (c, assigns)) conds
-    | other -> [Guarded (other, assigns)];;
+let rec preproc_guarded_guard = function
+  | Guarded (guard, assigns) ->
+    (match flatten_cond guard with 
+      | Cond (ifs, els) ->
+          let conds = List.rev_map2 (fun x y -> And(x, y)) (expand_conds (List.map fst ifs)) (els::(List.rev_map snd ifs)) in
+          List.map (fun c -> Guarded (c, assigns)) conds
+      | other -> [Guarded (other, assigns)])
+  | _ -> raise (Expected_guarded_command "as argument to preproc_guarded_guard");;
 
 (* convert a guarded command with conditionals in its assignments into separate
 guarded commands *)
-let rec preproc_guarded_assigns (Guarded (guard, finished)) = function
-  | (Assign (e, Cond (ifs, els)))::rest ->
-      let conds = expand_conds (List.map fst ifs) in
-      let exprs = els::(List.rev_map snd ifs) in
-      let guardeds =
-        List.rev_map2
-          (fun x y -> preproc_guarded_assigns
-             (Guarded (And (guard, x), (Assign (e, y))::finished))
-             rest)
-          conds exprs in
-      List.flatten guardeds
-  | assign::assigns ->
-      preproc_guarded_assigns (Guarded (guard, assign::finished)) assigns
-  | [] -> [Guarded (guard, finished)];;
+let rec preproc_guarded_assigns = function
+  | (Guarded (guard, finished)) -> (function
+    | (Assign (e, Cond (ifs, els)))::rest ->
+        let conds = expand_conds (List.map fst ifs) in
+        let exprs = els::(List.rev_map snd ifs) in
+        let guardeds =
+          List.rev_map2
+            (fun x y -> preproc_guarded_assigns
+               (Guarded (And (guard, x), (Assign (e, y))::finished))
+               rest)
+            conds exprs in
+        List.flatten guardeds
+    | assign::assigns ->
+        preproc_guarded_assigns (Guarded (guard, assign::finished)) assigns
+    | [] -> [Guarded (guard, finished)])
+  | _ -> raise (Expected_guarded_command "as argument to preproc_guarded_assigns");;
 
 let rec preproc_guarded = function
-  | ExistentialGuarded (decl, gc) -> List.map (fun gc -> ExistentialGuarded (decl, gc)) (preproc_guarded gc)
+  | ExistentialGuarded (decl, gc) -> raise (Unimplemented "Existential guards") (*List.map (fun gc -> ExistentialGuarded (decl, gc)) (preproc_guarded gc)*)
   | Guarded (guard, assigns) ->
-      (List.map (fun (Guarded (g, a)) -> preproc_guarded_assigns (Guarded (g, [])) (List.map preproc_assign a))
-               (preproc_guarded_guard (Guarded (guard, assigns))))
+      (List.map
+        (function
+         | (Guarded (g, a)) -> preproc_guarded_assigns (Guarded (g, [])) (List.map preproc_assign a)
+         | _ -> raise (Expected_guarded_command "as elements of list returned from preproc_guarded_guard"))
+        (preproc_guarded_guard (Guarded (guard, assigns))))
       |> List.flatten
   | other -> [other];;
 
@@ -211,31 +246,56 @@ let rec preproc_transition st =
   | Assignments assigns ->
       (* if there are conditionals in the assignments, convert into guarded commands *)
       (match preproc_guarded (Guarded (True, assigns)) with
-        | [g] -> Assignments assigns
+        | [Guarded (_, assigns)] -> Assignments assigns
         | gs -> GuardedCommands gs)
   | GuardedCommands gls ->
       let is_default = function
         | Default _ -> true
         | _ -> false in
-      let (gs, ds) = List.partition is_default gls in
-      let gs' = List.flatten (List.map preproc_guarded gs) in
+      let gls' = List.flatten (List.map preproc_guarded gls) in
+      let (ds, gs) = List.partition is_default gls' in
       (* handle ELSE *)
       match ds with
-      | [] -> GuardedCommands gs'
-      | [Default assigns] -> GuardedCommands gs'
+      | [] -> GuardedCommands gls'
+      | [Default assigns] ->
+          (* get explicit guard *)
+          let g =
+            List.hd (expand_conds (List.map
+            (function (Guarded (g, a)) -> g | _ -> raise (Expected_guarded_command "as non-default elements"))
+            gs)) in
+          (* see if it is necessary to make guard explicit *)
+          (match preproc_guarded (Guarded (g, assigns)) with
+            | [Guarded (_, assigns)] -> GuardedCommands (gs @ [Default assigns]) (* it is not necessary *) 
+            | gs' -> (* it is necessary *)
+                (match split_at gs' (List.length gs' - 1) with
+                 | (gs', [Guarded (_, default)]) -> GuardedCommands (gs @ gs' @ [Default default])
+                 | _ -> raise (Expected_guarded_command "as sole element of second list")))
       | _ -> raise Duplicate_else_guarded_commands;;
 
-let rec preproc_defs ds res =
-  match ds with
+let rec preproc_defs res = function
   | [] -> res
   | (Module_def (str, sal_mod))::ds ->
-      preproc_defs ds
+      preproc_defs
         ((Module_def (str, { sal_mod with
           transition = preproc_transition (sal_mod.transition) }))::res)
-  | _::ds -> preproc_defs ds res;;
+        ds
+  | _::ds -> preproc_defs res ds;;
   
+(*
+let remove_existential_guards
+  let remove_existential res id = function
+    | ExistentialGuarded ((strs, st), gc) ->
+      remove_existential (List.map (fun str -> Constant_decl (str^"*"^id, st))::res) id gc
+    | _ -> res in
+  let is_module = function
+    | Module_def _ -> true
+    | _ -> false in
+  let modules = List.filter is_module ds in
+*)   
+
+
 let preproc sal_ctx =
   let ctx' = inline sal_ctx in
   printf "%s\n" "inlined";
-  let defs = preproc_defs ctx'.definitions [] in
+  let defs = preproc_defs [] ctx'.definitions in
   { ctx' with definitions = defs };;

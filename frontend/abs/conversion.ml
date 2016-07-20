@@ -136,6 +136,7 @@ let get_conds cond man env =
       | Or (e1, e2) -> Abstract1.join man (to_abs e1) (to_abs e2)
       | True -> Abstract1.top man env
       | False -> Abstract1.bottom man env
+      | Cond (e1, e2) -> raise (Unimplemented "cond")
       | _ ->
         (match cond_to_tcons c env with
           | Some tcons -> Abstract1.of_tcons_array man env {Tcons1.tcons0_array = [|tcons.tcons0|]; Tcons1.array_env = tcons.env}
@@ -149,7 +150,9 @@ let get_guardeds gls (next_vars: string list) man env invs =
     | (Guarded (cond, assigns))::gcs ->
       let assigns_abs = Abstract1.meet man invs (get_full_assigns assigns next_vars man env) in
       let cond_abs = get_conds cond man env in
-      to_guardeds gcs ({ guard = cond_abs; expr = assigns_abs }::res)
+        if Abstract1.is_bottom man cond_abs (* guard is always false *)
+        then to_guardeds gcs res
+        else to_guardeds gcs ({ guard = cond_abs; expr = assigns_abs }::res)
     | [Default assigns] -> (res, Abstract1.meet man invs (get_full_assigns assigns next_vars man env))
     | [] -> to_guardeds [Default []] res
     | _ -> raise (Unimplemented "Default not at end.") in

@@ -2,6 +2,13 @@ open Types;;
 open Apron;;
 open Format;;
 
+let split_at ls n =
+  let rec split res = function
+  | ([], _) -> (List.rev res, [])
+  | (ls, 0) -> (List.rev res, ls)
+  | (l::ls, k) -> split (l::res) (ls, k - 1) in
+  split [] (ls, n);;
+
 (* printing *)
 let print_guarded g =
   printf "guard: %a@, expr: %a@." Abstract1.print g.guard Abstract1.print g.expr;;
