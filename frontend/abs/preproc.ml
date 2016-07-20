@@ -2,6 +2,8 @@ open Ast.Sal_ast;;
 open Inline;;
 open Format;;
 
+exception Duplicate_else_guarded_commands;;
+
 (* call inline function and remove conditional expressions *)
 
 let rec cond_ast_to_str ast =
@@ -63,96 +65,107 @@ let rec flatten_cond = function
   (* arithmetic *)
   | Add (Cond (ifs, els), e) ->
      let ifs' = List.map (fun (x, y) -> (x, Add (y, e))) ifs in
-     flatten_cond (Cond (ifs', Add(e, els)))
+     flatten_cond (Cond (ifs', Add (e, els)))
   | Add (e, Cond (ifs, els)) ->
      let ifs' = List.map (fun (x, y) -> (x, Add (e, y))) ifs in
-     flatten_cond (Cond (ifs', Add(els, e)))
+     flatten_cond (Cond (ifs', Add (els, e)))
   | Add (e1, e2) -> Add (flatten_cond e1, flatten_cond e2)
   | Sub (Cond (ifs, els), e) ->
      let ifs' = List.map (fun (x, y) -> (x, Sub (y, e))) ifs in
-     flatten_cond (Cond (ifs', Sub(e, els)))
+     flatten_cond (Cond (ifs', Sub (e, els)))
   | Sub (e, Cond (ifs, els)) ->
      let ifs' = List.map (fun (x, y) -> (x, Sub (e, y))) ifs in
-     flatten_cond (Cond (ifs', Sub(els, e)))
+     flatten_cond (Cond (ifs', Sub (els, e)))
   | Sub (e1, e2) -> Sub (flatten_cond e1, flatten_cond e2)
   | Mul (Cond (ifs, els), e) ->
      let ifs' = List.map (fun (x, y) -> (x, Mul (y, e))) ifs in
-     flatten_cond (Cond (ifs', Mul(e, els)))
+     flatten_cond (Cond (ifs', Mul (e, els)))
   | Mul (e, Cond (ifs, els)) ->
      let ifs' = List.map (fun (x, y) -> (x, Mul (e, y))) ifs in
-     flatten_cond (Cond (ifs', Mul(els, e)))
+     flatten_cond (Cond (ifs', Mul (els, e)))
   | Mul (e1, e2) -> Mul (flatten_cond e1, flatten_cond e2)
   | Div (Cond (ifs, els), e) ->
      let ifs' = List.map (fun (x, y) -> (x, Div (y, e))) ifs in
-     flatten_cond (Cond (ifs', Div(e, els)))
+     flatten_cond (Cond (ifs', Div (e, els)))
   | Div (e, Cond (ifs, els)) ->
      let ifs' = List.map (fun (x, y) -> (x, Div (e, y))) ifs in
-     flatten_cond (Cond (ifs', Div(els, e)))
+     flatten_cond (Cond (ifs', Div (els, e)))
   | Div (e1, e2) -> Div (flatten_cond e1, flatten_cond e2)
   (* comparisons *)
   | Ge (Cond (ifs, els), e) ->
      let ifs' = List.map (fun (x, y) -> (x, Ge (y, e))) ifs in
-     flatten_cond (Cond (ifs', Ge(e, els)))
+     flatten_cond (Cond (ifs', Ge (e, els)))
   | Ge (e, Cond (ifs, els)) ->
      let ifs' = List.map (fun (x, y) -> (x, Ge (e, y))) ifs in
-     flatten_cond (Cond (ifs', Ge(els, e)))
+     flatten_cond (Cond (ifs', Ge (els, e)))
   | Ge (e1, e2) -> Ge (flatten_cond e1, flatten_cond e2)
   | Gt (Cond (ifs, els), e) ->
      let ifs' = List.map (fun (x, y) -> (x, Gt (y, e))) ifs in
-     flatten_cond (Cond (ifs', Gt(e, els)))
+     flatten_cond (Cond (ifs', Gt (e, els)))
   | Gt (e, Cond (ifs, els)) ->
      let ifs' = List.map (fun (x, y) -> (x, Gt (e, y))) ifs in
-     flatten_cond (Cond (ifs', Gt(els, e)))
+     flatten_cond (Cond (ifs', Gt (els, e)))
   | Gt (e1, e2) -> Gt (flatten_cond e1, flatten_cond e2)
   | Le (Cond (ifs, els), e) ->
      let ifs' = List.map (fun (x, y) -> (x, Le (y, e))) ifs in
-     flatten_cond (Cond (ifs', Le(e, els)))
+     flatten_cond (Cond (ifs', Le (e, els)))
   | Le (e, Cond (ifs, els)) ->
      let ifs' = List.map (fun (x, y) -> (x, Le (e, y))) ifs in
-     flatten_cond (Cond (ifs', Le(els, e)))
+     flatten_cond (Cond (ifs', Le (els, e)))
   | Le (e1, e2) -> Le (flatten_cond e1, flatten_cond e2)
   | Lt (Cond (ifs, els), e) ->
      let ifs' = List.map (fun (x, y) -> (x, Lt (y, e))) ifs in
-     flatten_cond (Cond (ifs', Lt(e, els)))
+     flatten_cond (Cond (ifs', Lt (e, els)))
   | Lt (e, Cond (ifs, els)) ->
      let ifs' = List.map (fun (x, y) -> (x, Lt (e, y))) ifs in
-     flatten_cond (Cond (ifs', Lt(els, e)))
+     flatten_cond (Cond (ifs', Lt (els, e)))
   | Lt (e1, e2) -> Lt (flatten_cond e1, flatten_cond e2)
   | Eq (Cond (ifs, els), e) ->
      let ifs' = List.map (fun (x, y) -> (x, Eq (y, e))) ifs in
-     flatten_cond (Cond (ifs', Eq(e, els)))
+     flatten_cond (Cond (ifs', Eq (e, els)))
   | Eq (e, Cond (ifs, els)) ->
      let ifs' = List.map (fun (x, y) -> (x, Eq (e, y))) ifs in
-     flatten_cond (Cond (ifs', Eq(els, e)))
+     flatten_cond (Cond (ifs', Eq (els, e)))
   | Eq (e1, e2) -> Eq (flatten_cond e1, flatten_cond e2)
   | Neq (Cond (ifs, els), e) ->
      let ifs' = List.map (fun (x, y) -> (x, Neq (y, e))) ifs in
-     flatten_cond (Cond (ifs', Neq(e, els)))
+     flatten_cond (Cond (ifs', Neq (e, els)))
   | Neq (e, Cond (ifs, els)) ->
      let ifs' = List.map (fun (x, y) -> (x, Neq (e, y))) ifs in
-     flatten_cond (Cond (ifs', Neq(els, e)))
+     flatten_cond (Cond (ifs', Neq (els, e)))
   | Neq (e1, e2) -> Neq (flatten_cond e1, flatten_cond e2)
   (* logical expressions *)
   | Not (Cond (ifs, els)) -> 
       let ifs' = List.map (fun (x, y) -> (x, Not y)) ifs in
       flatten_cond (Cond (ifs', Not els))
   | Not e -> Not (flatten_cond e)
-  | And (e1, e2) -> 
-      let (e1', e2') = (flatten_cond e1, flatten_cond e2) in
-      And (flatten_cond_to_bool e1', flatten_cond_to_bool e2')
-  | Or (e1, e2) -> 
-      let (e1', e2') = (flatten_cond e1, flatten_cond e2) in
-      Or (flatten_cond_to_bool e1', flatten_cond_to_bool e2')
-  | Xor (e1, e2) -> 
-      let (e1', e2') = (flatten_cond e1, flatten_cond e2) in
-      Xor (flatten_cond_to_bool e1', flatten_cond_to_bool e2')
+  | And (Cond (ifs, els), e) ->
+     let ifs' = List.map (fun (x, y) -> (x, And (y, e))) ifs in
+     flatten_cond (Cond (ifs', And (e, els)))
+  | And (e, Cond (ifs, els)) ->
+     let ifs' = List.map (fun (x, y) -> (x, And (e, y))) ifs in
+     flatten_cond (Cond (ifs', And (els, e)))
+  | And (e1, e2) -> And (flatten_cond e1, flatten_cond e2)
+  | Or (Cond (ifs, els), e) ->
+     let ifs' = List.map (fun (x, y) -> (x, Or (y, e))) ifs in
+     flatten_cond (Cond (ifs', Or (e, els)))
+  | Or (e, Cond (ifs, els)) ->
+     let ifs' = List.map (fun (x, y) -> (x, Or (e, y))) ifs in
+     flatten_cond (Cond (ifs', Or (els, e)))
+  | Or (e1, e2) -> Or (flatten_cond e1, flatten_cond e2)
+  | Xor (Cond (ifs, els), e) ->
+     let ifs' = List.map (fun (x, y) -> (x, Xor (y, e))) ifs in
+     flatten_cond (Cond (ifs', Xor (e, els)))
+  | Xor (e, Cond (ifs, els)) ->
+     let ifs' = List.map (fun (x, y) -> (x, Xor (e, y))) ifs in
+     flatten_cond (Cond (ifs', Xor (els, e)))
+  | Xor (e1, e2) -> Xor (flatten_cond e1, flatten_cond e2)
   | Implies (e1, e2) -> 
-      let (e1', e2') = (flatten_cond e1, flatten_cond e2) in
-      Or (Not (flatten_cond_to_bool e1), flatten_cond_to_bool e2')
+      flatten_cond (Or (Not e1, e2))
   | Iff (e1, e2) ->
-      let (e1', e2') = (flatten_cond e1, flatten_cond e2) in
-      And (Or (Not (flatten_cond_to_bool e1'), flatten_cond_to_bool e2'),
-           Or (flatten_cond_to_bool e1', Not(flatten_cond_to_bool e2')))
+      flatten_cond
+        (And (Or (Not e1, e2),
+              Or (e1, Not e2)))
   | other -> other;;
 
 let preproc_assign = function
@@ -201,11 +214,16 @@ let rec preproc_transition st =
         | [g] -> Assignments assigns
         | gs -> GuardedCommands gs)
   | GuardedCommands gls ->
-      let gls' = List.flatten (List.map preproc_guarded gls) in
+      let is_default = function
+        | Default _ -> true
+        | _ -> false in
+      let (gs, ds) = List.partition is_default gls in
+      let gs' = List.flatten (List.map preproc_guarded gs) in
       (* handle ELSE *)
-      match (List.nth gls' (List.length gls' - 1)) with
-      | Default assigns -> GuardedCommands gls'
-      | other -> GuardedCommands gls';;
+      match ds with
+      | [] -> GuardedCommands gs'
+      | [Default assigns] -> GuardedCommands gs'
+      | _ -> raise Duplicate_else_guarded_commands;;
 
 let rec preproc_defs ds res =
   match ds with
@@ -218,5 +236,6 @@ let rec preproc_defs ds res =
   
 let preproc sal_ctx =
   let ctx' = inline sal_ctx in
+  printf "%s\n" "inlined";
   let defs = preproc_defs ctx'.definitions [] in
   { ctx' with definitions = defs };;

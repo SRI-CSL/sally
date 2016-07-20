@@ -71,6 +71,10 @@ let or_conds cs =
   let cs_arr = Array.of_list cs in
   Abstract1.join_array (Abstract1.manager cs_arr.(0)) cs_arr;;
 
+let is_lt c1 c2 =
+  let man = Abstract1.manager c1 in
+  (Abstract1.is_leq man c1 c2) && (not (Abstract1.is_eq man c1 c2));;
+
 (* operations on guardeds *)
 let flatten_guarded g =
   and_cond g.guard g.expr;;

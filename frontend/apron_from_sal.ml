@@ -12,6 +12,7 @@ exception Unimplemented of string;;
 
 let manbox = Box.manager_alloc ();;
 let manpk = Polka.manager_alloc_strict ();;
+let manoct = Oct.manager_alloc();;
 
 (* set current-state values to next-state values and forget next-state constraints *)
 let next_abs vars man abs =
@@ -43,7 +44,14 @@ let step_guardeds ts pred lim =
     let get_next assigns = Abstract1.meet ts.man ts.invs
                (Abstract1.join ts.man pred (next_abs ts.vars ts.man (Abstract1.meet ts.man assigns pred))) in
     let nexts = List.map get_next (List.map flatten_guarded guards_passed) in
-    let next = if guards_passed = [] then get_next e else or_conds nexts in
+    let else_passed guards = List.fold_left (&&) true (List.map (fun g -> is_lt (and_cond pred g.guard) pred) guards) in
+    let next =
+      if guards_passed = []
+      then get_next e
+      else
+        if else_passed guards_passed
+        then or_conds (get_next e::nexts)
+        else or_conds nexts in
     (*
     printf "step=%a@." Abstract1.print next;*)
     if (l > 0) then
@@ -77,6 +85,6 @@ let _ =
   create_channel_in !input_file
   |> Io.Sal_lexer.parse
   |> preproc
-  |> fun x -> handle_sal_defs x.definitions manpk
+  |> fun x -> handle_sal_defs x.definitions manoct
   |> List.map (fun ts -> step ts ts.init 100)
   |> List.map (printf "constraints found: %a@." Abstract1.print)
