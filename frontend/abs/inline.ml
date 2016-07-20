@@ -3,6 +3,8 @@ open Ast.Sal_ast;;
 (* Inline functions, constant declarations, let-statements *)
 module StrMap = Map.Make(String)
 
+exception Function_definition_not_found of string
+
 type to_inline = Type of sal_type | Val of sal_expr | Fun of string list * sal_expr
 
 let rec add_kvs ctx = function
@@ -21,7 +23,7 @@ let rec inline_expr ctx = function
       then match StrMap.find str ctx with
         Fun (strs, expr) ->
           inline_expr (add_kvs ctx (strs, es)) expr
-      else Funcall (str, es)
+      else raise (Function_definition_not_found (str))
   | Array_access (e1, e2) -> Array_access (inline_expr ctx e1, inline_expr ctx e2)
   | Array_literal (str, st, e) -> Array_literal (str, st, inline_expr ctx e)
   | Set_literal (str, st, e) -> Set_literal (str, st, inline_expr ctx e)
@@ -30,7 +32,7 @@ let rec inline_expr ctx = function
       Cond
         (List.map (fun (e1, e2) -> (inline_expr ctx e1, inline_expr ctx e2)) ifs,
         inline_expr ctx els)
-  | Opp e    -> Opp (inline_expr ctx e)
+  | Opp e        -> Opp (inline_expr ctx e)
   | Add (e1, e2) -> Add (inline_expr ctx e1, inline_expr ctx e2)
   | Sub (e1, e2) -> Sub (inline_expr ctx e1, inline_expr ctx e2)
   | Mul (e1, e2) -> Mul (inline_expr ctx e1, inline_expr ctx e2)
