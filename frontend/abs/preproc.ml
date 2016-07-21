@@ -7,35 +7,41 @@ exception Unimplemented of string;;
 exception Expected_guarded_command of string;;
 exception Duplicate_else_guarded_commands;;
 
-(* call inline function and remove conditional expressions *)
-let rec expr_ast_to_str = function
-  | Ge (e1, e2) -> "ge("^(expr_ast_to_str e1)^" , "^(expr_ast_to_str e2)^")"
-  | Gt (e1, e2) -> "gt("^(expr_ast_to_str e1)^" , "^(expr_ast_to_str e2)^")"
-  | Le (e1, e2) -> "le("^(expr_ast_to_str e1)^" , "^(expr_ast_to_str e2)^")"
-  | Lt (e1, e2) -> "lt("^(expr_ast_to_str e1)^" , "^(expr_ast_to_str e2)^")"
-  | Eq (e1, e2) -> "eq("^(expr_ast_to_str e1)^" , "^(expr_ast_to_str e2)^")"
-  | Neq (e1, e2) -> "neq("^(expr_ast_to_str e1)^" , "^(expr_ast_to_str e2)^")"
-  | And(e1, e2) -> "and("^(expr_ast_to_str e1)^", "^(expr_ast_to_str e2)^")"
-  | Or(e1, e2) -> "or("^(expr_ast_to_str e1)^", "^(expr_ast_to_str e2)^")"
-  | Not e -> "not("^(expr_ast_to_str e)^")"
-  | True -> "true"
-  | False -> "false"
+(* call inline function and remove conditional expressions by converting them to guarded commands *)
+
+let rec expr_to_str = function
+  | Add (e1, e2) -> "("^(expr_to_str e1)^"+"^(expr_to_str e2)^")"
+  | Sub (e1, e2) -> "("^(expr_to_str e1)^"-"^(expr_to_str e2)^")"
+  | Mul (e1, e2) -> "("^(expr_to_str e1)^"*"^(expr_to_str e2)^")"
+  | Div (e1, e2) -> "("^(expr_to_str e1)^"/"^(expr_to_str e2)^")"
+  | Ge (e1, e2) -> "("^(expr_to_str e1)^">="^(expr_to_str e2)^")"
+  | Gt (e1, e2) -> "("^(expr_to_str e1)^">"^(expr_to_str e2)^")"
+  | Le (e1, e2) -> "("^(expr_to_str e1)^"<="^(expr_to_str e2)^")"
+  | Lt (e1, e2) -> "("^(expr_to_str e1)^"<"^(expr_to_str e2)^")"
+  | Eq (e1, e2) -> "("^(expr_to_str e1)^"="^(expr_to_str e2)^")" | Neq (e1, e2) -> "("^(expr_to_str e1)^"!="^(expr_to_str e2)^")"
+  | And (e1, e2) -> "("^(expr_to_str e1)^" and "^(expr_to_str e2)^")"
+  | Or (e1, e2) -> "("^(expr_to_str e1)^" or "^(expr_to_str e2)^")"
+  | Xor (e1, e2) -> "("^(expr_to_str e1)^" xor "^(expr_to_str e2)^")"
+  | Not e -> "not("^(expr_to_str e)^")"
+  | Ident str -> str
   | Decimal i -> string_of_int i
   | Float f -> string_of_float f
-  | Ident str -> str 
-  | Cond (ifs, els) -> (List.fold_left (^) "cond(" (List.map (fun x -> (expr_ast_to_str (fst x))^" ; ") ifs))^(expr_ast_to_str els)^")"
-  | Add (e1, e2) -> "("^(expr_ast_to_str e1)^"+"^(expr_ast_to_str e2)^")"
+  | False -> "false"
+  | True -> "true"
+  | Cond (ifs, els) ->
+      (List.fold_left (^) "cond("
+        (List.map (fun (x, y) -> "if " ^ (expr_to_str x) ^ " then " ^ (expr_to_str y) ^ "; ") ifs))
+        ^ "else " ^ (expr_to_str els)^")"
   | _ -> "expr";;
 
-let assigns_to_str = function
-  | Assign (e1, e2) -> (expr_ast_to_str e1)^":="^(expr_ast_to_str e2)^"\n  "
-  | _ -> "member"
+let print_guarded = function
+  | Guarded (guard, assigns) ->
+      printf "guard: %s\n" (expr_to_str guard);
+  | Default assigns ->
+      printf "%s\n" "default";
+  | _ -> raise (Expected_guarded_command "print");;
 
-let guard_ast_to_str = function
-  | Guarded (expr, assigns) -> "guard: "^(expr_ast_to_str expr)^(List.fold_left (^) "\n  assigns:" (List.map assigns_to_str assigns))
-  | Default assigns -> "default"
-  | _ -> "existential";;
-
+(* functions for binary sal_expr constructors *)
 let fn_add (x, y) = Add (x, y);;
 let fn_sub (x, y) = Sub (x, y);;
 let fn_mul (x, y) = Mul (x, y);;
@@ -50,34 +56,12 @@ let fn_and (x, y) = And (x, y);;
 let fn_or (x, y) = Or (x, y);;
 let fn_xor (x, y) = Xor (x, y);;
 
-let rec contains_cond = function
-  | Cond (_, _) -> true
-  | Add (e1, e2) -> (contains_cond e1) || (contains_cond e2)
-  | Sub (e1, e2) -> (contains_cond e1) || (contains_cond e2)
-  | Mul (e1, e2) -> (contains_cond e1) || (contains_cond e2)
-  | Div (e1, e2) -> (contains_cond e1) || (contains_cond e2)
-  | Gt (e1, e2) -> (contains_cond e1) || (contains_cond e2)
-  | Ge (e1, e2) -> (contains_cond e1) || (contains_cond e2)
-  | Lt (e1, e2) -> (contains_cond e1) || (contains_cond e2)
-  | Le (e1, e2) -> (contains_cond e1) || (contains_cond e2)
-  | Eq (e1, e2) -> (contains_cond e1) || (contains_cond e2)
-  | Neq (e1, e2) -> (contains_cond e1) || (contains_cond e2)
-  | And (e1, e2) -> (contains_cond e1) || (contains_cond e2)
-  | Or (e1, e2) -> (contains_cond e1) || (contains_cond e2)
-  | Xor (e1, e2) -> (contains_cond e1) || (contains_cond e2)
-  | Implies (e1, e2) -> (contains_cond e1) || (contains_cond e2)
-  | _ -> false;;
-
-let rec non_toplevel_cond = function
-  | Cond (ifs, els) -> List.fold_left (||) (contains_cond els) (List.map contains_cond (List.map fst ifs))
-  | other -> contains_cond other;;
-
 let rec conjunction ls =
   match ls with
   | l::l'::ls -> conjunction (And(l, l')::ls)
   | [res] -> res
-  | _ -> False
-and
+  | _ -> False;;
+
 (*
   given a list of conditions [c1; c2; c3; ...; cn],
   returns the list [ce; cn'; ... ; c3'; c2'; c1'],
@@ -87,18 +71,18 @@ and
   is equivalent to
   if c1' then e1; if c2' then e2; ...; if cn' then en; if ce then e
 *)
-expand_conds conds =
+let expand_conds conds =
   let rec ec prev conds res =
     (match conds with
-    | [] -> ((conjunction (List.map (fun x -> Not x) prev)))::res
+    | [] -> (conjunction (List.map (fun x -> Not x) prev))::res
     | c::cs ->
-        ec (c::prev) cs ((And (conjunction (List.map (fun x -> Not x) prev), c))::res)) in
+        ec (c::prev) cs (And (conjunction (List.map (fun x -> Not x) prev), c)::res)) in
   match conds with
    | [] -> []
-   | c::cs -> ec [c] cs [c]
-and
+   | c::cs -> ec [c] cs [c];;
+
 (* turn an i b_1 then b_2 else if ... then b_n-1 else b_n expression into a disjunction *)
-flatten_cond_to_bool = function
+let rec flatten_cond_to_bool = function
   | Cond (ifs, els) ->
       let ls = List.rev_map2 (fun x y -> And(x, y)) (expand_conds (List.map fst ifs)) (els::(List.rev_map snd ifs)) in
         List.fold_left (fun x y -> flatten_cond (Or (x, y))) (List.hd ls) (List.tl ls)
@@ -134,9 +118,8 @@ flatten_cond = function
       (* flatten the else *)
       (match els' with
       | Cond (e_ifs, e_els) ->
-          Cond
-            (List.map (fun (x, y) -> (flatten_cond (And(x, List.hd (expand_conds (List.map fst ifs'')))), y)) e_ifs,
-             e_els)
+          let e_ifs' = List.map (fun (x, y) -> (And(x, List.hd (expand_conds (List.map fst ifs'')))), y) e_ifs in
+          Cond (ifs'' @ e_ifs', e_els)
       | _ -> Cond (ifs'', els')) in res
   (* arithmetic *)
   | Add (e1, e2) -> pair_flattener (e1, e2) fn_add
@@ -204,7 +187,11 @@ let rec preproc_guarded_assigns = function
 let rec preproc_guarded = function
   | ExistentialGuarded (decl, gc) -> raise (Unimplemented "Existential guards") (*List.map (fun gc -> ExistentialGuarded (decl, gc)) (preproc_guarded gc)*)
   | Guarded (guard, assigns) ->
-      List.flatten (List.map preproc_guarded_guard (preproc_guarded_assigns (Guarded (guard, [])) (List.map preproc_assign assigns)))
+      (* remove conditionals from assignments *)
+      preproc_guarded_assigns (Guarded (guard, [])) (List.map preproc_assign assigns)
+      |> (* remove conditionals from guards *)
+      List.map preproc_guarded_guard
+      |> List.flatten
   | other -> [other];;
 
 let rec preproc_transition = function
@@ -246,19 +233,6 @@ let rec preproc_defs res = function
           transition = preproc_transition (sal_mod.transition) }))::res)
         ds
   | _::ds -> preproc_defs res ds;;
-  
-(*
-let remove_existential_guards
-  let remove_existential res id = function
-    | ExistentialGuarded ((strs, st), gc) ->
-      remove_existential (List.map (fun str -> Constant_decl (str^"*"^id, st))::res) id gc
-    | _ -> res in
-  let is_module = function
-    | Module_def _ -> true
-    | _ -> false in
-  let modules = List.filter is_module ds in
-*)   
-
 
 let preproc sal_ctx =
   let ctx' = inline sal_ctx in
