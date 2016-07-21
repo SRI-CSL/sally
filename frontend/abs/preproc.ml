@@ -8,8 +8,6 @@ exception Expected_guarded_command of string;;
 exception Duplicate_else_guarded_commands;;
 
 (* call inline function and remove conditional expressions *)
-
-(*
 let rec expr_ast_to_str = function
   | Ge (e1, e2) -> "ge("^(expr_ast_to_str e1)^" , "^(expr_ast_to_str e2)^")"
   | Gt (e1, e2) -> "gt("^(expr_ast_to_str e1)^" , "^(expr_ast_to_str e2)^")"
@@ -24,21 +22,62 @@ let rec expr_ast_to_str = function
   | False -> "false"
   | Decimal i -> string_of_int i
   | Float f -> string_of_float f
-  | Ident str -> str
+  | Ident str -> str 
+  | Cond (ifs, els) -> (List.fold_left (^) "cond(" (List.map (fun x -> (expr_ast_to_str (fst x))^" ; ") ifs))^(expr_ast_to_str els)^")"
+  | Add (e1, e2) -> "("^(expr_ast_to_str e1)^"+"^(expr_ast_to_str e2)^")"
   | _ -> "expr";;
 
+let assigns_to_str = function
+  | Assign (e1, e2) -> (expr_ast_to_str e1)^":="^(expr_ast_to_str e2)^"\n  "
+  | _ -> "member"
+
 let guard_ast_to_str = function
-  | Guarded (expr, assigns) -> "guard: "^(expr_ast_to_str expr)
+  | Guarded (expr, assigns) -> "guard: "^(expr_ast_to_str expr)^(List.fold_left (^) "\n  assigns:" (List.map assigns_to_str assigns))
   | Default assigns -> "default"
   | _ -> "existential";;
-*)
+
+let fn_add (x, y) = Add (x, y);;
+let fn_sub (x, y) = Sub (x, y);;
+let fn_mul (x, y) = Mul (x, y);;
+let fn_div (x, y) = Div (x, y);;
+let fn_ge (x, y) = Ge (x, y);;
+let fn_gt (x, y) = Gt (x, y);;
+let fn_lt (x, y) = Le (x, y);;
+let fn_le (x, y) = Lt (x, y);;
+let fn_eq (x, y) = Eq (x, y);;
+let fn_neq (x, y) = Neq (x, y);;
+let fn_and (x, y) = And (x, y);;
+let fn_or (x, y) = Or (x, y);;
+let fn_xor (x, y) = Xor (x, y);;
+
+let rec contains_cond = function
+  | Cond (_, _) -> true
+  | Add (e1, e2) -> (contains_cond e1) || (contains_cond e2)
+  | Sub (e1, e2) -> (contains_cond e1) || (contains_cond e2)
+  | Mul (e1, e2) -> (contains_cond e1) || (contains_cond e2)
+  | Div (e1, e2) -> (contains_cond e1) || (contains_cond e2)
+  | Gt (e1, e2) -> (contains_cond e1) || (contains_cond e2)
+  | Ge (e1, e2) -> (contains_cond e1) || (contains_cond e2)
+  | Lt (e1, e2) -> (contains_cond e1) || (contains_cond e2)
+  | Le (e1, e2) -> (contains_cond e1) || (contains_cond e2)
+  | Eq (e1, e2) -> (contains_cond e1) || (contains_cond e2)
+  | Neq (e1, e2) -> (contains_cond e1) || (contains_cond e2)
+  | And (e1, e2) -> (contains_cond e1) || (contains_cond e2)
+  | Or (e1, e2) -> (contains_cond e1) || (contains_cond e2)
+  | Xor (e1, e2) -> (contains_cond e1) || (contains_cond e2)
+  | Implies (e1, e2) -> (contains_cond e1) || (contains_cond e2)
+  | _ -> false;;
+
+let rec non_toplevel_cond = function
+  | Cond (ifs, els) -> List.fold_left (||) (contains_cond els) (List.map contains_cond (List.map fst ifs))
+  | other -> contains_cond other;;
 
 let rec conjunction ls =
   match ls with
   | l::l'::ls -> conjunction (And(l, l')::ls)
   | [res] -> res
-  | _ -> False;;
-
+  | _ -> False
+and
 (*
   given a list of conditions [c1; c2; c3; ...; cn],
   returns the list [ce; cn'; ... ; c3'; c2'; c1'],
@@ -48,37 +87,46 @@ let rec conjunction ls =
   is equivalent to
   if c1' then e1; if c2' then e2; ...; if cn' then en; if ce then e
 *)
-let expand_conds conds =
+expand_conds conds =
   let rec ec prev conds res =
     (match conds with
-    | [] -> (conjunction (List.map (fun x -> Not x) prev))::res
+    | [] -> ((conjunction (List.map (fun x -> Not x) prev)))::res
     | c::cs ->
         ec (c::prev) cs ((And (conjunction (List.map (fun x -> Not x) prev), c))::res)) in
   match conds with
    | [] -> []
-   | c::cs -> ec [c] cs [c];;
-
+   | c::cs -> ec [c] cs [c]
+and
 (* turn an i b_1 then b_2 else if ... then b_n-1 else b_n expression into a disjunction *)
-let is_cond = function Cond (e1, e2) -> true | _ -> false;;
-
-let flatten_cond_to_bool = function
+flatten_cond_to_bool = function
   | Cond (ifs, els) ->
       let ls = List.rev_map2 (fun x y -> And(x, y)) (expand_conds (List.map fst ifs)) (els::(List.rev_map snd ifs)) in
-        List.fold_left (fun x y -> Or (x, y)) (List.hd ls) (List.tl ls)
+        List.fold_left (fun x y -> flatten_cond (Or (x, y))) (List.hd ls) (List.tl ls)
   | other -> other
-
-let rec flattener cond = function
+and
+flattener cond = function
   | Cond (ifs, els) ->
       (* generate new ifs *)
       List.rev_map2 (fun x y -> (And(cond, x), y))
         (expand_conds (List.map fst ifs)) (els::(List.rev_map snd ifs))
-  | other -> [(cond, other)];;
-
+  | other -> [(cond, other)]
+and
+pair_flattener (e1, e2) f =
+  match (flatten_cond e1, flatten_cond e2) with
+  | (Cond (ifs, els), e) ->
+      let ifs' = List.map (fun (x, y) -> (x, f (y, e))) ifs in
+      flatten_cond (Cond (ifs', f (e, els)))
+  | (e, Cond (ifs, els)) ->
+      let ifs' = List.map (fun (x, y) -> (x, f (e, y))) ifs in
+      Cond (ifs', f (els, e))
+  | (e1', e2') -> f (e1', e2')
+and
 (* flatten conditional statements in an expression so there is at most one conditional
 in the expression (conditionals within logical expressions are converted
 to logical expressions); simpler way? *)
-let rec flatten_cond = function
+flatten_cond = function
   | Cond (ifs, els) ->
+      let res =
       let ifs' = List.map (fun (x, y) -> (flatten_cond x, flatten_cond y)) ifs in
       let els' = flatten_cond els in
       (* flatten the ifs *)
@@ -87,107 +135,31 @@ let rec flatten_cond = function
       (match els' with
       | Cond (e_ifs, e_els) ->
           Cond
-            (List.map (fun (x, y) -> (And(x, List.hd (expand_conds (List.map fst ifs''))), y)) e_ifs,
+            (List.map (fun (x, y) -> (flatten_cond (And(x, List.hd (expand_conds (List.map fst ifs'')))), y)) e_ifs,
              e_els)
-      | _ -> Cond (ifs'', els'))
+      | _ -> Cond (ifs'', els')) in res
   (* arithmetic *)
-  | Add (Cond (ifs, els), e) ->
-     let ifs' = List.map (fun (x, y) -> (x, Add (y, e))) ifs in
-     flatten_cond (Cond (ifs', Add (e, els)))
-  | Add (e, Cond (ifs, els)) ->
-     let ifs' = List.map (fun (x, y) -> (x, Add (e, y))) ifs in
-     flatten_cond (Cond (ifs', Add (els, e)))
-  | Add (e1, e2) -> Add (flatten_cond e1, flatten_cond e2)
-  | Sub (Cond (ifs, els), e) ->
-     let ifs' = List.map (fun (x, y) -> (x, Sub (y, e))) ifs in
-     flatten_cond (Cond (ifs', Sub (e, els)))
-  | Sub (e, Cond (ifs, els)) ->
-     let ifs' = List.map (fun (x, y) -> (x, Sub (e, y))) ifs in
-     flatten_cond (Cond (ifs', Sub (els, e)))
-  | Sub (e1, e2) -> Sub (flatten_cond e1, flatten_cond e2)
-  | Mul (Cond (ifs, els), e) ->
-     let ifs' = List.map (fun (x, y) -> (x, Mul (y, e))) ifs in
-     flatten_cond (Cond (ifs', Mul (e, els)))
-  | Mul (e, Cond (ifs, els)) ->
-     let ifs' = List.map (fun (x, y) -> (x, Mul (e, y))) ifs in
-     flatten_cond (Cond (ifs', Mul (els, e)))
-  | Mul (e1, e2) -> Mul (flatten_cond e1, flatten_cond e2)
-  | Div (Cond (ifs, els), e) ->
-     let ifs' = List.map (fun (x, y) -> (x, Div (y, e))) ifs in
-     flatten_cond (Cond (ifs', Div (e, els)))
-  | Div (e, Cond (ifs, els)) ->
-     let ifs' = List.map (fun (x, y) -> (x, Div (e, y))) ifs in
-     flatten_cond (Cond (ifs', Div (els, e)))
-  | Div (e1, e2) -> Div (flatten_cond e1, flatten_cond e2)
+  | Add (e1, e2) -> pair_flattener (e1, e2) fn_add
+  | Sub (e1, e2) -> pair_flattener (e1, e2) fn_sub
+  | Mul (e1, e2) -> pair_flattener (e1, e2) fn_mul
+  | Div (e1, e2) -> pair_flattener (e1, e2) fn_div
   (* comparisons *)
-  | Ge (Cond (ifs, els), e) ->
-     let ifs' = List.map (fun (x, y) -> (x, Ge (y, e))) ifs in
-     flatten_cond (Cond (ifs', Ge (e, els)))
-  | Ge (e, Cond (ifs, els)) ->
-     let ifs' = List.map (fun (x, y) -> (x, Ge (e, y))) ifs in
-     flatten_cond (Cond (ifs', Ge (els, e)))
-  | Ge (e1, e2) -> Ge (flatten_cond e1, flatten_cond e2)
-  | Gt (Cond (ifs, els), e) ->
-     let ifs' = List.map (fun (x, y) -> (x, Gt (y, e))) ifs in
-     flatten_cond (Cond (ifs', Gt (e, els)))
-  | Gt (e, Cond (ifs, els)) ->
-     let ifs' = List.map (fun (x, y) -> (x, Gt (e, y))) ifs in
-     flatten_cond (Cond (ifs', Gt (els, e)))
-  | Gt (e1, e2) -> Gt (flatten_cond e1, flatten_cond e2)
-  | Le (Cond (ifs, els), e) ->
-     let ifs' = List.map (fun (x, y) -> (x, Le (y, e))) ifs in
-     flatten_cond (Cond (ifs', Le (e, els)))
-  | Le (e, Cond (ifs, els)) ->
-     let ifs' = List.map (fun (x, y) -> (x, Le (e, y))) ifs in
-     flatten_cond (Cond (ifs', Le (els, e)))
-  | Le (e1, e2) -> Le (flatten_cond e1, flatten_cond e2)
-  | Lt (Cond (ifs, els), e) ->
-     let ifs' = List.map (fun (x, y) -> (x, Lt (y, e))) ifs in
-     flatten_cond (Cond (ifs', Lt (e, els)))
-  | Lt (e, Cond (ifs, els)) ->
-     let ifs' = List.map (fun (x, y) -> (x, Lt (e, y))) ifs in
-     flatten_cond (Cond (ifs', Lt (els, e)))
-  | Lt (e1, e2) -> Lt (flatten_cond e1, flatten_cond e2)
-  | Eq (Cond (ifs, els), e) ->
-     let ifs' = List.map (fun (x, y) -> (x, Eq (y, e))) ifs in
-     flatten_cond (Cond (ifs', Eq (e, els)))
-  | Eq (e, Cond (ifs, els)) ->
-     let ifs' = List.map (fun (x, y) -> (x, Eq (e, y))) ifs in
-     flatten_cond (Cond (ifs', Eq (els, e)))
-  | Eq (e1, e2) -> Eq (flatten_cond e1, flatten_cond e2)
-  | Neq (Cond (ifs, els), e) ->
-     let ifs' = List.map (fun (x, y) -> (x, Neq (y, e))) ifs in
-     flatten_cond (Cond (ifs', Neq (e, els)))
-  | Neq (e, Cond (ifs, els)) ->
-     let ifs' = List.map (fun (x, y) -> (x, Neq (e, y))) ifs in
-     flatten_cond (Cond (ifs', Neq (els, e)))
-  | Neq (e1, e2) -> Neq (flatten_cond e1, flatten_cond e2)
+  | Ge (e1, e2) -> pair_flattener (e1, e2) fn_ge
+  | Gt (e1, e2) -> pair_flattener (e1, e2) fn_gt
+  | Le (e1, e2) -> pair_flattener (e1, e2) fn_le
+  | Lt (e1, e2) -> pair_flattener (e1, e2) fn_lt
+  | Eq (e1, e2) -> pair_flattener (e1, e2) fn_eq
+  | Neq (e1, e2) -> pair_flattener (e1, e2) fn_neq
   (* logical expressions *)
-  | Not (Cond (ifs, els)) -> 
-      let ifs' = List.map (fun (x, y) -> (x, Not y)) ifs in
-      flatten_cond (Cond (ifs', Not els))
-  | Not e -> Not (flatten_cond e)
-  | And (Cond (ifs, els), e) ->
-     let ifs' = List.map (fun (x, y) -> (x, And (y, e))) ifs in
-     flatten_cond (Cond (ifs', And (e, els)))
-  | And (e, Cond (ifs, els)) ->
-     let ifs' = List.map (fun (x, y) -> (x, And (e, y))) ifs in
-     flatten_cond (Cond (ifs', And (els, e)))
-  | And (e1, e2) -> And (flatten_cond e1, flatten_cond e2)
-  | Or (Cond (ifs, els), e) ->
-     let ifs' = List.map (fun (x, y) -> (x, Or (y, e))) ifs in
-     flatten_cond (Cond (ifs', Or (e, els)))
-  | Or (e, Cond (ifs, els)) ->
-     let ifs' = List.map (fun (x, y) -> (x, Or (e, y))) ifs in
-     flatten_cond (Cond (ifs', Or (els, e)))
-  | Or (e1, e2) -> Or (flatten_cond e1, flatten_cond e2)
-  | Xor (Cond (ifs, els), e) ->
-     let ifs' = List.map (fun (x, y) -> (x, Xor (y, e))) ifs in
-     flatten_cond (Cond (ifs', Xor (e, els)))
-  | Xor (e, Cond (ifs, els)) ->
-     let ifs' = List.map (fun (x, y) -> (x, Xor (e, y))) ifs in
-     flatten_cond (Cond (ifs', Xor (els, e)))
-  | Xor (e1, e2) -> Xor (flatten_cond e1, flatten_cond e2)
+  | Not e ->
+      (match flatten_cond e with
+       | Cond (ifs, els) ->
+           let ifs' = List.map (fun (x, y) -> (x, Not y)) ifs in
+           Cond (ifs', Not els)
+       | e' -> Not e')
+  | And (e1, e2) -> pair_flattener (e1, e2) fn_and
+  | Or (e1, e2) -> pair_flattener (e1, e2) fn_or
+  | Xor (e1, e2) -> pair_flattener (e1, e2) fn_xor
   | Implies (e1, e2) -> 
       flatten_cond (Or (Not e1, e2))
   | Iff (e1, e2) ->
@@ -232,16 +204,10 @@ let rec preproc_guarded_assigns = function
 let rec preproc_guarded = function
   | ExistentialGuarded (decl, gc) -> raise (Unimplemented "Existential guards") (*List.map (fun gc -> ExistentialGuarded (decl, gc)) (preproc_guarded gc)*)
   | Guarded (guard, assigns) ->
-      (List.map
-        (function
-         | (Guarded (g, a)) -> preproc_guarded_assigns (Guarded (g, [])) (List.map preproc_assign a)
-         | _ -> raise (Expected_guarded_command "as elements of list returned from preproc_guarded_guard"))
-        (preproc_guarded_guard (Guarded (guard, assigns))))
-      |> List.flatten
+      List.flatten (List.map preproc_guarded_guard (preproc_guarded_assigns (Guarded (guard, [])) (List.map preproc_assign assigns)))
   | other -> [other];;
 
-let rec preproc_transition st =
-  match st with
+let rec preproc_transition = function
   | NoTransition -> NoTransition
   | Assignments assigns ->
       (* if there are conditionals in the assignments, convert into guarded commands *)
