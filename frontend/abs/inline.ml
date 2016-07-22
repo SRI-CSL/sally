@@ -120,4 +120,4 @@ let rec inline_defs ctx res = function
   
 let inline sal_ctx =
   let defs = inline_defs StrMap.empty [] sal_ctx.definitions in
-  { sal_ctx with definitions = defs };;
+  { sal_ctx with definitions = List.rev defs };;
