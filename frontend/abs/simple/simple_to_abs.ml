@@ -1,6 +1,7 @@
 (* Create abstract program from simple program *)
 open Simple_ast;;
 open Apron;;
+open Format;;
 
 exception Unimplemented of string;;
 
@@ -85,20 +86,21 @@ let rec arith_to_texpr man env v is_int binop e1 e2 =
     Texpr1.of_expr (abs.Abstract1.env)
       (Texpr1.Binop (binop, te1, te2, typ, Texpr1.Rnd)) in
   (* The new environment *)
-  (abs.Abstract1.env, abs, texpr)
+  (abs, texpr)
 and
 arith_from_expr man env v is_int binop e1 e2 =
-  let (env', abs, texpr) = arith_to_texpr man env v is_int binop e1 e2 in
+  let (abs, texpr) = arith_to_texpr man env v is_int binop e1 e2 in
   (* The assignment of the variable v to the texpr in the new environment *)
   Abs (Abstract1.assign_texpr man abs v texpr None)
 and
 comp_from_expr man env v typ e1 e2 =
   (* get e1 - e2 *)
-  let (env', abs, texpr) = arith_to_texpr man env v false Texpr1.Sub e1 e2 in
+  let (abs, texpr) = arith_to_texpr man env v false Texpr1.Sub e1 e2 in
   (* now make e1 - e2 typ 0 constraint *)
   let tcons = Tcons1.make texpr typ in
-  let tcons_arr = Tcons1.array_make env' 1 in
-  Abs (Abstract1.meet_tcons_array man abs tcons_arr)
+  let tcons_arr = Tcons1.array_make abs.Abstract1.env 1 in
+  Tcons1.array_set tcons_arr 0 tcons;
+  Abs (Abstract1.change_environment man (Abstract1.meet_tcons_array man abs tcons_arr) env false)
 and
 from_expr man env v = function
   | Nat n -> Num (Coeff.Scalar (Scalar.of_int n))
@@ -114,7 +116,34 @@ from_expr man env v = function
   | Eq (e1, e2) -> comp_from_expr man env v Tcons1.EQ e1 e2
   | Neq (e1, e2) -> comp_from_expr man env v Tcons1.DISEQ e1 e2
   | Not e -> raise (Unimplemented "Not")
-  | _ -> raise (Unimplemented "Binary conds");;
+  | And (e1, e2) ->
+      let v_str = Var.to_string v in
+      (match (from_expr man env (Var.of_string (v_str^"_l")) e1, from_expr man env (Var.of_string(v_str^"_r")) e2) with
+      | (Abs a1, Abs a2) -> Abs (Abstract1.unify man a1 a2)
+      | _ -> raise (Unimplemented "No booleans"))
+  | Or (e1, e2) ->
+      let v_str = Var.to_string v in
+      (match (from_expr man env (Var.of_string (v_str^"_l")) e1, from_expr man env (Var.of_string(v_str^"_r")) e2) with
+      | (Abs a1, Abs a2) -> Abs (Abstract1.join man a1 a2)
+      | _ -> raise (Unimplemented "booleans"))
+(*
+  | Cond (e1, e2, e3) ->
+      (match from_expr man env (Var.of_string (v_str^"if")) e1 with
+      | Abs cond ->
+          if (Abstract1.is_top cond)
+          then from_expr man env v e2
+          else if (Abstract1.is_bottom cond)
+          then from_expr man env v e3
+          else
+            let v_str = Var.to_string v in
+            let v1 = Var.of_string (v^"_l") in
+            let v2 = Var.of_string (v^"_r") in
+            (* expand using ctx later *)
+            (match (from_expr man env v1 e1, from_expr man env v e2) with
+             | (Abs a1
+      | _ -> raise (Unimplemented "booleans"))
+  *)   
+  | _ -> raise (Unimplemented "Assign");;
       
 let simple_to_abs man p =
   let (env, invs') = from_decls p.Simple_ast.decls in
