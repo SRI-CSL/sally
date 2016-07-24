@@ -76,24 +76,35 @@ arith_from_expr man ctx v is_int binop e1 e2 =
   Abstract1.assign_texpr man abs v texpr None
 and
 comp_from_expr man ctx v typ e1 e2 =
+  let env = ctx.Abstract1.env in
   (* get e1 - e2 *)
   let (abs, texpr) = arith_to_texpr man ctx v false Texpr1.Sub e1 e2 in
   (* now make e1 - e2 typ 0 constraint *)
   let tcons = Tcons1.make texpr typ in
   let tcons_arr = Tcons1.array_make abs.Abstract1.env 1 in
   Tcons1.array_set tcons_arr 0 tcons;
-  Abstract1.meet_tcons_array man abs tcons_arr
-(*
-  Abstract1.change_environment man (Abstract1.meet_tcons_array man abs tcons_arr) (ctx.Abstract1.env) false*)
+  Abstract1.change_environment man (Abstract1.meet_tcons_array man abs tcons_arr) env false
+and
+set_var_to_scalar man abs v expr =
+  Abstract1.assign_texpr man abs v (Texpr1.of_expr (abs.Abstract1.env) expr) None
 and
 from_expr man ctx v = function
   | Nat n ->
       let env = Environment.add (ctx.Abstract1.env) [|v|] [||] in
       Abstract1.change_environment_with man ctx env false;
-      Abstract1.assign_texpr man ctx v (Texpr1.of_expr (ctx.Abstract1.env) (Texpr1.Cst (Coeff.Scalar (Scalar.of_int n)))) None
-  | Int i -> Abstract1.assign_texpr man ctx v (Texpr1.of_expr (ctx.Abstract1.env) (Texpr1.Cst (Coeff.Scalar (Scalar.of_int i)))) None
-  | Float f -> Abstract1.assign_texpr man ctx v (Texpr1.of_expr (ctx.Abstract1.env) (Texpr1.Cst (Coeff.Scalar (Scalar.of_float f)))) None
-  | Ident e -> Abstract1.assign_texpr man ctx v (Texpr1.of_expr (ctx.Abstract1.env) (Texpr1.Var (Var.of_string e))) None
+      set_var_to_scalar man ctx v (Texpr1.Cst (Coeff.Scalar (Scalar.of_int n)))
+  | Int i ->
+      let env = Environment.add (ctx.Abstract1.env) [|v|] [||] in
+      Abstract1.change_environment_with man ctx env false;
+      set_var_to_scalar man ctx v (Texpr1.Cst (Coeff.Scalar (Scalar.of_int i)))
+  | Float f ->
+      let env = Environment.add (ctx.Abstract1.env) [||] [|v|] in
+      Abstract1.change_environment_with man ctx env false;
+      set_var_to_scalar man ctx v (Texpr1.Cst (Coeff.Scalar (Scalar.of_float f)))
+  | Ident e ->
+      let env = Environment.add (ctx.Abstract1.env) [||] [|v|] in
+      Abstract1.change_environment_with man ctx env false;
+      set_var_to_scalar man ctx v (Texpr1.Var (Var.of_string e))
   | Add (e1, e2) -> arith_from_expr man ctx v false Texpr1.Add e1 e2
   | Sub (e1, e2) -> arith_from_expr man ctx v false Texpr1.Sub e1 e2
   | Mul (e1, e2) -> arith_from_expr man ctx v false Texpr1.Mul e1 e2
@@ -103,20 +114,32 @@ from_expr man ctx v = function
   | Eq (e1, e2) -> comp_from_expr man ctx v Tcons1.EQ e1 e2
   | Neq (e1, e2) -> comp_from_expr man ctx v Tcons1.DISEQ e1 e2
   | Not e -> raise (Unimplemented "Not")
-(*
   | And (e1, e2) ->
       let v_str = Var.to_string v in
-      (match (from_expr man env (Var.of_string (v_str^"_l")) e1, from_expr man env (Var.of_string(v_str^"_r")) e2) with
-      | (Abs a1, Abs a2) -> Abs (Abstract1.unify man a1 a2)
-      | _ -> raise (Unimplemented "No booleans"))
+      Abstract1.unify man
+        (from_expr man ctx (Var.of_string (v_str^"_l")) e1)
+        (from_expr man ctx (Var.of_string(v_str^"_r")) e2)
   | Or (e1, e2) ->
       let v_str = Var.to_string v in
-      (match (from_expr man env (Var.of_string (v_str^"_l")) e1, from_expr man env (Var.of_string(v_str^"_r")) e2) with
-      | (Abs a1, Abs a2) -> Abs (Abstract1.join man a1 a2)
-      | _ -> raise (Unimplemented "booleans"))
-*)
-(*
+      Abstract1.join man
+        (from_expr man ctx (Var.of_string (v_str^"_l")) e1)
+        (from_expr man ctx (Var.of_string(v_str^"_r")) e2)
   | Cond (e1, e2, e3) ->
+      let v_str = Var.to_string v in
+      let cond = from_expr man ctx (Var.of_string (v_str^"if")) e1 in
+      if (Abstract1.is_top man cond)
+      then from_expr man ctx v e2
+      else if (Abstract1.is_bottom man cond)
+      then from_expr man ctx v e3
+      else
+        let ctx1 = Abstract1.copy man ctx in
+        let ctx2 = Abstract1.copy man ctx in
+        Abstract1.join man
+          (from_expr man ctx1 v e1)
+          (from_expr man ctx2 v e2)
+  | True -> Abstract1.top man ctx.Abstract1.env
+  | False -> Abstract1.bottom man ctx.Abstract1.env
+(*
       (match from_expr man env (Var.of_string (v_str^"if")) e1 with
       | Abs cond ->
           if (Abstract1.is_top cond)
@@ -130,8 +153,7 @@ from_expr man ctx v = function
             (* expand using ctx later *)
             (match (from_expr man env v1 e1, from_expr man env v e2) with
              | (Abs a1
-      | _ -> raise (Unimplemented "booleans"))
-  *)   
+*)
   | _ -> raise (Unimplemented "Assign");;
       
 let simple_to_abs man p =
