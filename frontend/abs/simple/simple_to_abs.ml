@@ -47,6 +47,7 @@ let rec from_expr man env = function
   | Simple_ast.False -> False;;
 *)
 
+
 let rec arith_to_texpr man ctx v is_int binop e1 e2 =
   let v1 = Var.of_string ((Var.to_string v)^"_l") in
   let v2 = Var.of_string ((Var.to_string v)^"_r") in
@@ -91,20 +92,24 @@ and
 from_expr man ctx v = function
   | Nat n ->
       let env = Environment.add (ctx.Abstract1.env) [|v|] [||] in
-      Abstract1.change_environment_with man ctx env false;
-      set_var_to_scalar man ctx v (Texpr1.Cst (Coeff.Scalar (Scalar.of_int n)))
+      let ctx' = Abstract1.change_environment man ctx env false in 
+      set_var_to_scalar man ctx' v (Texpr1.Cst (Coeff.Scalar (Scalar.of_int n)))
   | Int i ->
       let env = Environment.add (ctx.Abstract1.env) [|v|] [||] in
-      Abstract1.change_environment_with man ctx env false;
-      set_var_to_scalar man ctx v (Texpr1.Cst (Coeff.Scalar (Scalar.of_int i)))
+      let ctx' = Abstract1.change_environment man ctx env false in
+      set_var_to_scalar man ctx' v (Texpr1.Cst (Coeff.Scalar (Scalar.of_int i)))
   | Float f ->
       let env = Environment.add (ctx.Abstract1.env) [||] [|v|] in
-      Abstract1.change_environment_with man ctx env false;
-      set_var_to_scalar man ctx v (Texpr1.Cst (Coeff.Scalar (Scalar.of_float f)))
+      let ctx' = Abstract1.change_environment man ctx env false in
+      set_var_to_scalar man ctx' v (Texpr1.Cst (Coeff.Scalar (Scalar.of_float f)))
   | Ident e ->
-      let env = Environment.add (ctx.Abstract1.env) [||] [|v|] in
-      Abstract1.change_environment_with man ctx env false;
-      set_var_to_scalar man ctx v (Texpr1.Var (Var.of_string e))
+      let (ints, _) = Environment.vars (ctx.Abstract1.env) in
+      let env =
+        if Array.exists (fun x -> (x = (Var.of_string e))) ints
+        then Environment.add (ctx.Abstract1.env) [|v|] [||]
+        else Environment.add (ctx.Abstract1.env) [||] [|v|] in
+      let ctx' = Abstract1.change_environment man ctx env false in
+      set_var_to_scalar man ctx' v (Texpr1.Var (Var.of_string e))
   | Add (e1, e2) -> arith_from_expr man ctx v false Texpr1.Add e1 e2
   | Sub (e1, e2) -> arith_from_expr man ctx v false Texpr1.Sub e1 e2
   | Mul (e1, e2) -> arith_from_expr man ctx v false Texpr1.Mul e1 e2
@@ -116,9 +121,8 @@ from_expr man ctx v = function
   | Not e -> raise (Unimplemented "Not")
   | And (e1, e2) ->
       let v_str = Var.to_string v in
-      Abstract1.unify man
-        (from_expr man ctx (Var.of_string (v_str^"_l")) e1)
-        (from_expr man ctx (Var.of_string(v_str^"_r")) e2)
+      let ctx' = from_expr man ctx (Var.of_string (v_str^"_l")) e1 in
+      from_expr man ctx' (Var.of_string(v_str^"_r")) e2
   | Or (e1, e2) ->
       let v_str = Var.to_string v in
       Abstract1.join man
@@ -128,33 +132,22 @@ from_expr man ctx v = function
       let v_str = Var.to_string v in
       let cond = from_expr man ctx (Var.of_string (v_str^"if")) e1 in
       if (Abstract1.is_top man cond)
-      then from_expr man ctx v e2
+      then from_expr man cond v e2
       else if (Abstract1.is_bottom man cond)
       then from_expr man ctx v e3
       else
-        let ctx1 = Abstract1.copy man ctx in
-        let ctx2 = Abstract1.copy man ctx in
+        let ctx' = Abstract1.change_environment man ctx (cond.Abstract1.env) false in
         Abstract1.join man
-          (from_expr man ctx1 v e1)
-          (from_expr man ctx2 v e2)
+          (from_expr man cond v e2)
+          (from_expr man ctx' v e3)
+  | Assign (e1, e2) ->
+      let assign =
+        Abstract1.meet man
+          (from_expr man ctx v e1)
+          (from_expr man ctx v e2) in
+      Abstract1.change_environment man assign (ctx.Abstract1.env) false
   | True -> Abstract1.top man ctx.Abstract1.env
-  | False -> Abstract1.bottom man ctx.Abstract1.env
-(*
-      (match from_expr man env (Var.of_string (v_str^"if")) e1 with
-      | Abs cond ->
-          if (Abstract1.is_top cond)
-          then from_expr man env v e2
-          else if (Abstract1.is_bottom cond)
-          then from_expr man env v e3
-          else
-            let v_str = Var.to_string v in
-            let v1 = Var.of_string (v^"_l") in
-            let v2 = Var.of_string (v^"_r") in
-            (* expand using ctx later *)
-            (match (from_expr man env v1 e1, from_expr man env v e2) with
-             | (Abs a1
-*)
-  | _ -> raise (Unimplemented "Assign");;
+  | False -> Abstract1.bottom man ctx.Abstract1.env;;
       
 let simple_to_abs man p =
   let (env, invs') = from_decls p.Simple_ast.decls in
