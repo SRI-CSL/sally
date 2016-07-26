@@ -118,7 +118,7 @@ from_expr man ctx v = function
       let v_str = Var.to_string v in
       let cond = from_expr man ctx (Var.of_string (v_str^"if")) e1 in
       if (Abstract1.is_top man cond)
-      then from_expr man cond v e2
+      then from_expr man ctx v e2
       else if (Abstract1.is_bottom man cond)
       then from_expr man ctx v e3
       else
