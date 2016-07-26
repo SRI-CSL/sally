@@ -20,3 +20,5 @@ let rec string_of_simple = function
   | Cond (e1, e2, e3) -> "(if "^(string_of_simple e1)^" then "^(string_of_simple e2)^" else "^(string_of_simple e3)^")"
   | True -> "true"
   | False -> "false"
+  | Seq (e::es) -> (string_of_simple e)^"; "^(string_of_simple (Seq es))
+  | Seq [] -> ""

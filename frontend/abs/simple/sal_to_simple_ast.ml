@@ -1,5 +1,6 @@
 open Ast;;
 open Simple_ast;;
+open Format;;
 
 exception Unexpected_expr;;
 exception Unimplemented of string;;
@@ -38,23 +39,29 @@ let rec sal_to_expr = function
   | Sal_ast.False        -> False
   | _                    -> raise Unexpected_expr;;
 
-let rec convert_sal_assignment = function
-  | Sal_ast.Assign (e1, e2) -> Assign (sal_to_expr e1, sal_to_expr e2)
+let rec convert_sal_assignments next_state assigned assigns = function
+  | [] ->
+      let unassigned = List.filter (fun x -> not (List.mem x assigned)) next_state in
+      (List.map (fun x -> Assign (Ident x, Ident (String.sub x 0 (String.length x - 1)))) unassigned) @ assigns
+  | (Sal_ast.Assign (Sal_ast.Ident v, e))::asgns -> convert_sal_assignments next_state (v::assigned) (Assign (Ident v, sal_to_expr e)::assigns) asgns
+  | (Sal_ast.Assign (_, _))::asgns -> raise Unexpected_expr
   | _ -> raise (Unimplemented "member");;
 
-let rec convert_sal_guardeds res = function
-  | [] -> (res, None)
+let rec convert_sal_guardeds next_state res = function
+  | [] -> (List.map (fun (x, y) -> (x, Seq y)) res, None)
   | Sal_ast.ExistentialGuarded (_, _)::gs -> raise (Unimplemented "existential guarded commands")
-  | Sal_ast.Guarded (e, assigns)::gs -> convert_sal_guardeds ((sal_to_expr e, List.map convert_sal_assignment assigns)::res) gs
-  | [Sal_ast.Default assigns] -> (res, Some (List.map convert_sal_assignment assigns))
+  | Sal_ast.Guarded (e, assigns)::gs ->
+      convert_sal_guardeds next_state ((sal_to_expr e, convert_sal_assignments next_state [] [] assigns)::res) gs
+  | [Sal_ast.Default assigns] ->
+      (List.map (fun (x, y) -> (x, Seq y)) res, Some (Seq (convert_sal_assignments next_state [] [] assigns)))
   | _ -> raise Unexpected_expr;;
 
-let convert_sal_transition = function
+let convert_sal_transition next_state = function
   | Sal_ast.NoTransition -> None
   | Sal_ast.Assignments assigns ->
-      Some ([(True, List.map convert_sal_assignment assigns)], None)
+      Some ([(True, Seq (convert_sal_assignments next_state [] [] assigns))], None)
   | Sal_ast.GuardedCommands gcs ->
-      Some (convert_sal_guardeds [] gcs);;
+      Some (convert_sal_guardeds next_state [] gcs);;
 
 let sal_to_decl str = function
   | Sal_ast.Base_type("NATURAL") -> Nat_decl str
@@ -66,14 +73,23 @@ let sal_to_progs ctx =
   let defs = ctx.Sal_ast.definitions in
   let rec to_prog constants = function
     | [] -> raise (Unimplemented "No module")
-    | (Sal_ast.Constant_decl (str, st))::ds -> to_prog (sal_to_decl str st::constants) ds
+    | (Sal_ast.Constant_decl (str, st))::ds ->
+        to_prog (sal_to_decl str st::constants) ds
     | (Sal_ast.Module_def (str, sm))::ds ->
-        (match convert_sal_transition sm.Sal_ast.transition with
+        let svs = List.map snd sm.Sal_ast.state_vars |> List.flatten in
+        let state_vars =
+          List.flatten (List.map (fun x -> List.map (fun y -> sal_to_decl y (snd x)) (fst x)) svs) in
+        let next_state_names = List.map (fun x -> x^"'") ((List.map fst svs) |> List.flatten) in
+        let next_state_vars =
+          List.flatten (List.map (fun x -> List.map (fun y -> sal_to_decl (y^"'") (snd x)) (fst x)) svs) in
+        (match convert_sal_transition next_state_names sm.Sal_ast.transition with
         | Some (guarded, default) ->
             { constants;
-              state_vars =
-                List.flatten (List.map (fun x -> List.map (fun y -> sal_to_decl y (snd x)) (fst x)) (List.flatten (List.map snd sm.Sal_ast.state_vars)));
-              invariants = []; guarded; default }
+              invariants = [];
+              state_vars;
+              next_state_vars;
+              initials = Seq (convert_sal_assignments [] [] [] sm.Sal_ast.initialization);
+              guarded; default }
         | None -> raise (Unimplemented "No transition"))
     | (Sal_ast.Assertion (_,_,_,_))::ds -> raise (Unimplemented "Assertion preceding module")
     | _ -> raise (Unimplemented "Other type of sal_def") in
