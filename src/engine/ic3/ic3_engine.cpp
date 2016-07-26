@@ -49,6 +49,7 @@ ic3_engine::ic3_engine(const system::context& ctx)
 , d_induction_frame_depth_count(0)
 , d_induction_cutoff(0)
 , d_induction_frame_next_index(0)
+, d_cex_manager(ctx.tm())
 , d_property_invalid(false)
 , d_learning_type(LEARN_UNDEFINED)
 {
@@ -423,7 +424,8 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 bool ic3_engine::add_property(expr::term_ref P) {
   smt::solver::result result = d_smt->query_at_init(tm().mk_not(P));
   if (result == smt::solver::UNSAT) {
-    induction_obligation ind(tm(), P, tm().mk_not(P), /* cex depth */ 0, /* score */ 1);
+    expr::term_ref F_cex = tm().mk_not(P);
+    induction_obligation ind(tm(), P, F_cex, /* cex depth */ 0, /* score */ 1);
     if (d_induction_frame.find(ind) == d_induction_frame.end()) {
       // Add to induction frame, we know it holds at 0
       assert(d_induction_frame_depth == 1);
@@ -431,6 +433,7 @@ bool ic3_engine::add_property(expr::term_ref P) {
       d_stats.frame_size->get_value() = d_induction_frame.size();
       d_smt->add_to_induction_solver(P, solvers::INDUCTION_FIRST);
       enqueue_induction_obligation(ind);
+      d_cex_manager.add(F_cex, F_cex, 0, 0);
     }
     d_properties.insert(P);
     return true;

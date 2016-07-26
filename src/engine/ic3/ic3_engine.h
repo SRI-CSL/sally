@@ -16,9 +16,12 @@
  * along with sally.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#pragma once
+
 #include "solvers.h"
 #include "reachability.h"
 #include "induction_obligation.h"
+#include "cex_manager.h"
 
 #include "smt/solver.h"
 #include "system/context.h"
@@ -155,6 +158,9 @@ class ic3_engine : public engine {
 
   /** Get the next induction obligations */
   induction_obligation pop_induction_obligation();
+
+  /** Manager for counter-examples */
+  cex_manager d_cex_manager;
 
   /** Push to the obligation */
   void enqueue_induction_obligation(const induction_obligation& ind);
