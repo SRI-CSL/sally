@@ -36,8 +36,6 @@ namespace ic3 {
  * * Each edge is one path towards the full counterexample and is labeled with
  *   - The property ID
  *   - The depth of the counter-example
- *
- * Nodes are reference-counted and removed when not in use.
  */
 class cex_manager {
 
@@ -62,17 +60,8 @@ private:
   /** Map from A -> list of edges */
   typedef expr::term_ref_hash_map<edge_list> cex_graph;
 
-  /** Reference counts */
-  typedef expr::term_ref_hash_map<size_t> cex_refcount;
-
   /** The graph */
   cex_graph d_cex_graph;
-
-  /** The reference counts */
-  cex_refcount d_cex_refcount;
-
-  /** Remove node */
-  void remove_node(expr::term_ref A);
 
   struct cex_root {
     expr::term_ref A;
@@ -89,11 +78,11 @@ public:
   /** Create the manager */
   cex_manager(expr::term_manager& tm);
 
-  /** Add a CEX edge */
-  void add(expr::term_ref A, expr::term_ref B, size_t edge_length, size_t property_id);
-
-  /** Remove a CEX edge */
-  void remove(expr::term_ref A, expr::term_ref B, size_t edge_length, size_t property_id);
+  /**
+   * Add a CEX edge. This will increase the reference count of A, and, if
+   * the same edge to B is not already present, increase the reference to B.
+   */
+  void add_edge(expr::term_ref A, expr::term_ref B, size_t edge_length, size_t property_id);
 
   /** Clear the counter-example graph */
   void clear();

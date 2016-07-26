@@ -433,7 +433,7 @@ bool ic3_engine::add_property(expr::term_ref P) {
       d_stats.frame_size->get_value() = d_induction_frame.size();
       d_smt->add_to_induction_solver(P, solvers::INDUCTION_FIRST);
       enqueue_induction_obligation(ind);
-      d_cex_manager.add(F_cex, F_cex, 0, 0);
+      d_cex_manager.add_edge(F_cex, F_cex, 0, 0);
     }
     d_properties.insert(P);
     return true;
