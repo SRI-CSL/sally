@@ -49,6 +49,9 @@ public:
     : B(B), edge_length(edge_length), property_id(property_id) {}
   };
 
+  /** Null property id */
+  static const size_t null_property_id = -1;
+
 private:
 
   /** The term manager */

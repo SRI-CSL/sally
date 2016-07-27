@@ -92,6 +92,9 @@ class ic3_engine : public engine {
   /** The solvers */
   solvers* d_smt;
 
+  /** Manager for counter-examples */
+  cex_manager d_cex_manager;
+
   /** Reachability solver */
   reachability d_reachability;
 
@@ -134,9 +137,6 @@ class ic3_engine : public engine {
   /** How many times we've used the current depth */
   size_t d_induction_frame_depth_count;
 
-  /** Cutoff for the counter-examples */
-  size_t d_induction_cutoff;
-
   /** The content of the induction frame */
   typedef std::set<induction_obligation> induction_frame_type;
   induction_frame_type d_induction_frame;
@@ -158,9 +158,6 @@ class ic3_engine : public engine {
 
   /** Get the next induction obligations */
   induction_obligation pop_induction_obligation();
-
-  /** Manager for counter-examples */
-  cex_manager d_cex_manager;
 
   /** Push to the obligation */
   void enqueue_induction_obligation(const induction_obligation& ind);

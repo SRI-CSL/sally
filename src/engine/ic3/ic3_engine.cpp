@@ -43,13 +43,12 @@ ic3_engine::ic3_engine(const system::context& ctx)
 , d_property(0)
 , d_trace(0)
 , d_smt(0)
-, d_reachability(ctx)
+, d_cex_manager(ctx.tm())
+, d_reachability(ctx, d_cex_manager)
 , d_induction_frame_index(0)
 , d_induction_frame_depth(0)
 , d_induction_frame_depth_count(0)
-, d_induction_cutoff(0)
 , d_induction_frame_next_index(0)
-, d_cex_manager(ctx.tm())
 , d_property_invalid(false)
 , d_learning_type(LEARN_UNDEFINED)
 {
@@ -83,7 +82,6 @@ void ic3_engine::reset() {
   d_induction_frame_index = 0;
   d_induction_frame_depth = 0;
   d_induction_frame_depth_count = 0;
-  d_induction_cutoff = 1;
   d_induction_obligations.clear();
   d_induction_obligations_next.clear();
   d_induction_obligations_count.clear();
@@ -92,6 +90,7 @@ void ic3_engine::reset() {
   d_properties.clear();
   d_property_invalid = false;
   d_reachability.clear();
+  d_cex_manager.clear();
 
   if (ai()) {
     ai()->clear();
@@ -133,11 +132,6 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
     return INDUCTION_SUCCESS;
   }
 
-  // If more than cutoff, just break
-  if (ind.d >= d_induction_cutoff) {
-    return INDUCTION_FAIL;
-  }
-
   expr::term_ref F_fwd_not = tm().mk_not(ind.F_fwd);
   expr::term_ref F_cex_not = tm().mk_not(ind.F_cex);
   F_cex_not = tm().mk_or(F_cex_not);
@@ -162,7 +156,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
     // Therefore i + induction_depth > frame_index, hence we check from i = frame_index - depth + 1 to frame_index
     size_t start = (d_induction_frame_index + 1) - d_induction_frame_depth;
     size_t end = d_induction_frame_index;
-    reachability::status reachable = d_reachability.check_reachable(start, end, cex_result.generalization, cex_result.model);
+    reachability::status reachable = d_reachability.check_reachable(start, end, cex_result.generalization, 0);
 
     // If reachable, then G leads to F_cex, and F_cex leads to !P
     if (reachable.r == reachability::REACHABLE) {
@@ -188,6 +182,9 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
     d_smt->add_to_induction_solver(F_fwd, solvers::INDUCTION_INTERMEDIATE);
     enqueue_induction_obligation(new_ind);
 
+    // Remember the counter-example
+    d_cex_manager.add_edge(F_cex, ind.F_cex, d_induction_frame_depth, 0);
+
     // We have to learn :(, decrease the score, let others go for a change
     ind.score *= 0.9;
 
@@ -202,7 +199,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
   // Check if it's reachable
   size_t start = (d_induction_frame_index + 1) - d_induction_frame_depth;
   size_t end = d_induction_frame_index;
-  reachability::status reachable = d_reachability.check_reachable(start, end, cti_result.generalization, cti_result.model);
+  reachability::status reachable = d_reachability.check_reachable(start, end, cti_result.generalization, cex_manager::null_property_id);
 
   if (reachable.r == reachability::REACHABLE) {
     // Current obligation is false at reach + depth. So we can move to at most
@@ -215,7 +212,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
     start = d_induction_frame_index + 1;
     end = std::min(reachable.k + d_induction_frame_depth, d_induction_frame_next_index);
     if (start < end) {
-      reachable = d_reachability.check_reachable(start, end, F_fwd_not, expr::model::ref());
+      reachable = d_reachability.check_reachable(start, end, F_fwd_not, cex_manager::null_property_id);
       if (reachable.r == reachability::REACHABLE) {
         // We have to adapt the next index
         d_induction_frame_next_index = reachable.k;
@@ -289,15 +286,13 @@ engine::result ic3_engine::search() {
   // Push frame by frame */
   for(;;) {
 
-    // Set the cutoff
-    d_induction_cutoff = std::numeric_limits<size_t>::max();
     // d_induction_cutoff = d_induction_frame_index + d_induction_frame_depth;
 
     // Set how far we can go
     // d_induction_frame_next_index = d_induction_frame_index + 1;
     d_induction_frame_next_index = d_induction_frame_index + d_induction_frame_depth;
 
-    MSG(1) << "ic3: working on induction frame " << d_induction_frame_index << " (" << d_induction_frame.size() << ") with induction depth " << d_induction_frame_depth << " and cutoff " << d_induction_cutoff << std::endl;
+    MSG(1) << "ic3: working on induction frame " << d_induction_frame_index << " (" << d_induction_frame.size() << ") with induction depth " << d_induction_frame_depth << std::endl;
 
     // Push the current induction frame forward
     push_current_frame();
@@ -399,7 +394,6 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   // Initialize the induction solver
   d_induction_frame_index = 0;
   d_induction_frame_depth = 1;
-  d_induction_cutoff = 1;
   d_smt->reset_induction_solver(1);
 
   // Add the property we're trying to prove (if not already invalid at frame 0)
@@ -422,10 +416,14 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 }
 
 bool ic3_engine::add_property(expr::term_ref P) {
+  // Add to cex manager
+  expr::term_ref P_cex = tm().mk_not(P);
+  d_cex_manager.add_edge(P_cex, P_cex, 0, 0);
+
+  // Check if sat in first frame
   smt::solver::result result = d_smt->query_at_init(tm().mk_not(P));
   if (result == smt::solver::UNSAT) {
-    expr::term_ref F_cex = tm().mk_not(P);
-    induction_obligation ind(tm(), P, F_cex, /* cex depth */ 0, /* score */ 1);
+    induction_obligation ind(tm(), P, P_cex, /* cex depth */ 0, /* score */ 1);
     if (d_induction_frame.find(ind) == d_induction_frame.end()) {
       // Add to induction frame, we know it holds at 0
       assert(d_induction_frame_depth == 1);
@@ -433,11 +431,11 @@ bool ic3_engine::add_property(expr::term_ref P) {
       d_stats.frame_size->get_value() = d_induction_frame.size();
       d_smt->add_to_induction_solver(P, solvers::INDUCTION_FIRST);
       enqueue_induction_obligation(ind);
-      d_cex_manager.add_edge(F_cex, F_cex, 0, 0);
     }
     d_properties.insert(P);
     return true;
   } else {
+    d_cex_manager.mark_root(P_cex, 0);
     return false;
   }
 }

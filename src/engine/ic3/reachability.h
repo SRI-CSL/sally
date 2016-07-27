@@ -12,6 +12,7 @@
 #include "system/context.h"
 #include "system/transition_system.h"
 #include "solvers.h"
+#include "cex_manager.h"
 
 #include <deque>
 
@@ -36,9 +37,6 @@ public:
   };
 
 
-  /** Type of reachability cex */
-  typedef std::deque<expr::term_ref> cex_type;
-
 private:
 
   /** The term manager */
@@ -53,12 +51,8 @@ private:
   /** Solvers we're using */
   solvers* d_smt;
 
-  /**
-   * A counter-example, if any, to the current induction check. The queue is
-   * stuffed with generalization, so the guarantee is that the every element
-   * can reach the next element.
-   */
-  cex_type d_cex;
+  /** CEX manager */
+  cex_manager& d_cex_manager;
 
   struct stats {
     /** Number of reachability SMT queries */
@@ -89,12 +83,12 @@ private:
   /**
    * Check if f is reachable at k, assuming f is unreachable in < k steps.
    */
-  result check_reachable(size_t k, expr::term_ref f, expr::model::ref f_model);
+  result check_reachable(size_t k, expr::term_ref f, size_t property_id);
 
 public:
 
   /** Construct the reachability checker */
-  reachability(const system::context& ctx);
+  reachability(const system::context& ctx, cex_manager& cm);
 
   /** Initialize the reachability engine */
   void init(const system::transition_system* transition_system, solvers* smt_solvers);
@@ -122,12 +116,7 @@ public:
    * If it returns reachable, the counter-example generalizations are stored in
    * d_cex (of lenght start <= l <= end) and can be obtained with get_cex().
    */
-  status check_reachable(size_t start, size_t end, expr::term_ref f, expr::model::ref f_model);
-
-  /**
-   * Return the counterexample if last query was reachable.
-   */
-  const cex_type& get_cex() const;
+  status check_reachable(size_t start, size_t end, expr::term_ref f, size_t property_id);
 
   /** Collect terms */
   void gc_collect(const expr::gc_relocator& gc_reloc);

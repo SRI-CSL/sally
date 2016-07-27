@@ -87,7 +87,7 @@ cex_manager::cex_edge cex_manager::get_next(expr::term_ref A, size_t property_id
   }
 
   assert(false);
-  return cex_edge(expr::term_ref(), std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max());
+  return cex_edge(expr::term_ref(), std::numeric_limits<size_t>::max(), null_property_id);
 }
 
 void cex_manager::to_stream(std::ostream& out) const {
