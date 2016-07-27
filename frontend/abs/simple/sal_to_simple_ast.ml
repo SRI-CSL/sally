@@ -57,7 +57,7 @@ let rec convert_sal_guardeds next_state res = function
   | _ -> raise Unexpected_expr;;
 
 let convert_sal_transition next_state = function
-  | Sal_ast.NoTransition -> None
+  | Sal_ast.NoTransition -> Some ([(True, Seq (convert_sal_assignments next_state [] [] []))], None)
   | Sal_ast.Assignments assigns ->
       Some ([(True, Seq (convert_sal_assignments next_state [] [] assigns))], None)
   | Sal_ast.GuardedCommands gcs ->
@@ -67,6 +67,7 @@ let sal_to_decl str = function
   | Sal_ast.Base_type("NATURAL") -> Nat_decl str
   | Sal_ast.Base_type("INTEGER") -> Int_decl str
   | Sal_ast.Base_type("REAL")    -> Real_decl str
+  | Sal_ast.Base_type("BOOLEAN") -> Bool_decl str
   | _ -> raise (Unimplemented "Non-numerical type declarations");;
 
 let sal_to_progs ctx =
@@ -82,6 +83,7 @@ let sal_to_progs ctx =
         let next_state_names = List.map (fun x -> x^"'") ((List.map fst svs) |> List.flatten) in
         let next_state_vars =
           List.flatten (List.map (fun x -> List.map (fun y -> sal_to_decl (y^"'") (snd x)) (fst x)) svs) in
+        let no_transition = Seq (convert_sal_assignments next_state_names [] [] []) in
         (match convert_sal_transition next_state_names sm.Sal_ast.transition with
         | Some (guarded, default) ->
             { constants;
@@ -89,7 +91,7 @@ let sal_to_progs ctx =
               state_vars;
               next_state_vars;
               initials = Seq (convert_sal_assignments [] [] [] sm.Sal_ast.initialization);
-              guarded; default }
+              guarded; default; no_transition }
         | None -> raise (Unimplemented "No transition"))
     | (Sal_ast.Assertion (_,_,_,_))::ds -> raise (Unimplemented "Assertion preceding module")
     | _ -> raise (Unimplemented "Other type of sal_def") in

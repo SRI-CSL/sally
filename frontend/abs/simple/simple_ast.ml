@@ -4,6 +4,7 @@ type decl =
   | Nat_decl of string
   | Int_decl of string
   | Real_decl of string
+  | Bool_decl of string
 
 type expr =
   | Nat of int
@@ -30,7 +31,7 @@ type expr =
 type prog = {
   decls : decl list;
   invs  : expr list;
-  expr : expr };;
+  expr  : expr };;
 
 type sal_prog = {
   constants       : decl list;
@@ -39,4 +40,5 @@ type sal_prog = {
   invariants      : expr list;
   initials        : expr;
   guarded         : (expr * expr) list;
-  default         : expr option }
+  default         : expr option;
+  no_transition   : expr }
