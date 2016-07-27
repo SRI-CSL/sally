@@ -23,6 +23,7 @@
 #include "expr/term_map.h"
 
 #include <list>
+#include <vector>
 #include <iosfwd>
 
 namespace sally {
@@ -41,16 +42,20 @@ class cex_manager {
 
 public:
 
+  /** Null property id */
+  static const size_t null_property_id = -1;
+
   /** Edge to B */
   struct cex_edge {
     expr::term_ref B;
     size_t edge_length, property_id;
     cex_edge(expr::term_ref B, size_t edge_length, size_t property_id)
     : B(B), edge_length(edge_length), property_id(property_id) {}
+    cex_edge()
+    : edge_length(-1)
+    , property_id(-1)
+    {}
   };
-
-  /** Null property id */
-  static const size_t null_property_id = -1;
 
 private:
 
@@ -93,11 +98,11 @@ public:
   /** Mark the node as root of a full counter-example */
   void mark_root(expr::term_ref A, size_t property_id);
 
-  /** Get the root of a CEX for given property */
-  expr::term_ref get_root(size_t property_id) const;
-
-  /** Get the next element of the counter-example (shortest) */
-  cex_edge get_next(expr::term_ref A, size_t property_id) const;
+  /**
+   * Get the next element of the counter-example (shortest) for the given
+   * property.
+   */
+  expr::term_ref get_full_cex(size_t property_id, std::vector<cex_edge>& edges) const;
 
   /** Print to stream */
   void to_stream(std::ostream& out) const;

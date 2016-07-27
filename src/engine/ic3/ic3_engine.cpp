@@ -441,12 +441,11 @@ bool ic3_engine::add_property(expr::term_ref P) {
 }
 
 const system::state_trace* ic3_engine::get_trace() {
-  expr::term_ref F = d_cex_manager.get_root(0);
-  while (true) {
-    cex_manager::cex_edge edge = d_cex_manager.get_next(F, 0);
-    if (edge.edge_length == 0) {
-      break;
-    }
+  std::vector<cex_manager::cex_edge> edges;
+  expr::term_ref A = d_cex_manager.get_full_cex(0, edges);
+  for (size_t i = 0; i < edges.size(); ++ i) {
+    // Go to next one
+    A = edges[i].B;
   }
   return 0;
 }
