@@ -441,7 +441,14 @@ bool ic3_engine::add_property(expr::term_ref P) {
 }
 
 const system::state_trace* ic3_engine::get_trace() {
-  return d_trace;
+  expr::term_ref F = d_cex_manager.get_root(0);
+  while (true) {
+    cex_manager::cex_edge edge = d_cex_manager.get_next(F, 0);
+    if (edge.edge_length == 0) {
+      break;
+    }
+  }
+  return 0;
 }
 
 void ic3_engine::gc_collect(const expr::gc_relocator& gc_reloc) {

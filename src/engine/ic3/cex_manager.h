@@ -93,6 +93,9 @@ public:
   /** Mark the node as root of a full counter-example */
   void mark_root(expr::term_ref A, size_t property_id);
 
+  /** Get the root of a CEX for given property */
+  expr::term_ref get_root(size_t property_id) const;
+
   /** Get the next element of the counter-example (shortest) */
   cex_edge get_next(expr::term_ref A, size_t property_id) const;
 

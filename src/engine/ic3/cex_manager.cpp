@@ -71,6 +71,15 @@ void cex_manager::mark_root(expr::term_ref A, size_t property_id) {
   d_roots.push_back(cex_root(A, property_id));
 }
 
+expr::term_ref cex_manager::get_root(size_t property_id) const {
+  for (size_t i = 0; i < d_roots.size(); ++ i) {
+    if (d_roots[i].property_id == property_id) {
+      return d_roots[i].A;
+    }
+  }
+  return expr::term_ref();
+}
+
 cex_manager::cex_edge cex_manager::get_next(expr::term_ref A, size_t property_id) const {
   cex_graph::const_iterator graph_find = d_cex_graph.find(A);
   assert(graph_find != d_cex_graph.end());
