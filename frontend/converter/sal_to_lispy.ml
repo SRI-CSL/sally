@@ -109,7 +109,7 @@ let rec sal_type_to_sally_type ctx ?name:(name="anonymous") = function
     Lispy_ast.Array(t1, t2)
   | Enum(l) -> Real
   | Subtype(_) -> Real
-  | IntegerRange -> IntegerRange name
+  | Process -> IntegerRange name
   | Range(i1, i2) -> (* FIXME: need to check it stays natural and inside the range *)
     let sally_expr_from = sal_expr_to_lisp ctx i1
     and sally_expr_to = sal_expr_to_lisp ctx i2 in

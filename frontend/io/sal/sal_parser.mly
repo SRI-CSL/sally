@@ -144,7 +144,7 @@ stype:
 
 simple_type:
 | IDENT                                           { Base_type($1) }
-| PROCESS_TYPE                                    { IntegerRange }
+| PROCESS_TYPE                                    { Process }
 | OPEN_BRACKET expr ELLIPSIS expr CLOSE_BRACKET   { Range($2,$4) }
 | OPEN_BRACE enumlist CLOSE_BRACE                 { Enum($2) }
 ;
