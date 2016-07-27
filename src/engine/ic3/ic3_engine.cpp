@@ -441,9 +441,36 @@ bool ic3_engine::add_property(expr::term_ref P) {
 }
 
 const system::state_trace* ic3_engine::get_trace() {
+
   std::vector<cex_manager::cex_edge> edges;
+
+  // Clear the trail
+  d_trace->clear_model();
+
+  // Get the counter-example description
   expr::term_ref A = d_cex_manager.get_full_cex(0, edges);
+
+  // Current depth
+  size_t depth = 0;
+
+  // Initial state
+  smt::solver* solver = d_smt->new_solver_for_frames(0, 0);
+  solver->add(A, smt::solver::CLASS_A);
+  smt::solver::result result = solver->check();
+  assert(result == smt::solver::SAT);
+  expr::model::ref model = solver->get_model();
+  delete solver;
+
+  // Set the model for initial states
+  d_trace->set_model_for_frames(0, 0, model);
+
   for (size_t i = 0; i < edges.size(); ++ i) {
+    // New solver
+    solver = d_smt->new_solver(depth, depth + edges[i].edge_length);
+    model->
+
+    // Assert the model
+    solver->add
     // Go to next one
     A = edges[i].B;
   }
