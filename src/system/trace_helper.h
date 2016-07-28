@@ -28,7 +28,7 @@
 namespace sally {
 namespace system {
 
-class state_trace : public expr::gc_participant {
+class trace_helper : public expr::gc_participant {
 
   /** The state type */
   const state_type* d_state_type;
@@ -74,10 +74,18 @@ class state_trace : public expr::gc_participant {
   /** Returns the term manager */
   expr::term_manager& tm() const;
 
-public:
+  /**
+   * Create ta trace for the given type (only transition system can create one.
+   * Others use the helper provided by the transition system.
+   */
+  trace_helper(const state_type* st);
 
-  /** Create ta trace for the given type */
-  state_trace(const state_type* st);
+  /** Same for destructor, only transition system can use it */
+  virtual ~trace_helper() {}
+
+  friend class transition_system;
+
+public:
 
   /** Get the size of the trace */
   size_t size() const;
@@ -139,7 +147,7 @@ public:
 
 };
 
-std::ostream& operator << (std::ostream& out, const state_trace& trace);
+std::ostream& operator << (std::ostream& out, const trace_helper& trace);
 
 }
 }

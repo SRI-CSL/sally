@@ -48,7 +48,7 @@ void interval_analyzer::clear() {
   d_potential_invariants.clear();
 }
 
-void interval_analyzer::notify_reachable(system::state_trace* trace) {
+void interval_analyzer::notify_reachable(system::trace_helper* trace) {
   TRACE("interval") << "interval_analyzer::notify_reachable(): " << std::endl;
   TRACE("interval") << *trace << std::endl;
 

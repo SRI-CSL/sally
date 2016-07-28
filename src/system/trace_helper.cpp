@@ -16,7 +16,8 @@
  * along with sally.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "system/state_trace.h"
+#include "trace_helper.h"
+
 #include "expr/gc_relocator.h"
 
 #include <sstream>
@@ -24,21 +25,21 @@
 namespace sally {
 namespace system {
 
-state_trace::state_trace(const state_type* st)
+trace_helper::trace_helper(const state_type* st)
 : gc_participant(st->tm())
 , d_state_type(st)
 , d_model_size(0)
 {}
 
-size_t state_trace::size() const {
+size_t trace_helper::size() const {
   return d_state_variables_structs.size();
 }
 
-expr::term_manager& state_trace::tm() const {
+expr::term_manager& trace_helper::tm() const {
   return d_state_type->tm();
 }
 
-void state_trace::ensure_variables(size_t k) {
+void trace_helper::ensure_variables(size_t k) {
   assert(d_state_variables_structs.size() == d_input_variables_structs.size());
   // Ensure we have enough
   while (d_state_variables_structs.size() <= k) {
@@ -76,19 +77,19 @@ void state_trace::ensure_variables(size_t k) {
   assert(d_input_variables_structs.size() > k);
 }
 
-expr::term_ref state_trace::get_state_struct_variable(size_t k) {
+expr::term_ref trace_helper::get_state_struct_variable(size_t k) {
   // Return the variable
   ensure_variables(k);
   return d_state_variables_structs[k];
 }
 
-expr::term_ref state_trace::get_input_struct_variable(size_t k) {
+expr::term_ref trace_helper::get_input_struct_variable(size_t k) {
   // Return the variable
   ensure_variables(k);
   return d_input_variables_structs[k];
 }
 
-void state_trace::get_struct_variables(expr::term_ref s, std::vector<expr::term_ref>& out) const {
+void trace_helper::get_struct_variables(expr::term_ref s, std::vector<expr::term_ref>& out) const {
   const expr::term& s_term = tm().term_of(s);
   size_t size = tm().get_struct_size(s_term);
   for (size_t i = 0; i < size; ++ i) {
@@ -96,27 +97,27 @@ void state_trace::get_struct_variables(expr::term_ref s, std::vector<expr::term_
   }
 }
 
-const std::vector<expr::term_ref>& state_trace::get_state_variables(size_t k) {
+const std::vector<expr::term_ref>& trace_helper::get_state_variables(size_t k) {
   ensure_variables(k);
   return d_state_variables[k];
 }
 
-const std::vector<expr::term_ref>& state_trace::get_input_variables(size_t k) {
+const std::vector<expr::term_ref>& trace_helper::get_input_variables(size_t k) {
   ensure_variables(k);
   return d_input_variables[k];
 }
 
-expr::term_ref state_trace::get_state_formula(expr::term_ref sf, size_t k) {
+expr::term_ref trace_helper::get_state_formula(expr::term_ref sf, size_t k) {
   ensure_variables(k);
   return tm().substitute_and_cache(sf, d_subst_maps_state_to_trace[k]);
 }
 
-expr::term_ref state_trace::get_state_formula(size_t k, expr::term_ref sf) {
+expr::term_ref trace_helper::get_state_formula(size_t k, expr::term_ref sf) {
   ensure_variables(k);
   return tm().substitute_and_cache(sf, d_subst_maps_trace_to_state[k]);
 }
 
-expr::term_ref state_trace::get_transition_formula(expr::term_ref tf, size_t k) {
+expr::term_ref trace_helper::get_transition_formula(expr::term_ref tf, size_t k) {
   // Setup the substitution map
   expr::term_manager::substitution_map subst;
   // Variables in the state type
@@ -143,17 +144,17 @@ expr::term_ref state_trace::get_transition_formula(expr::term_ref tf, size_t k) 
   return tm().substitute_and_cache(tf, subst);
 }
 
-expr::model::ref state_trace::get_model() const {
+expr::model::ref trace_helper::get_model() const {
   return d_model;
 }
 
-void state_trace::set_model(expr::model::ref m, size_t m_size) {
+void trace_helper::set_model(expr::model::ref m, size_t m_size) {
   d_model = m;
   assert(d_model_size <= d_state_variables_structs.size());
   d_model_size = m_size;
 }
 
-void state_trace::to_stream(std::ostream& out) const {
+void trace_helper::to_stream(std::ostream& out) const {
 
   d_state_type->use_namespace();
   d_state_type->use_namespace(state_type::STATE_CURRENT);
@@ -199,25 +200,25 @@ void state_trace::to_stream(std::ostream& out) const {
   d_state_type->tm().pop_namespace();
 }
 
-bool state_trace::is_true_in_frame(size_t frame, expr::term_ref f, expr::model::ref model) {
+bool trace_helper::is_true_in_frame(size_t frame, expr::term_ref f, expr::model::ref model) {
   // Return
   ensure_variables(frame);
   return model->is_true(f, d_subst_maps_state_to_trace[frame]);
 }
 
-bool state_trace::is_false_in_frame(size_t frame, expr::term_ref f, expr::model::ref model) {
+bool trace_helper::is_false_in_frame(size_t frame, expr::term_ref f, expr::model::ref model) {
   // Return
   ensure_variables(frame);
   assert(frame < d_subst_maps_state_to_trace.size());
   return model->is_false(f, d_subst_maps_state_to_trace[frame]);
 }
 
-std::ostream& operator << (std::ostream& out, const state_trace& trace) {
+std::ostream& operator << (std::ostream& out, const trace_helper& trace) {
   trace.to_stream(out);
   return out;
 }
 
-void state_trace::gc_collect(const expr::gc_relocator& gc_reloc) {
+void trace_helper::gc_collect(const expr::gc_relocator& gc_reloc) {
   gc_reloc.reloc(d_state_variables_structs);
 }
 

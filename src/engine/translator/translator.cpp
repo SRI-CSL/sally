@@ -309,7 +309,7 @@ engine::result translator::query(const system::transition_system* ts, const syst
   return SILENT;
 }
 
-const system::state_trace* translator::get_trace() {
+const system::trace_helper* translator::get_trace() {
   throw exception("Not supported.");
 }
 

@@ -1,1 +1,1 @@
-add_library(system state_type.cpp state_formula.cpp transition_formula.cpp transition_system.cpp state_trace.cpp context.cpp)
+add_library(system state_type.cpp state_formula.cpp transition_formula.cpp transition_system.cpp trace_helper.cpp context.cpp)

@@ -21,10 +21,10 @@
 #include "expr/term_manager.h"
 #include "expr/gc_participant.h"
 #include "system/context.h"
-#include "system/state_trace.h"
 #include "ai/analyzer.h"
 
 #include <string>
+#include "../system/trace_helper.h"
 
 namespace sally {
 
@@ -82,7 +82,7 @@ public:
 
   /** Get the counter-example trace, if previous query allows it */
   virtual
-  const system::state_trace* get_trace() = 0;
+  const system::trace_helper* get_trace() = 0;
 };
 
 std::ostream& operator << (std::ostream& out, engine::result result);

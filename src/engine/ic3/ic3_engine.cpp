@@ -21,7 +21,6 @@
 #include "engine/factory.h"
 
 #include "smt/factory.h"
-#include "system/state_trace.h"
 #include "utils/trace.h"
 #include "expr/gc_relocator.h"
 
@@ -31,6 +30,7 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#include "../../system/trace_helper.h"
 
 #define unused_var(x) { (void)x; }
 
@@ -68,7 +68,6 @@ ic3_engine::ic3_engine(const system::context& ctx)
 }
 
 ic3_engine::~ic3_engine() {
-  delete d_trace;
   delete d_smt;
 }
 
@@ -76,7 +75,6 @@ void ic3_engine::reset() {
 
   d_transition_system = 0;
   d_property = 0;
-  delete d_trace;
   d_trace = 0;
   d_induction_frame.clear();
   d_induction_frame_index = 0;
@@ -381,8 +379,7 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   d_property = sf;
 
   // Make the trace
-  if (d_trace) { delete d_trace; }
-  d_trace = new system::state_trace(sf->get_state_type());
+  d_trace = ts->get_trace_helper();
 
   // Initialize the solvers
   if (d_smt) { delete d_smt; }
@@ -440,40 +437,8 @@ bool ic3_engine::add_property(expr::term_ref P) {
   }
 }
 
-const system::state_trace* ic3_engine::get_trace() {
+const system::trace_helper* ic3_engine::get_trace() {
 
-  std::vector<cex_manager::cex_edge> edges;
-
-  // Clear the trail
-  d_trace->clear_model();
-
-  // Get the counter-example description
-  expr::term_ref A = d_cex_manager.get_full_cex(0, edges);
-
-  // Current depth
-  size_t depth = 0;
-
-  // Initial state
-  smt::solver* solver = d_smt->new_solver_for_frames(0, 0);
-  solver->add(A, smt::solver::CLASS_A);
-  smt::solver::result result = solver->check();
-  assert(result == smt::solver::SAT);
-  expr::model::ref model = solver->get_model();
-  delete solver;
-
-  // Set the model for initial states
-  d_trace->set_model_for_frames(0, 0, model);
-
-  for (size_t i = 0; i < edges.size(); ++ i) {
-    // New solver
-    solver = d_smt->new_solver(depth, depth + edges[i].edge_length);
-    model->
-
-    // Assert the model
-    solver->add
-    // Go to next one
-    A = edges[i].B;
-  }
   return 0;
 }
 

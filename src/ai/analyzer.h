@@ -22,9 +22,8 @@
 #include "expr/model.h"
 #include "expr/gc_participant.h"
 #include "system/context.h"
-#include "system/state_trace.h"
-
 #include <string>
+#include "../system/trace_helper.h"
 
 namespace sally {
 
@@ -63,7 +62,7 @@ public:
 
   /** Notification of new reachable states at frame k */
   virtual
-  void notify_reachable(system::state_trace* trace) = 0;
+  void notify_reachable(system::trace_helper* trace) = 0;
 
   /** Notification of unreachable states at frame k */
   virtual

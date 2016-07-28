@@ -133,7 +133,7 @@ void query_command::run(system::context* ctx, engine* e) {
   }
   // If invalid, and asked to, show the trace
   if (result == engine::INVALID && ctx->get_options().has_option("show-trace")) {
-    const system::state_trace* trace = e->get_trace();
+    const system::trace_helper* trace = e->get_trace();
     std::cout << *trace << std::endl;
   }
 }

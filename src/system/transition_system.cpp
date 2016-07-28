@@ -23,6 +23,23 @@
 namespace sally {
 namespace system {
 
+transition_system::transition_system(const state_type* state_type, state_formula* initial_states, transition_formula* transition_relation)
+: d_state_type(state_type)
+, d_initial_states(initial_states)
+, d_transition_relation(transition_relation)
+{
+  d_trace_helper = new trace_helper(state_type);
+}
+
+transition_system::~transition_system() {
+  for (size_t i = 0; i < d_assumptions.size(); ++ i) {
+    delete d_assumptions[i];
+  }
+  delete d_initial_states;
+  delete d_transition_relation;
+  delete d_trace_helper;
+}
+
 void transition_system::to_stream(std::ostream& out) const {
   out << "[" << std::endl;
   out << "type: " << *d_state_type << std::endl;
@@ -68,15 +85,9 @@ expr::term_ref transition_system::get_assumption() const {
   return d_state_type->tm().mk_and(assumption_terms);
 }
 
-
-transition_system::~transition_system() {
-  for (size_t i = 0; i < d_assumptions.size(); ++ i) {
-    delete d_assumptions[i];
-  }
-  delete d_initial_states;
-  delete d_transition_relation;
+trace_helper* transition_system::get_trace_helper() const {
+  return d_trace_helper;
 }
-
 
 }
 }

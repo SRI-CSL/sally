@@ -37,7 +37,6 @@ bmc_engine::bmc_engine(const system::context& ctx)
 
 bmc_engine::~bmc_engine() {
   delete d_solver;
-  delete d_trace;
 }
 
 engine::result bmc_engine::query(const system::transition_system* ts, const system::state_formula* sf) {
@@ -46,9 +45,8 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
   smt::solver_scope scope(d_solver);
   scope.push();
 
-  // The trace we are building
-  if (d_trace) { delete d_trace; }
-  d_trace = new system::state_trace(ts->get_state_type());
+  // The trace we are using
+  d_trace = ts->get_trace_helper();
 
   // Initial states
   expr::term_ref initial_states = ts->get_initial_states();
@@ -112,7 +110,7 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
   return UNKNOWN;
 }
 
-const system::state_trace* bmc_engine::get_trace() {
+const system::trace_helper* bmc_engine::get_trace() {
   return d_trace;
 }
 

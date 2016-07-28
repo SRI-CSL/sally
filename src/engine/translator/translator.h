@@ -54,7 +54,7 @@ public:
   result query(const system::transition_system* ts, const system::state_formula* sf);
 
   /** Trace */
-  const system::state_trace* get_trace();
+  const system::trace_helper* get_trace();
 
   /** Nothing to do */
   void gc_collect(const expr::gc_relocator& gc_reloc) {}

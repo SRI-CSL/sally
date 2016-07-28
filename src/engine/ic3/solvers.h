@@ -21,11 +21,11 @@
 #include <set>
 #include <vector>
 
+#include "../../system/trace_helper.h"
 #include "smt/solver.h"
 #include "expr/term_manager.h"
 #include "expr/gc_relocator.h"
 #include "system/transition_system.h"
-#include "system/state_trace.h"
 #include "system/context.h"
 
 #include "induction_obligation.h"
@@ -62,7 +62,7 @@ class solvers {
   size_t d_size;
 
   /** The trace to get the state variables for unrolling */
-  system::state_trace* d_trace;
+  system::trace_helper* d_trace;
 
   /** A solver per frame with transition relation info */
   std::vector<smt::solver*> d_reachability_solvers;
@@ -159,7 +159,7 @@ class solvers {
 public:
 
   /** Create solvers for the given transition system */
-  solvers(const system::context& ctx, const system::transition_system* transition_system, system::state_trace* trace);
+  solvers(const system::context& ctx, const system::transition_system* transition_system, system::trace_helper* trace);
 
   /** Delete the solvers */
   ~solvers();
