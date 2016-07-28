@@ -16,7 +16,7 @@
  * along with sally.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "parser/command.h"
+#include "command.h"
 
 #include <cassert>
 #include <iostream>

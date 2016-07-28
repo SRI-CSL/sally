@@ -19,7 +19,7 @@
 #pragma once
 
 #include "utils/exception.h"
-#include "parser/command.h"
+#include "command/command.h"
 
 namespace sally {
 

@@ -24,7 +24,7 @@ options {
  
 @parser::includes {
   #include <string>
-  #include "parser/command.h"
+  #include "command/command.h"
   #include "parser/btor/btor_state.h"
   using namespace sally;
 }

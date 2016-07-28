@@ -24,7 +24,7 @@
 #include <antlr3.h>
 
 #include "system/context.h"
-#include "parser/command.h"
+#include "command/command.h"
 
 namespace sally {
 namespace parser {
