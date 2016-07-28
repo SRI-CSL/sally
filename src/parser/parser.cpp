@@ -91,7 +91,7 @@ parser::~parser() {
   delete d_internal;
 }
 
-command* parser::parse_command() {
+cmd::command* parser::parse_command() {
   try {
     return d_internal->parse_command();
   } catch (const parser_exception& e) {

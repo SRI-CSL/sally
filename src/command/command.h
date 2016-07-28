@@ -24,7 +24,7 @@
 #include "engine/engine.h"
 
 namespace sally {
-namespace parser {
+namespace cmd {
 
 class command {
 public:

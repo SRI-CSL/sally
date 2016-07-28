@@ -41,7 +41,7 @@ options {
 }
 
 /** Parses the file and produces the commands */
-command returns [parser::command* cmd = 0] 
+command returns [cmd::command* cmd = 0] 
   : definition* { 
   	  $cmd = STATE->finalize(); 
     } 

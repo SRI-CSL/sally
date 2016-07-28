@@ -22,7 +22,7 @@
 #include <iostream>
 
 namespace sally {
-namespace parser {
+namespace cmd {
 
 command::command(command::type t)
 : d_type(t)

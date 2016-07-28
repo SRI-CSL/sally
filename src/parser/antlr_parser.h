@@ -105,7 +105,7 @@ public:
     d_input->free(d_input);
   }
 
-  command* parse_command() {
+  cmd::command* parse_command() {
     return d_parser->command(d_parser);
   }
 

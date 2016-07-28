@@ -126,7 +126,7 @@ int main(int argc, char* argv[]) {
       parser::parser p(ctx, language, files[i].c_str());
 
       // Parse an process each command
-      for (parser::command* cmd = p.parse_command(); cmd != 0; delete cmd, cmd = p.parse_command()) {
+      for (cmd::command* cmd = p.parse_command(); cmd != 0; delete cmd, cmd = p.parse_command()) {
 
         MSG(2) << "Got command " << *cmd << endl;
         // Run the command

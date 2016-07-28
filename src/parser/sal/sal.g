@@ -40,7 +40,7 @@ options {
   parser::sal_state* pState;
 }
 
-command returns [parser::command* cmd = 0]
+command returns [cmd::command* cmd = 0]
   : context
   | EOF
   ; 
