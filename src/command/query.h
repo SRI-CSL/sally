@@ -9,7 +9,7 @@ namespace sally {
 namespace cmd {
 
 /** Command to query a system. */
-class query_command : public command {
+class query : public command {
 
   /** Id of the system this query is about */
   std::string d_system_id;
@@ -20,10 +20,10 @@ class query_command : public command {
 public:
 
   /** Query takes over the state formula */
-  query_command(const system::context& ctx, std::string system_id, system::state_formula* sf);
+  query(const system::context& ctx, std::string system_id, system::state_formula* sf);
 
   /** Command owns the query, so we delete it */
-  ~query_command();
+  ~query();
 
   /** Get the id of the system */
   std::string get_system_id() const { return d_system_id; }

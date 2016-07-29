@@ -5,17 +5,17 @@
 namespace sally {
 namespace cmd {
 
-query_command::query_command(const system::context& ctx, std::string system_id, system::state_formula* sf)
+query::query(const system::context& ctx, std::string system_id, system::state_formula* sf)
 : command(QUERY)
 , d_system_id(system_id)
 , d_query(sf)
 {}
 
-void query_command::to_stream(std::ostream& out) const  {
+void query::to_stream(std::ostream& out) const  {
   out << "[" << get_command_type_string() << " " << d_system_id << " " << *d_query << "]";
 }
 
-void query_command::run(system::context* ctx, engine* e) {
+void query::run(system::context* ctx, engine* e) {
   // If in parse only mode, we're done
   if (ctx->get_options().has_option("parse-only")) { return; }
   // We need an engine
@@ -35,7 +35,7 @@ void query_command::run(system::context* ctx, engine* e) {
   }
 }
 
-query_command::~query_command() {
+query::~query() {
   delete d_query;
 }
 

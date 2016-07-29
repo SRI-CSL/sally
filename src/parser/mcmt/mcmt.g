@@ -86,7 +86,7 @@ declare_state_type returns [cmd::command* cmd = 0]
         variable_list[input_vars, input_types]? 
     ')' 
     {
-      $cmd = new cmd::declare_state_type_command(id, STATE->mk_state_type(id, state_vars, state_types, input_vars, input_types));
+      $cmd = new cmd::declare_state_type(id, STATE->mk_state_type(id, state_vars, state_types, input_vars, input_types));
     }
   ; 
 
@@ -103,7 +103,7 @@ define_states returns [cmd::command* cmd = 0]
         	state_type = STATE->ctx().get_state_type(type_id); 
         }
         sf = state_formula[state_type] { 
-        	$cmd = new cmd::define_states_command(id, sf); 
+        	$cmd = new cmd::define_states(id, sf); 
         }
     ')'
   ; 
@@ -121,7 +121,7 @@ define_transition returns [cmd::command* cmd = 0]
           state_type = STATE->ctx().get_state_type(type_id); 
       }
       f = state_transition_formula[state_type] {
-          $cmd = new cmd::define_transition_command(id, f); 
+          $cmd = new cmd::define_transition(id, f); 
       }
     ')'
   ; 
@@ -142,7 +142,7 @@ define_transition_system returns [cmd::command* cmd = 0]
       transition_relation = state_transition_formula[state_type]    
       {  
       	system::transition_system* T = new system::transition_system(state_type, initial_states, transition_relation); 
-        $cmd = new cmd::define_transition_system_command(id, T);
+        $cmd = new cmd::define_transition_system(id, T);
       } 
     ')'
   ; 
@@ -158,7 +158,7 @@ assume returns [cmd::command* cmd = 0]
         state_type = STATE->ctx().get_transition_system(id)->get_state_type();
     }
     f = state_formula[state_type] { 
-    	$cmd = new cmd::assume_command(STATE->ctx(), id, f);
+    	$cmd = new cmd::assume(STATE->ctx(), id, f);
     }
     ')'
   ; 
@@ -174,7 +174,7 @@ query returns [cmd::command* cmd = 0]
         state_type = STATE->ctx().get_transition_system(id)->get_state_type();
     }
     f = state_formula[state_type] { 
-    	$cmd = new cmd::query_command(STATE->ctx(), id, f);
+    	$cmd = new cmd::query(STATE->ctx(), id, f);
     }
     ')'
   ; 

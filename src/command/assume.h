@@ -9,7 +9,7 @@ namespace sally {
 namespace cmd {
 
 /** Command to add an assumption to the system. */
-class assume_command : public command {
+class assume : public command {
 
   /** Id of the system this query is about */
   std::string d_system_id;
@@ -20,10 +20,10 @@ class assume_command : public command {
 public:
 
   /** Query takes over the state formula */
-  assume_command(const system::context& ctx, std::string system_id, system::state_formula* assumption);
+  assume(const system::context& ctx, std::string system_id, system::state_formula* assumption);
 
   /** Command owns the query, so we delete it */
-  ~assume_command();
+  ~assume();
 
   /** Get the id of the system */
   std::string get_system_id() const { return d_system_id; }

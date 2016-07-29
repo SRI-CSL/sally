@@ -213,7 +213,7 @@ cmd::command* btor_state::finalize() const {
   }
   term_ref state_type_ref = tm().mk_struct_type(names, types);
   system::state_type* state_type = new system::state_type("state_type", tm(), state_type_ref, input_type_ref);
-  cmd::command* state_type_declare = new cmd::declare_state_type_command("state_type", state_type);
+  cmd::command* state_type_declare = new cmd::declare_state_type("state_type", state_type);
 
   // Get the state variables
   const std::vector<term_ref>& current_vars = state_type->get_variables(system::state_type::STATE_CURRENT);
@@ -258,7 +258,7 @@ cmd::command* btor_state::finalize() const {
 
   // Define the transition system
   system::transition_system* transition_system = new system::transition_system(state_type, init_formula, transition_formula);
-  cmd::command* transition_system_define = new cmd::define_transition_system_command("T", transition_system);
+  cmd::command* transition_system_define = new cmd::define_transition_system("T", transition_system);
 
   // Query
   std::vector<term_ref> bad_children;
@@ -269,10 +269,10 @@ cmd::command* btor_state::finalize() const {
   term_ref property = tm().mk_or(bad_children);
   property = tm().mk_term(TERM_EQ, property, d_zero);
   system::state_formula* property_formula = new system::state_formula(tm(), state_type, property);
-  cmd::command* query = new cmd::query_command(ctx(), "T", property_formula);
+  cmd::command* query = new cmd::query(ctx(), "T", property_formula);
 
   // Make the final command
-  cmd::sequence_command* full_command = new cmd::sequence_command();
+  cmd::sequence* full_command = new cmd::sequence();
   full_command->push_back(state_type_declare);
   full_command->push_back(transition_system_define);
   full_command->push_back(query);

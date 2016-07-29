@@ -151,7 +151,7 @@ aiger_parser::aiger_parser(const system::context& ctx, const char* filename)
   d_aiger_to_term_map[aiger_false] = d_tm.mk_boolean_constant(false);
 
   // The commands will be put here
-  cmd::sequence_command* all_commands = new cmd::sequence_command();
+  cmd::sequence* all_commands = new cmd::sequence();
 
   // Aiger format:
   // * inputs are sally input variables
@@ -192,7 +192,7 @@ aiger_parser::aiger_parser(const system::context& ctx, const char* filename)
   expr::term_ref input_type_ref = d_tm.mk_struct_type(input_names, input_types);
   expr::term_ref state_type_ref = d_tm.mk_struct_type(state_names, state_types);
   system::state_type* state_type = new system::state_type("aig", d_tm, state_type_ref, input_type_ref);
-  cmd::command* state_type_declare = new cmd::declare_state_type_command("aig", state_type);
+  cmd::command* state_type_declare = new cmd::declare_state_type("aig", state_type);
   all_commands->push_back(state_type_declare);
 
   // Get the variables
@@ -251,7 +251,7 @@ aiger_parser::aiger_parser(const system::context& ctx, const char* filename)
 
   // Define system
   system::transition_system* aiger_system = new system::transition_system(state_type, initial_state_formula, transition_formula);
-  cmd::command* define_system = new cmd::define_transition_system_command("system", aiger_system);
+  cmd::command* define_system = new cmd::define_transition_system("system", aiger_system);
   all_commands->push_back(define_system);
   
   // Get the properties
@@ -259,7 +259,7 @@ aiger_parser::aiger_parser(const system::context& ctx, const char* filename)
     expr::term_ref bad_i = aiger_to_term(a->outputs[i].lit);
     expr::term_ref p_i = d_tm.mk_term(expr::TERM_NOT, bad_i);
     system::state_formula *p = new system::state_formula(d_tm, state_type, p_i);
-    cmd::command* query = new cmd::query_command(ctx, "system", p);
+    cmd::command* query = new cmd::query(ctx, "system", p);
     all_commands->push_back(query);
   }
 

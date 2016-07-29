@@ -8,7 +8,7 @@ namespace sally {
 namespace cmd {
 
 /** Command to declared a state type. */
-class declare_state_type_command : public command {
+class declare_state_type : public command {
 
   /** Id if any */
   std::string d_id;
@@ -19,10 +19,10 @@ class declare_state_type_command : public command {
 public:
 
   /** Create a command to declare a state type. */
-  declare_state_type_command(std::string state_id, system::state_type* state_type);
+  declare_state_type(std::string state_id, system::state_type* state_type);
 
   /** Deletes the state type if not used */
-  ~declare_state_type_command();
+  ~declare_state_type();
 
   /** Get the id of the state type */
   std::string get_id() const { return d_id; }

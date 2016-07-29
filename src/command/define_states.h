@@ -8,7 +8,7 @@ namespace sally {
 namespace cmd {
 
 /** Command to declare a state set (formula) */
-class define_states_command : public command {
+class define_states : public command {
 
   /** Id of the formula */
   std::string d_id;
@@ -19,10 +19,10 @@ class define_states_command : public command {
 public:
 
   /** New command to define set of states id by given formula */
-  define_states_command(std::string id, system::state_formula* formula);
+  define_states(std::string id, system::state_formula* formula);
 
   /** Deletes the formula if not used */
-  ~define_states_command();
+  ~define_states();
 
   /** Get the state formula */
   const system::state_formula* get_state_formula() const { return d_formula; }

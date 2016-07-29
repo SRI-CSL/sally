@@ -5,21 +5,21 @@
 namespace sally {
 namespace cmd {
 
-define_states_command::define_states_command(std::string id, system::state_formula* formula)
+define_states::define_states(std::string id, system::state_formula* formula)
 : command(DEFINE_STATES)
 , d_id(id)
 , d_formula(formula)
 {}
 
-void define_states_command::run(system::context* ctx, engine* e) {
+void define_states::run(system::context* ctx, engine* e) {
   ctx->add_state_formula(d_id, d_formula);
   d_formula = 0;
 }
 
-define_states_command::~define_states_command() {
+define_states::~define_states() {
   delete d_formula;
 }
-void define_states_command::to_stream(std::ostream& out) const  {
+void define_states::to_stream(std::ostream& out) const  {
   out << "[" << get_command_type_string() << "(" << d_id << "): ";
   out << *d_formula;
   out << "]";

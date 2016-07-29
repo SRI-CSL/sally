@@ -8,7 +8,7 @@ namespace sally {
 namespace cmd {
 
 /** Command to defined a transition system */
-class define_transition_system_command : public command {
+class define_transition_system : public command {
 
   /** Id of the system */
   std::string d_id;
@@ -19,10 +19,10 @@ class define_transition_system_command : public command {
 public:
 
   /** Command to define a new system with given id */
-  define_transition_system_command(std::string id, system::transition_system* system);
+  define_transition_system(std::string id, system::transition_system* system);
 
   /** Deletes the transitino system if not used */
-  ~define_transition_system_command();
+  ~define_transition_system();
 
   /** Get the id of the system */
   std::string get_id() const { return d_id; }

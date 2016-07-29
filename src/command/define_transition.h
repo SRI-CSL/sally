@@ -8,7 +8,7 @@ namespace sally {
 namespace cmd {
 
 /** Command to defined a transition (formula) */
-class define_transition_command : public command {
+class define_transition : public command {
 
   /** Id of the transition */
   std::string d_id;
@@ -19,10 +19,10 @@ class define_transition_command : public command {
 public:
 
   /** Command to define a transition with given id */
-  define_transition_command(std::string id, system::transition_formula* formula);
+  define_transition(std::string id, system::transition_formula* formula);
 
   /** Deletes the transition if not used */
-  ~define_transition_command();
+  ~define_transition();
 
   /** Get the id of the transition */
   std::string get_id() const { return d_id; }
