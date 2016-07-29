@@ -100,15 +100,17 @@ let rec interpret man env cond ctx = function
   | _ -> raise Unexpected_expression;;
      
 let initialize ds invs =
-  let rec generate pairs constraints = function
-    | [] -> (pairs, constraints)
-    | (Nat_decl str)::ds -> generate ((str, `Int)::pairs) (Ge (Ident str, Nat 0)::constraints) ds
-    | (Int_decl str)::ds -> generate ((str, `Int)::pairs) constraints ds
-    | (Real_decl str)::ds -> generate ((str, `Real)::pairs) constraints ds
-    | (Bool_decl str)::ds -> generate ((str, `Bool)::pairs) constraints ds in
-  let (pairs, constraints) = generate [] [] ds in
+  let rec generate pairs constraints env = function
+    | [] -> (pairs, constraints, env)
+    | (Nat_decl str)::ds -> generate ((str, `Int)::pairs) (Ge (Ident str, Nat 0)::constraints) env ds
+    | (Int_decl str)::ds -> generate ((str, `Int)::pairs) constraints env ds
+    | (Real_decl str)::ds -> generate ((str, `Real)::pairs) constraints env ds
+    | (Bool_decl str)::ds -> generate ((str, `Bool)::pairs) constraints env ds
+    | (Enum_def (str, strs))::ds -> generate pairs constraints (Env.add_typ env str (`Benum (Array.of_list strs))) ds
+    | (Enum_decl (str, enum))::ds -> generate ((str, `Benum enum)::pairs) constraints env ds in
   let cudd = Cudd.Man.make_v () in (* in the future, may need to change cudd settings *)
-  let env = Env.add_vars (Env.make Env.string_symbol cudd) pairs in (* create an environment with declared variables *)
+  let (pairs, constraints, env) = generate [] [] (Env.make Env.string_symbol cudd) ds in
+  let env = Env.add_vars env pairs in (* create an environment with declared variables *)
   let cond = Cond.make Env.string_symbol cudd in
   let apron = Polka.manager_alloc_strict() in (* to do: make this a parameter *)
   let man = Domain1.man_of_mtbdd (Domain1.make_mtbdd apron) in (* to do: make this a parameter *)

@@ -64,12 +64,14 @@ let convert_sal_transition next_state = function
       Some (convert_sal_guardeds next_state [] gcs);;
 
 let sal_to_decl str = function
-  | Sal_ast.Base_type("NATURAL") -> Nat_decl str
-  | Sal_ast.Base_type("INTEGER") -> Int_decl str
-  | Sal_ast.Base_type("REAL")    -> Real_decl str
-  | Sal_ast.Base_type("BOOLEAN") -> Bool_decl str
+  | Sal_ast.Base_type ("NATURAL") -> Nat_decl str
+  | Sal_ast.Base_type ("INTEGER") -> Int_decl str
+  | Sal_ast.Base_type ("REAL")    -> Real_decl str
+  | Sal_ast.Base_type ("BOOLEAN") -> Bool_decl str
+  | Sal_ast.Base_type (other) -> Enum_decl (str, other)
   | _ -> raise (Unimplemented "Non-numerical type declarations");;
 
+(* Go through a preprocessed SAL AST and convert the first module into a simple program representation of the SAL program *)
 let sal_to_progs ctx =
   let defs = ctx.Sal_ast.definitions in
   let rec to_prog constants = function

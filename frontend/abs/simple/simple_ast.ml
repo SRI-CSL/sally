@@ -5,6 +5,10 @@ type decl =
   | Int_decl of string
   | Real_decl of string
   | Bool_decl of string
+  | Enum_def of string * (string list)
+  | Enum_decl of string * string
+(*
+  | Constraint_decl of decl * expr*)
 
 type expr =
   | Nat of int

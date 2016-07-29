@@ -33,8 +33,15 @@ let print_sal_prog p =
    | _ -> raise Malformed_sal_prog);;
 
 let rec eval_step man env inv cond p ctx' =
-  let current = List.map (function | Nat_decl str -> str | Int_decl str -> str | Real_decl str -> str | Bool_decl str -> str) p.state_vars in
-  let next = List.map (function | Nat_decl str -> str | Int_decl str -> str | Real_decl str -> str | Bool_decl str -> str) p.next_state_vars in
+  let string_from_decl = function
+    | Nat_decl str -> str
+    | Int_decl str -> str
+    | Real_decl str -> str
+    | Bool_decl str -> str
+    | Enum_decl (str, _) -> str
+    | _ -> raise Malformed_sal_prog in
+  let current = List.map string_from_decl p.state_vars in
+  let next = List.map string_from_decl p.next_state_vars in
   let next_exprs = List.map (Expr1.var env cond) next in
   let assigned = Domain1.assign_lexpr man cond ctx' current next_exprs None in
   Domain1.forget_list man assigned next |> Domain1.meet man inv
