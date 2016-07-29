@@ -21,6 +21,14 @@
 #include <vector>
 #include <boost/unordered_map.hpp>
 
+#include "command/assume.h"
+#include "command/declare_state_type.h"
+#include "command/define_states.h"
+#include "command/define_transition.h"
+#include "command/define_transition_system.h"
+#include "command/query.h"
+#include "command/sequence.h"
+
 extern "C"
 {
 #include "aiger-1.9.4/aiger.h"
