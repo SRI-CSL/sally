@@ -2,3 +2,9 @@ abs/Types
 abs/Utils
 abs/Conversion
 abs/Preproc
+abs/Inline
+abs/simple/Simple_ast
+abs/simple/Sal_to_simple_ast
+abs/simple/Print_simple
+abs/simple/Simple_to_abs
+abs/simple/Interpret_simple

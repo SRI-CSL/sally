@@ -92,7 +92,7 @@ let rec interpret man env cond ctx = function
         Domain1.join man ctx1 ctx2
   | _ -> raise Unexpected_expression;;
      
-let convert_decls ds invs =
+let initialize ds invs =
   let rec generate pairs constraints = function
     | [] -> (pairs, constraints)
     | (Nat_decl str)::ds -> generate ((str, `Int)::pairs) (Ge (Ident str, Nat 0)::constraints) ds
@@ -110,13 +110,14 @@ let convert_decls ds invs =
   (man, env, cond, List.fold_left (Domain1.meet_condition man cond) abs constraints);;
 
 let interpret_program p =
-  let (man, env, cond, ctx) = convert_decls p.decls p.invs in
+  let (man, env, cond, ctx) = initialize p.decls p.invs in
   let res = interpret man env cond ctx p.expr in
   printf "res:%a@." (Domain1.print man) res;;
    
+(*
 let _ =
   let test_prog =
     { decls = [Nat_decl "x"; Int_decl "y"; Bool_decl "b"];
       invs  = [];
       expr  = Seq [Cond (Eq (Ident "x", Nat 0), Assign(Ident "y", Ident "x"), Assign(Ident "y", Nat 0))] } in
-  interpret_program test_prog;;
+  interpret_program test_prog;;*)
