@@ -75,31 +75,33 @@ make_expr1 env cond = function
   | _ -> raise Unexpected_expression;;
   
 (* interpret a simple program consisting of sequences of assignments and conditionals (containing assignments) *)
-let rec interpret man env cond ctx = function
+let rec interpret carry_conditionals man env cond ctx = function
   | Assign (Ident v, e) ->
       Domain1.assign_lexpr man cond ctx [v] [make_expr1 env cond e] None
   | Seq (e::es) ->
-      let ctx' = interpret man env cond ctx e in
-      interpret man env cond ctx' (Seq es)
+      let ctx' = interpret carry_conditionals man env cond ctx e in
+      interpret carry_conditionals man env cond ctx' (Seq es)
   | Seq [] -> ctx
   | Cond (e1, e2, e3) ->
       let e1' = Expr1.Bool.of_expr (make_expr1 env cond e1)
                 |> Domain1.meet_condition man cond ctx in
       if Domain1.is_eq man ctx e1' (* adding condition e1 does not reduce the domain *)
-      then interpret man env cond ctx e2
+      then interpret carry_conditionals man env cond ctx e2
       else if Domain1.is_bottom man e1' (* condition e1 cannot hold in ctx *)
-      then interpret man env cond ctx e3
+      then interpret carry_conditionals man env cond ctx e3
       else
         (* cannot tell if e1 holds or not, so take both branches, assuming e1 holds in the
            first branch and that it does not in the second *)
-        let ctx1 = interpret man env cond e1' e2 in
+        let e1' = if carry_conditionals then e1' else ctx in
+        let ctx1 = interpret carry_conditionals man env cond e1' e2 in
         let not_e1' = Expr1.Bool.of_expr (make_expr1 env cond (Not e1))
                       |> Domain1.meet_condition man cond ctx in
-        let ctx2 = interpret man env cond not_e1' e3 in
+        let not_e1' = if carry_conditionals then not_e1' else ctx in
+        let ctx2 = interpret carry_conditionals man env cond not_e1' e3 in
         Domain1.join man ctx1 ctx2
   | _ -> raise Unexpected_expression;;
      
-let initialize ds invs =
+let initialize apron ds invs =
   let rec generate pairs constraints env = function
     | [] -> (pairs, constraints, env)
     | (Nat_decl str)::ds -> generate ((str, `Int)::pairs) (Ge (Ident str, Nat 0)::constraints) env ds
@@ -108,19 +110,21 @@ let initialize ds invs =
     | (Bool_decl str)::ds -> generate ((str, `Bool)::pairs) constraints env ds
     | (Enum_def (str, strs))::ds -> generate pairs constraints (Env.add_typ env str (`Benum (Array.of_list strs))) ds
     | (Enum_decl (str, enum))::ds -> generate ((str, `Benum enum)::pairs) constraints env ds in
-  let cudd = Cudd.Man.make_v () in (* in the future, may need to change cudd settings *)
-  let (pairs, constraints, env) = generate [] [] (Env.make Env.string_symbol cudd) ds in
+  let cudd = Cudd.Man.make_v () in (* in the future, may need to make cudd parameterizable *)
+  Cudd.Man.set_gc 10000
+    (begin fun () -> printf "@.CUDD GC@." end)
+    (begin fun () -> printf "@.CUDD REORDER@." end);
+  let (pairs, constraints, env) = generate [] [] (Env.make ~symbol:Env.string_symbol ~bddsize:(List.length ds) cudd) ds in
   let env = Env.add_vars env pairs in (* create an environment with declared variables *)
   let cond = Cond.make Env.string_symbol cudd in
-  let apron = Polka.manager_alloc_strict() in (* to do: make this a parameter *)
   let man = Domain1.man_of_mtbdd (Domain1.make_mtbdd apron) in (* to do: make this a parameter *)
   let abs = Domain1.top man env in
   let constraints = List.map (fun x -> Expr1.Bool.of_expr (make_expr1 env cond x)) (constraints @ invs) in
   (man, env, cond, List.fold_left (Domain1.meet_condition man cond) abs constraints);;
 
-let interpret_program p =
-  let (man, env, cond, ctx) = initialize p.decls p.invs in
-  let res = interpret man env cond ctx p.expr in
+let interpret_program carry_conditionals apron_man p =
+  let (man, env, cond, ctx) = initialize apron_man p.decls p.invs in
+  let res = interpret carry_conditionals man env cond ctx p.expr in
   printf "result:%a@." (Domain1.print man) res;;
    
 (*

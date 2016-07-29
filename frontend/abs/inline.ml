@@ -99,7 +99,7 @@ let inline_transition ctx = function
 let rec inline_defs ctx res = function
   | [] -> res
   | (Type_def (str, Process))::ds -> inline_defs (StrMap.add str (Type (Process_type str)) ctx) res ds
-  | (Type_def (str, Enum _))::ds -> inline_defs ctx res ds (* do not inline enums *)
+  | (Type_def (str, Enum strs))::ds -> inline_defs ctx (Type_def (str, Enum strs)::res) ds (* do not inline enums *)
   | (Type_def (str, st))::ds -> inline_defs (StrMap.add str (Type st) ctx) res ds
   | (Constant_decl (str, st))::ds -> inline_defs ctx (Constant_decl(str, inline_type ctx st)::res) ds
   | (Constant_def (str, st, expr))::ds -> inline_defs (StrMap.add str (Val (inline_expr ctx expr)) ctx) res ds

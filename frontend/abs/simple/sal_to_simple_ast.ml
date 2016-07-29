@@ -76,6 +76,8 @@ let sal_to_progs ctx =
   let defs = ctx.Sal_ast.definitions in
   let rec to_prog constants = function
     | [] -> raise (Unimplemented "No module")
+    | (Sal_ast.Type_def (str, Sal_ast.Enum strs))::ds ->
+        to_prog (Enum_def (str, strs)::constants) ds
     | (Sal_ast.Constant_decl (str, st))::ds ->
         to_prog (sal_to_decl str st::constants) ds
     | (Sal_ast.Module_def (str, sm))::ds ->
