@@ -42,7 +42,6 @@ let rec eval_step man env inv cond p ctx' =
 and
 
 eval_sal man env cond inv ctx p lim cnt =
-  let cond' = Cond.copy cond in
   let guards = List.map (fun g -> Domain1.meet_condition man cond ctx (Expr1.Bool.of_expr (fst g |> make_expr1 env cond))) p.guarded in
   List.iter (printf "guard: %a@." (Expr1.Bool.print cond)) guards;
   let all_guards_false = List.fold_left (&&) true (List.map (Domain1.is_bottom man) guards) in
@@ -66,13 +65,13 @@ eval_sal man env cond inv ctx p lim cnt =
       match p.default with
       | None -> interpret man env cond ctx p.no_transition
       | Some e -> interpret man env cond ctx e in
-  printf "ctx': %a@." (Domain1.print man) ctx';
   let ctx' = Domain1.join man (eval_step man env inv cond p ctx') ctx in
+  (* printf "ctx': %a@." (Domain1.print man) ctx'; *)
   if (Domain1.is_eq man ctx ctx')
   then ctx
   else if cnt = 0
-  then eval_sal man env cond' inv (Domain1.widening man ctx ctx') p lim lim
-  else eval_sal man env cond' inv ctx' p lim (cnt - 1);;
+  then eval_sal man env cond inv (Domain1.widening man ctx ctx') p lim lim
+  else eval_sal man env cond inv ctx' p lim (cnt - 1);;
 
 let eval_sal_prog p =
   let decls = p.constants @ p.state_vars @ p.next_state_vars in

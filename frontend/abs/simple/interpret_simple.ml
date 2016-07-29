@@ -1,4 +1,4 @@
-(* Interpret simple program *)
+(* Interpret simple programs *)
 open Simple_ast;;
 open Bddapron;;
 open Bddapron.Syntax;;
@@ -21,11 +21,14 @@ make_apron_comp env cond cmp e =
 
 and
 
+(* make Expr1.ts for the RHS of an assignment *)
 make_expr1 env cond = function
   | Nat e -> make_expr1 env cond (Int e)
   | Int e -> Expr1.Apron.to_expr (Expr1.Apron.cst env cond (Coeff.Scalar (Scalar.of_int e)))
   | Float e -> Expr1.Apron.to_expr (Expr1.Apron.cst env cond (Coeff.Scalar (Scalar.of_float e)))
   | Ident e -> Expr1.var env cond e
+  (* Arithmetic operators (i.e., And, Sub, Mul, Div) currently use default type (e.g. REAL, INT) and
+     rounding settings *)
   | Add (e1, e2) ->
       let e1' = Expr1.Apron.of_expr (make_expr1 env cond e1) in
       let e2' = Expr1.Apron.of_expr (make_expr1 env cond e2) in
@@ -71,6 +74,7 @@ make_expr1 env cond = function
       Expr1.ite cond e1' e2' e3'
   | _ -> raise Unexpected_expression;;
   
+(* interpret a simple program consisting of sequences of assignments and conditionals (containing assignments) *)
 let rec interpret man env cond ctx = function
   | Assign (Ident v, e) ->
       Domain1.assign_lexpr man cond ctx [v] [make_expr1 env cond e] None
@@ -79,16 +83,19 @@ let rec interpret man env cond ctx = function
       interpret man env cond ctx' (Seq es)
   | Seq [] -> ctx
   | Cond (e1, e2, e3) ->
-      let e1' = Expr1.Bool.of_expr (make_expr1 env cond e1) in
-      if Expr1.Bool.is_true cond e1'
+      let e1' = Expr1.Bool.of_expr (make_expr1 env cond e1)
+                |> Domain1.meet_condition man cond ctx in
+      if Domain1.is_eq man ctx e1' (* adding condition e1 does not reduce the domain *)
       then interpret man env cond ctx e2
-      else if Expr1.Bool.is_false cond e1'
+      else if Domain1.is_bottom man e1' (* condition e1 cannot hold in ctx *)
       then interpret man env cond ctx e3
       else
-        let cond' = Cond.copy cond in
-        let ctx' = Domain1.meet_condition man cond' ctx e1' in
-        let ctx1 = interpret man env cond ctx' e2 in
-        let ctx2 = interpret man env cond ctx e3 in
+        (* cannot tell if e1 holds or not, so take both branches, assuming e1 holds in the
+           first branch and that it does not in the second *)
+        let ctx1 = interpret man env cond e1' e2 in
+        let not_e1' = Expr1.Bool.of_expr (make_expr1 env cond (Not e1))
+                      |> Domain1.meet_condition man cond ctx in
+        let ctx2 = interpret man env cond not_e1' e3 in
         Domain1.join man ctx1 ctx2
   | _ -> raise Unexpected_expression;;
      
@@ -101,10 +108,10 @@ let initialize ds invs =
     | (Bool_decl str)::ds -> generate ((str, `Bool)::pairs) constraints ds in
   let (pairs, constraints) = generate [] [] ds in
   let cudd = Cudd.Man.make_v () in (* in the future, may need to change cudd settings *)
-  let env = Env.add_vars (Env.make Env.string_symbol cudd) pairs in
+  let env = Env.add_vars (Env.make Env.string_symbol cudd) pairs in (* create an environment with declared variables *)
   let cond = Cond.make Env.string_symbol cudd in
-  let apron = Polka.manager_alloc_loose() in
-  let man = Domain1.man_of_mtbdd (Domain1.make_mtbdd apron) in
+  let apron = Polka.manager_alloc_strict() in (* to do: make this a parameter *)
+  let man = Domain1.man_of_mtbdd (Domain1.make_mtbdd apron) in (* to do: make this a parameter *)
   let abs = Domain1.top man env in
   let constraints = List.map (fun x -> Expr1.Bool.of_expr (make_expr1 env cond x)) (constraints @ invs) in
   (man, env, cond, List.fold_left (Domain1.meet_condition man cond) abs constraints);;
@@ -112,12 +119,12 @@ let initialize ds invs =
 let interpret_program p =
   let (man, env, cond, ctx) = initialize p.decls p.invs in
   let res = interpret man env cond ctx p.expr in
-  printf "res:%a@." (Domain1.print man) res;;
+  printf "result:%a@." (Domain1.print man) res;;
    
 (*
 let _ =
   let test_prog =
-    { decls = [Nat_decl "x"; Int_decl "y"; Bool_decl "b"];
+    { decls = [Nat_decl "x"; Nat_decl "y"; Bool_decl "b"];
       invs  = [];
-      expr  = Seq [Cond (Eq (Ident "x", Nat 0), Assign(Ident "y", Ident "x"), Assign(Ident "y", Nat 0))] } in
+      expr  = Seq [Cond (Eq (Ident "x", Nat 0), Assign(Ident "y", Nat 0), Cond (Eq (Ident "x", Nat 0), Assign (Ident "y", Nat 1), Assign(Ident "y", Nat 0)))] } in
   interpret_program test_prog;;*)
