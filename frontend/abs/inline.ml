@@ -109,7 +109,9 @@ let rec inline_defs ctx res = function
       inline_defs ctx (Assertion(str1, tag, str2, inline_expr ctx expr)::res) ds
   | (Module_def (str, sal_mod))::ds ->
       inline_defs ctx
-        (Module_def (str, { sal_mod with
+        (Module_def (str, { 
+          state_vars =
+            List.map ( fun (tag, decls) -> (tag, List.map (fun (strs, st) -> (strs, inline_type ctx st)) decls) ) sal_mod.state_vars;
           initialization = List.map (inline_assignment ctx) (sal_mod.initialization);
           definition = List.map (inline_assignment ctx) (sal_mod.definition);
           invariant =

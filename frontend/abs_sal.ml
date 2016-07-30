@@ -101,5 +101,5 @@ let _ =
   create_channel_in !input_file
   |> Io.Sal_lexer.parse
   |> inline
-  |> sal_to_progs;
+  |> sal_to_progs
   |> fun p -> print_sal_prog p; eval_sal_prog p;;
