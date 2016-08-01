@@ -8,6 +8,8 @@ open Format;;
 exception Unimplemented of string;;
 exception Unexpected_expression;;
 
+(* Make a boolean expression out of two boolean expressions
+   e1 and e2 and a boolean binary operator binop *)
 let rec make_bool_expr env cond binop e1 e2 =
   let e1' = Expr1.Bool.of_expr (make_expr1 env cond e1) in
   let e2' = Expr1.Bool.of_expr (make_expr1 env cond e2) in
@@ -15,13 +17,14 @@ let rec make_bool_expr env cond binop e1 e2 =
 
 and
 
+(* Make a comparison relative to zero, e.g. e > 0 *)
 make_apron_comp env cond cmp e =
   let e' = Expr1.Apron.of_expr (make_expr1 env cond e) in
   Expr1.Bool.to_expr (cmp cond e')
 
 and
 
-(* make Expr1.ts for the RHS of an assignment *)
+(* Make Expr1.ts for the RHS of an assignment or condition in a conditional statement *)
 make_expr1 env cond = function
   | Nat e -> make_expr1 env cond (Int e)
   | Int e -> Expr1.Apron.to_expr (Expr1.Apron.cst env cond (Coeff.Scalar (Scalar.of_int e)))
@@ -74,31 +77,32 @@ make_expr1 env cond = function
       Expr1.ite cond e1' e2' e3'
   | _ -> raise Unexpected_expression;;
   
-(* interpret a simple program consisting of sequences of assignments and conditionals (containing assignments) *)
-let rec interpret carry_conditionals man env cond ctx = function
+(* Interpret a simple program consisting of sequences of assignments and conditionals (containing assignments) *)
+let rec interpret carry_conditionals man env cond inv ctx = function
   | Assign (Ident v, e) ->
       Domain1.assign_lexpr man cond ctx [v] [make_expr1 env cond e] None
+      |> Domain1.meet man inv
   | Seq (e::es) ->
-      let ctx' = interpret carry_conditionals man env cond ctx e in
-      interpret carry_conditionals man env cond ctx' (Seq es)
+      let ctx' = interpret carry_conditionals man env cond inv ctx e in
+      interpret carry_conditionals man env cond inv ctx' (Seq es)
   | Seq [] -> ctx
   | Cond (e1, e2, e3) ->
       let e1' = Expr1.Bool.of_expr (make_expr1 env cond e1)
                 |> Domain1.meet_condition man cond ctx in
       if Domain1.is_eq man ctx e1' (* adding condition e1 does not reduce the domain *)
-      then interpret carry_conditionals man env cond ctx e2
+      then interpret carry_conditionals man env cond inv ctx e2
       else if Domain1.is_bottom man e1' (* condition e1 cannot hold in ctx *)
-      then interpret carry_conditionals man env cond ctx e3
+      then interpret carry_conditionals man env cond inv ctx e3
       else
         (* cannot tell if e1 holds or not, so take both branches, assuming e1 holds in the
            first branch and that it does not in the second *)
         let e1' = if carry_conditionals then e1' else ctx in
-        let ctx1 = interpret carry_conditionals man env cond e1' e2 in
+        let ctx1 = interpret carry_conditionals man env cond inv e1' e2 in
         let not_e1' = Expr1.Bool.of_expr (make_expr1 env cond (Not e1))
                       |> Domain1.meet_condition man cond ctx in
         let not_e1' = if carry_conditionals then not_e1' else ctx in
-        let ctx2 = interpret carry_conditionals man env cond not_e1' e3 in
-        Domain1.join man ctx1 ctx2
+        let ctx2 = interpret carry_conditionals man env cond inv not_e1' e3 in
+        Domain1.join man ctx1 ctx2 |> Domain1.meet man inv
   | _ -> raise Unexpected_expression;;
      
 let initialize apron ds invs =
@@ -124,7 +128,7 @@ let initialize apron ds invs =
 
 let interpret_program carry_conditionals apron_man p =
   let (man, env, cond, ctx) = initialize apron_man p.decls p.invs in
-  let res = interpret carry_conditionals man env cond ctx p.expr in
+  let res = interpret carry_conditionals man env cond ctx ctx p.expr in
   printf "result:%a@." (Domain1.print man) res;;
    
 (*
