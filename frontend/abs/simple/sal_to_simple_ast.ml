@@ -3,12 +3,36 @@ open Simple_ast;;
 open Format;;
 
 exception Unexpected_expr;;
+exception Unexpected_subtype_expression;;
 exception Unimplemented of string;;
+
+let rec replace_var lit repl =
+  function
+  | Ident e -> if e = lit then repl else Ident e
+  | Add (e1, e2) -> Add (replace_var lit repl e1, replace_var lit repl e2)
+  | Sub (e1, e2) -> Sub (replace_var lit repl e1, replace_var lit repl e2)
+  | Mul (e1, e2) -> Mul (replace_var lit repl e1, replace_var lit repl e2)
+  | Div (e1, e2) -> Div (replace_var lit repl e1, replace_var lit repl e2)
+  | Ge (e1, e2) -> Ge (replace_var lit repl e1, replace_var lit repl e2)
+  | Gt (e1, e2) -> Gt (replace_var lit repl e1, replace_var lit repl e2)
+  | Eq (e1, e2) -> Eq (replace_var lit repl e1, replace_var lit repl e2)
+  | Not e -> Not (replace_var lit repl e)
+  | And (e1, e2) -> And (replace_var lit repl e1, replace_var lit repl e2)
+  | Or (e1, e2) -> Or (replace_var lit repl e1, replace_var lit repl e2)
+  | Cond (e1, e2, e3) -> Cond (replace_var lit repl e1, replace_var lit repl e2, replace_var lit repl e3)
+  | Assign (_, _) -> raise Unexpected_subtype_expression
+  | Seq _ -> raise Unexpected_subtype_expression
+  | other -> other
 
 let rec sal_to_expr = function
   | Sal_ast.Decimal i    -> Int i
   | Sal_ast.Float f      -> Float f
   | Sal_ast.Ident str    -> Ident str
+  | Sal_ast.Set_literal (str, st, e) ->
+      printf "set literal: %s\n" str;
+      printf "set expr: %s\n" (Print_simple.string_of_simple (sal_to_expr e));
+      printf "set expr applied: %s\n" (Print_simple.string_of_simple (replace_var str (Ident "expr") (sal_to_expr e)));
+      Constrained (fun x -> replace_var str x (sal_to_expr e))
   | Sal_ast.Cond ((e1, e2)::ifs, els) ->
       Cond
         (sal_to_expr e1,
@@ -24,7 +48,7 @@ let rec sal_to_expr = function
   | Sal_ast.Le (e1, e2)  -> Ge (sal_to_expr e2, sal_to_expr e1)
   | Sal_ast.Lt (e1, e2)  -> Gt (sal_to_expr e2, sal_to_expr e1)
   | Sal_ast.Eq (e1, e2)  -> Eq (sal_to_expr e1, sal_to_expr e2)
-  | Sal_ast.Neq (e1, e2) -> Neq (sal_to_expr e1, sal_to_expr e2)
+  | Sal_ast.Neq (e1, e2) -> Not (Eq (sal_to_expr e1, sal_to_expr e2))
   | Sal_ast.Not e        -> Not (sal_to_expr e)
   | Sal_ast.And (e1, e2) -> And (sal_to_expr e1, sal_to_expr e2)
   | Sal_ast.Or  (e1, e2) -> Or (sal_to_expr e1, sal_to_expr e2)
@@ -44,8 +68,8 @@ let rec convert_sal_assignments next_state assigned assigns = function
       let unassigned = List.filter (fun x -> not (List.mem x assigned)) next_state in
       (List.map (fun x -> Assign (Ident x, Ident (String.sub x 0 (String.length x - 1)))) unassigned) @ assigns
   | (Sal_ast.Assign (Sal_ast.Ident v, e))::asgns -> convert_sal_assignments next_state (v::assigned) (Assign (Ident v, sal_to_expr e)::assigns) asgns
-  | (Sal_ast.Assign (_, _))::asgns -> raise Unexpected_expr
-  | _ -> raise (Unimplemented "member");;
+  | (Sal_ast.Member (Sal_ast.Ident v, e))::asgns -> convert_sal_assignments next_state (v::assigned) (Assign (Ident v, sal_to_expr e)::assigns) asgns
+  | _ -> raise Unexpected_expr;;
 
 let rec convert_sal_guardeds next_state res = function
   | [] -> (List.map (fun (x, y) -> (x, Seq y)) res, None)
@@ -63,17 +87,26 @@ let convert_sal_transition next_state = function
   | Sal_ast.GuardedCommands gcs ->
       Some (convert_sal_guardeds next_state [] gcs);;
 
-let sal_to_decl str = function
+
+let rec sal_to_decl str = function
   | Sal_ast.Base_type ("NATURAL") -> Nat_decl str
   | Sal_ast.Base_type ("INTEGER") -> Int_decl str
   | Sal_ast.Base_type ("REAL")    -> Real_decl str
   | Sal_ast.Base_type ("BOOLEAN") -> Bool_decl str
-  | Sal_ast.Base_type (other) -> Enum_decl (str, other)
-  | _ -> raise (Unimplemented "Non-numerical type declarations");;
+  | Sal_ast.Base_type (enum) -> Enum_decl (str, enum)
+  | Sal_ast.Subtype (lit, st, expr) -> Constraint_decl (sal_to_decl str st, sal_to_expr expr |> replace_var lit (Ident str))
+  | Sal_ast.Range (low, high) ->
+      (* todo: find type; for now default to Real *)
+      Constraint_decl (Real_decl str, And (Ge (Ident str, sal_to_expr low), Ge (sal_to_expr high, Ident str)))
+  | Sal_ast.Array (_, st) -> raise (Unimplemented "Array type declarations")
+  | Sal_ast.Enum _ -> raise (Unimplemented "Direct enum type declarations")
+  | Sal_ast.Process -> raise (Unimplemented "Process type declarations")
+  | Sal_ast.Process_type _ -> raise (Unimplemented "Process_type type declarations");;
 
 (* Go through a preprocessed SAL AST and convert the first module into a simple program representation of the SAL program *)
 let sal_to_progs ctx =
   let defs = ctx.Sal_ast.definitions in
+  printf "%s\n" "to_progs";
   let rec to_prog constants = function
     | [] -> raise (Unimplemented "No module")
     | (Sal_ast.Type_def (str, Sal_ast.Enum strs))::ds ->

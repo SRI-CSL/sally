@@ -79,6 +79,10 @@ make_expr1 env cond = function
   
 (* Interpret a simple program consisting of sequences of assignments and conditionals (containing assignments) *)
 let rec interpret carry_conditionals man env cond inv ctx = function
+  | Assign (Ident v, Constrained f) ->
+      let ctx = Domain1.forget_list man ctx [v] in
+      Domain1.meet_condition man cond ctx (Expr1.Bool.of_expr (make_expr1 env cond (f (Ident v))))
+      |> Domain1.meet man inv
   | Assign (Ident v, e) ->
       Domain1.assign_lexpr man cond ctx [v] [make_expr1 env cond e] None
       |> Domain1.meet man inv
@@ -113,12 +117,13 @@ let initialize apron ds invs =
     | (Real_decl str)::ds -> generate ((str, `Real)::pairs) constraints env ds
     | (Bool_decl str)::ds -> generate ((str, `Bool)::pairs) constraints env ds
     | (Enum_def (str, strs))::ds -> generate pairs constraints (Env.add_typ env str (`Benum (Array.of_list strs))) ds
-    | (Enum_decl (str, enum))::ds -> generate ((str, `Benum enum)::pairs) constraints env ds in
+    | (Enum_decl (str, enum))::ds -> generate ((str, `Benum enum)::pairs) constraints env ds
+    | (Constraint_decl (decl, cond))::ds -> generate pairs (cond::constraints) env (decl::ds) in
   let cudd = Cudd.Man.make_v () in (* in the future, may need to make cudd parameterizable *)
   Cudd.Man.set_gc 10000
     (begin fun () -> printf "@.CUDD GC@." end)
     (begin fun () -> printf "@.CUDD REORDER@." end);
-  let (pairs, constraints, env) = generate [] [] (Env.make ~symbol:Env.string_symbol ~bddsize:(List.length ds) cudd) ds in
+  let (pairs, constraints, env) = generate [] [] (Env.make ~symbol:Env.string_symbol ~bddsize:(10 + List.length ds) cudd) ds in
   let env = Env.add_vars env pairs in (* create an environment with declared variables *)
   let cond = Cond.make Env.string_symbol cudd in
   let man = Domain1.man_of_mtbdd (Domain1.make_mtbdd apron) in (* to do: make this a parameter *)
