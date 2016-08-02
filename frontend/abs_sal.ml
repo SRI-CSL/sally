@@ -48,39 +48,46 @@ let rec eval_step man env inv cond p ctx' =
 
 and
 
+(* evaluate a guarded command; if the guard is false, then the result is bottom *)
+eval_guarded man env cond inv ctx (g, c) =
+  let guard = Expr1.Bool.of_expr (make_expr1 env cond g) in
+  let ctx = Domain1.meet_condition man cond ctx guard in
+  interpret true man env cond inv ctx c
+
+and
+
 eval_sal man env cond inv ctx p lim cnt =
   let guards = List.map (fun g -> Domain1.meet_condition man cond ctx (Expr1.Bool.of_expr (fst g |> make_expr1 env cond))) p.guarded in
-  (* List.iter (printf "guard: %a@." (Expr1.Bool.print cond)) guards; *)
   let all_guards_false = List.fold_left (&&) true (List.map (Domain1.is_bottom man) guards) in
-  (* printf "all guards false: %s\n" (string_of_bool all_guards_false); *)
   let any_guards_true = List.fold_left (||) false (List.map (Domain1.is_eq man ctx) guards) in
-  (* printf "any guards true: %s\n" (string_of_bool any_guards_true); *)
-  let ctx' =
+  let ctx's =
     if not (all_guards_false) (* do not go straight to ELSE *)
     then
-      (* Convert guarded command to a conditional (maybe do it differently later). Taking no transition, i.e. setting each
-         x' = x is fine because the "no transition" option is in the domain from the later join with the current
-         ctx. Taking no action, e.g. Seq [], will result in top after variable renaming *)
-      let guarded_to_cond (e, es) = Cond (e, es, p.no_transition) in
-      let guardeds = List.map (fun x -> interpret true man env cond inv ctx (guarded_to_cond x)) p.guarded in
-      (*List.iter (printf "guarded: %a@." (Domain1.print man)) guardeds;*)
-      let evaluated_guardeds = List.fold_left (Domain1.join man) (Domain1.bottom man env) guardeds in
+      let guardeds = List.map (fun x -> (eval_guarded man env cond inv ctx x, x)) p.guarded in
       if any_guards_true (* check if some guards are definitely true *)
-      then evaluated_guardeds (* ELSE does not get executed *)
+      then guardeds (* ELSE does not get executed *)
       else (* ELSE may be executed *)
         match p.default with
-          | None -> evaluated_guardeds
-          | Some e -> Domain1.join man evaluated_guardeds (interpret true man env cond inv ctx e)
+          | None -> guardeds
+          | Some e -> (interpret true man env cond inv ctx e, (True, e))::guardeds
     else (* all guards are definitely false *)
       match p.default with
-      | None -> interpret true man env cond inv ctx p.no_transition
-      | Some e -> interpret true man env cond inv ctx e in
-  let ctx' = Domain1.join man (eval_step man env inv cond p ctx') ctx in
-  (* printf "ctx': %a@." (Domain1.print man) ctx'; *)
+      | None -> [(interpret true man env cond inv ctx p.no_transition, (True, p.no_transition))]
+      | Some e -> [(interpret true man env cond inv ctx e, (True, e))] in
+  let ctx's = List.map (fun (x, y) -> (Domain1.join man (eval_step man env inv cond p x) ctx, y)) ctx's in
+  let ctx' = List.fold_left (Domain1.join man) (Domain1.bottom man env) (List.map fst ctx's) in
+  printf "ctx': %a@." (Domain1.print man) ctx';
   if (Domain1.is_eq man ctx ctx')
   then ctx
   else if cnt = 0
-  then eval_sal man env cond inv (Domain1.widening man ctx ctx') p lim lim
+  then
+    let widened = eval_sal man env cond inv (Domain1.widening man ctx ctx') p lim lim in
+    (* Cannot do narrowing for all guarded commands; must figure out which guarded commands resulted in the
+       need for widening and do narrowing using only those *)
+    let to_redo = List.filter (fun (x, _) -> not (Domain1.is_eq man ctx x)) ctx's in (* which guarded commands resulted in widening? *)
+    let narrow = List.map (fun (_, y) -> eval_step man env inv cond p (eval_guarded man env cond inv widened y)) to_redo in (* one more pass through *)
+    let narrowed = List.fold_left (Domain1.join man) ctx' narrow in (* join them together *)
+    eval_sal man env cond inv narrowed p lim lim
   else eval_sal man env cond inv ctx' p lim (cnt - 1);;
 
 let eval_sal_prog p =
@@ -89,7 +96,7 @@ let eval_sal_prog p =
   let (man, env, cond, ctx) = initialize (Polka.manager_alloc_strict()) decls invs in
   let init = interpret true man env cond ctx ctx p.initials in
   printf "initial state: %a@." (Domain1.print man) init;
-  let res = eval_sal man env cond ctx init p 5 5 in
+  let res = eval_sal man env cond ctx init p 6 6 in
   printf "invariants found: %a@." (Domain1.print man) res;;
     
 let create_channel_in = function
