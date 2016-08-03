@@ -107,6 +107,35 @@ let rec interpret carry_conditionals man env cond inv ctx = function
         let not_e1' = if carry_conditionals then not_e1' else ctx in
         let ctx2 = interpret carry_conditionals man env cond inv not_e1' e3 in
         Domain1.join man ctx1 ctx2 |> Domain1.meet man inv
+  | Local (e1, e2) ->
+      let rec add_to_env env inv = function
+        | Nat_decl str -> 
+            let env' = Env.add_vars env [(str, `Int)] in
+            let inv' = Domain1.meet_condition man cond inv (Expr1.Bool.of_expr (make_expr1 env' cond (Ge (Ident str, Nat 0)))) in
+            (env', inv', str)
+        | Int_decl str -> 
+            let env' = Env.add_vars env [(str, `Int)] in
+            (env', inv, str)
+        | Real_decl str ->
+            let env' = Env.add_vars env [(str, `Real)] in
+            (env', inv, str)
+        | Bool_decl str ->
+            let env' = Env.add_vars env [(str, `Bool)] in
+            (env', inv, str)
+        | Enum_def (str, strs) ->
+            let env' = Env.add_typ env str (`Benum (Array.of_list strs)) in
+            (env', inv, str)
+        | Enum_decl (str, enum) ->
+            let env' = Env.add_vars env [(str, `Benum enum)] in
+            (env', inv, str)
+        | Constraint_decl (decl, constr) ->
+            let (env', inv, str) = add_to_env env inv decl in
+            (env', Domain1.meet_condition man cond inv (Expr1.Bool.of_expr (make_expr1 env' cond constr)), str) in
+      printf "%s@." "local";
+      let (env', inv', str) = add_to_env env inv e1 in
+      let ctx' = Domain1.change_environment man ctx env' |> Domain1.meet man inv' in
+      let res = interpret carry_conditionals man env' cond inv' ctx' e2 in
+      Domain1.change_environment man res env
   | _ -> raise Unexpected_expression;;
      
 let initialize apron ds invs =
@@ -136,10 +165,17 @@ let interpret_program carry_conditionals apron_man p =
   let res = interpret carry_conditionals man env cond ctx ctx p.expr in
   printf "result:%a@." (Domain1.print man) res;;
    
-(*
 let _ =
   let test_prog =
     { decls = [Nat_decl "x"; Nat_decl "y"; Bool_decl "b"];
       invs  = [];
-      expr  = Seq [Cond (Eq (Ident "x", Nat 0), Assign(Ident "y", Nat 0), Cond (Eq (Ident "x", Nat 0), Assign (Ident "y", Nat 1), Assign(Ident "y", Nat 0)))] } in
-  interpret_program test_prog;;*)
+      expr  = Seq []} in
+  let (man, env, cond, ctx) = initialize (Box.manager_alloc()) (test_prog.decls) [] in
+  let ctx1 = make_expr1 env cond (Eq (Ident "x", Nat 1)) |> Expr1.Bool.of_expr |> Domain1.meet_condition man cond ctx in
+  let ctx2 = make_expr1 env cond (Eq (Ident "x", Nat 2)) |> Expr1.Bool.of_expr |> Domain1.meet_condition man cond ctx in
+  let ctx3 = make_expr1 env cond (Eq (Ident "x", Nat 3)) |> Expr1.Bool.of_expr |> Domain1.meet_condition man cond ctx in
+  let ctx4 = make_expr1 env cond (Gt (Nat 10, Add (Ident "x", Ident "y"))) |> Expr1.Bool.of_expr |> Domain1.meet_condition man cond ctx in
+  let ctx1234 = Domain1.join man ctx1 ctx2 |> Domain1.join man ctx3 |> Domain1.join man ctx3 in
+  printf "join 1234: %a@." (Domain1.print man) ctx1234;
+  let ctx1243 = Domain1.join man ctx1 ctx2 |> Domain1.join man ctx4 |> Domain1.join man ctx4 in
+  printf "join 1243: %a@." (Domain1.print man) ctx1243;;

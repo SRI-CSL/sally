@@ -1,6 +1,17 @@
 (* A simpler AST *)
 
-type expr =
+type decl =
+  | Nat_decl of string
+  | Int_decl of string
+  | Real_decl of string
+  | Bool_decl of string
+  | Enum_def of string * (string list)
+  | Enum_decl of string * string
+  | Constraint_decl of decl * expr
+
+and
+
+expr =
   | Nat of int
   | Int of int
   | Float of float
@@ -20,16 +31,8 @@ type expr =
   | Cond of expr * expr * expr
   | True
   | False
-  | Seq of expr list;;
-
-type decl =
-  | Nat_decl of string
-  | Int_decl of string
-  | Real_decl of string
-  | Bool_decl of string
-  | Enum_def of string * (string list)
-  | Enum_decl of string * string
-  | Constraint_decl of decl * expr
+  | Seq of expr list
+  | Local of decl * expr;;
 
 type prog = {
   decls : decl list;

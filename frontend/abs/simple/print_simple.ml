@@ -5,7 +5,7 @@ let rec string_of_simple = function
   | Int i -> string_of_int i
   | Float f -> string_of_float f
   | Ident str -> str
-  | Constrained f -> "{ a | "^string_of_simple (f (Ident "x")) ^ " }"
+  | Constrained f -> "{ `a | "^string_of_simple (f (Ident "`a")) ^ " }"
   | Add (e1, e2) -> "("^(string_of_simple e1)^" + "^(string_of_simple e2)^")"
   | Sub (e1, e2) -> "("^(string_of_simple e1)^" - "^(string_of_simple e2)^")"
   | Mul (e1, e2) -> "("^(string_of_simple e1)^" * "^(string_of_simple e2)^")"
@@ -23,3 +23,13 @@ let rec string_of_simple = function
   | False -> "false"
   | Seq (e::es) -> (string_of_simple e)^"; "^(string_of_simple (Seq es))
   | Seq [] -> ""
+  | Local (decl, e) ->
+      match decl with
+      | Nat_decl str -> "(let "^str^" : nat in "^(string_of_simple e)^")"
+      | Int_decl str -> "(let "^str^" : int in "^(string_of_simple e)^")"
+      | Real_decl str -> "(let "^str^" : real in "^(string_of_simple e)^")"
+      | Bool_decl str -> "(let "^str^" : bool in "^(string_of_simple e)^")"
+      | Enum_def (enum, _) -> "(let "^enum^" : enum in "^(string_of_simple e) ^")"
+      | Enum_decl (str, enum) -> "(let "^str^" : "^enum^" in "^(string_of_simple e) ^")"
+      | Constraint_decl (decl, e) -> string_of_simple e ^ " with ("^string_of_simple e^")"
+
