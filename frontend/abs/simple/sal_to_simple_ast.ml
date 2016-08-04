@@ -20,6 +20,9 @@ let rec replace_var lit repl =
   | And (e1, e2) -> And (replace_var lit repl e1, replace_var lit repl e2)
   | Or (e1, e2) -> Or (replace_var lit repl e1, replace_var lit repl e2)
   | Cond (e1, e2, e3) -> Cond (replace_var lit repl e1, replace_var lit repl e2, replace_var lit repl e3)
+  | Local (d, e) ->
+      let d = match d with Constraint_decl (d', e') -> Constraint_decl (d', replace_var lit repl e') | _ -> d in
+      Local (d, replace_var lit repl e)
   | Assign (_, _) -> raise Unexpected_subtype_expression
   | Seq _ -> raise Unexpected_subtype_expression
   | other -> other
@@ -35,6 +38,8 @@ let rec sal_to_expr = function
       printf "set expr: %s\n" (Print_simple.string_of_simple (sal_to_expr e));
       printf "set expr applied: %s\n" (Print_simple.string_of_simple (replace_var str (Ident "expr") (sal_to_expr e)));
       Constrained (fun x -> replace_var str x (sal_to_expr e))
+(*
+  | Sal_ast.SProc_cardinal str -> Ident ("#"^str) *)
   | Sal_ast.Cond ((e1, e2)::ifs, els) ->
       Cond
         (sal_to_expr e1,
@@ -88,8 +93,9 @@ sal_to_decl str = function
   | Sal_ast.Array (_, st) -> (* treat array as scalar *) sal_to_decl str st
   | Sal_ast.Enum _ -> raise (Unimplemented "Direct enum type declarations")
   | Sal_ast.Process -> raise (Unimplemented "Direct process type declarations") (* should be eliminated in inlining *)
-  | Sal_ast.Process_type name ->
-      Constraint_decl (Nat_decl str, Gt ( Ident name, Ident str ));;
+  | Sal_ast.Process_type name -> Nat_decl str;;
+(*
+      Constraint_decl (Nat_decl str, Gt ( Ident ("#"^name), Ident str ));; *)
 
 let rec convert_sal_assignments next_state assigned assigns = function
   | [] ->

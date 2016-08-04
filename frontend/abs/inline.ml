@@ -59,8 +59,8 @@ let rec inline_expr ctx = function
   | Xor (e1, e2) -> Xor (inline_expr ctx e1, inline_expr ctx e2)
   | Implies (e1, e2) -> Implies (inline_expr ctx e1, inline_expr ctx e2)
   | Iff (e1, e2) -> Iff (inline_expr ctx e1, inline_expr ctx e2)
-  | Exists (decls, e) -> Exists (decls, inline_expr ctx e)
-  | Forall (decls, e) -> Forall (decls, inline_expr ctx e)
+  | Exists (decls, e) -> Exists (List.map (fun (strs, st) -> (strs, inline_type ctx st)) decls, inline_expr ctx e)
+  | Forall (decls, e) -> Forall (List.map (fun (strs, st) -> (strs, inline_type ctx st)) decls, inline_expr ctx e)
   | Let (decls, e) ->
       let strs = List.map (fun (str, _, _) -> str) decls in
       let exprs = List.map (fun (_, _, expr) -> expr) decls in

@@ -80,8 +80,9 @@ make_expr1 env cond = function
 (* Interpret a simple program consisting of sequences of assignments and conditionals (containing assignments) *)
 let rec interpret carry_conditionals man env cond inv ctx = function
   | Assign (Ident v, Constrained f) ->
-      let ctx = Domain1.forget_list man ctx [v] in
-      Domain1.meet_condition man cond ctx (Expr1.Bool.of_expr (make_expr1 env cond (f (Ident v))))
+      let ctx' = Domain1.forget_list man ctx [v] in
+      Domain1.meet man ctx' (interpret carry_conditionals man env cond inv ctx (f (Ident v)))
+      (* Domain1.meet_condition man cond ctx (Expr1.Bool.of_expr (make_expr1 env cond (f (Ident v)))) *)
       |> Domain1.meet man inv
   | Assign (Ident v, e) ->
       Domain1.assign_lexpr man cond ctx [v] [make_expr1 env cond e] None
@@ -111,32 +112,38 @@ let rec interpret carry_conditionals man env cond inv ctx = function
       let rec add_to_env env inv = function
         | Nat_decl str -> 
             let env' = Env.add_vars env [(str, `Int)] in
+            let inv = Domain1.change_environment man inv env' in
             let inv' = Domain1.meet_condition man cond inv (Expr1.Bool.of_expr (make_expr1 env' cond (Ge (Ident str, Nat 0)))) in
             (env', inv', str)
         | Int_decl str -> 
             let env' = Env.add_vars env [(str, `Int)] in
+            let inv = Domain1.change_environment man inv env' in
             (env', inv, str)
         | Real_decl str ->
             let env' = Env.add_vars env [(str, `Real)] in
+            let inv = Domain1.change_environment man inv env' in
             (env', inv, str)
         | Bool_decl str ->
             let env' = Env.add_vars env [(str, `Bool)] in
+            let inv = Domain1.change_environment man inv env' in
             (env', inv, str)
         | Enum_def (str, strs) ->
             let env' = Env.add_typ env str (`Benum (Array.of_list strs)) in
+            let inv = Domain1.change_environment man inv env' in
             (env', inv, str)
         | Enum_decl (str, enum) ->
             let env' = Env.add_vars env [(str, `Benum enum)] in
+            let inv = Domain1.change_environment man inv env' in
             (env', inv, str)
         | Constraint_decl (decl, constr) ->
             let (env', inv, str) = add_to_env env inv decl in
+            let inv = Domain1.change_environment man inv env' in
             (env', Domain1.meet_condition man cond inv (Expr1.Bool.of_expr (make_expr1 env' cond constr)), str) in
-      printf "%s@." "local";
       let (env', inv', str) = add_to_env env inv e1 in
       let ctx' = Domain1.change_environment man ctx env' |> Domain1.meet man inv' in
       let res = interpret carry_conditionals man env' cond inv' ctx' e2 in
       Domain1.change_environment man res env
-  | _ -> raise Unexpected_expression;;
+  | other -> Domain1.meet_condition man cond inv (Expr1.Bool.of_expr (make_expr1 env cond other));;
      
 let initialize apron ds invs =
   let rec generate pairs constraints env = function
@@ -165,6 +172,7 @@ let interpret_program carry_conditionals apron_man p =
   let res = interpret carry_conditionals man env cond ctx ctx p.expr in
   printf "result:%a@." (Domain1.print man) res;;
    
+(*
 let _ =
   let test_prog =
     { decls = [Nat_decl "x"; Nat_decl "y"; Bool_decl "b"];
@@ -178,4 +186,4 @@ let _ =
   let ctx1234 = Domain1.join man ctx1 ctx2 |> Domain1.join man ctx3 |> Domain1.join man ctx3 in
   printf "join 1234: %a@." (Domain1.print man) ctx1234;
   let ctx1243 = Domain1.join man ctx1 ctx2 |> Domain1.join man ctx4 |> Domain1.join man ctx4 in
-  printf "join 1243: %a@." (Domain1.print man) ctx1243;;
+  printf "join 1243: %a@." (Domain1.print man) ctx1243;;*)
