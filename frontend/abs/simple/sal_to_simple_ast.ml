@@ -31,15 +31,8 @@ let rec sal_to_expr = function
   | Sal_ast.Decimal i    -> Int i
   | Sal_ast.Float f      -> Float f
   | Sal_ast.Ident str    -> Ident str
-  | Sal_ast.Array_access (Sal_ast.Ident str, _) -> Ident str (* will be wrong in cases like a[i] < a[j] *)
-  | Sal_ast.Array_literal (_,_,_) -> raise (Unimplemented "array lit")
   | Sal_ast.Set_literal (str, st, e) ->
-      printf "set literal: %s\n" str;
-      printf "set expr: %s\n" (Print_simple.string_of_simple (sal_to_expr e));
-      printf "set expr applied: %s\n" (Print_simple.string_of_simple (replace_var str (Ident "expr") (sal_to_expr e)));
       Constrained (fun x -> replace_var str x (sal_to_expr e))
-(*
-  | Sal_ast.SProc_cardinal str -> Ident ("#"^str) *)
   | Sal_ast.Cond ((e1, e2)::ifs, els) ->
       Cond
         (sal_to_expr e1,
@@ -88,24 +81,18 @@ sal_to_decl str = function
   | Sal_ast.Base_type (enum) -> Enum_decl (str, enum)
   | Sal_ast.Subtype (lit, st, expr) -> Constraint_decl (sal_to_decl str st, sal_to_expr expr |> replace_var lit (Ident str))
   | Sal_ast.Range (low, high) ->
-      (* todo: find type; for now default to Real *)
       Constraint_decl (Real_decl str, And (Ge (Ident str, sal_to_expr low), Ge (sal_to_expr high, Ident str)))
-  | Sal_ast.Array (_, st) -> (* treat array as scalar *) sal_to_decl str st
+  | Sal_ast.Array (_, _) -> raise (Unimplemented "Array type declarations")
   | Sal_ast.Enum _ -> raise (Unimplemented "Direct enum type declarations")
   | Sal_ast.Process -> raise (Unimplemented "Direct process type declarations") (* should be eliminated in inlining *)
   | Sal_ast.Process_type name -> Nat_decl str;;
-(*
-      Constraint_decl (Nat_decl str, Gt ( Ident ("#"^name), Ident str ));; *)
 
 let rec convert_sal_assignments next_state assigned assigns = function
   | [] ->
       let unassigned = List.filter (fun x -> not (List.mem x assigned)) next_state in
       (List.map (fun x -> Assign (Ident x, Ident (String.sub x 0 (String.length x - 1)))) unassigned) @ assigns
-  (* fix for arrays on LHS! *)
   | (Sal_ast.Assign (Sal_ast.Ident v, e))::asgns -> convert_sal_assignments next_state (v::assigned) (Assign (Ident v, sal_to_expr e)::assigns) asgns
-  | (Sal_ast.Assign (Sal_ast.Array_access (Sal_ast.Ident v, _), e))::asgns -> convert_sal_assignments next_state (v::assigned) (Assign (Ident v, sal_to_expr e)::assigns) asgns
   | (Sal_ast.Member (Sal_ast.Ident v, e))::asgns -> convert_sal_assignments next_state (v::assigned) (Assign (Ident v, sal_to_expr e)::assigns) asgns
-  | (Sal_ast.Member (Sal_ast.Array_access (Sal_ast.Ident v, _), e))::asgns -> convert_sal_assignments next_state (v::assigned) (Assign (Ident v, sal_to_expr e)::assigns) asgns
   | _ -> raise (Unexpected_expr "Expression in LHS of assignment");;
 
 let rec convert_sal_guardeds next_state res = function
