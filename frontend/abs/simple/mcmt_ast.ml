@@ -19,11 +19,11 @@ type expression =
   | Mul of expression * expression
   | Div of expression * expression
   | Ite of expression * expression * expression
-  | And of expression * expression
-  | Or of expression * expression
+  | And of expression list
+  | Or of expression list
   | Xor of expression * expression
   | Implies of expression * expression
-  | Let of (expression * expression) list * expression
+  | Let of (string * expression) list * expression
   | True
   | False
 
@@ -37,7 +37,7 @@ type definition =
   | Transition of string * expression * expression
   | Transition_system of string * state_type * expression * expression
   | Constant of string * expression
-  | Assume of string * expression
+  | Assert of string * expression
   | Query of string * expression
 
 type context = definition list

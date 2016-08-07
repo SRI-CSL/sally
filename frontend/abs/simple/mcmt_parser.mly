@@ -13,7 +13,7 @@ open Mcmt_ast
 %token ITE
 %token TRUE
 %token FALSE
-%token DEFINE_STATE_TYPE DEFINE_STATES DEFINE_TRANSITION DEFINE_TRANSITION_SYSTEM DEFINE_CONSTANT ASSUME QUERY
+%token DEFINE_STATE_TYPE DEFINE_STATES DEFINE_TRANSITION DEFINE_TRANSITION_SYSTEM DEFINE_CONSTANT ASSERT QUERY
 %token COMMENT
 %token EOF
 %token LEX_ERROR
@@ -37,7 +37,7 @@ definition:
 | DEFINE_TRANSITION_SYSTEM IDENT IDENT expression expression { Transition_system ($2, Ref $3, $4, $5) }
 | DEFINE_TRANSITION_SYSTEM IDENT OPEN_PAREN state_type CLOSE_PAREN expression expression { Transition_system ($2, Anon (fst $4, snd $4), $6, $7) }
 | DEFINE_CONSTANT IDENT expression { Constant ($2, $3) }
-| ASSUME IDENT expression { Assume ($2, $3) }
+| ASSERT IDENT expression { Assert ($2, $3) }
 | QUERY IDENT expression { Query ($2, $3) }
 
 state_type:
@@ -76,13 +76,17 @@ op:
 | MINUS expression expression { Sub ($2, $3) }
 | MUL expression expression { Mul ($2, $3) }
 | DIV expression expression { Div ($2, $3) }
-| AND expression expression { And ($2, $3) }
-| OR expression expression { Or ($2, $3) }
+| AND expressions { And $2 }
+| OR expressions { Or $2 }
 | XOR expression expression { Xor ($2, $3) }
 | IMPLIES expression expression { Implies ($2, $3) }
 | ITE expression expression expression { Ite ($2, $3, $4) }
 | LET OPEN_PAREN let_expressions CLOSE_PAREN expression { Let ($3, $5) }
 
+expressions:
+| expression expressions { $1::$2 }
+| { [] }
+
 let_expressions:
-| OPEN_PAREN IDENT expression CLOSE_PAREN let_expressions { (Ident $2, $3)::$5 }
+| OPEN_PAREN IDENT expression CLOSE_PAREN let_expressions { ($2, $3)::$5 }
 | { [] }

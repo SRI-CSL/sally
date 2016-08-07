@@ -1,5 +1,6 @@
 open Ast;;
 open Simple_ast;;
+open Sal_simple_ast;;
 open Format;;
 
 exception Unexpected_expr of string;;

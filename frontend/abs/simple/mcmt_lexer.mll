@@ -6,7 +6,7 @@
     List.iter (fun (kwd, tok) -> Hashtbl.add keyword_table kwd tok)
       [
 	"and", AND;
-        "assume", ASSUME;
+        "assert", ASSERT;
         "Int", INT_DECL;
         "Real", REAL_DECL;
         "Bool", BOOL_DECL;
@@ -22,7 +22,7 @@
 }
 
 let alpha = ['_' 'a'-'z' 'A'-'Z']
-let alphanum = ['0'-'9' '_' '?' '!' '.' 'a'-'z' 'A'-'Z']
+let alphanum = ['0'-'9' '_' '?' '!' '.' 'a'-'z' 'A'-'Z' '\'']
 let digit = ['0'-'9']
 let plusminus = ['-' '+']
 
