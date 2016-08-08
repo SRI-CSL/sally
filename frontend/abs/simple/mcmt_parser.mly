@@ -5,6 +5,9 @@ open Mcmt_ast
 %token <int> INT
 %token <float> REAL
 %token <string> IDENT
+%token <string> INPUT
+%token <string> STATE
+%token <string> NEXT
 %token INT_DECL REAL_DECL BOOL_DECL
 %token OPEN_PAREN
 %token CLOSE_PAREN
@@ -14,7 +17,6 @@ open Mcmt_ast
 %token TRUE
 %token FALSE
 %token DEFINE_STATE_TYPE DEFINE_STATES DEFINE_TRANSITION DEFINE_TRANSITION_SYSTEM DEFINE_CONSTANT ASSERT QUERY
-%token COMMENT
 %token EOF
 %token LEX_ERROR
 
@@ -63,9 +65,13 @@ value:
 | INT { Int $1 }
 | REAL { Real $1 }
 | IDENT { Ident $1 }
+| INPUT { Ident $1 }
+| STATE { Ident $1 }
 
 op:
 | NOT expression { Not $2 }
+| EQ NEXT expression { Assign (Next (Ident $2), $3) }
+| EQ expression NEXT { Assign (Next (Ident $3), $2) }
 | EQ expression expression { Eq ($2, $3) }
 | NEQ expression expression { Neq ($2, $3) }
 | GE expression expression { Ge ($2, $3) }
@@ -73,6 +79,7 @@ op:
 | LE expression expression { Le ($2, $3) }
 | LT expression expression { Lt ($2, $3) }
 | PLUS expression expression { Add ($2, $3) }
+| MINUS expression { Mul (Int (-1), $2) }
 | MINUS expression expression { Sub ($2, $3) }
 | MUL expression expression { Mul ($2, $3) }
 | DIV expression expression { Div ($2, $3) }

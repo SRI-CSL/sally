@@ -32,6 +32,7 @@ expr =
   | True
   | False
   | Seq of expr list
+  | Branch of expr list
   | Local of decl * expr;;
 
 type prog = {

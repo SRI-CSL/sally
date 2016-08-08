@@ -7,6 +7,7 @@ type expression =
   | Int of int
   | Real of float
   | Ident of string
+  | Next of expression
   | Not of expression
   | Ge of expression * expression
   | Gt of expression * expression
@@ -24,6 +25,7 @@ type expression =
   | Xor of expression * expression
   | Implies of expression * expression
   | Let of (string * expression) list * expression
+  | Assign of expression * expression
   | True
   | False
 

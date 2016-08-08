@@ -1,6 +1,6 @@
 {
   open Mcmt_parser
-    let keyword_table = Hashtbl.create 35
+    let keyword_table = Hashtbl.create 38
   let keyword k = try Hashtbl.find keyword_table k with Not_found -> (IDENT k)
   let _ =
     List.iter (fun (kwd, tok) -> Hashtbl.add keyword_table kwd tok)
@@ -30,7 +30,11 @@ rule token =
    parse eof                       { EOF }
      | [ '\000' ' ' '\t' '\r'] +   { token lexbuf }
      | '\n'                        { Lexing.new_line lexbuf ; token lexbuf }
-     | ";;" [^'\n''\r']*            { token lexbuf }
+     | ";;" [^'\n''\r']*           { token lexbuf }
+     | "input." alphanum*          { INPUT (Lexing.lexeme lexbuf |> fun x -> String.sub x 6 (String.length x - 6)) }
+     | "state." alphanum*          { STATE (Lexing.lexeme lexbuf |> fun x -> String.sub x 6 (String.length x - 6)) }
+     | "next." alphanum*           { NEXT (Lexing.lexeme lexbuf |> fun x -> String.sub x 5 (String.length x - 5)) }
+     | alpha alphanum* "'"         { NEXT (Lexing.lexeme lexbuf |> fun x -> String.sub x 0 (String.length x - 1)) }
      | alpha alphanum*             { keyword (Lexing.lexeme lexbuf) }
      | digit+ '.' digit+ (['e' 'E'] plusminus? digit+)? { REAL (float_of_string (Lexing.lexeme lexbuf)) }
      | digit+                      { INT (int_of_string (Lexing.lexeme lexbuf)) }

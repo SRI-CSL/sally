@@ -23,6 +23,8 @@ let rec string_of_simple = function
   | False -> "false"
   | Seq (e::es) -> (string_of_simple e)^"; "^(string_of_simple (Seq es))
   | Seq [] -> ""
+  | Branch (e::es) -> "("^(string_of_simple e)^")\n||\n"^(string_of_simple (Branch es))
+  | Branch [] -> ""
   | Local (decl, e) ->
       match decl with
       | Nat_decl str -> "(let "^str^" : nat in "^(string_of_simple e)^")"

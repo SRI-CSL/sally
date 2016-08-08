@@ -11,6 +11,7 @@ exception Unexpected_expression;;
 (* Make a boolean expression out of two boolean expressions
    e1 and e2 and a boolean binary operator binop *)
 let rec make_bool_expr env cond binop e1 e2 =
+  printf "%s\n" "make_bool_expr";
   let e1' = Expr1.Bool.of_expr (make_expr1 env cond e1) in
   let e2' = Expr1.Bool.of_expr (make_expr1 env cond e2) in
   Expr1.Bool.to_expr (binop cond e1' e2')
@@ -33,6 +34,7 @@ make_expr1 env cond = function
   (* Arithmetic operators (i.e., And, Sub, Mul, Div) currently use default type (e.g. REAL, INT) and
      rounding settings *)
   | Add (e1, e2) ->
+      printf "add: %d of %d\n" (env.Bdd.Env.bddindex) (env.Bdd.Env.bddsize);
       let e1' = Expr1.Apron.of_expr (make_expr1 env cond e1) in
       let e2' = Expr1.Apron.of_expr (make_expr1 env cond e2) in
       Expr1.Apron.to_expr (Expr1.Apron.add cond e1' e2')
@@ -51,6 +53,7 @@ make_expr1 env cond = function
   | Ge (e1, e2) -> make_apron_comp env cond Expr1.Apron.supeq (Sub (e1, e2))
   | Gt (e1, e2) -> make_apron_comp env cond Expr1.Apron.sup (Sub (e1, e2))
   | Eq (e1, e2) ->
+      printf "%s\n" "eq";
       let e1' = make_expr1 env cond e1 in
       let e2' = make_expr1 env cond e2 in
       let t1 = Expr1.typ_of_expr e1' in
@@ -64,8 +67,12 @@ make_expr1 env cond = function
           (Expr1.Apron.supeq cond (Expr1.Apron.sub cond e2' e1'))
         |> Expr1.Bool.to_expr
       else Expr1.Bool.to_expr (Expr1.eq cond e1' e2')
-  | And (e1, e2) -> make_bool_expr env cond Expr1.Bool.dand e1 e2
-  | Or (e1, e2) -> make_bool_expr env cond Expr1.Bool.dor e1 e2
+  | And (e1, e2) ->
+      printf "and: %d of %d\n" (env.Bdd.Env.bddindex) (env.Bdd.Env.bddsize);
+      make_bool_expr env cond Expr1.Bool.dand e1 e2
+  | Or (e1, e2) ->
+      printf "or: %d of %d\n" (env.Bdd.Env.bddindex) (env.Bdd.Env.bddsize);
+      make_bool_expr env cond Expr1.Bool.dor e1 e2
   | Not e ->
       Expr1.Bool.to_expr (Expr1.Bool.dnot cond (Expr1.Bool.of_expr (make_expr1 env cond e)))
   | True -> Expr1.Bool.to_expr (Expr1.Bool.dtrue env cond)
@@ -91,6 +98,9 @@ let rec interpret carry_conditionals man env cond inv ctx = function
       let ctx' = interpret carry_conditionals man env cond inv ctx e in
       interpret carry_conditionals man env cond inv ctx' (Seq es)
   | Seq [] -> ctx
+  | Branch es ->
+      let ctx's = List.map (interpret carry_conditionals man env cond inv ctx) es in
+      List.fold_left (Domain1.join man) (Domain1.bottom man env) ctx's
   | Cond (e1, e2, e3) ->
       let e1' = Expr1.Bool.of_expr (make_expr1 env cond e1)
                 |> Domain1.meet_condition man cond ctx in
@@ -143,7 +153,7 @@ let rec interpret carry_conditionals man env cond inv ctx = function
       let ctx' = Domain1.change_environment man ctx env' |> Domain1.meet man inv' in
       let res = interpret carry_conditionals man env' cond inv' ctx' e2 in
       Domain1.change_environment man res env
-  | other -> Domain1.meet_condition man cond inv (Expr1.Bool.of_expr (make_expr1 env cond other));;
+  | other -> printf "%s\n" "other"; Domain1.meet_condition man cond inv (Expr1.Bool.of_expr (make_expr1 env cond other));;
      
 let initialize apron ds invs =
   let rec generate pairs constraints env = function
@@ -159,7 +169,7 @@ let initialize apron ds invs =
   Cudd.Man.set_gc 10000
     (begin fun () -> printf "@.CUDD GC@." end)
     (begin fun () -> printf "@.CUDD REORDER@." end);
-  let (pairs, constraints, env) = generate [] [] (Env.make ~symbol:Env.string_symbol ~bddsize:(10 + List.length ds) cudd) ds in
+  let (pairs, constraints, env) = generate [] [] (Env.make ~symbol:Env.string_symbol ~bddsize:(100) cudd) ds in
   let env = Env.add_vars env pairs in (* create an environment with declared variables *)
   let cond = Cond.make Env.string_symbol cudd in
   let man = Domain1.man_of_mtbdd (Domain1.make_mtbdd apron) in (* to do: make this a parameter *)

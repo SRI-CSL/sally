@@ -1,8 +1,11 @@
 abs/Inline
 abs/simple/Simple_ast
+abs/simple/Sal_simple_ast
 abs/simple/Sal_to_simple_ast
 abs/simple/Print_simple
 abs/simple/Interpret_simple
-abs/mcmt/Mcmt_ast
-abs/mcmt/Mcmt_lexer
-abs/mcmt/Mcmt_parser
+abs/simple/Mcmt_lexer
+abs/simple/Mcmt_parser
+abs/simple/Mcmt_ast
+abs/simple/Mcmt_simple_ast
+abs/simple/Mcmt_to_simple_ast
