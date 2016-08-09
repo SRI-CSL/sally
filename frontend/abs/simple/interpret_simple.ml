@@ -174,7 +174,7 @@ let initialize apron ds invs =
     (begin fun () -> printf "@.CUDD REORDER@." end);
   let (pairs, constraints, env) = generate [] [] (Env.make ~symbol:Env.string_symbol ~bddsize:(100) cudd) ds in
   let env = Env.add_vars env pairs in (* create an environment with declared variables *)
-  let cond = Cond.make Env.string_symbol cudd in
+  let cond = Cond.make ~symbol:Env.string_symbol ~bddsize:(700) cudd in
   let man = Domain1.man_of_bdd (Domain1.make_bdd apron) in
   let abs = Domain1.top man env in
   let constraints = List.map (fun x -> Expr1.Bool.of_expr (make_expr1 env cond x)) (constraints @ invs) in

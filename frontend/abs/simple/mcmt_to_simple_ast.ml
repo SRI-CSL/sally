@@ -94,7 +94,7 @@ let rec mcmt_to_expr map = function
       let map' = StrMap.add x (mcmt_to_expr map y) map in
       mcmt_to_expr map' (Mcmt_ast.Let (es, e))
   | Mcmt_ast.Let ([], e) -> mcmt_to_expr map e
-  | Mcmt_ast.Assign (e1, e2) -> Assign (mcmt_to_expr map e1, mcmt_to_expr map e2)
+  | Mcmt_ast.Assign (e1, e2) -> Eq (mcmt_to_expr map e1, mcmt_to_expr map e2)
   | Mcmt_ast.True -> True
   | Mcmt_ast.False -> False;;
 

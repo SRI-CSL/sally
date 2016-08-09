@@ -74,10 +74,10 @@ op:
 | EQ expression NEXT { Assign (Next (Ident $3), $2) }
 | EQ expression expression { Eq ($2, $3) }
 | NEQ expression expression { Neq ($2, $3) }
-| GE expression expression { Ge ($2, $3) }
-| GT expression expression { Gt ($2, $3) }
-| LE expression expression { Le ($2, $3) }
-| LT expression expression { Lt ($2, $3) }
+| GE nexpression nexpression { Ge ($2, $3) }
+| GT nexpression nexpression { Gt ($2, $3) }
+| LE nexpression nexpression { Le ($2, $3) }
+| LT nexpression nexpression { Lt ($2, $3) }
 | PLUS expression expression { Add ($2, $3) }
 | MINUS expression { Mul (Int (-1), $2) }
 | MINUS expression expression { Sub ($2, $3) }
@@ -89,6 +89,10 @@ op:
 | IMPLIES expression expression { Implies ($2, $3) }
 | ITE expression expression expression { Ite ($2, $3, $4) }
 | LET OPEN_PAREN let_expressions CLOSE_PAREN expression { Let ($3, $5) }
+
+nexpression:
+| expression { $1 }
+| NEXT { Next (Ident $1) }
 
 expressions:
 | expression expressions { $1::$2 }
