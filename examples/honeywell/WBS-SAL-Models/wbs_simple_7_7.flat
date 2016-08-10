@@ -1,0 +1,540 @@
+      (output auto_mode_invariant_ok::bool)
+      (output button_count::NATURAL)
+      (output button_dispatch_time::TIME)
+      (output button_frame_count::NATURAL)
+      (output button_invariant_ok::bool)
+      (output button_pressed::bool)
+      (output button_pressed_prev::bool)
+      (input button_width::TIME)
+      (output chan_a_com_auto_mode::bool)
+      (input chan_a_com_prev_button::bool)
+      (output chan_a_com_prev_button_pressed::bool)
+      (output chan_a_in_control::bool)
+      (output chan_a_mon_agreement_failure::bool)
+      (output chan_a_mon_auto_mode::bool)
+      (output chan_a_mon_disagree_count::NATURAL)
+      (input chan_a_mon_prev_button::bool)
+      (output chan_a_mon_prev_button_pressed::bool)
+      (output chan_b_com_auto_mode::bool)
+      (input chan_b_com_prev_button::bool)
+      (output chan_b_com_prev_button_pressed::bool)
+      (output chan_b_in_control::bool)
+      (output chan_b_mon_agreement_failure::bool)
+      (output chan_b_mon_auto_mode::bool)
+      (output chan_b_mon_disagree_count::NATURAL)
+      (input chan_b_mon_prev_button::bool)
+      (output chan_b_mon_prev_button_pressed::bool)
+      (output clock_invariant_ok::bool)
+      (output clock_phase_ok::bool)
+      (output complete_arr!0::bool)
+      (output complete_arr!1::bool)
+      (output complete_arr!2::bool)
+      (output complete_arr!3::bool)
+      (output complete_arr!4::bool)
+      (output congruent_sample_ok::bool)
+      (output monotonic_time_values_ok::bool)
+      (output positive_time_values_ok::bool)
+      (output redge_ok::bool)
+      (output seen_rising_edge::bool)
+      (output time::TIME)
+      (output time_arri!0::TIME)
+      (output time_arri!1::TIME)
+      (output time_arri!2::TIME)
+      (output time_arri!3::TIME)
+      (output time_arri!4::TIME)
+      (output time_ok::bool)
+      (output time_prev::TIME)
+      (output unique_atomic_time_ok::bool)
+      (definition
+        (let ((cs!336::bool (/= button_count 0))
+              (cs!337::bool (not button_pressed))
+              (cs!338::bool (= time -1))
+              (cs!339::bool (not seen_rising_edge)))
+          (let ((cs!321::bool (<= time time_arri!0))
+                (cs!322::bool (<= time time_arri!1))
+                (cs!323::bool (<= time time_arri!2))
+                (cs!324::bool (<= time time_arri!3))
+                (cs!325::bool (<= time time_arri!4))
+                (cs!326::bool (= time_arri!0 -1))
+                (cs!327::bool (= time_arri!1 -1))
+                (cs!328::bool (= time_arri!2 -1))
+                (cs!329::bool (= time_arri!3 -1))
+                (cs!330::bool (= time_arri!4 -1))
+                (cs!331::bool (/= time_arri!4 -1))
+                (cs!332::bool (/= time_arri!0 -1))
+                (cs!333::bool (/= time_arri!1 -1))
+                (cs!334::bool (/= time_arri!2 -1))
+                (cs!335::bool (/= time_arri!3 -1)))
+            (and
+              (and
+                cs!321
+                cs!322
+                cs!323
+                cs!324
+                cs!325
+                (or
+                  (= time time_arri!0)
+                  (= time time_arri!1)
+                  (= time time_arri!2)
+                  (= time time_arri!3)
+                  (= time time_arri!4)))
+              (=
+                positive_time_values_ok
+                (and
+                  (or (not (< time 0)) cs!338)
+                  (or (not (< time_arri!0 0)) cs!326)
+                  (or (not (< time_arri!1 0)) cs!327)
+                  (or (not (< time_arri!2 0)) cs!328)
+                  (or (not (< time_arri!3 0)) cs!329)
+                  (or (not (< time_arri!4 0)) cs!330)))
+              (=
+                monotonic_time_values_ok
+                (or
+                  (not cs!321)
+                  (not cs!322)
+                  (not cs!323)
+                  (not cs!324)
+                  (not cs!325)
+                  (and
+                    (/= time time_arri!0)
+                    (/= time time_arri!1)
+                    (/= time time_arri!2)
+                    (/= time time_arri!3)
+                    (/= time time_arri!4))
+                  (and
+                    (or (not (< time_arri!0 time)) cs!326)
+                    (or (not (< time_arri!1 time)) cs!327)
+                    (or (not (< time_arri!2 time)) cs!328)
+                    (or (not (< time_arri!3 time)) cs!329)
+                    (or (not (< time_arri!4 time)) cs!330))))
+              (=
+                unique_atomic_time_ok
+                (and
+                  (or cs!332 (and cs!333 cs!334 cs!335 cs!331))
+                  (or cs!333 (and cs!332 cs!334 cs!335 cs!331))
+                  (or cs!334 (and cs!332 cs!333 cs!335 cs!331))
+                  (or cs!335 (and cs!332 cs!333 cs!334 cs!331))
+                  (or cs!331 (and cs!332 cs!333 cs!334 cs!335))))
+              (=
+                clock_phase_ok
+                (and
+                  (or
+                    (<= time_arri!1 time_arri!2)
+                    (<= (- time_arri!1 time_arri!2) 20))
+                  (or
+                    (<= time_arri!2 time_arri!1)
+                    (<= (- time_arri!2 time_arri!1) 20))
+                  (or
+                    (<= time_arri!3 time_arri!4)
+                    (<= (- time_arri!3 time_arri!4) 20))
+                  (or
+                    (<= time_arri!4 time_arri!3)
+                    (<= (- time_arri!4 time_arri!3) 20))
+                  (or
+                    (<= time_arri!3 time_arri!2)
+                    (<= (- time_arri!3 time_arri!2) 20))
+                  (or
+                    (<= time_arri!2 time_arri!3)
+                    (<= (- time_arri!2 time_arri!3) 20))
+                  (or
+                    (<= time_arri!3 time_arri!1)
+                    (<= (- time_arri!3 time_arri!1) 20))
+                  (or
+                    (<= time_arri!1 time_arri!3)
+                    (<= (- time_arri!1 time_arri!3) 20))
+                  (or
+                    (<= time_arri!4 time_arri!2)
+                    (<= (- time_arri!4 time_arri!2) 20))
+                  (or
+                    (<= time_arri!2 time_arri!4)
+                    (<= (- time_arri!2 time_arri!4) 20))
+                  (or
+                    (<= time_arri!4 time_arri!1)
+                    (<= (- time_arri!4 time_arri!1) 20))
+                  (or
+                    (<= time_arri!1 time_arri!4)
+                    (<= (- time_arri!1 time_arri!4) 20))))
+              (=
+                clock_invariant_ok
+                (and
+                  positive_time_values_ok
+                  monotonic_time_values_ok
+                  unique_atomic_time_ok
+                  clock_phase_ok))
+              (=
+                button_invariant_ok
+                (and
+                  (or
+                    cs!336
+                    (and
+                      cs!337
+                      (= button_dispatch_time 20)
+                      (= time_arri!0 20)
+                      (<= time 20)))
+                  (or (/= button_count 1) cs!338 button_pressed)
+                  (or (<= button_count 1) cs!337)))
+              (=
+                auto_mode_invariant_ok
+                (or
+                  cs!336
+                  (and
+                    (not chan_a_com_auto_mode)
+                    (not chan_a_mon_auto_mode)
+                    (= chan_a_mon_disagree_count 0)
+                    (not chan_a_com_prev_button_pressed)
+                    (not chan_a_mon_prev_button_pressed)
+                    cs!337
+                    (not chan_b_com_auto_mode)
+                    (not chan_b_mon_auto_mode)
+                    (= chan_b_mon_disagree_count 0)
+                    (not chan_b_com_prev_button_pressed)
+                    (not chan_b_mon_prev_button_pressed))))
+              (=
+                congruent_sample_ok
+                (or
+                  cs!339
+                  (<= time 40001/1000)
+                  (and
+                    (= chan_a_mon_auto_mode chan_a_com_auto_mode)
+                    (= chan_b_mon_auto_mode chan_b_com_auto_mode))))
+              (=
+                redge_ok
+                (and
+                  (or (<= time 40) seen_rising_edge)
+                  (or cs!338 (not (< time 20)) cs!339)))))))
+      (initialization
+        (and
+          (= time_arri!0 BUTTON_PHASE)
+          (= button_pressed false)
+          (= button_pressed_prev false)
+          (= button_count 0)
+          (= time 0)
+          (= button_frame_count 0)
+          (= button_dispatch_time BUTTON_PHASE)
+          (= time_arri!1 NODE2_PHASE)
+          (= chan_a_com_prev_button_pressed false)
+          (= chan_a_com_auto_mode false)
+          (= time_arri!2 NODE3_PHASE)
+          (= chan_a_mon_auto_mode false)
+          (= chan_a_mon_prev_button_pressed false)
+          (= chan_a_mon_disagree_count 0)
+          (= chan_a_in_control true)
+          (= chan_a_mon_agreement_failure false)
+          (= time_arri!3 NODE2_PHASE)
+          (= chan_b_com_prev_button_pressed false)
+          (= chan_b_com_auto_mode false)
+          (= time_arri!4 NODE3_PHASE)
+          (= chan_b_mon_auto_mode false)
+          (= chan_b_mon_prev_button_pressed false)
+          (= chan_b_mon_disagree_count 0)
+          (= chan_b_in_control true)
+          (= chan_b_mon_agreement_failure false)
+          (= time_prev 0)
+          (= seen_rising_edge false)))
+      (transition
+        (let ((cs!286::bool (= button_pressed_prev' button_pressed))
+              (cs!287::bool
+                    (=
+                      chan_b_mon_agreement_failure'
+                      chan_b_mon_agreement_failure))
+              (cs!288::bool
+                    (=
+                      chan_b_mon_prev_button_pressed'
+                      chan_b_mon_prev_button_pressed))
+              (cs!289::bool
+                    (= chan_b_mon_auto_mode' chan_b_mon_auto_mode))
+              (cs!291::bool (= button_frame_count' button_frame_count))
+              (cs!292::bool
+                    (= button_dispatch_time' button_dispatch_time))
+              (cs!293::bool (= button_count' button_count))
+              (cs!294::bool (= button_pressed_prev' button_pressed_prev))
+              (cs!295::bool (= button_pressed' button_pressed))
+              (cs!297::bool
+                    (=
+                      chan_a_com_prev_button_pressed'
+                      chan_a_com_prev_button_pressed))
+              (cs!298::bool
+                    (= chan_a_com_auto_mode' chan_a_com_auto_mode))
+              (cs!300::bool
+                    (= chan_a_mon_disagree_count' chan_a_mon_disagree_count))
+              (cs!301::bool (= chan_a_in_control' chan_a_in_control))
+              (cs!302::bool
+                    (=
+                      chan_a_mon_agreement_failure'
+                      chan_a_mon_agreement_failure))
+              (cs!303::bool
+                    (=
+                      chan_a_mon_prev_button_pressed'
+                      chan_a_mon_prev_button_pressed))
+              (cs!304::bool
+                    (= chan_a_mon_auto_mode' chan_a_mon_auto_mode))
+              (cs!306::bool
+                    (=
+                      chan_b_com_prev_button_pressed'
+                      chan_b_com_prev_button_pressed))
+              (cs!307::bool
+                    (= chan_b_com_auto_mode' chan_b_com_auto_mode))
+              (cs!311::bool (= button_count' (+ button_count 1)))
+              (cs!313::bool
+                    (= button_frame_count' (+ button_frame_count 1)))
+              (cs!314::bool
+                    (= chan_b_mon_disagree_count' chan_b_mon_disagree_count))
+              (cs!315::bool (= chan_b_in_control' chan_b_in_control)))
+          (let ((cs!290::bool (= time_arri!4' time_arri!4))
+                (cs!296::bool (= time_arri!0' time_arri!0))
+                (cs!299::bool (= time_arri!1' time_arri!1))
+                (cs!305::bool (= time_arri!2' time_arri!2))
+                (cs!308::bool (= time_arri!3' time_arri!3))
+                (cs!309::bool (= time time_arri!0))
+                (cs!310::real (+ time_arri!0 40))
+                (cs!312::bool (= button_dispatch_time' time_arri!0)))
+            (and
+              (or
+                (and
+                  (or
+                    (and
+                      cs!309
+                      (NOT button_pressed)
+                      (= button_count 0)
+                      (= button_pressed' true)
+                      (and
+                        (not (< time_arri!0' (+ time_arri!0 20001/1000)))
+                        (< time_arri!0' cs!310))
+                      cs!311
+                      cs!286
+                      cs!312
+                      cs!313)
+                    (and
+                      cs!309
+                      button_pressed
+                      (= button_count 1)
+                      (= time_arri!0' (+ BUTTON_PHASE 40))
+                      (= button_pressed' false)
+                      cs!311
+                      cs!286
+                      cs!312
+                      cs!291)
+                    (and
+                      cs!309
+                      (not (<= button_count 1))
+                      (= time_arri!0' cs!310)
+                      cs!311
+                      cs!312
+                      cs!313
+                      cs!295
+                      cs!294))
+                  cs!297
+                  cs!298
+                  cs!299
+                  cs!300
+                  cs!301
+                  cs!302
+                  cs!303
+                  cs!304
+                  cs!305
+                  cs!306
+                  cs!307
+                  cs!308
+                  cs!314
+                  cs!315
+                  cs!287
+                  cs!288
+                  cs!289
+                  cs!290)
+                (and
+                  (= time time_arri!1)
+                  (= time_arri!1' (+ time_arri!1 20))
+                  (=
+                    chan_a_com_auto_mode'
+                    (ite (and
+                          button_pressed
+                          (NOT chan_a_com_prev_button_pressed))
+                      (NOT chan_a_com_auto_mode)
+                      chan_a_com_auto_mode))
+                  (= chan_a_com_prev_button_pressed' button_pressed)
+                  cs!291
+                  cs!292
+                  cs!293
+                  cs!294
+                  cs!295
+                  cs!296
+                  cs!300
+                  cs!301
+                  cs!302
+                  cs!303
+                  cs!304
+                  cs!305
+                  cs!306
+                  cs!307
+                  cs!308
+                  cs!314
+                  cs!315
+                  cs!287
+                  cs!288
+                  cs!289
+                  cs!290)
+                (and
+                  (= time time_arri!2)
+                  (= time_arri!2' (+ time_arri!2 20))
+                  (=
+                    chan_a_mon_auto_mode'
+                    (ite (and
+                          button_pressed
+                          (NOT chan_a_mon_prev_button_pressed))
+                      (NOT chan_a_mon_auto_mode)
+                      chan_a_mon_auto_mode))
+                  (=
+                    chan_a_mon_disagree_count'
+                    (cond
+                      ((= chan_a_com_auto_mode chan_a_mon_auto_mode') 0)
+                      ((<= chan_a_mon_disagree_count 3)
+                        (+ chan_a_mon_disagree_count 1))
+                      (else chan_a_mon_disagree_count)))
+                  (=
+                    chan_a_mon_agreement_failure'
+                    (not (<= chan_a_mon_disagree_count' 2)))
+                  (= chan_a_in_control' (NOT chan_a_mon_agreement_failure'))
+                  (= chan_a_mon_prev_button_pressed' button_pressed)
+                  cs!291
+                  cs!292
+                  cs!293
+                  cs!294
+                  cs!295
+                  cs!296
+                  cs!297
+                  cs!298
+                  cs!299
+                  cs!306
+                  cs!307
+                  cs!308
+                  cs!314
+                  cs!315
+                  cs!287
+                  cs!288
+                  cs!289
+                  cs!290)
+                (and
+                  (= time time_arri!3)
+                  (= time_arri!3' (+ time_arri!3 20))
+                  (=
+                    chan_b_com_auto_mode'
+                    (ite (and
+                          button_pressed
+                          (NOT chan_b_com_prev_button_pressed))
+                      (NOT chan_b_com_auto_mode)
+                      chan_b_com_auto_mode))
+                  (= chan_b_com_prev_button_pressed' button_pressed)
+                  cs!291
+                  cs!292
+                  cs!293
+                  cs!294
+                  cs!295
+                  cs!296
+                  cs!297
+                  cs!298
+                  cs!299
+                  cs!300
+                  cs!301
+                  cs!302
+                  cs!303
+                  cs!304
+                  cs!305
+                  cs!314
+                  cs!315
+                  cs!287
+                  cs!288
+                  cs!289
+                  cs!290)
+                (and
+                  (= time time_arri!4)
+                  (= time_arri!4' (+ time_arri!4 20))
+                  (=
+                    chan_b_mon_auto_mode'
+                    (ite (and
+                          button_pressed
+                          (NOT chan_b_mon_prev_button_pressed))
+                      (NOT chan_b_mon_auto_mode)
+                      chan_b_mon_auto_mode))
+                  (=
+                    chan_b_mon_disagree_count'
+                    (cond
+                      ((= chan_b_com_auto_mode chan_b_mon_auto_mode') 0)
+                      ((<= chan_b_mon_disagree_count 3)
+                        (+ chan_b_mon_disagree_count 1))
+                      (else chan_b_mon_disagree_count)))
+                  (=
+                    chan_b_mon_agreement_failure'
+                    (not (<= chan_b_mon_disagree_count' 2)))
+                  (= chan_b_in_control' (NOT chan_b_mon_agreement_failure'))
+                  (= chan_b_mon_prev_button_pressed' button_pressed)
+                  cs!291
+                  cs!292
+                  cs!293
+                  cs!294
+                  cs!295
+                  cs!296
+                  cs!297
+                  cs!298
+                  cs!299
+                  cs!300
+                  cs!301
+                  cs!302
+                  cs!303
+                  cs!304
+                  cs!305
+                  cs!306
+                  cs!307
+                  cs!308))
+              (= time_prev' (ite (= time -1) time_prev time))
+              (=
+                seen_rising_edge'
+                (ite (not seen_rising_edge)
+                  (and (not button_pressed_prev) button_pressed)
+                  seen_rising_edge))
+              (= time_ok' time_ok)))))
+      (skip
+        (and
+          (= button_frame_count' button_frame_count)
+          (= button_dispatch_time' button_dispatch_time)
+          (= button_count' button_count)
+          (= button_pressed_prev' button_pressed_prev)
+          (= button_pressed' button_pressed)
+          (= time_arri!0' time_arri!0)
+          (=
+            chan_a_com_prev_button_pressed'
+            chan_a_com_prev_button_pressed)
+          (= chan_a_com_auto_mode' chan_a_com_auto_mode)
+          (= time_arri!1' time_arri!1)
+          (= chan_a_mon_disagree_count' chan_a_mon_disagree_count)
+          (= chan_a_in_control' chan_a_in_control)
+          (=
+            chan_a_mon_agreement_failure'
+            chan_a_mon_agreement_failure)
+          (=
+            chan_a_mon_prev_button_pressed'
+            chan_a_mon_prev_button_pressed)
+          (= chan_a_mon_auto_mode' chan_a_mon_auto_mode)
+          (= time_arri!2' time_arri!2)
+          (=
+            chan_b_com_prev_button_pressed'
+            chan_b_com_prev_button_pressed)
+          (= chan_b_com_auto_mode' chan_b_com_auto_mode)
+          (= time_arri!3' time_arri!3)
+          (= chan_b_mon_disagree_count' chan_b_mon_disagree_count)
+          (= chan_b_in_control' chan_b_in_control)
+          (=
+            chan_b_mon_agreement_failure'
+            chan_b_mon_agreement_failure)
+          (=
+            chan_b_mon_prev_button_pressed'
+            chan_b_mon_prev_button_pressed)
+          (= chan_b_mon_auto_mode' chan_b_mon_auto_mode)
+          (= time_arri!4' time_arri!4)
+          (= seen_rising_edge' seen_rising_edge)
+          (= time_prev' time_prev)
+          (= time_ok' time_ok)))
+      (valid-input true)
+      (valid-state true)
+      (valid-constant true))
+    (G (not chan_a_mon_agreement_failure)))
+sal > 
