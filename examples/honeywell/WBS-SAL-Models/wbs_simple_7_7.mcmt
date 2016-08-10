@@ -355,18 +355,7 @@
 	  (cs!322 (<= time time_arri!1))
 	  (cs!323 (<= time time_arri!2))
 	  (cs!324 (<= time time_arri!3))
-	  (cs!325 (<= time time_arri!4))
-	  (cs!326 (= time_arri!0 (- 1)))
-	  (cs!327 (= time_arri!1 (- 1)))
-	  (cs!328 (= time_arri!2 (- 1)))
-	  (cs!329 (= time_arri!3 (- 1)))
-	  (cs!330 (= time_arri!4 (- 1)))
-	  (cs!331 (/= time_arri!4 (- 1)))
-	  (cs!332 (/= time_arri!0 (- 1)))
-	  (cs!333 (/= time_arri!1 (- 1)))
-	  (cs!334 (/= time_arri!2 (- 1)))
-	  (cs!335 (/= time_arri!3 (- 1))))
-      (and
+	  (cs!325 (<= time time_arri!4)))
        (and
 	cs!321
 	cs!322
@@ -378,7 +367,7 @@
 	 (= time time_arri!1)
 	 (= time time_arri!2)
 	 (= time time_arri!3)
-	 (= time time_arri!4)))))
+	 (= time time_arri!4))))
 
     (<= 0 NODE2_PHASE) (< NODE2_PHASE NODE_CLOCK_PERIOD)
     (<= 0 NODE3_PHASE) (< NODE3_PHASE NODE_CLOCK_PERIOD)
