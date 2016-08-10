@@ -1,0 +1,417 @@
+%---------------------------------------------------------------------------
+% This is a very simple example to capture the node clock and task clock abstraction.
+% The system comprises an abstracted example of the wheel brake system that
+% suffered byzantine failure. 
+%--------------------------------------------------------------------------- 
+wbs_simple_7_7 : CONTEXT = 
+BEGIN
+
+TIME: TYPE = { m: REAL | (m >= 0) };
+TOTAL_TASKS : NATURAL = 5;
+TASK_INDEX : TYPE = [1 .. TOTAL_TASKS];
+TIMEOUT_ARR : TYPE =  ARRAY TASK_INDEX  OF TIME;
+TASK_OUTPUT_ARR : TYPE =  ARRAY TASK_INDEX  OF NATURAL;
+TASK_COMPLETE_ARR : TYPE = ARRAY TASK_INDEX OF BOOLEAN;
+
+% initially we set this to the same period
+NODE_CLOCK_PERIOD : TIME = 20;
+BUTTON_PERIOD : TIME = 40;
+
+% in our initial phase experiments we have also set the node start up to 0
+% this allows control over the exact phase to explore the interaction of the 
+% behaviors. For Asynchronous exploration set this to the worst case
+% anticipated start up delay for each  of the nodes
+
+
+BUTTON_PHASE:  {T : TIME | T = NODE_CLOCK_PERIOD};
+NODE2_PHASE: {T : TIME | 0 <= T AND T <  NODE_CLOCK_PERIOD};
+NODE3_PHASE: {T : TIME | 0 <= T AND T <  NODE_CLOCK_PERIOD};
+NODE4_PHASE: {T : TIME | 0 <= T AND T <  NODE_CLOCK_PERIOD};
+NODE5_PHASE: {T : TIME | 0 <= T AND T <  NODE_CLOCK_PERIOD};
+
+%----------------------------------------------------------------------------
+% Calendar and Auxiliary min function
+%----------------------------------------------------------------------------
+time_arr : TIMEOUT_ARR;
+  
+is_min(x : TIMEOUT_ARR, t : TIME) : bool =
+  (FORALL (i: TASK_INDEX) : t <= x[i]) AND
+  (EXISTS (i: TASK_INDEX) : t = x[i]);
+
+
+%-----------------------------------------------------------------------
+% Generic task clock 
+% This implements the tasks progression of time and also implements 
+% the mutex to allow node local transitions to be explored atomically and 
+% not interleaved with internal transitions of other nodes
+%-----------------------------------------------------------------------
+com_task_and_clock [nc_start : TIME, tc_phase : TIME, tc_period : TIME] : MODULE =
+BEGIN
+  INPUT time : TIME
+  OUTPUT task_timeout : TIME
+  OUTPUT com_auto_mode : BOOLEAN
+  INPUT button_pressed : BOOLEAN
+  OUTPUT prev_button_pressed : BOOLEAN
+
+  INITIALIZATION
+    task_timeout  = nc_start+tc_phase;  
+    prev_button_pressed = false;
+    com_auto_mode = false;
+  TRANSITION
+    [
+  com_dispatch: time = task_timeout -->
+       task_timeout' = task_timeout + tc_period;
+
+    com_auto_mode' = IF (button_pressed) AND (NOT prev_button_pressed) THEN
+                   NOT com_auto_mode 
+         ELSE 
+             com_auto_mode 
+         ENDIF;
+  prev_button_pressed' = button_pressed;
+
+  ]
+END;
+
+
+mon_task_and_clock [nc_start : TIME, tc_phase : TIME, tc_period : TIME, high_priority : BOOLEAN] : MODULE =
+BEGIN
+  INPUT time : TIME
+  OUTPUT task_timeout : TIME
+  INPUT button_pressed : BOOLEAN
+  OUTPUT mon_auto_mode : BOOLEAN
+  OUTPUT prev_button_pressed : BOOLEAN
+  OUTPUT mon_agreement_failure : BOOLEAN
+  INPUT  com_auto_mode : BOOLEAN
+  OUTPUT in_control :BOOLEAN
+  INPUT  x_side_in_control : BOOLEAN
+  OUTPUT mon_disagree_count : NATURAL
+
+  INITIALIZATION
+    task_timeout  = nc_start+tc_phase;  
+    mon_auto_mode = false;
+    prev_button_pressed = false;
+    mon_disagree_count = 0;
+    in_control = high_priority;
+    mon_agreement_failure = false;
+  TRANSITION
+    [
+  mon_dispatch: time = task_timeout -->
+       task_timeout' = task_timeout + tc_period;
+
+    mon_auto_mode' = IF (button_pressed) AND (NOT prev_button_pressed) THEN
+                   NOT mon_auto_mode 
+         ELSE 
+             mon_auto_mode 
+         ENDIF;
+  
+   mon_disagree_count' = IF com_auto_mode = mon_auto_mode' THEN 
+                     0
+                     ELSE
+            IF (mon_disagree_count <= 3) THEN
+               mon_disagree_count + 1
+            ELSE
+               mon_disagree_count
+            ENDIF 
+                            ENDIF; 
+  mon_agreement_failure' = IF mon_disagree_count' > 2 THEN 
+                  TRUE 
+                                 ELSE
+                FALSE
+                               ENDIF;
+  in_control' = IF high_priority AND (NOT mon_agreement_failure') THEN 
+                   TRUE
+                    ELSIF high_priority AND mon_agreement_failure' THEN 
+           FALSE
+                    ELSIF (NOT high_priority) AND  x_side_in_control THEN 
+           FALSE
+        ELSE 
+           (NOT high_priority) AND (NOT x_side_in_control) AND (NOT mon_agreement_failure')
+                    ENDIF; 
+  prev_button_pressed' = button_pressed;
+  ]
+END;
+
+
+%------------------------------------------------------------------------------
+ % Button task produces runt pules
+ % With limited by min_button_width
+ %-----------------------------------------------------------------------------
+button_task [button_start : TIME, button_period : TIME, min_button_width : TIME] : MODULE =
+BEGIN 
+  OUTPUT time: TIME
+  INPUT time_arr : TIMEOUT_ARR
+  DEFINITION
+   time in {t: TIME | is_min(time_arr,t)};
+   OUTPUT task_timeout : TIME
+   OUTPUT button_pressed : BOOLEAN 
+   OUTPUT button_pressed_prev : BOOLEAN 
+   OUTPUT button_count : NATURAL
+   OUTPUT  button_dispatch_time : TIME
+    OUTPUT button_frame_count: NATURAL
+
+INITIALIZATION 
+  task_timeout  = button_start;
+  button_pressed = FALSE;
+  button_pressed_prev = FALSE;
+  button_count = 0;
+  time = 0;
+  button_frame_count = 0;
+  button_dispatch_time = button_start;
+TRANSITION
+[
+button_on:
+	(time = task_timeout) AND (NOT button_pressed) AND (button_count = 0)  -->
+   	      button_pressed' = TRUE;
+	task_timeout' in { n: TIME | (n>= task_timeout + min_button_width) AND (n < task_timeout + button_period)};
+	button_count' = button_count + 1;
+	button_pressed_prev' = button_pressed;
+	button_dispatch_time' =  task_timeout; 
+  	button_frame_count' = button_frame_count + 1;
+[]
+button_off:
+	(time = task_timeout) AND (button_pressed)  AND button_count = 1-->
+  task_timeout' = button_start + button_period;
+  button_pressed' = false;
+  button_count' = button_count + 1;
+  button_pressed_prev' = button_pressed;
+  button_dispatch_time' =  task_timeout; 
+  button_frame_count' = button_frame_count;
+[]
+button_idle: (time = task_timeout) AND button_count > 1 -->
+  task_timeout' = task_timeout + button_period;
+  button_count' = button_count + 1;
+button_dispatch_time' =  task_timeout; 
+button_frame_count' = button_frame_count + 1;
+]  
+END;
+
+
+%----------------------------------------------------------------------------
+% Node compositions 
+% task_clock takes three parameters
+%  Node_statup_delay
+%  tc phase 
+%  tc period
+%
+%  task clocks and task programs are synchronously composed 
+%---------------------------------------------------------------------------- 
+button_node : MODULE =
+ button_task[BUTTON_PHASE,BUTTON_PERIOD ,NODE_CLOCK_PERIOD+0.001];
+% button_task[BUTTON_PHASE,BUTTON_PERIOD ,NODE_CLOCK_PERIOD-10];
+
+coma_node: MODULE = 
+  WITH OUTPUT chan_a_com_auto_mode : BOOLEAN
+  WITH OUTPUT chan_a_com_prev_button_pressed : BOOLEAN
+  (RENAME com_auto_mode TO chan_a_com_auto_mode,
+	prev_button_pressed TO chan_a_com_prev_button_pressed
+  IN com_task_and_clock[0,NODE2_PHASE,NODE_CLOCK_PERIOD]);
+  
+mona_node : MODULE =
+  WITH OUTPUT chan_a_mon_auto_mode : BOOLEAN
+  WITH OUTPUT chan_a_mon_agreement_failure : BOOLEAN
+  WITH OUTPUT chan_a_in_control : BOOLEAN
+  WITH OUTPUT chan_a_mon_prev_button_pressed : BOOLEAN
+  WITH OUTPUT chan_a_mon_disagree_count :  NATURAL
+  (RENAME mon_auto_mode TO chan_a_mon_auto_mode,
+    mon_agreement_failure TO chan_a_mon_agreement_failure,
+    com_auto_mode TO chan_a_com_auto_mode,
+    mon_disagree_count TO chan_a_mon_disagree_count,
+    in_control TO chan_a_in_control,
+    prev_button_pressed TO chan_a_mon_prev_button_pressed,
+    x_side_in_control TO chan_b_in_control IN mon_task_and_clock[0,NODE3_PHASE,NODE_CLOCK_PERIOD,true]);
+ 
+comb_node: MODULE = 
+  WITH OUTPUT chan_b_com_auto_mode : BOOLEAN
+  WITH OUTPUT chan_b_com_prev_button_pressed : BOOLEAN
+  (RENAME com_auto_mode TO chan_b_com_auto_mode,
+  prev_button_pressed TO chan_b_com_prev_button_pressed
+  IN com_task_and_clock[0,NODE2_PHASE,NODE_CLOCK_PERIOD]);
+  
+monb_node : MODULE =
+  WITH OUTPUT chan_b_mon_auto_mode : BOOLEAN
+  WITH OUTPUT chan_b_mon_agreement_failure : BOOLEAN
+  WITH OUTPUT chan_b_in_control : BOOLEAN
+  WITH OUTPUT chan_b_mon_prev_button_pressed : BOOLEAN
+  WITH OUTPUT chan_b_mon_disagree_count :  NATURAL
+  (RENAME mon_auto_mode TO chan_b_mon_auto_mode,
+    mon_agreement_failure TO chan_b_mon_agreement_failure,
+    com_auto_mode TO chan_b_com_auto_mode,
+    mon_disagree_count TO chan_b_mon_disagree_count,
+    in_control TO chan_b_in_control,
+    prev_button_pressed TO chan_b_mon_prev_button_pressed,
+    x_side_in_control TO chan_a_in_control IN mon_task_and_clock[0,NODE3_PHASE,NODE_CLOCK_PERIOD,true]);
+ 
+
+
+
+%----------------------------------------------------------------------------
+% Asynchronous composition of all nodes
+%----------------------------------------------------------------------------
+system : MODULE =
+  WITH OUTPUT 
+   		time_arri : TIMEOUT_ARR,
+      complete_arr : TASK_COMPLETE_ARR 
+  % button         
+  (RENAME task_timeout TO time_arri[1],
+          time_arr TO time_arri  IN button_node)
+  []
+  (RENAME task_timeout TO time_arri[2] IN coma_node)  
+  []
+  (RENAME task_timeout TO time_arri[3] IN mona_node)
+  []
+  (RENAME task_timeout TO time_arri[4] IN comb_node) 
+  []
+  (RENAME task_timeout TO time_arri[5] IN monb_node);
+    	
+
+
+
+
+%===----------------------------------------------------------------===
+%       Syncronous Observer
+%===----------------------------------------------------------------===
+
+observer: MODULE =
+BEGIN
+  INPUT time_arri : TIMEOUT_ARR
+  INPUT time : TIME
+
+  INPUT chan_a_com_auto_mode: BOOLEAN
+  INPUT chan_a_mon_auto_mode: BOOLEAN
+  INPUT chan_a_mon_disagree_count: NATURAL
+
+  INPUT chan_b_com_auto_mode: BOOLEAN
+  INPUT chan_b_mon_auto_mode: BOOLEAN
+  INPUT chan_b_mon_disagree_count: NATURAL
+
+
+  INPUT button_pressed : BOOLEAN 
+  INPUT button_dispatch_time : TIME
+  INPUT button_width : TIME
+  INPUT button_pressed_prev : BOOLEAN 
+
+  INPUT chan_a_mon_prev_button_pressed : BOOLEAN
+  INPUT chan_a_com_prev_button_pressed : BOOLEAN
+  INPUT chan_a_mon_prev_button : BOOLEAN
+  INPUT chan_a_com_prev_button : BOOLEAN
+  
+  INPUT chan_b_mon_prev_button_pressed : BOOLEAN
+  INPUT chan_b_com_prev_button_pressed : BOOLEAN
+  INPUT chan_b_mon_prev_button : BOOLEAN
+  INPUT chan_b_com_prev_button : BOOLEAN
+  
+
+
+  INPUT button_count : NATURAL
+  INPUT button_frame_count : NATURAL
+  
+  OUTPUT time_ok : BOOLEAN
+  OUTPUT positive_time_values_ok: BOOLEAN
+  OUTPUT monotonic_time_values_ok: BOOLEAN
+  OUTPUT unique_atomic_time_ok: BOOLEAN
+  OUTPUT clock_invariant_ok: BOOLEAN
+  OUTPUT clock_phase_ok : BOOLEAN
+  OUTPUT button_invariant_ok: BOOLEAN
+  OUTPUT auto_mode_invariant_ok : BOOLEAN
+
+  OUTPUT  time_prev : TIME
+
+ OUTPUT seen_rising_edge : BOOLEAN
+ OUTPUT congruent_sample_ok : BOOLEAN
+ OUTPUT redge_ok : BOOLEAN
+
+  DEFINITION
+
+%% Clock Invariant Auxillary Lemmas coded as variables in synchronous observer
+positive_time_values_ok = ((time >= 0) OR (time = -1)) AND
+			  (FORALL (i: TASK_INDEX) :( time_arri[i] >= 0) OR (time_arri[i] = -1));
+monotonic_time_values_ok = FORALL (i: TASK_INDEX) : is_min(time_arri, time) => (((time_arri[i] >= time)) OR (time_arri[i] = -1));
+unique_atomic_time_ok = FORALL (i,j: TASK_INDEX) : time_arri[i] = -1 AND time_arri[j] = -1 => i = j;
+
+clock_phase_ok =(time_arri[2] > time_arri[3] => time_arri[2] - time_arri[3] <=  NODE_CLOCK_PERIOD) AND
+                (time_arri[3] > time_arri[2] => time_arri[3] - time_arri[2] <=  NODE_CLOCK_PERIOD) AND
+                (time_arri[4] > time_arri[5] => time_arri[4] - time_arri[5] <=  NODE_CLOCK_PERIOD) AND
+                (time_arri[5] > time_arri[4] => time_arri[5] - time_arri[4] <=  NODE_CLOCK_PERIOD) AND
+                (time_arri[4] > time_arri[3] => time_arri[4] - time_arri[3] <=  NODE_CLOCK_PERIOD) AND
+                (time_arri[3] > time_arri[4] => time_arri[3] - time_arri[4] <=  NODE_CLOCK_PERIOD) AND
+                (time_arri[4] > time_arri[2] => time_arri[4] - time_arri[2] <=  NODE_CLOCK_PERIOD) AND
+                (time_arri[2] > time_arri[4] => time_arri[2] - time_arri[4] <=  NODE_CLOCK_PERIOD) AND
+                (time_arri[5] > time_arri[3] => time_arri[5] - time_arri[3] <=  NODE_CLOCK_PERIOD) AND
+                (time_arri[3] > time_arri[5] => time_arri[3] - time_arri[5] <=  NODE_CLOCK_PERIOD) AND
+                (time_arri[5] > time_arri[2] => time_arri[5] - time_arri[2] <=  NODE_CLOCK_PERIOD) AND
+                (time_arri[2] > time_arri[5] => time_arri[2] - time_arri[5] <=  NODE_CLOCK_PERIOD);
+
+clock_invariant_ok = positive_time_values_ok AND monotonic_time_values_ok AND unique_atomic_time_ok AND clock_phase_ok;
+
+
+button_invariant_ok = (    
+        ( button_count = 0  => button_pressed = FALSE  AND button_dispatch_time = NODE_CLOCK_PERIOD  and time_arri[1] = NODE_CLOCK_PERIOD AND time <= NODE_CLOCK_PERIOD) AND
+          (button_count = 1  AND time /= -1 => button_pressed = TRUE) AND 
+          (button_count > 1  => button_pressed = FALSE ) 
+          );
+
+
+auto_mode_invariant_ok = (button_count = 0  => (chan_a_com_auto_mode = FALSE AND chan_a_mon_auto_mode = FALSE AND chan_a_mon_disagree_count = 0 AND chan_a_com_prev_button_pressed = FALSE 
+													AND chan_a_mon_prev_button_pressed = FALSE AND button_pressed = FALSE ) AND
+                          (chan_b_com_auto_mode = FALSE AND chan_b_mon_auto_mode = FALSE AND
+                          chan_b_mon_disagree_count = 0 AND chan_b_com_prev_button_pressed = FALSE 
+                          AND chan_b_mon_prev_button_pressed = FALSE AND button_pressed = FALSE )
+                          );
+
+
+
+
+congruent_sample_ok =  seen_rising_edge and (time > NODE_CLOCK_PERIOD + NODE_CLOCK_PERIOD+0.001) =>  (chan_a_mon_auto_mode = chan_a_com_auto_mode) AND  (chan_b_mon_auto_mode = chan_b_com_auto_mode)   ;
+
+redge_ok = (time > 2.0 * NODE_CLOCK_PERIOD => seen_rising_edge) AND (time /= -1 AND time < NODE_CLOCK_PERIOD => seen_rising_edge = false);
+
+
+
+INITIALIZATION
+  time_prev = 0;
+  seen_rising_edge = false;
+
+TRANSITION
+  [
+      observer : true -->
+      	   time_prev' =  if time = -1 THEN time_prev
+      	   				 ELSE
+      	   				 	time
+      	   				 ENDIF;
+			seen_rising_edge' = if seen_rising_edge = false then
+									button_pressed_prev = false and button_pressed = true
+								else
+									seen_rising_edge
+								ENDIF;		
+
+  ]
+END;
+
+system_obs : MODULE = system || observer;
+  
+
+ 
+
+%---------------------------------------------------------------------------
+% Simple lemmas to seed execution 
+% counters. 
+%----------------------------------------------------------------------------
+clock_invariant :  THEOREM system_obs |- G(clock_invariant_ok);
+button_invariant : THEOREM system_obs |- G(button_invariant_ok);
+auto_mode_invariant : THEOREM system_obs |- G(auto_mode_invariant_ok);
+seen_rising_edge: THEOREM system_obs |- G(redge_ok);
+cs: THEOREM system_obs |- G(congruent_sample_ok);
+disagree_a :  THEOREM system_obs |- G(not(chan_a_mon_agreement_failure));
+disagree_b :  THEOREM system_obs |- G(not(chan_b_mon_agreement_failure));
+
+channel_a_in_control : THEOREM system_obs |- G(chan_a_in_control);
+
+
+
+% contrived lemma just to force state dump to show we did not introduce deadlock and there was state progression during proof
+time_a : THEOREM system_obs |-G((time_arri[1] <  60));
+
+
+END
+
+
