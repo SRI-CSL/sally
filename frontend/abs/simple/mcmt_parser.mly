@@ -16,6 +16,7 @@ open Mcmt_ast
 %token ITE
 %token TRUE
 %token FALSE
+%token COND ELSE
 %token DEFINE_STATE_TYPE DEFINE_STATES DEFINE_TRANSITION DEFINE_TRANSITION_SYSTEM DEFINE_CONSTANT ASSERT QUERY
 %token EOF
 %token LEX_ERROR
@@ -73,31 +74,36 @@ op:
 | EQ NEXT expression { Assign (Next (Ident $2), $3) }
 | EQ expression NEXT { Assign (Next (Ident $3), $2) }
 | EQ expression expression { Eq ($2, $3) }
-| NEQ expression expression { Neq ($2, $3) }
+| NEQ nexpression nexpression { Neq ($2, $3) }
 | GE nexpression nexpression { Ge ($2, $3) }
 | GT nexpression nexpression { Gt ($2, $3) }
 | LE nexpression nexpression { Le ($2, $3) }
 | LT nexpression nexpression { Lt ($2, $3) }
-| PLUS expression expression { Add ($2, $3) }
-| MINUS expression { Mul (Int (-1), $2) }
-| MINUS expression expression { Sub ($2, $3) }
-| MUL expression expression { Mul ($2, $3) }
-| DIV expression expression { Div ($2, $3) }
-| AND expressions { And $2 }
-| OR expressions { Or $2 }
-| XOR expression expression { Xor ($2, $3) }
-| IMPLIES expression expression { Implies ($2, $3) }
-| ITE expression expression expression { Ite ($2, $3, $4) }
+| PLUS nexpression nexpression { Add ($2, $3) }
+| MINUS nexpression { Mul (Int (-1), $2) }
+| MINUS nexpression nexpression { Sub ($2, $3) }
+| MUL nexpression nexpression { Mul ($2, $3) }
+| DIV nexpression nexpression { Div ($2, $3) }
+| AND nexpressions { And $2 }
+| OR nexpressions { Or $2 }
+| XOR nexpression nexpression { Xor ($2, $3) }
+| IMPLIES nexpression nexpression { Implies ($2, $3) }
+| ITE expression nexpression nexpression { Ite ($2, $3, $4) }
+| COND cond_expressions { $2 }
 | LET OPEN_PAREN let_expressions CLOSE_PAREN expression { Let ($3, $5) }
+
+cond_expressions:
+| OPEN_PAREN expression nexpression CLOSE_PAREN cond_expressions { Ite ($2, $3, $5) }
+| OPEN_PAREN ELSE nexpression CLOSE_PAREN { $3 }
 
 nexpression:
 | expression { $1 }
 | NEXT { Next (Ident $1) }
 
-expressions:
-| expression expressions { $1::$2 }
+nexpressions:
+| nexpression nexpressions { $1::$2 }
 | { [] }
 
 let_expressions:
-| OPEN_PAREN IDENT expression CLOSE_PAREN let_expressions { ($2, $3)::$5 }
+| OPEN_PAREN IDENT nexpression CLOSE_PAREN let_expressions { ($2, $3)::$5 }
 | { [] }

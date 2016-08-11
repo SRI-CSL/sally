@@ -1,6 +1,6 @@
 {
   open Mcmt_parser
-    let keyword_table = Hashtbl.create 38
+    let keyword_table = Hashtbl.create 40
   let keyword k = try Hashtbl.find keyword_table k with Not_found -> (IDENT k)
   let _ =
     List.iter (fun (kwd, tok) -> Hashtbl.add keyword_table kwd tok)
@@ -10,6 +10,8 @@
         "Int", INT_DECL;
         "Real", REAL_DECL;
         "Bool", BOOL_DECL;
+        "cond", COND;
+        "else", ELSE;
         "let", LET;
         "ite", ITE;
         "not", NOT;
