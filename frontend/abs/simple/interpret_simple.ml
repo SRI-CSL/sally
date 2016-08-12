@@ -93,13 +93,10 @@ let rec interpret carry_conditionals man env cond inv ctx = function
   | Seq (e::es) ->
       let ctx' = interpret carry_conditionals man env cond inv ctx e in
       interpret carry_conditionals man env cond inv ctx' (Seq es)
-  | Seq [] -> ctx
+  | Seq [] -> printf "%a@." (Domain1.print man) ctx; ctx
   | Branch es ->
-      let ctx's = List.map (interpret carry_conditionals man env cond inv ctx) es in
+      let ctx's = List.map (interpret carry_conditionals man env (Cond.copy cond) inv ctx) es in
       let res = List.fold_left (Domain1.join man) (Domain1.bottom man env) ctx's in
-(*
-      printf "branch: %d of %d\n" (env.Bdd.Env.bddindex) (env.Bdd.Env.bddsize);
-      printf "env: %a@." Env.print env;*)
       res
   | Cond (e1, e2, e3) ->
       let e1' = Expr1.Bool.of_expr (make_expr1 env cond e1)
@@ -154,11 +151,19 @@ let rec interpret carry_conditionals man env cond inv ctx = function
       let res = interpret carry_conditionals man env' cond inv' ctx' e2 in
       Domain1.change_environment man res env
   | other ->
+(* let condition' = of_apron man env (Abstract1.meet (Abstract1.top env.Env.eapron) condition in*)
      let condition = Expr1.Bool.of_expr (make_expr1 env cond other) in
-     let condition' = Domain1.meet_condition man (Cond.copy cond) ctx condition in
+     let condition' = Domain1.meet_condition man cond ctx condition in
+(*
+     let apron_man = Domain1.man_get_apron man in
+     let apron_env = env.Bdd.Env.ext.Bddapron.Env.eapron in
+     let apron_cond = List.fold_left (Apron.Abstract1.join apron_man) (Abstract1.bottom apron_man apron_env) (List.map snd (Domain1.to_bddapron man condition')) in
+     let condition' = Domain1.of_apron man env apron_cond in condition';*)
+(*     let condition' = Domain1.meet_condition man (Cond.copy cond) ctx condition in *)
      Domain1.meet man inv condition';;
+
      
-let initialize apron ds invs =
+let initialize apron ds invs cond_size =
   let rec generate pairs constraints env = function
     | [] -> (pairs, constraints, env)
     | (Nat_decl str)::ds -> generate ((str, `Int)::pairs) (Ge (Ident str, Nat 0)::constraints) env ds
@@ -169,19 +174,24 @@ let initialize apron ds invs =
     | (Enum_decl (str, enum))::ds -> generate ((str, `Benum enum)::pairs) constraints env ds
     | (Constraint_decl (decl, cond))::ds -> generate pairs (cond::constraints) env (decl::ds) in
   let cudd = Cudd.Man.make_v () in (* in the future, may need to make cudd parameterizable *)
-  Cudd.Man.set_gc 10000
+  (* Cudd.Man.enable_autodyn cudd Cudd.Man.REORDER_SIFT; *)
+  Cudd.Man.set_gc 1000000
     (begin fun () -> Cudd.Man.print_info cudd; printf "@.CUDD GC@." end)
     (begin fun () -> printf "@.CUDD REORDER@." end);
   let (pairs, constraints, env) = generate [] [] (Env.make ~symbol:Env.string_symbol ~bddsize:(100) cudd) ds in
   let env = Env.add_vars env pairs in (* create an environment with declared variables *)
-  let cond = Cond.make ~symbol:Env.string_symbol ~bddsize:(700) cudd in
+  let cond = Cond.make ~symbol:Env.string_symbol ~bddsize:(cond_size) cudd in
   let man = Domain1.man_of_bdd (Domain1.make_bdd apron) in
   let abs = Domain1.top man env in
+  printf "%s@." "constraints";
+  let constraints = List.map (fun x -> (interpret true man env cond abs abs x)) (constraints @ invs) in
+  (man, env, cond, List.fold_left (Domain1.meet man) abs constraints);;
+(*
   let constraints = List.map (fun x -> Expr1.Bool.of_expr (make_expr1 env cond x)) (constraints @ invs) in
-  (man, env, cond, List.fold_left (Domain1.meet_condition man cond) abs constraints);;
+  (man, env, cond, List.fold_left (Domain1.meet_condition man cond) abs constraints);;*)
 
-let interpret_program carry_conditionals apron_man p =
-  let (man, env, cond, ctx) = initialize apron_man p.decls p.invs in
+let interpret_program carry_conditionals apron_man p cond_size =
+  let (man, env, cond, ctx) = initialize apron_man p.decls p.invs cond_size in
   let res = interpret carry_conditionals man env cond ctx ctx p.expr in
   printf "result:%a@." (Domain1.print man) res;;
    

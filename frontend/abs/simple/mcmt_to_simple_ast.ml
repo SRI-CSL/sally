@@ -38,10 +38,21 @@ let inline_simple map =
        then StrMap.find str map
        else Ident str);;
 
-let rec contains_assign = function
+let rec contains_next = function
+  | Mcmt_ast.Next _ -> true
   | Mcmt_ast.Assign (_, _) -> true
-  | Mcmt_ast.And es -> List.fold_left (||) false (List.map contains_assign es)
-  | Mcmt_ast.Or es -> List.fold_left (||) false (List.map contains_assign es)
+  | Mcmt_ast.Add (e1, e2) -> (contains_next e1) || (contains_next e2)
+  | Mcmt_ast.Sub (e1, e2) -> (contains_next e1) || (contains_next e2)
+  | Mcmt_ast.Mul (e1, e2) -> (contains_next e1) || (contains_next e2)
+  | Mcmt_ast.Div (e1, e2) -> (contains_next e1) || (contains_next e2)
+  | Mcmt_ast.Ge (e1, e2) -> (contains_next e1) || (contains_next e2)
+  | Mcmt_ast.Gt (e1, e2) -> (contains_next e1) || (contains_next e2)
+  | Mcmt_ast.Le (e1, e2) -> (contains_next e1) || (contains_next e2)
+  | Mcmt_ast.Lt (e1, e2) -> (contains_next e1) || (contains_next e2)
+  | Mcmt_ast.Eq (e1, e2) -> (contains_next e1) || (contains_next e2)
+  | Mcmt_ast.Neq (e1, e2) -> (contains_next e1) || (contains_next e2)
+  | Mcmt_ast.And es -> List.fold_left (||) false (List.map contains_next es)
+  | Mcmt_ast.Or es -> List.fold_left (||) false (List.map contains_next es)
   | _ -> false
 
 let rec mcmt_to_expr map = function
@@ -64,7 +75,7 @@ let rec mcmt_to_expr map = function
   | Mcmt_ast.Eq (e1, e2) -> Eq (mcmt_to_expr map e1, mcmt_to_expr map e2)
   | Mcmt_ast.Neq (e1, e2) -> Not (Eq (mcmt_to_expr map e1, mcmt_to_expr map e2))
   | Mcmt_ast.And es ->
-      if contains_assign (Mcmt_ast.And es)
+      if contains_next (Mcmt_ast.And es)
       then Seq (List.map (mcmt_to_expr map) es)
       else
         (match es with
@@ -72,7 +83,7 @@ let rec mcmt_to_expr map = function
          | (e::es) -> And (mcmt_to_expr map e, mcmt_to_expr map (Mcmt_ast.And es))
          | _ -> raise Unexpected_expression)
   | Mcmt_ast.Or es ->
-      if contains_assign (Mcmt_ast.Or es)
+      if contains_next (Mcmt_ast.Or es)
       then Branch (List.map (mcmt_to_expr map) es)
       else
         (match es with
