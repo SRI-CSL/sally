@@ -20,10 +20,10 @@
   open Sal_parser
   let keyword_table = Hashtbl.create 53
   let keyword k = try Hashtbl.find keyword_table k with Not_found -> IDENT(k)
-  let _ =
+  let () =
     List.iter (fun (kwd, tok) -> Hashtbl.add keyword_table kwd tok)
       [
-	"AND", AND;
+        "AND", AND;
         "ARRAY", ARRAY;
         "BEGIN", BEGIN;
         "CONTEXT", CONTEXT;

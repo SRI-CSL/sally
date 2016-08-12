@@ -24,7 +24,7 @@ let create_channel_out = function
   | Some filename -> open_out filename
   | None -> stdout
 
-let _ =
+let () =
   let mcmt_output = ref None in
   let only_convert = ref false in
   let engine = ref "kind" in

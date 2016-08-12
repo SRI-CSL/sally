@@ -61,27 +61,45 @@ let ctx_add_substition ctx a b =
 let eval_sally ctx = function
   | Value(s) -> s
   | _ -> raise Not_implemented
-
+    
+(**
+ * Given two integers i < j, returns a list [j:...:i] 
+ *)
 let rec seq i = function
   | x when x = i -> [i]
   | n -> n::(seq i (n-1))
-
+    
+(**
+ * Add a new expression of given name to the context. For example
+ * ctx_add_expr "x" expr type ctx, it binds "x" to expr of given type 
+ * to ctx.
+ *)
 let ctx_add_expr name v ty ctx =
   StrMap.add name (Expr(v, ty)) ctx
-
+    
+(**
+ * Try to find the name in the converter environment.
+ *)
 let ctx_var name ctx =
   try
     StrMap.find name ctx
   with
   | Not_found -> raise (Variable_not_found name)
-
+    
+    
+(**
+ * Same as ctx_var but considering the next variable.
+ *)
 let next_var name ctx =
   try
     StrMap.find (name ^ "'") ctx
   with
   | Not_found ->
     ctx_var name ctx
-
+      
+(**
+ * Find name in the map, given next name.
+ *)
 let prev_var name ctx =
   let l = String.length name - 1 in
   if name.[l] = '\'' then
