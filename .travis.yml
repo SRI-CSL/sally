@@ -50,3 +50,5 @@ after_script:
       coveralls -r .. -b . --gcov-options '\-lp';
     fi
   
+notifications:
+  slack: sallydevelopers:0ShJwlN0m6sOFGb5wfaJcLAB
