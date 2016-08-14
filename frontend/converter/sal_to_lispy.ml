@@ -63,7 +63,7 @@ let eval_sally ctx = function
   | _ -> raise Not_implemented
     
 (**
- * Given two integers i < j, returns a list [j:...:i] 
+ * Given two integers i < j, returns a list [i:...:j] 
  *)
 let rec seq i = function
   | x when x = i -> [i]
@@ -136,52 +136,72 @@ let rec sal_type_to_sally_type ctx ?name:(name="anonymous") = function
     and to_as_string = eval_sally ctx sally_expr_to in
     Lispy_ast.Range (int_of_string from_as_string, int_of_string to_as_string)
 and
-  get_disjonctions_from_array ctx = function
-  | Array_access(Ident(s), a) ->
-    begin
-      let open Lispy_ast in
-      let index_expr = sal_expr_to_lisp ctx a in
-      match StrMap.find s ctx with
-      | Expr(Ident(n, _), Array(Range(array_start, array_end), dest_type)) ->
-        begin
-          match index_expr with
-          | Value(s) ->
-            let s' = int_of_string s in
-            assert(array_start <= s' && s' <= array_end);
-            [True, Ident(n ^ "!" ^ s, dest_type)]
-          | a ->
-            let l = seq array_start array_end in
-            List.map (fun i ->
-                (Equality(index_expr, Value(string_of_int i)), Lispy_ast.Ident(n ^ "!" ^ string_of_int i, dest_type))) l
-        end
-      | Expr(a, Array(IntegerRange(_), dest_type)) ->
-        [True, Lispy_ast.Select(a, index_expr)]
-      | Expr(Ident(n, _), t) ->
-        Io.Sal_writer.print_expr stdout a;
-        Format.printf "%s %s@." n (Io.Lispy_writer.sally_type_to_debug t);
-        raise Inadequate_array_index
-      | Array(Array_literal(name, data_type, expr), old_ctx, _) ->
-        let old_ctx = ctx_add_substition old_ctx name (Expr(index_expr, sal_type_to_sally_type ctx data_type)) in
-        [True, sal_expr_to_lisp old_ctx expr]
-      | Array(sal_expr, old_ctx, data_type) ->
-        let tmp_ctx = ctx_add_substition ctx s (Expr (sal_expr_to_lisp old_ctx sal_expr, data_type)) in
-        get_disjonctions_from_array tmp_ctx (Array_access(Ident(s), a))
-      | _ -> raise Inadequate_array_use
-    end
-  | Array_access(Array_access(a, b), index) ->
-    let sub_array = Array_access(a,b) in
-    let all_sub_disjs = get_disjonctions_from_array ctx sub_array in
-    List.(concat @@ map (fun (disj, sub_array_cell) ->
-        let sub_array_cell_name, dest_type =
-          match sub_array_cell with
-          | Lispy_ast.Ident(sub, dest_type) -> sub, dest_type
-          | _ -> failwith "should be ident"
-        in
-        let tmp_ctx = StrMap.add sub_array_cell_name (Expr(sub_array_cell, dest_type)) ctx in
-        map (fun (sub_disj, array_cell) ->
-            (Lispy_ast.And(disj, sub_disj), array_cell)
-          ) @@ get_disjonctions_from_array tmp_ctx (Array_access(Ident(sub_array_cell_name), index))) all_sub_disjs)
-  | _ -> raise Inadequate_array_use
+  (**
+   * flatten_array ctx term returns a lispy expression representing term.
+   * term must be an array term, such as a[i] or a[b[i]] etc.
+   * If the array size is known, then, as the arrays is converted to
+   * n variable (where n is the array length), a!1, a!2, a!3, … a!n, then the
+   * sally expression looks like (ite (= i 1) a!1 (ite (= i 2) a!2 (ite …))).
+   * If the array size is not known (i.e. the file is parametric), then it returns
+   * an expression that looks like (select a i).
+   **)
+  flatten_array ctx array_access =
+  let rec flatten_aux ctx = function
+    | Array_access(Ident(s), a) ->
+      begin
+        let open Lispy_ast in
+        let index_expr = sal_expr_to_lisp ctx a in
+        match StrMap.find s ctx with
+        | Expr(Ident(n, _), Array(Range(array_start, array_end), dest_type)) ->
+          begin
+            match index_expr with
+            | Value(s) ->
+              let s' = int_of_string s in
+              assert(array_start <= s' && s' <= array_end);
+              [True, Ident(n ^ "!" ^ s, dest_type)]
+            | a ->
+              let l = seq array_start array_end in
+              List.map (fun i ->
+                  (Equality(index_expr, Value(string_of_int i)), Lispy_ast.Ident(n ^ "!" ^ string_of_int i, dest_type))) l
+          end
+        | Expr(a, Array(IntegerRange(_), dest_type)) ->
+          [True, Lispy_ast.Select(a, index_expr)]
+        | Expr(Ident(n, _), t) ->
+          Io.Sal_writer.print_expr stdout a;
+          Format.printf "%s %s@." n (Io.Lispy_writer.sally_type_to_debug t);
+          raise Inadequate_array_index
+        | Array(Array_literal(name, data_type, expr), old_ctx, _) ->
+          let old_ctx = ctx_add_substition old_ctx name (Expr(index_expr, sal_type_to_sally_type ctx data_type)) in
+          [True, sal_expr_to_lisp old_ctx expr]
+        | Array(sal_expr, old_ctx, data_type) ->
+          let tmp_ctx = ctx_add_substition ctx s (Expr (sal_expr_to_lisp old_ctx sal_expr, data_type)) in
+          flatten_aux tmp_ctx (Array_access(Ident(s), a))
+        | _ -> raise Inadequate_array_use
+      end
+    | Array_access(Array_access(a, b), index) ->
+      let sub_array = Array_access(a,b) in
+      let all_sub_disjs = flatten_aux ctx sub_array in
+      List.(concat @@ map (fun (disj, sub_array_cell) ->
+          let sub_array_cell_name, dest_type =
+            match sub_array_cell with
+            | Lispy_ast.Ident(sub, dest_type) -> sub, dest_type
+            | _ -> failwith "should be ident"
+          in
+          let tmp_ctx = StrMap.add sub_array_cell_name (Expr(sub_array_cell, dest_type)) ctx in
+          map (fun (sub_disj, array_cell) ->
+              (Lispy_ast.And(disj, sub_disj), array_cell)
+            ) @@ flatten_aux tmp_ctx (Array_access(Ident(sub_array_cell_name), index))) all_sub_disjs)
+    | _ -> raise Inadequate_array_use
+  in
+  let conds = flatten_aux ctx array_access in
+
+  match conds with
+  | [] -> raise Inadequate_array_use
+  | (last_dsj, last_result)::q ->
+    (* it's safe to ignore the last conditions, as the index has to be in the array range
+     * If it is not the case, then one value is "randomly" (the implementation of
+     * flatten_aux suggests it is the last array cell) chosen *)
+    List.fold_left (fun l (dsj, result) -> Ite(dsj, result, l)) last_result q
 and
   (** Convert a sal expr to a lispy condition, based on the information contained in ctx *)
   sal_expr_to_lisp (ctx:sally_context) = function
@@ -203,6 +223,7 @@ and
   | Next(s) -> (failwith ("Next ? " ^ s))
 
   | Funcall("G", [l]) -> sal_expr_to_lisp ctx l
+  (* FIXME: this should not be needed anymore, it should be inlined by the inlined module. *)
   | Funcall(name, args_expr) ->
     begin
       match  StrMap.find name ctx with
@@ -224,16 +245,7 @@ and
     Ite(a, b, sal_expr_to_lisp ctx next_condition)
 
   | Array_access(a, b) ->
-    let conds = get_disjonctions_from_array ctx (Array_access (a, b)) in
-    begin
-      match conds with
-      | [] -> raise Inadequate_array_use
-      | (last_dsj, last_result)::q ->
-        (* it's safe to ignore the last conditions, as the index has to be in the array range
-           * If it is not the case, then one value is "randomly" (the implementation of
-           * get_disjonctions_from_array suggests it is the last array cell) chosen *)
-        List.fold_left (fun l (dsj, result) -> Ite(dsj, result, l)) last_result q
-    end
+    flatten_array ctx (Array_access (a, b))
   | Set_literal(_) -> failwith "set" 
   | SSet_cardinal(in_name, t, expr) ->
     let st = sal_type_to_sally_type ctx t in
@@ -270,14 +282,14 @@ and
   | True -> Lispy_ast.True
   | False -> Lispy_ast.False
 
-  | Opp(_) -> failwith "opp"
   | Sub(a,b) -> Sub(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
   | Mul(a, b) -> Mul(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
   | Div(a,b) -> Div(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
   | And(a, b) -> And(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
   | Or(a, b) -> Or(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
-  | Xor(_) | Iff(_) -> failwith "xor implies iff"
-  | Let(_) -> failwith "logic"
+  | Opp(_) -> failwith "Opp not supported."
+  | Xor(_) | Iff(_) -> failwith "xor/iff not supported."
+  | Let(_) -> failwith "Let not supported."
 
 
 let sal_state_vars_to_state_type (ctx:sally_context) name vars =
@@ -303,7 +315,17 @@ let rec infer_type ctx = function
   | Array_literal(_, a, expr) -> Ast.Lispy_ast.Array(sal_type_to_sally_type ctx a, infer_type ctx expr)
   | _ -> Real
 
-(** Converts a list of sal_assignments to a single big lispy condition *) 
+(** Converts a list of sal_assignments to a single big lispy condition
+ * e.g., if the assignment is a' = 1; b' = 2;, it is translated to (and (= a' 1) (= b' 2)).
+ * If some state variables are not assigned (let's say we have a state type with three
+ * variables a, b, c), then they are added to the condition to be kept constant. For this example,
+ * that would be (and (= a' 1) (= b' 1) (= c' c)). The state variables must be in ~vars_to_define
+ * (so, the default is an empty list, meaning that we'll never add extra conditions such as c' = c).
+ * Additionnaly, types are (well, should be) insured. For instance, if a is a variable of type [1..5],
+ * then (or (= a 1) ... (= a 5)).
+ * If ~only_define_type:true, then the assignement is completely skipped and we only check the type.
+ * (can be useful for input variables)
+ **) 
 let sal_assignments_to_condition ?only_define_type:(only_type=false) ?vars_to_define:(s=[]) ctx assignment =
   let variables_to_init = ref s in
   let forget_variable n =
