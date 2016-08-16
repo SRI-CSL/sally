@@ -25,7 +25,6 @@ type expression =
   | Xor of expression * expression
   | Implies of expression * expression
   | Let of (string * expression) list * expression
-  | Assign of expression * expression
   | True
   | False
 

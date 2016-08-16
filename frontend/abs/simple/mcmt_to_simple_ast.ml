@@ -46,7 +46,6 @@ let inline_simple map =
 (* Check whether the mcmt ast expression contains a next-state variable *)
 let rec contains_next = function
   | Mcmt_ast.Next _ -> true
-  | Mcmt_ast.Assign (_, _) -> true
   | Mcmt_ast.Add (e1, e2) -> (contains_next e1) || (contains_next e2)
   | Mcmt_ast.Sub (e1, e2) -> (contains_next e1) || (contains_next e2)
   | Mcmt_ast.Mul (e1, e2) -> (contains_next e1) || (contains_next e2)
@@ -112,7 +111,6 @@ let rec mcmt_to_expr map = function
       let map' = StrMap.add x (mcmt_to_expr map y) map in
       mcmt_to_expr map' (Mcmt_ast.Let (es, e))
   | Mcmt_ast.Let ([], e) -> mcmt_to_expr map e
-  | Mcmt_ast.Assign (e1, e2) -> Eq (mcmt_to_expr map e1, mcmt_to_expr map e2)
   | Mcmt_ast.True -> True
   | Mcmt_ast.False -> False;;
 

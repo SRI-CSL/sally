@@ -70,10 +70,8 @@ value:
 | STATE { Ident $1 }
 
 op:
-| NOT expression { Not $2 }
-| EQ NEXT expression { Assign (Next (Ident $2), $3) }
-| EQ expression NEXT { Assign (Next (Ident $3), $2) }
-| EQ expression expression { Eq ($2, $3) }
+| NOT nexpression { Not $2 }
+| EQ nexpression nexpression { Eq ($2, $3) }
 | NEQ nexpression nexpression { Neq ($2, $3) }
 | GE nexpression nexpression { Ge ($2, $3) }
 | GT nexpression nexpression { Gt ($2, $3) }
