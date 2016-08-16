@@ -46,9 +46,9 @@ let () =
                     "./sally"; "src/sally"; "../src/sally"];
   create_channel_in !input_file
   |> Io.Sal_lexer.parse
-  |> Converter.Sal_to_lispy.sal_context_to_lisp
-  |> Ast.Lispy_simplifier.simplify_context
-  |> Io.Lispy_writer.output_context_to_channel
+  |> Converter.Sal_to_mcmt.sal_context_to_lisp
+  |> Ast.Mcmt_simplifier.simplify_context
+  |> Io.Mcmt_writer.output_context_to_channel
   |> fun write_to -> if !only_convert then
                        create_channel_out !mcmt_output
                        |> write_to

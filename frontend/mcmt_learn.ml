@@ -74,7 +74,7 @@ let print_transition_system ts =
   printf "Initial:%s\n" (string_of_simple ts.init);
   printf "Transition:%s\n" (string_of_simple ts.trans);;
 
-let _ =
+let () =
   let input_file = ref None in
   (let open Arg in
    Arg.parse [] (fun f ->

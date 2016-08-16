@@ -16,9 +16,9 @@
  * along with sally.  If not, see <http://www.gnu.org/licenses/>.
  *)
 
-(* Abstract syntax for the lispy style of the .mcmt files read by Sally *)
+(* Abstract syntax for the mcmt style of the .mcmt files read by Sally *)
 
-open Ast.Lispy_ast
+open Ast.Mcmt_ast
 
 type indentation = In | Out | None
 
@@ -194,5 +194,5 @@ let output_context_to_channel c ch =
 
 (* Local Variables: *)
 (* compile-command: "make -C ../../../build/ -j 4" *)
-(* caml-annot-dir: "../../../build/frontend/io/lispy/" *)
+(* caml-annot-dir: "../../../build/frontend/io/mcmt/" *)
 (* End: *)
