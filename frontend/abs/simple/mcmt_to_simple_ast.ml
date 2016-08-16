@@ -1,3 +1,4 @@
+(** Convert a mcmt AST to a simple AST *)
 open Simple_ast;;
 open Mcmt_simple_ast;;
 open Format;;
@@ -7,9 +8,9 @@ module StrMap = Map.Make(String);;
 exception Unexpected_expression;;
 exception Unexpected_declaration;;
 
-(* Apply a function to every Ident that occurs in the simple AST:
-     apply_to_simple_ident f expr
-   applies f to every Ident leaf in the AST expr *)
+(** Apply a function to every [Ident] that occurs in the simple AST:
+      [ apply_to_simple_ident f expr ]
+    applies [f] to every [Ident] leaf in the AST [expr] *)
 let rec apply_to_simple_ident f = function
   | Int i -> Int i
   | Float f -> Float f
@@ -30,12 +31,12 @@ let rec apply_to_simple_ident f = function
   | False -> False
   | _ -> raise Unexpected_expression;;
 
-(* Use a map to perform inlining on a simple AST expression:
-     inline_simple map expr
-   uses the variable name in an Ident leaf to look up another
-   simple AST expression and gives the simple AST in which
-   each Ident leaf whose name is a key in the map is replaced
-   by the corresponding value in the map *)
+(** Use a map to perform inlining on a simple AST expression:
+      [ inline_simple map expr ]
+    uses the variable name in an [Ident] leaf to look up another
+    simple AST expression and gives the simple AST in which
+    each [Ident] leaf whose name is a key in [map] is replaced
+    by the corresponding value in [map] *)
 let inline_simple map =
   apply_to_simple_ident
     (fun str ->
@@ -43,7 +44,7 @@ let inline_simple map =
        then StrMap.find str map
        else Ident str);;
 
-(* Check whether the mcmt ast expression contains a next-state variable *)
+(** Check if the mcmt AST expression contains a next-state variable *)
 let rec contains_next = function
   | Mcmt_ast.Next _ -> true
   | Mcmt_ast.Add (e1, e2) -> (contains_next e1) || (contains_next e2)
@@ -60,7 +61,7 @@ let rec contains_next = function
   | Mcmt_ast.Or es -> List.fold_left (||) false (List.map contains_next es)
   | _ -> false
 
-(* Convert an mcmt AST expression into a simple AST expression *)
+(** Convert an mcmt AST expression into a simple AST expression *)
 let rec mcmt_to_expr map = function
   | Mcmt_ast.Int i -> Int i
   | Mcmt_ast.Real f -> Float f
@@ -114,25 +115,25 @@ let rec mcmt_to_expr map = function
   | Mcmt_ast.True -> True
   | Mcmt_ast.False -> False;;
 
-(* Convert an mcmt declaration into a simple declaration *)
+(** Convert an mcmt declaration into a simple declaration *)
 let to_simple_decl = function
   | Mcmt_ast.Int_decl str -> Int_decl str
   | Mcmt_ast.Real_decl str -> Real_decl str
   | Mcmt_ast.Bool_decl str -> Bool_decl str;;
 
-(* Add a prefix to the variable in a declaration:
-     make_prefix pre decl
-   adds the prefix pre^"." to the string in decl *)
+(** Add a prefix to the variable in a declaration:
+      [ make_prefix pre decl ]
+    adds the prefix [pre^"."] to the string in decl *)
 let make_prefix pre = function
   | Int_decl str -> Int_decl (pre^"."^str)
   | Real_decl str -> Real_decl (pre^"."^str)
   | Bool_decl str -> Bool_decl (pre^"."^str)
   | _ -> raise Unexpected_declaration;;
 
-(* Convert a list of mcmt definitions into a list of simple transition systems:
-     mcmt_defs_to_ts st_map expr_map ts defs
-   converts the list defs into simple transition systems kept in ts_map,
-   using st_map to inline state types and expr_map to inline other expressions *)
+(** Convert a list of mcmt definitions into a list of simple transition systems:
+      [ mcmt_defs_to_ts st_map expr_map ts defs ]
+    converts the list [defs] into simple transition systems kept in [ts_map],
+    using [st_map] to inline state types and [expr_map] to inline other expressions *)
 let rec mcmt_defs_to_ts st_map expr_map ts_map = function
   | Mcmt_ast.State_type (str, svs, inputs)::ds -> mcmt_defs_to_ts (StrMap.add str (svs, inputs) st_map) expr_map ts_map ds
   | Mcmt_ast.States (str, e1, e2)::ds -> mcmt_defs_to_ts st_map (StrMap.add str (mcmt_to_expr expr_map e2) expr_map) ts_map ds
@@ -161,7 +162,7 @@ let rec mcmt_defs_to_ts st_map expr_map ts_map = function
   | Mcmt_ast.Query (_, _)::ds -> mcmt_defs_to_ts st_map expr_map ts_map ds
   | [] -> ts_map;;
 
-(* Convert a list of mcmt definitions into a list of simple transition systems *)
+(** Convert a list of mcmt definitions into a list of simple transition systems *)
 let mcmt_to_ts mcmt_defs =
   mcmt_defs_to_ts StrMap.empty StrMap.empty StrMap.empty mcmt_defs
   |> StrMap.bindings

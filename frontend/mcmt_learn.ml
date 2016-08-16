@@ -1,3 +1,4 @@
+(** Learn invariants from an mcmt input file *)
 open Abs.Mcmt_lexer;;
 open Abs.Mcmt_to_simple_ast;;
 open Abs.Print_simple;;
@@ -12,7 +13,7 @@ exception Malformed_mcmt_prog;;
 exception Unexpected_lincons;;
 exception Backtrack;;
 
-(* Move forward one step in the transition relation *)
+(** Move forward one step in the transition relation *)
 let eval_step man env inv cond ts ctx =
   let string_from_decl = function
     | Simple_ast.Nat_decl str -> str
@@ -29,13 +30,13 @@ let eval_step man env inv cond ts ctx =
   let forget = Domain1.forget_list man assigned next in
   Domain1.meet man inv forget;;
 
-(* Evaluate a transition relation until a fixed point is found:
-     eval_mcmt man env cond inv ctx ts lim cnt
-   will repeatedly apply the transition relation ts to the current context ctx using
-   the bddapron manager man, environment env, and condition BDD cond;
-   move forward one step in the transition relation;
-   apply the invariants inv to the new domain; and
-   decrement cnt. When cnt = 0, widening is performed, and cnt is reset to lim.*)
+(** Evaluate a transition relation until a fixed point is found:
+      [ eval_mcmt man env cond inv ctx ts lim cnt ]
+    will repeatedly apply the transition relation [ts] to the current context [ctx] using
+    [man], [env], and [cond];
+    move forward one step in the transition relation;
+    apply the invariants [inv] to the new domain; and
+    decrement [cnt]. When [cnt = 0], widening is performed, and [cnt] is reset to [lim].*)
 let rec eval_mcmt man env cond inv ctx ts lim cnt =
   let ctx' = interpret false man env cond inv ctx ts.trans |> eval_step man env inv cond ts |> Domain1.join man ctx in
   printf "ctx': %a@." (Domain1.print man) ctx';
@@ -47,15 +48,15 @@ let rec eval_mcmt man env cond inv ctx ts lim cnt =
     eval_mcmt man env cond inv narrowed ts lim lim
   else eval_mcmt man env cond inv ctx' ts lim (cnt - 1);;
 
-(* Find invariants for a transition system in an mcmt program:
-     eval_mcmt_prog cond_size ts
-   finds invariants for transition system ts, where cond_size decides
-   the initial size for the condition BDD. If cond_size is too small,
-   its size is doubled, and eval_mcmt_prog begins again. *)
+(** Find invariants for a transition system in an mcmt program:
+      [ eval_mcmt_prog cond_size ts ]
+    finds invariants for transition system [ts], where [cond_size] decides
+    the initial size for the condition BDD. If [cond_size] is too small,
+    its size is doubled, and [eval_mcmt_prog] begins again. *)
 let rec eval_mcmt_prog cond_size ts =
   let decls = ts.decls @ ts.current_sv_decls @ ts.next_sv_decls in
   let invs = ts.invs in
-  let apron_man = Polka.manager_alloc_strict() in
+  let apron_man = Box.manager_alloc() in
   try (
     let (man, env, cond, ctx) = initialize apron_man decls invs cond_size in
     printf "invariant: %a@." (Domain1.print man) ctx;
@@ -65,7 +66,8 @@ let rec eval_mcmt_prog cond_size ts =
     mcmt_of_domain ts.name man apron_man env res)
   with Bdd.Env.Bddindex -> eval_mcmt_prog (cond_size * 2) ts;;
 
-(* Print the transition system ts after it has been converted into simple ASTs *)
+(** [ print_transition_system ts ] prints the transition system [ts]
+    after it has been converted into simple ASTs *)
 let print_transition_system ts =
   printf "Transition system: %s\n" ts.name;
   List.iter (fun x -> printf "Invariant: %s\n" (string_of_simple x)) ts.invs;

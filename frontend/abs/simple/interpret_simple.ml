@@ -1,4 +1,4 @@
-(* Interpret simple programs *)
+(** Interpret simple programs *)
 open Simple_ast;;
 open Print_simple;;
 open Bddapron;;
@@ -9,8 +9,8 @@ open Format;;
 exception Unimplemented of string;;
 exception Unexpected_expression;;
 
-(* Make a boolean expression out of two boolean expressions
-   e1 and e2 and a boolean binary operator binop *)
+(** [make_bool_expr env cond binop e1 e2] makes a boolean expression out of two
+    boolean expressions [e1] and [e2] and a boolean binary operator [binop] *)
 let rec make_bool_expr env cond binop e1 e2 =
   let e1' = Expr1.Bool.of_expr (make_expr1 env cond e1) in
   let e2' = Expr1.Bool.of_expr (make_expr1 env cond e2) in
@@ -18,14 +18,15 @@ let rec make_bool_expr env cond binop e1 e2 =
 
 and
 
-(* Make a comparison relative to zero, e.g. e > 0 *)
+(** [make_apron_comp env cond cmp e] makes a comparison (determined by [cmp])
+    relative to zero, e.g. [e > 0] *)
 make_apron_comp env cond cmp e =
   let e' = Expr1.Apron.of_expr (make_expr1 env cond e) in
   Expr1.Bool.to_expr (cmp cond e')
 
 and
 
-(* Make Expr1.ts for the RHS of an assignment or condition in a conditional statement *)
+(** Make [Expr1.t]s for the RHS of an assignment or condition in a conditional statement *)
 make_expr1 env cond = function
   | Nat e -> make_expr1 env cond (Int e)
   | Int e -> Expr1.Apron.to_expr (Expr1.Apron.cst env cond (Coeff.Scalar (Scalar.of_int e)))
@@ -80,7 +81,11 @@ make_expr1 env cond = function
       Expr1.ite cond e1' e2' e3'
   | _ -> raise Unexpected_expression;;
   
-(* Interpret a simple program consisting of sequences of assignments and conditionals (containing assignments) *)
+(** Interpret a simple program:
+    [interpret carry_conditionals man env cond inv ctx prog]
+    interprets program [prog] in the context [ctx] with invariants
+    [inv]. If [carry_conditionals] is [true], then the condition from
+    a [Cond] expression is used in its branches. *)
 let rec interpret carry_conditionals man env cond inv ctx = function
   | Assign (Ident v, Constrained f) ->
       let ctx' = Domain1.forget_list man ctx [v] in
@@ -162,12 +167,12 @@ let rec interpret carry_conditionals man env cond inv ctx = function
 (*     let condition' = Domain1.meet_condition man (Cond.copy cond) ctx condition in *)
      Domain1.meet man inv condition';;
 
-(* Initialize a domain:
-     initialize apron ds invs cond_size
-   creates an environment containing all declarations in the list ds,
-   a bddapron manager man based off of the apron manager apron,
-   a conditional BDD of size cond_size, and
-   invariants in invs and arising from type declarations *)
+(** Initialize a domain:
+      [initialize apron ds invs cond_size]
+    creates an environment containing all declarations in the list [ds],
+    a bddapron manager [man] based off of the apron manager [apron],
+    a conditional BDD of size [cond_size], and
+    invariants in [invs] and arising from type declarations *)
 let initialize apron ds invs cond_size =
   let rec generate pairs constraints env = function
     | [] -> (pairs, constraints, env)
