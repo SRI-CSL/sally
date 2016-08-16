@@ -162,7 +162,12 @@ let rec interpret carry_conditionals man env cond inv ctx = function
 (*     let condition' = Domain1.meet_condition man (Cond.copy cond) ctx condition in *)
      Domain1.meet man inv condition';;
 
-     
+(* Initialize a domain:
+     initialize apron ds invs cond_size
+   creates an environment containing all declarations in the list ds,
+   a bddapron manager man based off of the apron manager apron,
+   a conditional BDD of size cond_size, and
+   invariants in invs and arising from type declarations *)
 let initialize apron ds invs cond_size =
   let rec generate pairs constraints env = function
     | [] -> (pairs, constraints, env)
@@ -173,8 +178,7 @@ let initialize apron ds invs cond_size =
     | (Enum_def (str, strs))::ds -> generate pairs constraints (Env.add_typ env str (`Benum (Array.of_list strs))) ds
     | (Enum_decl (str, enum))::ds -> generate ((str, `Benum enum)::pairs) constraints env ds
     | (Constraint_decl (decl, cond))::ds -> generate pairs (cond::constraints) env (decl::ds) in
-  let cudd = Cudd.Man.make_v () in (* in the future, may need to make cudd parameterizable *)
-  (* Cudd.Man.enable_autodyn cudd Cudd.Man.REORDER_SIFT; *)
+  let cudd = Cudd.Man.make_v () in (* in the future, may need to make cudd more parameterizable *)
   Cudd.Man.set_gc 1000000
     (begin fun () -> Cudd.Man.print_info cudd; printf "@.CUDD GC@." end)
     (begin fun () -> printf "@.CUDD REORDER@." end);
@@ -186,27 +190,8 @@ let initialize apron ds invs cond_size =
   printf "%s@." "constraints";
   let constraints = List.map (fun x -> (interpret true man env cond abs abs x)) (constraints @ invs) in
   (man, env, cond, List.fold_left (Domain1.meet man) abs constraints);;
-(*
-  let constraints = List.map (fun x -> Expr1.Bool.of_expr (make_expr1 env cond x)) (constraints @ invs) in
-  (man, env, cond, List.fold_left (Domain1.meet_condition man cond) abs constraints);;*)
 
 let interpret_program carry_conditionals apron_man p cond_size =
   let (man, env, cond, ctx) = initialize apron_man p.decls p.invs cond_size in
   let res = interpret carry_conditionals man env cond ctx ctx p.expr in
   printf "result:%a@." (Domain1.print man) res;;
-   
-(*
-let _ =
-  let test_prog =
-    { decls = [Nat_decl "x"; Nat_decl "y"; Bool_decl "b"];
-      invs  = [];
-      expr  = Seq []} in
-  let (man, env, cond, ctx) = initialize (Box.manager_alloc()) (test_prog.decls) [] in
-  let ctx1 = make_expr1 env cond (Eq (Ident "x", Nat 1)) |> Expr1.Bool.of_expr |> Domain1.meet_condition man cond ctx in
-  let ctx2 = make_expr1 env cond (Eq (Ident "x", Nat 2)) |> Expr1.Bool.of_expr |> Domain1.meet_condition man cond ctx in
-  let ctx3 = make_expr1 env cond (Eq (Ident "x", Nat 3)) |> Expr1.Bool.of_expr |> Domain1.meet_condition man cond ctx in
-  let ctx4 = make_expr1 env cond (Gt (Nat 10, Add (Ident "x", Ident "y"))) |> Expr1.Bool.of_expr |> Domain1.meet_condition man cond ctx in
-  let ctx1234 = Domain1.join man ctx1 ctx2 |> Domain1.join man ctx3 |> Domain1.join man ctx3 in
-  printf "join 1234: %a@." (Domain1.print man) ctx1234;
-  let ctx1243 = Domain1.join man ctx1 ctx2 |> Domain1.join man ctx4 |> Domain1.join man ctx4 in
-  printf "join 1243: %a@." (Domain1.print man) ctx1243;;*)

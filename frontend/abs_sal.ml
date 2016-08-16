@@ -1,5 +1,6 @@
 open Abs.Sal_to_simple_ast;;
 open Abs.Simple_ast;;
+open Abs.Sal_simple_ast;;
 open Abs.Print_simple;;
 open Abs.Interpret_simple;;
 open Abs.Inline;;
@@ -93,7 +94,7 @@ eval_sal man env cond inv ctx p lim cnt =
 let eval_sal_prog p =
   let decls = p.constants @ p.state_vars @ p.next_state_vars in
   let invs = p.invariants in
-  let (man, env, cond, ctx) = initialize (Polka.manager_alloc_strict()) decls invs in
+  let (man, env, cond, ctx) = initialize (Polka.manager_alloc_strict()) decls invs 500 in
   let init = interpret true man env cond ctx ctx p.initials in
   printf "initial state: %a@." (Domain1.print man) init;
   let res = eval_sal man env cond ctx init p 6 6 in
