@@ -129,8 +129,8 @@ let rec sal_type_to_mcmt_type ctx ?name:(name="anonymous") = function
   | Subtype(_) -> Real
   | Process -> ProcessType name
   | Range(i1, i2) -> (* FIXME: need to check it stays natural and inside the range *)
-    let mcmt_expr_from = sal_expr_to_lisp ctx i1
-    and mcmt_expr_to = sal_expr_to_lisp ctx i2 in
+    let mcmt_expr_from = sal_expr_to_mcmt ctx i1
+    and mcmt_expr_to = sal_expr_to_mcmt ctx i2 in
 
     let from_as_string = eval_sally ctx mcmt_expr_from
     and to_as_string = eval_sally ctx mcmt_expr_to in
@@ -150,7 +150,7 @@ and
     | Array_access(Ident(s), a) ->
       begin
         let open Mcmt_ast in
-        let index_expr = sal_expr_to_lisp ctx a in
+        let index_expr = sal_expr_to_mcmt ctx a in
         match StrMap.find s ctx with
         | Expr(Ident(n, _), Array(Range(array_start, array_end), dest_type)) ->
           begin
@@ -172,9 +172,9 @@ and
           raise Inadequate_array_index
         | Array(Array_literal(name, data_type, expr), old_ctx, _) ->
           let old_ctx = ctx_add_substition old_ctx name (Expr(index_expr, sal_type_to_mcmt_type ctx data_type)) in
-          [True, sal_expr_to_lisp old_ctx expr]
+          [True, sal_expr_to_mcmt old_ctx expr]
         | Array(sal_expr, old_ctx, data_type) ->
-          let tmp_ctx = ctx_add_substition ctx s (Expr (sal_expr_to_lisp old_ctx sal_expr, data_type)) in
+          let tmp_ctx = ctx_add_substition ctx s (Expr (sal_expr_to_mcmt old_ctx sal_expr, data_type)) in
           flatten_aux tmp_ctx (Array_access(Ident(s), a))
         | _ -> raise Inadequate_array_use
       end
@@ -204,25 +204,25 @@ and
     List.fold_left (fun l (dsj, result) -> Ite(dsj, result, l)) last_result q
 and
   (** Convert a sal expr to a mcmt condition, based on the information contained in ctx *)
-  sal_expr_to_lisp (ctx:mcmt_context) = function
+  sal_expr_to_mcmt (ctx:mcmt_context) = function
   | Decimal(i) -> Value (string_of_int i)
   | Float(i) -> Value(string_of_float i)
   | Ident(s) -> (match ctx_var s ctx with
       | Expr(s, _) -> s
-      | Array(e, old_ctx, _) -> sal_expr_to_lisp old_ctx e
+      | Array(e, old_ctx, _) -> sal_expr_to_mcmt old_ctx e
       | _ -> raise Cannot_use_function_as_expression)
   | SProc_cardinal s -> LProc_cardinal s
-  | Eq(a, b) -> Equality(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
-  | Ge(a, b) -> GreaterEqual(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
-  | Gt(a, b) -> Greater(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
-  | Lt(a, b) -> Greater(sal_expr_to_lisp ctx b, sal_expr_to_lisp ctx a)
-  | Le(a, b) -> GreaterEqual(sal_expr_to_lisp ctx b, sal_expr_to_lisp ctx a)
-  | Implies(a, b) -> Or(Not(sal_expr_to_lisp ctx a), sal_expr_to_lisp ctx b)
-  | Add(a, b) -> Mcmt_ast.Add(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
+  | Eq(a, b) -> Equality(sal_expr_to_mcmt ctx a, sal_expr_to_mcmt ctx b)
+  | Ge(a, b) -> GreaterEqual(sal_expr_to_mcmt ctx a, sal_expr_to_mcmt ctx b)
+  | Gt(a, b) -> Greater(sal_expr_to_mcmt ctx a, sal_expr_to_mcmt ctx b)
+  | Lt(a, b) -> Greater(sal_expr_to_mcmt ctx b, sal_expr_to_mcmt ctx a)
+  | Le(a, b) -> GreaterEqual(sal_expr_to_mcmt ctx b, sal_expr_to_mcmt ctx a)
+  | Implies(a, b) -> Or(Not(sal_expr_to_mcmt ctx a), sal_expr_to_mcmt ctx b)
+  | Add(a, b) -> Mcmt_ast.Add(sal_expr_to_mcmt ctx a, sal_expr_to_mcmt ctx b)
 
   | Next(s) -> (failwith ("Next ? " ^ s))
 
-  | Funcall("G", [l]) -> sal_expr_to_lisp ctx l
+  | Funcall("G", [l]) -> sal_expr_to_mcmt ctx l
   (* FIXME: this should not be needed anymore, it should be inlined by the inlined module. *)
   | Funcall(name, args_expr) ->
     begin
@@ -231,18 +231,18 @@ and
         let args = List.combine decls args_expr in
         let inside_function_ctx = List.fold_left (fun nctx ((arg_name, arg_type), arg_value) ->
             match arg_type with
-            | Real | Bool -> StrMap.add arg_name (Expr(sal_expr_to_lisp ctx arg_value, arg_type)) nctx
+            | Real | Bool -> StrMap.add arg_name (Expr(sal_expr_to_mcmt ctx arg_value, arg_type)) nctx
             | Array(_, dest_type) -> StrMap.add arg_name (Array(arg_value, ctx, arg_type)) nctx
           ) ctx args in
-        sal_expr_to_lisp inside_function_ctx expr
+        sal_expr_to_mcmt inside_function_ctx expr
       | _ -> raise (Cannot_use_expression_as_function name)
     end
-  | Cond([], else_term) -> sal_expr_to_lisp ctx else_term
+  | Cond([], else_term) -> sal_expr_to_mcmt ctx else_term
   | Cond((a,b)::q, else_term) ->
-    let a = sal_expr_to_lisp ctx a in
-    let b = sal_expr_to_lisp ctx b in
+    let a = sal_expr_to_mcmt ctx a in
+    let b = sal_expr_to_mcmt ctx b in
     let next_condition = Cond(q, else_term) in
-    Ite(a, b, sal_expr_to_lisp ctx next_condition)
+    Ite(a, b, sal_expr_to_mcmt ctx next_condition)
 
   | Array_access(a, b) ->
     flatten_array ctx (Array_access (a, b))
@@ -250,13 +250,13 @@ and
   | SSet_cardinal(in_name, t, expr) ->
     let st = sal_type_to_mcmt_type ctx t in
     let intermediate_context = StrMap.add in_name (Expr(Ident (in_name, st), st)) ctx in
-    LSet_cardinal (in_name, st, sal_expr_to_lisp intermediate_context expr)
+    LSet_cardinal (in_name, st, sal_expr_to_mcmt intermediate_context expr)
   | Array_literal(n, e, e2) ->
     failwith "Unsupported Array_literal"
   | Forall(t::q, expr) ->
     begin
       match t with
-      | [], sal_type -> sal_expr_to_lisp ctx (Forall(q, expr))
+      | [], sal_type -> sal_expr_to_mcmt ctx (Forall(q, expr))
       | t::end_decl, sal_type ->
         let mcmt_type = sal_type_to_mcmt_type ctx sal_type in
         match mcmt_type with
@@ -265,28 +265,28 @@ and
             let cond = ref Mcmt_ast.True in
             for i = a to b do
               let (tmp_ctx:mcmt_context) = StrMap.add t (Expr(Value(string_of_int i), Real)) ctx in
-              cond := Mcmt_ast.And(!cond, sal_expr_to_lisp tmp_ctx (Forall((end_decl, sal_type)::q, expr)))
+              cond := Mcmt_ast.And(!cond, sal_expr_to_mcmt tmp_ctx (Forall((end_decl, sal_type)::q, expr)))
             done;
             !cond
           end
         | ProcessType(n) ->
           let tmp_ctx = ctx_add_expr t (Ident(t, mcmt_type)) mcmt_type ctx in
-          Mcmt_ast.Forall(t, mcmt_type, sal_expr_to_lisp tmp_ctx (Forall((end_decl, sal_type)::q, expr)))
+          Mcmt_ast.Forall(t, mcmt_type, sal_expr_to_mcmt tmp_ctx (Forall((end_decl, sal_type)::q, expr)))
         | _ -> raise Iteration_on_non_range_type
     end
-  | Forall([], expr) -> sal_expr_to_lisp ctx expr
+  | Forall([], expr) -> sal_expr_to_mcmt ctx expr
   | Exists(_) -> failwith "exists"
 
-  | Not(e) -> Not(sal_expr_to_lisp ctx e)
-  | Neq(a, b) -> Not(sal_expr_to_lisp ctx (Eq(a, b)))
+  | Not(e) -> Not(sal_expr_to_mcmt ctx e)
+  | Neq(a, b) -> Not(sal_expr_to_mcmt ctx (Eq(a, b)))
   | True -> Mcmt_ast.True
   | False -> Mcmt_ast.False
 
-  | Sub(a,b) -> Sub(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
-  | Mul(a, b) -> Mul(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
-  | Div(a,b) -> Div(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
-  | And(a, b) -> And(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
-  | Or(a, b) -> Or(sal_expr_to_lisp ctx a, sal_expr_to_lisp ctx b)
+  | Sub(a,b) -> Sub(sal_expr_to_mcmt ctx a, sal_expr_to_mcmt ctx b)
+  | Mul(a, b) -> Mul(sal_expr_to_mcmt ctx a, sal_expr_to_mcmt ctx b)
+  | Div(a,b) -> Div(sal_expr_to_mcmt ctx a, sal_expr_to_mcmt ctx b)
+  | And(a, b) -> And(sal_expr_to_mcmt ctx a, sal_expr_to_mcmt ctx b)
+  | Or(a, b) -> Or(sal_expr_to_mcmt ctx a, sal_expr_to_mcmt ctx b)
   | Opp(_) -> failwith "Opp not supported."
   | Xor(_) | Iff(_) -> failwith "xor/iff not supported."
   | Let(_) -> failwith "Let not supported."
@@ -364,15 +364,15 @@ let sal_assignments_to_condition ?only_define_type:(only_type=false) ?vars_to_de
             |> List.fold_left Mcmt_ast.and_ Mcmt_ast.True
           | Expr(_, Array(_, _)) ->
             failwith "equality not supported for every arrays"
-          | _ -> Equality(sal_expr_to_lisp ctx n, sal_expr_to_lisp ctx expr)
+          | _ -> Equality(sal_expr_to_mcmt ctx n, sal_expr_to_mcmt ctx expr)
       end
     | Assign(Array_access(Ident id, index), expr) ->
       forget_variable id;
       begin
         match ctx_var id ctx, prev_var id ctx with
         | Expr(i, Array _), Expr(pi, Array _) ->
-          let lexpr = sal_expr_to_lisp ctx expr in
-          let lindex  = sal_expr_to_lisp ctx index in
+          let lexpr = sal_expr_to_mcmt ctx expr in
+          let lindex  = sal_expr_to_mcmt ctx index in
           Mcmt_ast.Equality(i, Mcmt_ast.Store (pi, lindex, lexpr))
         | _ -> assert false
       end
@@ -382,8 +382,8 @@ let sal_assignments_to_condition ?only_define_type:(only_type=false) ?vars_to_de
           | Ident(name) -> forget_variable name
           | _ -> raise Bad_left_hand_side
       in
-      let intermediate_context = StrMap.add in_name (Expr(sal_expr_to_lisp ctx n, sal_type_to_mcmt_type ctx t)) ctx in
-      sal_expr_to_lisp intermediate_context expr
+      let intermediate_context = StrMap.add in_name (Expr(sal_expr_to_mcmt ctx n, sal_type_to_mcmt_type ctx t)) ctx in
+      sal_expr_to_mcmt intermediate_context expr
     | Member(_) -> raise Member_without_set
   in
   let explicit_condition = List.fold_left (
@@ -413,7 +413,7 @@ let sal_assignments_to_condition ?only_define_type:(only_type=false) ?vars_to_de
     | (name, Array(_, t)) -> raise Unsupported_array_type
     | (name, ty) -> equality_function ctx (name, ty)
   in
-  let real_equality_function ctx (name, ty) = Equality(sal_expr_to_lisp ctx (Ident name), sal_expr_to_lisp ctx (Ident (name ^ "'"))) in
+  let real_equality_function ctx (name, ty) = Equality(sal_expr_to_mcmt ctx (Ident name), sal_expr_to_mcmt ctx (Ident (name ^ "'"))) in
   let fake_equality_function ctx (name, ty) = match ty with
     | Mcmt_ast.Range(a, b) ->
       begin
@@ -465,7 +465,7 @@ let sal_transition_to_transition ((type_name, variables):state_type) ctx transit
     let all_conditions = List.fold_left (fun l a ->
         match a with
         | Guarded(expr, _) ->
-          let guard = sal_expr_to_lisp ctx expr in
+          let guard = sal_expr_to_mcmt ctx expr in
           Mcmt_ast.And(l, Mcmt_ast.Not(guard))
         | _ -> raise Not_found
       ) True all_guarded
@@ -495,7 +495,7 @@ let sal_transition_to_transition ((type_name, variables):state_type) ctx transit
             | _ -> raise Iteration_on_non_range_type
         end
       | Guarded(expr, assignment) ->
-        let guard = sal_expr_to_lisp ctx expr in
+        let guard = sal_expr_to_mcmt ctx expr in
         let implies = sal_assignments_to_condition ~vars_to_define:variables ctx assignment in
         Or(l, And(guard, implies))
     in
@@ -507,7 +507,7 @@ let sal_transition_to_transition ((type_name, variables):state_type) ctx transit
 let add_variable_to_state_type ((name, vars):state_type) var_name var_type =
   ((name, (var_name, var_type)::vars):state_type)
 
-let sal_module_to_lisp undefined_constants ctx (name, sal_module) =
+let sal_module_to_mcmt undefined_constants ctx (name, sal_module) =
   let ctx = List.fold_left (fun l (n, _) ->
       StrMap.remove n l) ctx undefined_constants in
   let type_init_ctx, transition_ctx, state_type = sal_state_vars_to_state_type ctx name sal_module.state_vars in
@@ -532,26 +532,26 @@ let sal_module_to_lisp undefined_constants ctx (name, sal_module) =
   * As of now, the second assertion argument, the argument_tag (which is either Lemma or Theorem) is
   * ignored.
 *)
-let sal_query_to_lisp ctx systems (name, _, model_name, expr) =
+let sal_query_to_mcmt ctx systems (name, _, model_name, expr) =
   let type_init_ctx, transition_system = List.find (fun (_, ts) -> ts.id = model_name) systems in
   { transition_system = transition_system;
-    condition = sal_expr_to_lisp (ctx_union ctx type_init_ctx) expr; }
+    condition = sal_expr_to_mcmt (ctx_union ctx type_init_ctx) expr; }
 
-let sal_context_to_lisp ctx =
+let sal_context_to_mcmt ctx =
   let defs = ctx.definitions in
   let mcmt_ctx = StrMap.empty in
   let undefined_constants = ref [] in
   let _, queries, mcmt_env =
     List.fold_left (fun (transition_systems, queries, mcmt_ctx) -> function
         | Module_def(a, b) ->
-          let mcmt_module = sal_module_to_lisp !undefined_constants mcmt_ctx (a,b) in
+          let mcmt_module = sal_module_to_mcmt !undefined_constants mcmt_ctx (a,b) in
           mcmt_module::transition_systems, queries, mcmt_ctx
         | Assertion(a,b,c,d) ->
-          let q = sal_query_to_lisp mcmt_ctx transition_systems (a,b,c,d) in
+          let q = sal_query_to_mcmt mcmt_ctx transition_systems (a,b,c,d) in
           transition_systems, queries @ [q], mcmt_ctx
         | Constant_def(name, sal_type, expr) ->
           transition_systems, queries,
-          StrMap.add name (Expr(sal_expr_to_lisp mcmt_ctx expr, sal_type_to_mcmt_type mcmt_ctx sal_type)) mcmt_ctx
+          StrMap.add name (Expr(sal_expr_to_mcmt mcmt_ctx expr, sal_type_to_mcmt_type mcmt_ctx sal_type)) mcmt_ctx
         | Constant_decl(name, sal_type) ->
           begin
             let mcmt_type = sal_type_to_mcmt_type mcmt_ctx sal_type in
