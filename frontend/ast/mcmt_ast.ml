@@ -16,61 +16,60 @@
  * along with sally.  If not, see <http://www.gnu.org/licenses/>.
  *)
 
-type state_identifier = string
-type system_identifier = string
-type state_type_identifier = string
-type transition_identifier = string
-
-type sally_type = 
+type mcmt_type = 
   | Real
+  (* TODO: Integer *)
   | Bool
-  | Array of sally_type * sally_type
+  | Array of mcmt_type * mcmt_type
+  (* TODO: Predicate subtypes *)
   | Range of int * int
-  | IntegerRange of string
-
-type sally_condition =
-  | Equality of sally_condition * sally_condition
-  | GreaterEqual of sally_condition * sally_condition
-  | Greater of sally_condition * sally_condition
-  | Or of sally_condition * sally_condition
-  | And of sally_condition * sally_condition
-  | Not of sally_condition
-  | Add of sally_condition * sally_condition
-  | Sub of sally_condition * sally_condition
-  | Div of sally_condition * sally_condition
-  | Mul of sally_condition * sally_condition
+  | ProcessType of string
+    
+(** All MCMT expressions *)
+type mcmt_expr =
+  | Equality of mcmt_expr * mcmt_expr (** Equality t1 = t2 *)
+  | GreaterEqual of mcmt_expr * mcmt_expr              
+  | Greater of mcmt_expr * mcmt_expr
+  (* TODO: maybe also <, <= *)
+  | Or of mcmt_expr * mcmt_expr
+  | And of mcmt_expr * mcmt_expr
+  | Not of mcmt_expr
+  | Add of mcmt_expr * mcmt_expr
+  | Sub of mcmt_expr * mcmt_expr
+  | Div of mcmt_expr * mcmt_expr
+  | Mul of mcmt_expr * mcmt_expr
   | Value of string
-  | LProc_cardinal of string
-  | Ident of string * sally_type
-  | Ite of sally_condition * sally_condition * sally_condition
-  | Forall of string * sally_type * sally_condition
-  | Select of sally_condition * sally_condition
-  | Store of sally_condition * sally_condition * sally_condition
-  | Exists of string * sally_type * sally_condition
-  | LSet_cardinal of string * sally_type * sally_condition
+  | LProc_cardinal of string (** #P: cardinality of a particular process type *)
+  | Ident of string * mcmt_type
+  | Ite of mcmt_expr * mcmt_expr * mcmt_expr
+  | Forall of string * mcmt_type * mcmt_expr
+  | Select of mcmt_expr * mcmt_expr
+  | Store of mcmt_expr * mcmt_expr * mcmt_expr
+  | Exists of string * mcmt_type * mcmt_expr
+  | LSet_cardinal of string * mcmt_type * mcmt_expr (** # k: P such that F holds, with P process type and F formula *)
   | True
   | False
 
-type variable_declaration = string * sally_type
+type variable_declaration = string * mcmt_type
 
-type state_type = state_type_identifier * (variable_declaration list)
+type state_type = string * (variable_declaration list)
 
 type state = {
-  id: state_identifier;
-  state_type_id: state_type_identifier;
-  condition: sally_condition;
+  id: string;
+  state_type_id: string;
+  condition: mcmt_expr;
 }
 
 type transition = {
-  id: transition_identifier;
-  state_type_id: state_type_identifier;
-  formula: sally_condition;
+  id: string;
+  state_type_id: string;
+  formula: mcmt_expr;
 }
 
 type parametrized_type = string
 
 type transition_system = {
-  id: system_identifier;
+  id: string;
   state_type: state_type;
   initial_state: state;
   transition: transition;
@@ -78,9 +77,10 @@ type transition_system = {
 
 type query = {
   transition_system: transition_system;
-  condition: sally_condition;
+  condition: mcmt_expr;
 }
-
+    
+(** TODO: should just be a list of commands *)
 type context = {
   queries: query list;
   parametrized_types: parametrized_type list;

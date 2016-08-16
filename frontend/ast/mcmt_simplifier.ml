@@ -18,7 +18,7 @@
 
 open Mcmt_ast
 
-type pass = sally_condition -> sally_condition
+type pass = mcmt_expr -> mcmt_expr
 
 let (>>) f g x = g (f x)
 

@@ -43,8 +43,8 @@ let rec print_expr f =
     Format.fprintf f "@])"
   in
   function
-  | Forall(n, t, expr) -> print_folded_exists "forall " (Ident("((" ^ n ^ " " ^ sally_type_to_string t ^ "))", Real)) expr
-  | Exists(n, t, expr) -> print_folded_exists "exists" (Ident("((" ^ n ^ " " ^ sally_type_to_string t ^ "))", Real)) expr
+  | Forall(n, t, expr) -> print_folded_exists "forall " (Ident("((" ^ n ^ " " ^ mcmt_type_to_string t ^ "))", Real)) expr
+  | Exists(n, t, expr) -> print_folded_exists "exists" (Ident("((" ^ n ^ " " ^ mcmt_type_to_string t ^ "))", Real)) expr
   | Select(expr, index) -> print_folded "select" expr index
   | Equality(a, b) -> print_folded "=" a b
   | Value(s) -> Format.fprintf f "%s" s
@@ -108,17 +108,17 @@ let rec print_expr f =
     Format.fprintf f "@[(store %a %a %a)@]"
       print_expr a print_expr b print_expr c
   | LSet_cardinal (n, t, expr) -> 
-    print_folded_exists "#" (Ident("((" ^ n ^ " " ^ sally_type_to_string t ^ "))", Real)) expr
+    print_folded_exists "#" (Ident("((" ^ n ^ " " ^ mcmt_type_to_string t ^ "))", Real)) expr
   | True -> Format.fprintf f "true"
   | False -> Format.fprintf f "false"
 
-and sally_type_to_string = function
+and mcmt_type_to_string = function
   | Real -> "Real"
   | Bool -> "Bool"
   | Range(_, _) -> "Real"
-  | Array(IntegerRange(n), t) -> "(Array (" ^ sally_type_to_string (IntegerRange n) ^ ") ("^ sally_type_to_string t ^ "))"
-  | Array(a, b) -> Format.sprintf "(Array (%s) (%s))" (sally_type_to_string a) (sally_type_to_string b)
-  | IntegerRange(n) -> n
+  | Array(ProcessType(n), t) -> "(Array (" ^ mcmt_type_to_string (ProcessType n) ^ ") ("^ mcmt_type_to_string t ^ "))"
+  | Array(a, b) -> Format.sprintf "(Array (%s) (%s))" (mcmt_type_to_string a) (mcmt_type_to_string b)
+  | ProcessType(n) -> n
 
 
 let print_transition f (transition:transition) =
@@ -132,18 +132,18 @@ let print_state f (state:state) =
   Format.fprintf f ")@]"
 
 
-let rec sally_type_to_debug = function
+let rec mcmt_type_to_debug = function
   | Real -> "Real"
   | Bool -> "Bool"
   | Range(b, a) -> "[" ^ string_of_int b ^ ".." ^ string_of_int a ^ "]"
-  | Array(a, b) -> sally_type_to_debug a ^ " -> " ^ sally_type_to_debug b
-  | IntegerRange(n) -> n ^ ":[..]"
+  | Array(a, b) -> mcmt_type_to_debug a ^ " -> " ^ mcmt_type_to_debug b
+  | ProcessType(n) -> n ^ ":[..]"
 
 
 let print_state_type f (ident, var_list) =
   Format.fprintf f "@[(define-state-type state @;  (@[<v>";
-  let rec print_variable (name, sally_type) =
-    match sally_type with
+  let rec print_variable (name, mcmt_type) =
+    match mcmt_type with
     | Array(Range(array_inf, array_sup), b) ->
       begin
         for i = array_inf to array_sup do
@@ -151,7 +151,7 @@ let print_state_type f (ident, var_list) =
         done;
       end
     | _ ->
-      Format.fprintf f "(%s %s)@\n" name (sally_type_to_string sally_type)
+      Format.fprintf f "(%s %s)@\n" name (mcmt_type_to_string mcmt_type)
   in
   List.iter print_variable var_list;
   Format.fprintf f "@]))@]@\n"
