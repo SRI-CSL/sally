@@ -29,6 +29,7 @@ addons:
       - default-jre
       - gperf
       - libmpfr-dev
+      - libppl-dev
 
 cache:
   directories:
@@ -42,7 +43,7 @@ install:
     fi
 
 before_script:
-  - opam install -y ocamlbuild ounit menhir ocamlfind bddapron
+  - opam install -y ocamlbuild ounit menhir ocamlfind conf-ppl bddapron
   
 script:
   - eval $(opam config env)
