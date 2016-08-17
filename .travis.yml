@@ -28,6 +28,7 @@ addons:
       - libboost-system1.55-dev
       - default-jre
       - gperf
+      - libmpfr-dev
 
 cache:
   directories:
