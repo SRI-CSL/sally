@@ -22,5 +22,5 @@ message("-- Found ocamlbuild at ${OCAMLBUILD}")
 
 function (add_ocaml_target RESULT)
 	add_custom_target(${RESULT} ALL)
-	add_custom_command(TARGET ${RESULT} COMMAND ${OCAMLBUILD} -build-dir "${CMAKE_CURRENT_BINARY_DIR}" ${RESULT} -pkg unix DEPENDS ${ARGN} WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+	add_custom_command(TARGET ${RESULT} COMMAND ${OCAMLBUILD} -use-ocamlfind -build-dir "${CMAKE_CURRENT_BINARY_DIR}" ${RESULT} -pkg unix DEPENDS ${ARGN} WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 endfunction(add_ocaml_target)

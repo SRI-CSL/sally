@@ -1,4 +1,5 @@
 add_ocaml_target("frontend.d.byte")
+add_ocaml_target("mcmt_learn.d.byte")
 
 # Add tests
 
