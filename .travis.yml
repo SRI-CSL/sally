@@ -41,7 +41,7 @@ install:
     fi
 
 before_script:
-  - opam install -y ocamlbuild ounit menhir ocamlfind
+  - opam install -y ocamlbuild ounit menhir ocamlfind bddapron
   
 script:
   - eval $(opam config env)
