@@ -34,8 +34,8 @@ type state_type =
 
 type definition =
   | State_type of string * declaration list * declaration list
-  | States of string * expression * expression
-  | Transition of string * expression * expression
+  | States of string * state_type * expression
+  | Transition of string * state_type * expression
   | Transition_system of string * state_type * expression * expression
   | Constant of string * expression
   | Assert of string * expression

@@ -1,16 +1,18 @@
-(* A simpler AST *)
+(** AST for a simple language for performing abstract interpretation *)
 
+(** Declarations *)
 type decl =
-  | Nat_decl of string
-  | Int_decl of string
-  | Real_decl of string
-  | Bool_decl of string
-  | Enum_def of string * (string list)
-  | Enum_decl of string * string
-  | Constraint_decl of decl * expr
+  | Nat_decl of string (** Natural number declaration *)
+  | Int_decl of string (** Integer declaration *)
+  | Real_decl of string (** Real number declaration *)
+  | Bool_decl of string (** Boolean declaration *)
+  | Enum_def of string * (string list) (** Enum type definition *)
+  | Enum_decl of string * string (** Enum declaration, where the second string gives the name of the enum type *)
+  | Constraint_decl of decl * expr (** Constraint declaration, where the expression gives the constraint *)
 
 and
 
+(** Expressions *)
 expr =
   | Nat of int
   | Int of int
@@ -35,6 +37,7 @@ expr =
   | Branch of expr list
   | Local of decl * expr;;
 
+(** A simple program *)
 type prog = {
   decls : decl list;
   invs  : expr list;

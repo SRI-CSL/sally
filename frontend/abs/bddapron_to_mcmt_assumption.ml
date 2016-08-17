@@ -1,10 +1,12 @@
+(** Functions for printing mcmt with added assumptions *)
+
 open Bddapron;;
 open Format;;
 
 exception Unexpected_lincons;;
 exception Backtrack;;
 
-(* Convert a BDD into an mcmt string *)
+(** Convert a BDD into an mcmt string *)
 let rec string_of_bdd env ls = function
   | Cudd.Bdd.Bool true -> if ls = [] then "" else "( "^(List.fold_left (fun x y -> x^" "^y) "and" ls)^")"
   | Cudd.Bdd.Bool false -> raise Backtrack
@@ -13,7 +15,7 @@ let rec string_of_bdd env ls = function
       _ -> try string_of_bdd env ((PMappe.find i env.Bdd.Env.idcondvar)::ls) (Cudd.Bdd.inspect b2) with
            _ -> raise Backtrack;;
 
-(* Convert an apron linear constraint into an mcmt string *)
+(** Convert an apron linear constraint into an mcmt string *)
 let string_of_lincons env lc =
   (* Convert APRON typ *)
   let string_of_typ = function
@@ -51,11 +53,11 @@ let string_of_lincons env lc =
     if (float_of_string cst) = 0.0 then res else "( + "^res^" "^cst^" )" in
   "( "^(string_of_typ lc.Apron.Lincons0.typ)^" "^(string_of_linexpr lc.Apron.Lincons0.linexpr0)^" 0 )";;
 
-(* Convert a bddapron domain representing the invariants for a transition system into an mcmt assume string:
-     mcmt_of_domain name man apron_man env res
-   results in the string for the transition system called name with invariants contained in the domain res,
-   where man, apron_man, and env are respectively the bddapron Manager, the apron Manager, and the bddapron Env
-   used to find the invariants *)
+(** Convert a bddapron domain representing the invariants for a transition system into an mcmt assume string:
+      [mcmt_of_domain name man apron_man env res]
+    results in the string for the transition system called name with invariants contained in the domain [res],
+    where [man], [apron_man], and [env] are respectively the bddapron Manager, the apron Manager, and the bddapron Env
+    used to find the invariants *)
 let mcmt_of_domain name man apron_man env res =
   let res = Domain1.to_bddapron man res in
   let handle_pair (x, y) =
@@ -83,11 +85,11 @@ let create_channel_out = function
   | Some filename -> open_out filename
   | None -> stdout;;
 
-(* Add strings representing learned invariants to the original mcmt file just
-   before the first query definition:
-     add_learned "in.mcmt" learned
-   adds the invariant strings in learned to the program in file "in.mcmt", outputting the result
-   to a new file "in_learned.mcmt" *)
+(** Add strings representing learned invariants to the original mcmt file just
+    before the first query definition:
+      [add_learned "in.mcmt" learned]
+    adds the invariant strings in learned to the program in file "in.mcmt", outputting the result
+    to a new file "in_learned.mcmt" *)
 let add_learned in_name learned =
   let rec check_query str start =
     try

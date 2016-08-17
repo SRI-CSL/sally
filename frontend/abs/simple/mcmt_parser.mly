@@ -35,8 +35,10 @@ definitions:
 
 definition:
 | DEFINE_STATE_TYPE IDENT state_type { State_type ($2, fst $3, snd $3) }
-| DEFINE_STATES IDENT expression expression { States ($2, $3, $4) }
-| DEFINE_TRANSITION IDENT expression expression { Transition ($2, $3, $4) }
+| DEFINE_STATES IDENT IDENT expression { States ($2, Ref $3, $4) }
+| DEFINE_STATES IDENT OPEN_PAREN state_type CLOSE_PAREN expression { States ($2, Anon (fst $4, snd $4), $6) }
+| DEFINE_TRANSITION IDENT IDENT expression { Transition ($2, Ref $3, $4) }
+| DEFINE_TRANSITION IDENT OPEN_PAREN state_type CLOSE_PAREN expression { Transition ($2, Anon (fst $4, snd $4), $6) }
 | DEFINE_TRANSITION_SYSTEM IDENT IDENT expression expression { Transition_system ($2, Ref $3, $4, $5) }
 | DEFINE_TRANSITION_SYSTEM IDENT OPEN_PAREN state_type CLOSE_PAREN expression expression { Transition_system ($2, Anon (fst $4, snd $4), $6, $7) }
 | DEFINE_CONSTANT IDENT expression { Constant ($2, $3) }
