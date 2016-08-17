@@ -30,6 +30,7 @@ and
 make_expr1 env cond = function
   | Nat e -> make_expr1 env cond (Int e)
   | Int e -> Expr1.Apron.to_expr (Expr1.Apron.cst env cond (Coeff.Scalar (Scalar.of_int e)))
+  (* TODO: Where are reals? *)
   | Float e -> Expr1.Apron.to_expr (Expr1.Apron.cst env cond (Coeff.Scalar (Scalar.of_float e)))
   | Ident e -> Expr1.var env cond e
   (* Arithmetic operators (i.e., And, Sub, Mul, Div) currently use default type (e.g. REAL, INT) and
@@ -57,15 +58,18 @@ make_expr1 env cond = function
       let e2' = make_expr1 env cond e2 in
       let t1 = Expr1.typ_of_expr e1' in
       let t2 = Expr1.typ_of_expr e2' in
-      if t1 = `Int || t1 = `Real || t2 = `Int || t2 = `Real
-      then (* more precision by turning x = y into x >= y && y >= x *)
-        let e1' = Expr1.Apron.of_expr e1' in
-        let e2' = Expr1.Apron.of_expr e2' in
-        Expr1.Bool.dand cond
-          (Expr1.Apron.supeq cond (Expr1.Apron.sub cond e1' e2'))
-          (Expr1.Apron.supeq cond (Expr1.Apron.sub cond e2' e1'))
-        |> Expr1.Bool.to_expr
-      else Expr1.Bool.to_expr (Expr1.eq cond e1' e2')
+      (* TODO: Make sure that Real doesn't mean Float *)
+      (** = replaced with <= and >= *)
+      (match t1, t2 with
+        | (`Int | `Real), (`Int | `Real) ->
+          let e1' = Expr1.Apron.of_expr e1' in
+          let e2' = Expr1.Apron.of_expr e2' in
+            Expr1.Bool.dand cond
+              (Expr1.Apron.supeq cond (Expr1.Apron.sub cond e1' e2'))
+              (Expr1.Apron.supeq cond (Expr1.Apron.sub cond e2' e1'))
+            |> Expr1.Bool.to_expr
+        | _ -> Expr1.Bool.to_expr (Expr1.eq cond e1' e2')
+      )
   | And (e1, e2) ->
       make_bool_expr env cond Expr1.Bool.dand e1 e2
   | Or (e1, e2) ->
