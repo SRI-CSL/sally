@@ -2,6 +2,7 @@
 
 (** Declarations *)
 type decl =
+  (* TODO: remove Nat_decl *)
   | Nat_decl of string (** Natural number declaration *)
   | Int_decl of string (** Integer declaration *)
   | Real_decl of string (** Real number declaration *)
@@ -37,7 +38,27 @@ expr =
   | Branch of expr list
   | Local of decl * expr;;
 
-(** A simple program *)
+(**
+  Simple language Example:
+
+  declarations:
+    x: int;
+    z: real;
+    b: bool;
+    y: int, (y >= 0); // example of constraint declaration
+
+  invariants:
+    list of invariants (always true)
+
+  program: expressions
+    seq:
+      x := 1; // assign x to 1
+      y := 5;
+      (x < 0); // boolean expressions: assert that x < 0:
+      branch: choose non-deterministic
+        - x = 1
+        - x = 0
+*)
 type prog = {
   decls : decl list;
   invs  : expr list;

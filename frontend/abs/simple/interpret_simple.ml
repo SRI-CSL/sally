@@ -80,7 +80,7 @@ make_expr1 env cond = function
       let e3' = make_expr1 env cond e3 in
       Expr1.ite cond e1' e2' e3'
   | _ -> raise Unexpected_expression;;
-  
+
 (** Interpret a simple program:
     [interpret carry_conditionals man env cond inv ctx prog]
     interprets program [prog] in the context [ctx] with invariants
@@ -122,12 +122,12 @@ let rec interpret carry_conditionals man env cond inv ctx = function
         Domain1.join man ctx1 ctx2 |> Domain1.meet man inv
   | Local (e1, e2) ->
       let rec add_to_env env inv = function
-        | Nat_decl str -> 
+        | Nat_decl str ->
             let env' = Env.add_vars env [(str, `Int)] in
             let inv = Domain1.change_environment man inv env' in
             let inv' = Domain1.meet_condition man cond inv (Expr1.Bool.of_expr (make_expr1 env' cond (Ge (Ident str, Nat 0)))) in
             (env', inv', str)
-        | Int_decl str -> 
+        | Int_decl str ->
             let env' = Env.add_vars env [(str, `Int)] in
             let inv = Domain1.change_environment man inv env' in
             (env', inv, str)
@@ -174,20 +174,22 @@ let rec interpret carry_conditionals man env cond inv ctx = function
     a conditional BDD of size [cond_size], and
     invariants in [invs] and arising from type declarations *)
 let initialize apron ds invs cond_size =
-  let rec generate pairs constraints env = function
-    | [] -> (pairs, constraints, env)
-    | (Nat_decl str)::ds -> generate ((str, `Int)::pairs) (Ge (Ident str, Nat 0)::constraints) env ds
-    | (Int_decl str)::ds -> generate ((str, `Int)::pairs) constraints env ds
-    | (Real_decl str)::ds -> generate ((str, `Real)::pairs) constraints env ds
-    | (Bool_decl str)::ds -> generate ((str, `Bool)::pairs) constraints env ds
-    | (Enum_def (str, strs))::ds -> generate pairs constraints (Env.add_typ env str (`Benum (Array.of_list strs))) ds
-    | (Enum_decl (str, enum))::ds -> generate ((str, `Benum enum)::pairs) constraints env ds
-    | (Constraint_decl (decl, cond))::ds -> generate pairs (cond::constraints) env (decl::ds) in
+ let rec manage_decl ((pairs, constraints, env) as acc) = function
+    | Nat_decl str -> (str, `Int)::pairs, Ge (Ident str, Nat 0)::constraints, env
+    | Int_decl str -> (str, `Int)::pairs, constraints, env
+    | Real_decl str -> (str, `Real)::pairs, constraints, env
+    | Bool_decl str -> (str, `Bool)::pairs, constraints, env
+    | Enum_def (str, strs) -> pairs, constraints, Env.add_typ env str (`Benum (Array.of_list strs))
+    | Enum_decl (str, enum) -> (str, `Benum enum)::pairs, constraints, env
+    | Constraint_decl (decl, cond) -> let pairs, constraints, env = manage_decl acc decl in
+                                      pairs, cond::constraints, env
+  in
+  let generate = List.fold_left manage_decl in
   let cudd = Cudd.Man.make_v () in (* in the future, may need to make cudd more parameterizable *)
   Cudd.Man.set_gc 1000000
     (begin fun () -> Cudd.Man.print_info cudd; printf "@.CUDD GC@." end)
     (begin fun () -> printf "@.CUDD REORDER@." end);
-  let (pairs, constraints, env) = generate [] [] (Env.make ~symbol:Env.string_symbol ~bddsize:(100) cudd) ds in
+  let (pairs, constraints, env) = generate ([], [], (Env.make ~symbol:Env.string_symbol ~bddsize:(100) cudd)) ds in
   let env = Env.add_vars env pairs in (* create an environment with declared variables *)
   let cond = Cond.make ~symbol:Env.string_symbol ~bddsize:(cond_size) cudd in
   let man = Domain1.man_of_bdd (Domain1.make_bdd apron) in
