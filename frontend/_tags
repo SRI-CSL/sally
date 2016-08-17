@@ -1,3 +1,3 @@
 true: annot
-<mcmt_learn.ml> or <abs/*.ml> or <abs/*/*.ml>: package(bddapron.bddapron), package(apron.octD), package(apron.boxD)
+<mcmt_learn.*> or <abs/*> or <abs/*/*>: package(bddapron.bddapron), package(apron.octD), package(apron.boxD)
 
