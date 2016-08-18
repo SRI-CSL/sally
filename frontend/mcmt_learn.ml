@@ -48,11 +48,12 @@ let rec eval_mcmt man env cond inv ctx ts cnt =
   else eval_mcmt man env cond inv ctx' ts (cnt - 1);;
 
 (** Find invariants for a transition system in an mcmt program:
-      [ eval_mcmt_prog cond_size ts ]
-    finds invariants for transition system [ts], where [cond_size] decides
+      [ eval_mcmt_prog cond_size iter ts ]
+    finds invariants for transition system [ts] by doing abstract interpretation
+  for [iter] iterations, where [cond_size] decides
     the initial size for the condition BDD. If [cond_size] is too small,
     its size is doubled, and [eval_mcmt_prog] begins again. *)
-let rec eval_mcmt_prog cond_size ts =
+let rec eval_mcmt_prog cond_size iter ts =
   let decls = ts.decls @ ts.current_sv_decls @ ts.next_sv_decls in
   let invs = ts.invs in
   let apron_man = Polka.manager_alloc_strict() in
@@ -61,9 +62,9 @@ let rec eval_mcmt_prog cond_size ts =
     printf "invariant: %a@." (Domain1.print man) ctx;
     let init = interpret true man env cond ctx ctx ts.init in
     printf "initial state: %a@." (Domain1.print man) init;
-    let res = eval_mcmt man env cond ctx init ts 5 in
+    let res = eval_mcmt man env cond ctx init ts iter in
     mcmt_of_domain ts.name man apron_man env res)
-  with Bdd.Env.Bddindex -> eval_mcmt_prog (cond_size * 2) ts;;
+  with Bdd.Env.Bddindex -> eval_mcmt_prog (cond_size * 2) iter ts;;
 
 (** [ print_transition_system ts ] prints the transition system [ts]
     after it has been converted into simple ASTs *)
@@ -75,15 +76,18 @@ let print_transition_system ts =
 
 let () =
   let input_file = ref None in
+  let num_iterations = ref 10 in
   (let open Arg in
-   Arg.parse [] (fun f ->
-       input_file := Some f) "");
+   Arg.parse [
+     "--iterations", Int (fun x -> num_iterations := x), "Number of iterations for the interpreter"
+   ] (fun f -> input_file := Some f)
+     "Abstract interpreter for MCMT files.");
   let in_ch = create_channel_in !input_file in
   let parsed = parse in_ch in
   close_in in_ch;
   mcmt_to_ts parsed
   |> fun x -> List.iter print_transition_system x; x
-  |> List.map (eval_mcmt_prog 1000)
+  |> List.map (eval_mcmt_prog 1000 !num_iterations)
   |> List.fold_left (fun x y -> x^"\n"^y) ""
   |> fun x -> printf "%s@." x; x
   |> add_learned !input_file;;
