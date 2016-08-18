@@ -1,10 +1,12 @@
 (** An AST for mcmt *)
 
-(** Mcmt declaration types *)
-type declaration =
-  | Int_decl of string
-  | Real_decl of string
-  | Bool_decl of string
+(** Mcmt types *)
+type mcmt_type =
+  | Int_type
+  | Real_type
+  | Bool_type
+
+type declaration = string * mcmt_type
 
 (** Mcmt expressions *)
 type expression =

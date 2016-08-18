@@ -54,9 +54,9 @@ declarations:
 | { [] }
 
 declaration:
-| IDENT INT_DECL {Int_decl $1}
-| IDENT REAL_DECL {Real_decl $1}
-| IDENT BOOL_DECL {Bool_decl $1}
+| IDENT INT_DECL {$1, Int_type}
+| IDENT REAL_DECL {$1, Real_type}
+| IDENT BOOL_DECL {$1, Bool_type}
 
 expression:
 | value { $1 }

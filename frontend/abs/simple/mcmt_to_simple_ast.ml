@@ -117,9 +117,9 @@ let rec mcmt_to_expr map = function
 
 (** Convert an mcmt declaration into a simple declaration *)
 let to_simple_decl = function
-  | Mcmt_ast.Int_decl str -> Int_decl str
-  | Mcmt_ast.Real_decl str -> Real_decl str
-  | Mcmt_ast.Bool_decl str -> Bool_decl str;;
+  | (str, Mcmt_ast.Int_type) -> Int_decl str
+  | (str, Mcmt_ast.Real_type) -> Real_decl str
+  | (str, Mcmt_ast.Bool_type) -> Bool_decl str;;
 
 (** Add a prefix to the variable in a declaration:
       [ make_prefix pre decl ]

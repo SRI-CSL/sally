@@ -1,7 +1,9 @@
-type declaration =
-  | Int_decl of string
-  | Real_decl of string
-  | Bool_decl of string
+type mcmt_type =
+  | Int_type
+  | Real_type
+  | Bool_type
+
+type declaration = string * mcmt_type
 
 type expression =
   | Int of int
