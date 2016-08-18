@@ -31,22 +31,21 @@ let eval_step man env inv cond ts ctx =
   Domain1.meet man inv forget;;
 
 (** Evaluate a transition relation until a fixed point is found:
-      [ eval_mcmt man env cond inv ctx ts lim cnt ]
+      [ eval_mcmt man env cond inv ctx ts cnt ]
     will repeatedly apply the transition relation [ts] to the current context [ctx] using
     [man], [env], and [cond];
     move forward one step in the transition relation;
     apply the invariants [inv] to the new domain; and
-    decrement [cnt]. When [cnt = 0], widening is performed, and [cnt] is reset to [lim].*)
-let rec eval_mcmt man env cond inv ctx ts lim cnt =
+    decrement [cnt]. When [cnt = 0], widening and narrowing are performed. *)
+let rec eval_mcmt man env cond inv ctx ts cnt =
   let ctx' = interpret false man env cond inv ctx ts.trans |> eval_step man env inv cond ts |> Domain1.join man ctx in
   printf "ctx': %a@." (Domain1.print man) ctx';
   if (Domain1.is_eq man ctx ctx')
   then ctx
   else if cnt = 0 then
     let widened = Domain1.widening man ctx ctx' in
-    let narrowed = eval_step man env inv cond ts (interpret true man env cond inv widened ts.trans) |> Domain1.join man ctx in
-    eval_mcmt man env cond inv narrowed ts lim lim
-  else eval_mcmt man env cond inv ctx' ts lim (cnt - 1);;
+    eval_step man env inv cond ts (interpret true man env cond inv widened ts.trans) |> Domain1.join man ctx
+  else eval_mcmt man env cond inv ctx' ts (cnt - 1);;
 
 (** Find invariants for a transition system in an mcmt program:
       [ eval_mcmt_prog cond_size ts ]
@@ -56,13 +55,13 @@ let rec eval_mcmt man env cond inv ctx ts lim cnt =
 let rec eval_mcmt_prog cond_size ts =
   let decls = ts.decls @ ts.current_sv_decls @ ts.next_sv_decls in
   let invs = ts.invs in
-  let apron_man = Box.manager_alloc() in
+  let apron_man = Polka.manager_alloc_strict() in
   try (
     let (man, env, cond, ctx) = initialize apron_man decls invs cond_size in
     printf "invariant: %a@." (Domain1.print man) ctx;
     let init = interpret true man env cond ctx ctx ts.init in
     printf "initial state: %a@." (Domain1.print man) init;
-    let res = eval_mcmt man env cond ctx init ts 5 5 in
+    let res = eval_mcmt man env cond ctx init ts 5 in
     mcmt_of_domain ts.name man apron_man env res)
   with Bdd.Env.Bddindex -> eval_mcmt_prog (cond_size * 2) ts;;
 

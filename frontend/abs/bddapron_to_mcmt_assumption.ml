@@ -65,7 +65,7 @@ let mcmt_of_domain name man apron_man env res =
     let lincons = (Apron.Abstract1.to_lincons_array apron_man y).Apron.Lincons1.lincons0_array |> Array.map (string_of_lincons env) in
     let abstract =
       if Array.length lincons = 0
-      then ""
+      then "true"
       else if Array.length lincons = 1
       then Array.get lincons 0
       else "( "^(Array.fold_left (fun x y -> x^" "^y) "and" lincons)^" )" in
@@ -73,8 +73,8 @@ let mcmt_of_domain name man apron_man env res =
   let results = List.map handle_pair res in
   "( assume "^name^" "^
     (if List.length results < 2
-    then List.hd results
-    else "( "^(List.fold_left (fun x y -> x^" "^y) "or" results)^" )")
+     then List.hd results
+     else "( "^(List.fold_left (fun x y -> x^" "^y) "or" results)^" )")
   ^" )";;
 
 let create_channel_in = function
