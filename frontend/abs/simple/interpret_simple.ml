@@ -88,42 +88,24 @@ make_expr1 env cond = function
 (** Interpret a simple program:
     [interpret carry_conditionals man env cond inv ctx prog]
     interprets program [prog] in the context [ctx] with invariants
-    [inv]. If [carry_conditionals] is [true], then the condition from
-    a [Cond] expression is used in its branches. *)
-let rec interpret carry_conditionals man env cond inv ctx = function
+    [inv]. *)
+let rec interpret man env cond inv ctx = function
   | Assign (Ident v, Constrained f) ->
       let ctx' = Domain1.forget_list man ctx [v] in
-      Domain1.meet man ctx' (interpret carry_conditionals man env cond inv ctx (f (Ident v)))
+      Domain1.meet man ctx' (interpret man env cond inv ctx (f (Ident v)))
       (* Domain1.meet_condition man cond ctx (Expr1.Bool.of_expr (make_expr1 env cond (f (Ident v)))) *)
       |> Domain1.meet man inv
   | Assign (Ident v, e) ->
       Domain1.assign_lexpr man cond ctx [v] [make_expr1 env cond e] None
       |> Domain1.meet man inv
   | Seq (e::es) ->
-      let ctx' = interpret carry_conditionals man env cond inv ctx e in
-      interpret carry_conditionals man env cond inv ctx' (Seq es)
+      let ctx' = interpret man env cond inv ctx e in
+      interpret man env cond inv ctx' (Seq es)
   | Seq [] -> printf "%a@." (Domain1.print man) ctx; ctx
   | Branch es ->
-      let ctx's = List.map (interpret carry_conditionals man env (Cond.copy cond) inv ctx) es in
+      let ctx's = List.map (interpret man env (Cond.copy cond) inv ctx) es in
       let res = List.fold_left (Domain1.join man) (Domain1.bottom man env) ctx's in
       res
-  | Cond (e1, e2, e3) ->
-      let e1' = Expr1.Bool.of_expr (make_expr1 env cond e1)
-                |> Domain1.meet_condition man cond ctx in
-      if Domain1.is_eq man ctx e1' (* adding condition e1 does not reduce the domain *)
-      then interpret carry_conditionals man env cond inv ctx e2
-      else if Domain1.is_bottom man e1' (* condition e1 cannot hold in ctx *)
-      then interpret carry_conditionals man env cond inv ctx e3
-      else
-        (* cannot tell if e1 holds or not, so take both branches, assuming e1 holds in the
-           first branch and that it does not in the second *)
-        let e1' = if carry_conditionals then e1' else ctx in
-        let ctx1 = interpret carry_conditionals man env cond inv e1' e2 in
-        let not_e1' = Expr1.Bool.of_expr (make_expr1 env cond (Not e1))
-                      |> Domain1.meet_condition man cond ctx in
-        let not_e1' = if carry_conditionals then not_e1' else ctx in
-        let ctx2 = interpret carry_conditionals man env cond inv not_e1' e3 in
-        Domain1.join man ctx1 ctx2 |> Domain1.meet man inv
   | Local (e1, e2) ->
       let rec add_to_env env inv = function
         | Nat_decl str ->
@@ -157,7 +139,7 @@ let rec interpret carry_conditionals man env cond inv ctx = function
             (env', Domain1.meet_condition man cond inv (Expr1.Bool.of_expr (make_expr1 env' cond constr)), str) in
       let (env', inv', str) = add_to_env env inv e1 in
       let ctx' = Domain1.change_environment man ctx env' |> Domain1.meet man inv' in
-      let res = interpret carry_conditionals man env' cond inv' ctx' e2 in
+      let res = interpret man env' cond inv' ctx' e2 in
       Domain1.change_environment man res env
   | other ->
 (* let condition' = of_apron man env (Abstract1.meet (Abstract1.top env.Env.eapron) condition in*)
@@ -199,10 +181,10 @@ let initialize apron ds invs cond_size =
   let man = Domain1.man_of_bdd (Domain1.make_bdd apron) in
   let abs = Domain1.top man env in
   printf "%s@." "constraints";
-  let constraints = List.map (fun x -> (interpret true man env cond abs abs x)) (constraints @ invs) in
+  let constraints = List.map (fun x -> (interpret man env cond abs abs x)) (constraints @ invs) in
   (man, env, cond, List.fold_left (Domain1.meet man) abs constraints);;
 
-let interpret_program carry_conditionals apron_man p cond_size =
+let interpret_program apron_man p cond_size =
   let (man, env, cond, ctx) = initialize apron_man p.decls p.invs cond_size in
-  let res = interpret carry_conditionals man env cond ctx ctx p.expr in
+  let res = interpret man env cond ctx ctx p.expr in
   printf "result:%a@." (Domain1.print man) res;;

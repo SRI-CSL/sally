@@ -29,6 +29,36 @@ let eval_step man env inv cond ts ctx =
   let forget = Domain1.forget_list man assigned next in
   Domain1.meet man inv forget;;
 
+(**
+  Does fixpoint computation:
+  - start from [prev]
+  - iterate while [while_op] holds for [prev] and [curr]
+  - it does at most [iter_count] iterations, or to completion if [iter_count] <= 0
+
+ Notes for iteration: keep iterating while
+  - for fixpoint: go while !=
+  - for widening: go while <
+  - for narrowing: go while >
+
+ [iter_combine] is usually (fun x y -> y) for regular iteration, or the widening/narrowing operator.
+*)
+
+let rec mcmt_iterate man env cond inv init prev ts while_op iter_count iter_combine =
+  let curr =
+    (** Interpret one-step transition (keeps variables) *)
+    interpret man env cond inv prev ts.trans |>
+    (** Just keep the next-state variables *)
+    eval_step man env inv cond ts |>
+    (** Join with initial states *)
+    Domain1.join man init in
+  let compare = while_op prev curr in
+    printf "prev: %a@." (Domain1.print man) prev;
+    printf "curr: %a@." (Domain1.print man) curr;
+    if compare && (iter_count != 1) then
+      let combined = iter_combine prev curr in
+      mcmt_iterate man env cond inv init combined ts while_op (iter_count-1) iter_combine
+    else prev, curr, compare
+
 (** Evaluate a transition relation until a fixed point is found:
       [ eval_mcmt man env cond inv ctx ts cnt ]
     will repeatedly apply the transition relation [ts] to the current context [ctx] using
@@ -36,42 +66,53 @@ let eval_step man env inv cond ts ctx =
     move forward one step in the transition relation;
     apply the invariants [inv] to the new domain; and
     decrement [cnt]. When [cnt = 0], widening and narrowing are performed. *)
-let rec eval_mcmt man env cond inv init ctx ts cnt =
-  let ctx' = interpret false man env cond inv ctx ts.trans |> eval_step man env inv cond ts |>
-             (match init with
-              | None -> Domain1.join man ctx
-              | Some i -> Domain1.join man i) in
-  printf "ctx: %a@." (Domain1.print man) ctx;
-  printf "ctx': %a@." (Domain1.print man) ctx';
-  if (Domain1.is_leq man ctx' ctx)
-  then ctx'
-  else if cnt = 0 then
-    let widened = Domain1.widening man ctx ctx' in
-    printf "widened: %a@." (Domain1.print man) widened;
-    eval_mcmt man env cond inv init widened ts 0
-  else eval_mcmt man env cond inv init ctx' ts (cnt - 1);;
+let eval_mcmt man env cond inv init ts fixpoint_iter narrowing_iter =
+  let ai_neq = (fun x y -> not (Domain1.is_eq man x y)) in
+  let ai_lt = (fun x y -> not (Domain1.is_leq man y x)) in (** x < y as !(x >= y) *)
+  let ai_gt = (fun x y -> not (Domain1.is_leq man x y)) in (** x > y as !(x <= y) *)
+  (* Do fixpoint computation for fixpont_iter iterations: go while != *)
+  let trans_prev, trans_curr, trans_is_neq =
+    printf "Iterating for %s\n" "fixpoint";
+    mcmt_iterate man env cond inv init init ts ai_neq fixpoint_iter (fun x y -> y) in
+  if not trans_is_neq then trans_curr (* double negation: we're fixpoint *)
+  else
+    (* We're not a fixpoint, do widening: go while wid_prev < wid_curr, wid_prev is always widening *)
+    let wid_prev, wid_curr, _ =
+      printf "Iterating for %s\n" "widening";
+      mcmt_iterate man env cond inv init trans_curr ts ai_lt (-1) (Domain1.widening man) in
+    if narrowing_iter = 0 then wid_prev
+    else if narrowing_iter = 1 then wid_curr
+    else
+      (* We already did one step, do narrowing-1 iterations. We know wid_prev >= wid_curr.
+         Go while nar_prev > nra_curr, nar_cur is the one we return  *)
+      let nar_prev, nar_curr, _ =
+        printf "Iterating for %s\n" "narrowing";
+        mcmt_iterate man env cond inv init wid_curr ts ai_gt (narrowing_iter-1) (fun x y -> y) in
+      nar_curr
 
 (** Find invariants for a transition system in an mcmt program:
-      [ eval_mcmt_prog cond_size iter use_init ts ]
-    finds invariants for transition system [ts] by doing abstract interpretation
-    for [iter] iterations, where [cond_size] decides
-    the initial size for the condition BDD and [use_init] determines whether
+      [ eval_mcmt_prog cond_size fixpoint_iter narrowing_iter use_init ts ]
+    Finds invariants for transition system [ts] by doing:
+     * fixpoint computation unitl fixpoint is found or [fixpoint_iter] is exceeded,
+     * if no fixpoint is found then:
+       - do widening to find a post-fixpoint,
+       - do 'narrowing' until a fixpoint is found of [narrowing_iter] is exceeded.
+    The [cond_size] decides the initial size for the condition BDD and [use_init] determines whether
     the result from taking one step of the transition is joined with the
     initial state or the previous state. If [cond_size] is too small,
     its size is doubled, and [eval_mcmt_prog] begins again. *)
-let rec eval_mcmt_prog cond_size iter use_init ts =
+let rec eval_mcmt_prog cond_size fixpoint_iter narrowing_iter ts =
   let decls = ts.decls @ ts.current_sv_decls @ ts.next_sv_decls in
   let invs = ts.invs in
   let apron_man = Polka.manager_alloc_strict() in
   try (
     let (man, env, cond, invariant) = initialize apron_man decls invs cond_size in
     printf "invariant: %a@." (Domain1.print man) invariant;
-    let init = interpret true man env cond invariant invariant ts.init in
+    let init = interpret man env cond invariant invariant ts.init in
     printf "initial state: %a@." (Domain1.print man) init;
-    let init' = match use_init with true -> Some init | false -> None in
-    let res = eval_mcmt man env cond invariant init' init ts iter in
+    let res = eval_mcmt man env cond invariant init ts fixpoint_iter narrowing_iter in
     mcmt_of_domain ts.name man apron_man env res)
-  with Bdd.Env.Bddindex -> eval_mcmt_prog (cond_size * 2) iter use_init ts;;
+  with Bdd.Env.Bddindex -> eval_mcmt_prog (cond_size * 2) fixpoint_iter narrowing_iter ts;;
 
 (** [ print_transition_system ts ] prints the transition system [ts]
     after it has been converted into simple ASTs *)
@@ -83,12 +124,14 @@ let print_transition_system ts =
 
 let () =
   let input_file = ref None in
-  let num_iterations = ref 10 in
-  let use_init = ref true in
+  let fixpoint_iterations = ref 10 in
+  let narrowing_iterations = ref 1 in
   (let open Arg in
    Arg.parse [
-     "--iterations", Int (fun x -> num_iterations := x), "Number of iterations for the interpreter";
-     "--use-nonstandard-transformer", Unit (fun x -> use_init := false), "Use nonstandard transformer: F(X) = X join T(X)"
+     "--fixpoint-iterations", Int (fun x -> fixpoint_iterations := x),
+        Printf.sprintf "Limit on the number of iterations to use for fixpoint computation (default %d)" !fixpoint_iterations;
+     "--narrowing-iterations", Int (fun x -> narrowing_iterations := x),
+           Printf.sprintf "Limit on the number of 'narrowing' steps to use (default %d)" !narrowing_iterations
    ] (fun f -> input_file := Some f)
      "Abstract interpreter for MCMT files.");
   let in_ch = create_channel_in !input_file in
@@ -96,7 +139,7 @@ let () =
   close_in in_ch;
   mcmt_to_ts parsed
   |> fun x -> List.iter print_transition_system x; x
-  |> List.map (eval_mcmt_prog 1000 !num_iterations !use_init)
+  |> List.map (eval_mcmt_prog 1000 !fixpoint_iterations !narrowing_iterations)
   |> List.fold_left (fun x y -> x^"\n"^y) ""
   |> fun x -> printf "%s@." x; x
   |> add_learned !input_file;;
