@@ -1,0 +1,32 @@
+* Parametrized stuff is missing alltogether.
+* Only arithmetic (integers, reals, and Bool), no bit-vectors, quantifiers, ...
+* Parsing errors, add locations and typechecking.
+* Check if it parses all the sally benchmarks from fmcad2016:
+  - Make sure examples don't blow up.
+* Boolean AND and OR:
+  - Some sensible solution for choosing between Seq/And and Choice/Or
+* Best workflow:
+
+    T = ...
+    Query P1
+    Assert A
+    Query P2
+    Assert B
+
+  ->
+
+    T = ...
+    Assume L1: learning from above.
+    Query P1
+    Assert A
+    Assume L2: learning from above (T1, L1, A).
+    Query P2
+    Assert B
+    Don't learn, there is no query.
+
+    Parse up to query, learn, assume, continue...
+* SAL? Maybe get rid of it.
+* Natural -> Predicate type: abs/simple/simple_ast.ml:  (* TODO: remove Nat_decl *).
+* Float e -> Should be division of two integers.
+* How to make Apron do reals: abs/simple/interpret_simple.ml: (* TODO: Make sure that Real doesn't mean Float *)
+* Make pretty and refactor.

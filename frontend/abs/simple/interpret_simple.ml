@@ -30,7 +30,7 @@ and
 make_expr1 env cond = function
   | Nat e -> make_expr1 env cond (Int e)
   | Int e -> Expr1.Apron.to_expr (Expr1.Apron.cst env cond (Coeff.Scalar (Scalar.of_int e)))
-  (* TODO: Where are reals? *)
+  (* TODO: Where are real constants? *)
   | Float e -> Expr1.Apron.to_expr (Expr1.Apron.cst env cond (Coeff.Scalar (Scalar.of_float e)))
   | Ident e -> Expr1.var env cond e
   (* Arithmetic operators (i.e., And, Sub, Mul, Div) currently use default type (e.g. REAL, INT) and
