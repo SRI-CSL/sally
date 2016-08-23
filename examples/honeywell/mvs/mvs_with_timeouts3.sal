@@ -11,36 +11,20 @@
 % - the components are not synchronized.
 %
 
-  
-
-
-
-mvs_with_timeouts4: CONTEXT = 
+mvs_with_timeouts3: CONTEXT = 
 
   BEGIN
 
-
-%% module constant
   TIME: TYPE = REAL;
-  fcm_period: TIME = 0.2;
-  mvs_period: TIME = 0.05;
-
-
+  
+  %
+  % Input = a triangular waveform
+  %
   plant_period: TIME = 2;
   amplitude: REAL = 1;
 
   A: REAL = amplitude / (plant_period/2);
 
-
-  start_phase_type : TYPE =  { t: TIME | plant_period + 2 * fcm_period <= t   AND t < 2 * plant_period - fcm_period };
-  start_phase : start_phase_type;
-
-  
-  
-  %
-  % Input = a triangular waveform
-  %
-  
   waveform(t: REAL): REAL = 
     IF t < 0 OR t > plant_period THEN 0
     ELSIF t <= plant_period/2 THEN A * t
@@ -56,12 +40,10 @@ mvs_with_timeouts4: CONTEXT =
     BEGIN 
       INPUT time: TIME
       LOCAL period_counter: INTEGER
-      OUTPUT x: REAL,
-      x_pre : REAL
+      OUTPUT x: REAL
     DEFINITION
       period_counter IN { n: INTEGER | n * plant_period <= time AND time < (n+1) * plant_period };
       x = waveform(time - period_counter * plant_period);
-      x_pre = waveform((time - fcm_period)- period_counter * plant_period);
     END;
 
   
@@ -69,23 +51,21 @@ mvs_with_timeouts4: CONTEXT =
   % Sampler module: period = fcm_period
   % - reads x at this period.
   %
-  
+  fcm_period: TIME = 0.2;
+
   fcm: MODULE =
     BEGIN
       INPUT
         time: TIME, 
-        x: REAL,
-        x_pre : REAL
+        x: REAL
       OUTPUT 
         timeout: TIME,
         y, pre_y: REAL
 
       INITIALIZATION
-
-	timeout IN { t: TIME |  start_phase <= t  AND t < start_phase + fcm_period };
-        y = x;
-        pre_y = x_pre;
-
+        timeout IN { t: TIME | 0 <= t AND t < fcm_period };
+        y = 0;
+        pre_y = 0;
 
       TRANSITION
         [ time = timeout --> 
@@ -105,6 +85,7 @@ mvs_with_timeouts4: CONTEXT =
   % - if bi is true then yi is good
   %   otherwise, yi is bad and not used in the vote
   %
+  mvs_period: TIME = 0.05;
 
   midval(y1: REAL, y2: REAL, y3: REAL): REAL =
     IF y1 <= y2 THEN
@@ -125,11 +106,9 @@ mvs_with_timeouts4: CONTEXT =
         mvs: REAL
 
       INITIALIZATION
+        timeout IN { t: TIME | 0 <= t AND t < mvs_period };
+        mvs = 0;
 
-	timeout IN { t: TIME | start_phase <= t AND t < start_phase + mvs_period };
-        mvs = waveform(start_phase);
-
-        
       TRANSITION
         [ time = timeout -->
              timeout' = time + mvs_period;
@@ -189,6 +168,7 @@ mvs_with_timeouts4: CONTEXT =
           ]
       END;
 
+
    %
    % Full system: 
    % - synchronous composition of these components
@@ -213,7 +193,7 @@ mvs_with_timeouts4: CONTEXT =
       OUTPUT
         time: TIME
       INITIALIZATION
-        time = start_phase;
+        time = 0;
       TRANSITION
        [ time < fcm_timeout1 AND time < fcm_timeout2 AND time < fcm_timeout3 AND time < mvs_timeout1 AND time < mvs_timeout2 -->
                time' IN { t: TIME | t <= fcm_timeout1 AND t <= fcm_timeout2 AND t <= fcm_timeout3
@@ -223,107 +203,7 @@ mvs_with_timeouts4: CONTEXT =
       END;
 
 
-   %
-   % Monitor: defines variables used in the lemmas
-   %
-   monitor: MODULE =
-     BEGIN
-      INPUT
-        fcm_timeout1, fcm_timeout2, fcm_timeout3: TIME,
-        mvs_timeout1, mvs_timeout2: TIME,
-        y1, y3, pre_y1, pre_y3: REAL
-      OUTPUT
-        z11, z13, z21, z23: REAL, 
-        n1, n3, pre_n1, pre_n3: INTEGER
-      DEFINITION
-        z11 = IF fcm_timeout1 - fcm_period <= mvs_timeout1 - mvs_period THEN y1 ELSE pre_y1 ENDIF;
-        z13 = IF fcm_timeout3 - fcm_period <= mvs_timeout1 - mvs_period THEN y3 ELSE pre_y3 ENDIF;
-
-        z21 = IF fcm_timeout1 - fcm_period <= mvs_timeout2 - mvs_period THEN y1 ELSE pre_y1 ENDIF;
-        z23 = IF fcm_timeout3 - fcm_period <= mvs_timeout2 - mvs_period THEN y3 ELSE pre_y3 ENDIF;
-
-        n1 IN { n: INTEGER | n * plant_period <= fcm_timeout1 - fcm_period AND fcm_timeout1 - fcm_period < (n+1) * plant_period };
-        n3 IN { n: INTEGER | n * plant_period <= fcm_timeout3 - fcm_period AND fcm_timeout3 - fcm_period < (n+1) * plant_period };
-
-        pre_n1 IN { n: INTEGER | n * plant_period <= fcm_timeout1 - 2 * fcm_period AND fcm_timeout1 - 2 * fcm_period < (n+1) * plant_period };
-        pre_n3 IN { n: INTEGER | n * plant_period <= fcm_timeout3 - 2 * fcm_period AND fcm_timeout3 - 2 * fcm_period < (n+1) * plant_period };
-     END;
-
-   full: MODULE = (system [] (clock || source)) || monitor;
-
-
-
-   %
-   % provable: by induction at depth 1
-   %
-   time_positive: LEMMA full |- G(time >= 0);
-
-
-   %
-   % All these are also provable by induction at depth 1
-   %
-   fcm_timeout_bounds1: LEMMA full |- G(time <= fcm_timeout1 AND fcm_timeout1 <= time + fcm_period);
-
-   fcm_timeout_bounds3: LEMMA full |- G(time <= fcm_timeout3 AND fcm_timeout3 <= time + fcm_period);
-
-   mvs_timeout_bounds1: LEMMA full |- G(time <= mvs_timeout1 AND mvs_timeout1 <= time + mvs_period);
-
-   mvs_timeout_bounds2: LEMMA full |- G(time <= mvs_timeout2 AND mvs_timeout2 <= time + mvs_period);
-
-
-   %
-   % The source is a periodic triangular function f(t) = waveform(t div plant_period)
-   % - in the source module we define x so that x = f(time)
-   % - the following lemmas show that 
-   %       y1 = f(fcm_timeout1 - fcm_period)      (except that y1 = 0 if fcm_timeout1 < fcm_period)
-   %   pre_y1 = f(fcm_timeout1 - 2 * fcm_period)  (except that pre_y1 = 0 if fcm_timeout1 < 2 * fcm_period)
-   %       y3 = f(fcm_timeout3 - fcm_period)      (except that y3 = 0 if fcm_timeout3 < fcm_period)
-   %   pre_y3 = f(fcm_timeout3 - 2 * fcm_period)  (except that pre_y3 = 0 if fcm_timeout3 < 2 * fcm_period)
-   %
-
-   %
-   % Provable by induction at depth 1
-   %
-   y_invar1: LEMMA
-     full |- G(fcm_timeout1 >= plant_period + fcm_period => y1 = waveform(fcm_timeout1 - fcm_period - n1 * plant_period));
-
-   y_invar3: LEMMA
-     full |- G(fcm_timeout3 >= fcm_period => y3 = waveform(fcm_timeout3 - fcm_period - n3 * plant_period));
-
-   % depth 1, lemma: time_positive
-   y_init1: LEMMA 
-     full |- G(fcm_timeout1 < fcm_period => y1 = waveform(fcm_timeout1));
-
-   y_init3: LEMMA
-     full |- G(fcm_timeout3 < fcm_period => y3 = waveform(fcm_timeout3));
-
-   % depth 1, lemma: y_invar1
-   pre_y_invar1: LEMMA
-     full |- G(fcm_timeout1 >= 2 * fcm_period => pre_y1 = waveform(fcm_timeout1 - 2 * fcm_period - pre_n1 * plant_period));
- 
-   % depth 1, lemma: y_invar3  
-   pre_y_invar3: LEMMA
-     full |- G(fcm_timeout3 >= 2 * fcm_period => pre_y3 = waveform(fcm_timeout3 - 2 * fcm_period - pre_n3 * plant_period));
-
-   % depth 1: lemma y_init1
-   pre_y_init1: LEMMA 
-     full |- G(fcm_timeout1 > fcm_period AND fcm_timeout1 < 2 * fcm_period => pre_y1 = waveform(fcm_timeout1 - fcm_period));
-
-   % depth 1: lemma y_init3
-   pre_y_init3: LEMMA 
-      full |- G(fcm_timeout3 > fcm_period AND fcm_timeout3 < 2 * fcm_period => pre_y3 = waveform(fcm_timeout3 - fcm_period));
-
-
-   %
-   % Bounds on mvs1 and mvs2
-   %
-
-   % depth 2: lemmas fcm_timeout_bounds1, fcm_timeout_bounds3, mvs_timeout_bounds1
-   mvs_bounds1: LEMMA full |- G((z11 <= mvs1 AND mvs1 <= z13) OR (z13 <= mvs1 AND mvs1 <= z11));
-
-   % depth 2: lemmas fcm_timeout_bounds1, fcm_timeout_bounds3, mvs_timeout_bounds2
-   mvs_bounds2: LEMMA full |- G((z21 <= mvs2 AND mvs2 <= z23) OR (z23 <= mvs2 AND mvs2 <= z21));
-
+   full: MODULE = (system [] (clock || source));
 
    %
    % agreement can be proved by induction at depth 1
