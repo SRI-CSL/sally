@@ -42,8 +42,7 @@ options {
 
 /** Parses a command */
 command returns [parser::command* cmd = 0] 
-  : internal_command* c = system_command { $cmd = c; }
-  | internal_command* EOF { $cmd = 0; } 
+  : (internal_command*) c = system_command { $cmd = c; }
   ;
 
 /** Parser an internal command */
@@ -59,6 +58,7 @@ system_command returns [parser::command* cmd = 0]
   | c = define_transition_system { $cmd = c; }
   | c = assume                   { $cmd = c; }                    
   | c = query                    { $cmd = c; }
+  | EOF { $cmd = 0; }
   ;
   
 /** Declaration of a state type */
@@ -179,7 +179,7 @@ define_constant
 }
   : '(' 'define-constant'
     symbol[id, parser::MCMT_VARIABLE, false] 
-    c = constant { STATE->set_variable(id, c); }
+    c = term { STATE->set_variable(id, c); }
     ')'
   ; 
 

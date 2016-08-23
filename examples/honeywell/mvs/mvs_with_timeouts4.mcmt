@@ -1,0 +1,222 @@
+(define-state-type state_type (
+  (c1_b1 Bool)
+  (c1_b2 Bool)
+  (c1_b3 Bool)
+  (c2_b1 Bool)
+  (c2_b2 Bool)
+  (c2_b3 Bool)
+  (fcm_timeout1 Real)
+  (fcm_timeout2 Real)
+  (fcm_timeout3 Real)  
+  (mvs1 Real)
+  (mvs2 Real)
+  (mvs_timeout1 Real)
+  (mvs_timeout2 Real)
+  ;; Seems like we need integers
+  (n1 Int) 
+  (n3 Int)
+  (period_counter Int)
+  (pre_n1 Int) 
+  (pre_n3 Int)
+  (pre_y1 Real)
+  (pre_y3 Real)
+  (time Real)
+  (x Real)
+  (x_pre Real)
+  (y1 Real)
+  (y2 Real)
+  (y3 Real)
+  (z11 Real)
+  (z13 Real)
+  (z21 Real)
+  (z23 Real)
+  (start_phase Real)
+))
+
+(define-constant fcm_period (/ 2 10))
+(define-constant mvs_period (/ 5 100))
+(define-constant plant_period 2)
+(define-constant amplitude 1)
+
+(define-states definitions state_type 
+  (let ((cs!109 (* period_counter 2))
+        (cs!110 (- mvs_timeout1 (/ 1 20)))
+        (cs!111 (- mvs_timeout2 (/ 1 20)))
+        (cs!112 (- fcm_timeout1 (/ 1 5)))
+        (cs!113 (- fcm_timeout3 (/ 1 5)))
+        (cs!114 (- fcm_timeout1 (/ 2 5)))
+        (cs!115 (- fcm_timeout3 (/ 2 5))))
+  (let ((t!12 (- time cs!109))
+        (t!13 (- (- time (/ 1 5)) cs!109)))
+    (and
+      (= c1_b1 true)
+      (= c1_b3 true)
+      (= c2_b1 true)
+      (= c2_b3 true)
+      (and (<= cs!109 time) (< time (* (+ period_counter 1) 2)))
+      (= x (cond ((or (< t!12 0) (not (<= t!12 2))) 0)
+                 ((<= t!12 1) t!12)
+                 (else (- 1 (- t!12 1)))))
+      (= x_pre (cond ((or (< t!13 0) (not (<= t!13 2))) 0)
+                     ((<= t!13 1) t!13)
+                     (else (- 1 (- t!13 1)))))
+      (= z11 (ite (<= cs!112 cs!110) y1 pre_y1))
+      (= z13 (ite (<= cs!113 cs!110) y3 pre_y3))
+      (= z21 (ite (<= cs!112 cs!111) y1 pre_y1))
+      (= z23 (ite (<= cs!113 cs!111) y3 pre_y3))
+      (and (<= (* n1 2) cs!112) (< cs!112 (* (+ n1 1) 2)))
+      (and (<= (* n3 2) cs!113) (< cs!113 (* (+ n3 1) 2)))
+      (and (<= (* pre_n1 2) cs!114) (< cs!114 (* (+ pre_n1 1) 2)))
+      (and (<= (* pre_n3 2) cs!115) (< cs!115 (* (+ pre_n3 1) 2)))
+    )
+  ))
+)
+
+(define-states type_conditions state_type
+  (and 
+    ;; start_phase in t : plant_period + 2 * fcm_period <= t   AND t < 2 * plant_period - fcm_period
+    (<= (+ plant_period (* 2 fcm_period)) start_phase)
+    (< start_phase (- (* 2 plant_period) fcm_period))
+  )
+)
+
+(define-states initial_states state_type
+  (let ((cs!106 (+ start_phase (/ 1 5)))
+        (cs!107 (+ start_phase (/ 1 20))))
+  (let ((cs!108 
+          (cond ((or (< start_phase 0) (not (<= start_phase 2))) 0)
+                ((<= start_phase 1) start_phase)
+                (else (- 1 (- start_phase 1))))))
+    (and
+      (and (<= start_phase fcm_timeout1) (< fcm_timeout1 cs!106))
+      (= y1 x)
+      (= pre_y1 x_pre)
+      (and (<= 0 fcm_timeout2) (< fcm_timeout2 (/ 1 5)))
+      (and (<= start_phase fcm_timeout3) (< fcm_timeout3 cs!106))
+      (= y3 x)
+      (= pre_y3 x_pre)
+      (and (<= start_phase mvs_timeout1) (< mvs_timeout1 cs!107))
+      (= mvs1 cs!108)
+      (and (<= start_phase mvs_timeout2) (< mvs_timeout2 cs!107))
+      (= mvs2 cs!108)
+      (= time start_phase)))
+  )
+)
+
+(define-transition transition state_type
+  (and 
+    ;; Added 
+    (= start_phase' start_phase)
+    ;; Transtion from SAL
+        (let ((cs!83 (not c1_b2'))
+              (cs!85 (+ time (/ 1 20)))
+              (cs!87 (not c2_b2'))
+              (cs!89 (= pre_y1' pre_y1))
+              (cs!90 (= y1' y1))
+              (cs!91 (= fcm_timeout1' fcm_timeout1))
+              (cs!92 (= y2' y2))
+              (cs!93 (= fcm_timeout2' fcm_timeout2))
+              (cs!94 (= pre_y3' pre_y3))
+              (cs!95 (= y3' y3))
+              (cs!96 (= fcm_timeout3' fcm_timeout3))
+              (cs!97 (= mvs1' mvs1))
+              (cs!98 (= mvs_timeout1' mvs_timeout1))
+              (cs!99 (= mvs2' mvs2))
+              (cs!100 (= mvs_timeout2' mvs_timeout2))
+              (cs!101 (+ time (/ 1 5))))
+          (let ((y2!3 (ite c1_b2' y2' mvs1))
+                (y2!4 (ite c2_b2' y2' mvs2)))
+            (let ((cs!102 (<= y1' y3'))
+                  (cs!103 (<= y2!3 y3'))
+                  (cs!104 (<= y1' y3'))
+                  (cs!105 (<= y2!4 y3')))
+              (or
+                (and
+                  (or
+                    (and
+                      (= time fcm_timeout1)
+                      (= fcm_timeout1' cs!101)
+                      (= y1' x')
+                      (= pre_y1' y1))
+                    (and (/= time fcm_timeout1) cs!89 cs!91 cs!90))
+                  (or
+                    (and
+                      (= time fcm_timeout2)
+                      (<= (+ time (/ 1 1000)) fcm_timeout2')
+                      true)
+                    (and (/= time fcm_timeout2) cs!93 cs!92))
+                  (or
+                    (and
+                      (= time fcm_timeout3)
+                      (= fcm_timeout3' cs!101)
+                      (= y3' x')
+                      (= pre_y3' y3))
+                    (and (/= time fcm_timeout3) cs!94 cs!96 cs!95))
+                  (or
+                    (and
+                      (= time mvs_timeout1)
+                      (= mvs_timeout1' cs!85)
+                      (=
+                        mvs1'
+                        (cond
+                          ((<= y1' y2!3) (cond (cs!103 y2!3) (cs!102 y3') (else y1')))
+                          (cs!102 y1')
+                          (cs!103 y3')
+                          (else y2!3))))
+                    (and (/= time mvs_timeout1) cs!97 cs!98))
+                  (or
+                    (and
+                      (= time mvs_timeout2)
+                      (= mvs_timeout2' cs!85)
+                      (=
+                        mvs2'
+                        (cond
+                          ((<= y1' y2!4) (cond (cs!105 y2!4) (cs!104 y3') (else y1')))
+                          (cs!104 y1')
+                          (cs!105 y3')
+                          (else y2!4))))
+                    (and (/= time mvs_timeout2) cs!99 cs!100))
+                  (= time' time))
+                (and
+                  (< time fcm_timeout1)
+                  (< time fcm_timeout2)
+                  (< time fcm_timeout3)
+                  (< time mvs_timeout1)
+                  (< time mvs_timeout2)
+                  (and
+                    (<= time' fcm_timeout1)
+                    (<= time' fcm_timeout2)
+                    (<= time' fcm_timeout3)
+                    (<= time' mvs_timeout1)
+                    (<= time' mvs_timeout2)
+                    (or
+                      (= time' fcm_timeout1)
+                      (= time' fcm_timeout2)
+                      (= time' fcm_timeout3)
+                      (= time' mvs_timeout1)
+                      (= time' mvs_timeout2)))
+                  cs!89
+                  cs!90
+                  cs!91
+                  cs!92
+                  cs!93
+                  cs!94
+                  cs!95
+                  cs!96
+                  cs!97
+                  cs!98
+                  cs!99
+                  cs!100)))))
+  )
+)
+
+(define-transition-system T state_type initial_states transition)
+
+(assume T
+  (and
+    definitions
+    type_conditions
+  )
+)
+
+(query T (and (<= (- mvs1 mvs2) (/ 1 4)) (<= (- mvs2 mvs1) (/ 1 4))))
