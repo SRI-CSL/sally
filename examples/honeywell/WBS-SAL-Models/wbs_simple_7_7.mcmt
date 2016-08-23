@@ -1,0 +1,387 @@
+(define-state-type state_type (
+;;      (auto_mode_invariant_ok Bool)
+      (button_count Real)
+      (button_dispatch_time Real)
+      (button_frame_count Real)
+;;      (button_invariant_ok Bool)
+      (button_pressed Bool)
+      (button_pressed_prev Bool)
+      (button_width Real)
+      (chan_a_com_auto_mode Bool)
+      (chan_a_com_prev_button Bool)
+      (chan_a_com_prev_button_pressed Bool)
+      (chan_a_in_control Bool)
+      (chan_a_mon_agreement_failure Bool)
+      (chan_a_mon_auto_mode Bool)
+      (chan_a_mon_disagree_count Real)
+      (chan_a_mon_prev_button Bool)
+      (chan_a_mon_prev_button_pressed Bool)
+      (chan_b_com_auto_mode Bool)
+      (chan_b_com_prev_button Bool)
+      (chan_b_com_prev_button_pressed Bool)
+      (chan_b_in_control Bool)
+      (chan_b_mon_agreement_failure Bool)
+      (chan_b_mon_auto_mode Bool)
+      (chan_b_mon_disagree_count Real)
+      (chan_b_mon_prev_button Bool)
+      (chan_b_mon_prev_button_pressed Bool)
+;;      (clock_invariant_ok Bool)
+;;      (clock_phase_ok Bool)
+      (complete_arr!0 Bool)
+      (complete_arr!1 Bool)
+      (complete_arr!2 Bool)
+      (complete_arr!3 Bool)
+      (complete_arr!4 Bool)
+;;      (congruent_sample_ok Bool)
+;;      (monotonic_time_values_ok Bool)
+;;      (positive_time_values_ok Bool)
+;;      (redge_ok Bool)
+      (seen_rising_edge Bool)
+      (time Real)
+      (time_arri!0 Real)
+      (time_arri!1 Real)
+      (time_arri!2 Real)
+      (time_arri!3 Real)
+      (time_arri!4 Real)
+;;      (time_ok Bool)
+      (time_prev Real)
+;;      (unique_atomic_time_ok Bool)
+      (NODE2_PHASE Real)
+      (NODE3_PHASE Real)
+      (NODE4_PHASE Real)
+      (NODE5_PHASE Real)
+))
+
+
+(define-constant TOTAL_TASKS 5)
+(define-constant NODE_CLOCK_PERIOD 20)
+(define-constant BUTTON_PERIOD 40)
+(define-constant BUTTON_PHASE 20)
+
+(define-states initial_states state_type
+  (and
+   (= time_arri!0 BUTTON_PHASE)
+   (= button_pressed false)
+   (= button_pressed_prev false)
+   (= button_count 0)
+   (= time 0)
+   (= button_frame_count 0)
+   (= button_dispatch_time BUTTON_PHASE)
+   (= time_arri!1 NODE2_PHASE)
+   (= chan_a_com_prev_button_pressed false)
+   (= chan_a_com_auto_mode false)
+   (= time_arri!2 NODE3_PHASE)
+   (= chan_a_mon_auto_mode false)
+   (= chan_a_mon_prev_button_pressed false)
+   (= chan_a_mon_disagree_count 0)
+   (= chan_a_in_control true)
+   (= chan_a_mon_agreement_failure false)
+   (= time_arri!3 NODE2_PHASE)
+   (= chan_b_com_prev_button_pressed false)
+   (= chan_b_com_auto_mode false)
+   (= time_arri!4 NODE3_PHASE)
+   (= chan_b_mon_auto_mode false)
+   (= chan_b_mon_prev_button_pressed false)
+   (= chan_b_mon_disagree_count 0)
+   (= chan_b_in_control true)
+   (= chan_b_mon_agreement_failure false)
+   (= time_prev 0)
+   (= seen_rising_edge false)))
+
+
+(define-transition transition state_type
+  (let ((cs!286 (= button_pressed_prev' button_pressed))
+	 (cs!287
+	  (=
+	   chan_b_mon_agreement_failure'
+	   chan_b_mon_agreement_failure))
+	 (cs!288
+	  (=
+	   chan_b_mon_prev_button_pressed'
+	   chan_b_mon_prev_button_pressed))
+	 (cs!289
+	  (= chan_b_mon_auto_mode' chan_b_mon_auto_mode))
+	 (cs!291 (= button_frame_count' button_frame_count))
+	 (cs!292 (= button_dispatch_time' button_dispatch_time))
+	 (cs!293 (= button_count' button_count))
+	 (cs!294 (= button_pressed_prev' button_pressed_prev))
+	 (cs!295 (= button_pressed' button_pressed))
+	 (cs!297 (= chan_a_com_prev_button_pressed' chan_a_com_prev_button_pressed))
+	 (cs!298
+	  (= chan_a_com_auto_mode' chan_a_com_auto_mode))
+	 (cs!300
+	  (= chan_a_mon_disagree_count' chan_a_mon_disagree_count))
+	 (cs!301 (= chan_a_in_control' chan_a_in_control))
+	 (cs!302
+	  (=
+	   chan_a_mon_agreement_failure'
+	   chan_a_mon_agreement_failure))
+	 (cs!303
+	  (=
+	   chan_a_mon_prev_button_pressed'
+	   chan_a_mon_prev_button_pressed))
+	 (cs!304
+	  (= chan_a_mon_auto_mode' chan_a_mon_auto_mode))
+	 (cs!306
+	  (=
+	   chan_b_com_prev_button_pressed'
+	   chan_b_com_prev_button_pressed))
+	 (cs!307
+	  (= chan_b_com_auto_mode' chan_b_com_auto_mode))
+	 (cs!311 (= button_count' (+ button_count 1)))
+	 (cs!313
+	  (= button_frame_count' (+ button_frame_count 1)))
+	 (cs!314
+	  (= chan_b_mon_disagree_count' chan_b_mon_disagree_count))
+	 (cs!315 (= chan_b_in_control' chan_b_in_control)))
+     (let ((cs!290 (= time_arri!4' time_arri!4))
+	   (cs!296 (= time_arri!0' time_arri!0))
+	   (cs!299 (= time_arri!1' time_arri!1))
+	   (cs!305 (= time_arri!2' time_arri!2))
+	   (cs!308 (= time_arri!3' time_arri!3))
+	   (cs!309 (= time time_arri!0))
+	   (cs!310 (+ time_arri!0 40))
+	   (cs!312 (= button_dispatch_time' time_arri!0)))
+       (and
+	(or
+	 (and
+	  (or
+	   (and
+	    cs!309
+	    (not button_pressed)
+	    (= button_count 0)
+	    (= button_pressed' true)
+	    (and
+	     (not (< time_arri!0' (+ time_arri!0 (/ 20001 1000))))
+	     (< time_arri!0' cs!310))
+	    cs!311
+	    cs!286
+	    cs!312
+	    cs!313)
+	   (and
+	    cs!309
+	    button_pressed
+	    (= button_count 1)
+	    (= time_arri!0' (+ BUTTON_PHASE 40))
+	    (= button_pressed' false)
+	    cs!311
+	    cs!286
+	    cs!312
+	    cs!291)
+	   (and
+	    cs!309
+	    (not (<= button_count 1))
+	    (= time_arri!0' cs!310)
+	    cs!311
+	    cs!312
+	    cs!313
+	    cs!295
+	    cs!294))
+	  cs!297
+	  cs!298
+	  cs!299
+	  cs!300
+	  cs!301
+	  cs!302
+	  cs!303
+	  cs!304
+	  cs!305
+	  cs!306
+	  cs!307
+	  cs!308
+	  cs!314
+	  cs!315
+	  cs!287
+	  cs!288
+	  cs!289
+	  cs!290)
+	 (and
+	  (= time time_arri!1)
+	  (= time_arri!1' (+ time_arri!1 20))
+	  (=
+	   chan_a_com_auto_mode'
+	   (ite (and
+		 button_pressed
+		 (not chan_a_com_prev_button_pressed))
+		(not chan_a_com_auto_mode)
+		chan_a_com_auto_mode))
+	  (= chan_a_com_prev_button_pressed' button_pressed)
+	  cs!291
+	  cs!292
+	  cs!293
+	  cs!294
+	  cs!295
+	  cs!296
+	  cs!300
+	  cs!301
+	  cs!302
+	  cs!303
+	  cs!304
+	  cs!305
+	  cs!306
+	  cs!307
+	  cs!308
+	  cs!314
+	  cs!315
+	  cs!287
+	  cs!288
+	  cs!289
+	  cs!290)
+	 (and
+	  (= time time_arri!2)
+	  (= time_arri!2' (+ time_arri!2 20))
+	  (=
+	   chan_a_mon_auto_mode'
+	   (ite (and
+		 button_pressed
+		 (not chan_a_mon_prev_button_pressed))
+		(not chan_a_mon_auto_mode)
+		chan_a_mon_auto_mode))
+	  (=
+	   chan_a_mon_disagree_count'
+	   (cond
+	    ((= chan_a_com_auto_mode chan_a_mon_auto_mode') 0)
+	    ((<= chan_a_mon_disagree_count 3)
+	     (+ chan_a_mon_disagree_count 1))
+	    (else chan_a_mon_disagree_count)))
+	  (=
+	   chan_a_mon_agreement_failure'
+	   (not (<= chan_a_mon_disagree_count' 2)))
+	  (= chan_a_in_control' (not chan_a_mon_agreement_failure'))
+	  (= chan_a_mon_prev_button_pressed' button_pressed)
+	  cs!291
+	  cs!292
+	  cs!293
+	  cs!294
+	  cs!295
+	  cs!296
+	  cs!297
+	  cs!298
+	  cs!299
+	  cs!306
+	  cs!307
+	  cs!308
+	  cs!314
+	  cs!315
+	  cs!287
+	  cs!288
+	  cs!289
+	  cs!290)
+	 (and
+	  (= time time_arri!3)
+	  (= time_arri!3' (+ time_arri!3 20))
+	  (=
+	   chan_b_com_auto_mode'
+	   (ite (and
+		 button_pressed
+		 (not chan_b_com_prev_button_pressed))
+		(not chan_b_com_auto_mode)
+		chan_b_com_auto_mode))
+	  (= chan_b_com_prev_button_pressed' button_pressed)
+	  cs!291
+	  cs!292
+	  cs!293
+	  cs!294
+	  cs!295
+	  cs!296
+	  cs!297
+	  cs!298
+	  cs!299
+	  cs!300
+	  cs!301
+	  cs!302
+	  cs!303
+	  cs!304
+	  cs!305
+	  cs!314
+	  cs!315
+	  cs!287
+	  cs!288
+	  cs!289
+	  cs!290)
+	 (and
+	  (= time time_arri!4)
+	  (= time_arri!4' (+ time_arri!4 20))
+	  (=
+	   chan_b_mon_auto_mode'
+	   (ite (and
+		 button_pressed
+		 (not chan_b_mon_prev_button_pressed))
+		(not chan_b_mon_auto_mode)
+		chan_b_mon_auto_mode))
+	  (=
+	   chan_b_mon_disagree_count'
+	   (cond
+	    ((= chan_b_com_auto_mode chan_b_mon_auto_mode') 0)
+	    ((<= chan_b_mon_disagree_count 3)
+	     (+ chan_b_mon_disagree_count 1))
+	    (else chan_b_mon_disagree_count)))
+	  (=
+	   chan_b_mon_agreement_failure'
+	   (not (<= chan_b_mon_disagree_count' 2)))
+	  (= chan_b_in_control' (not chan_b_mon_agreement_failure'))
+	  (= chan_b_mon_prev_button_pressed' button_pressed)
+	  cs!291
+	  cs!292
+	  cs!293
+	  cs!294
+	  cs!295
+	  cs!296
+	  cs!297
+	  cs!298
+	  cs!299
+	  cs!300
+	  cs!301
+	  cs!302
+	  cs!303
+	  cs!304
+	  cs!305
+	  cs!306
+	  cs!307
+	  cs!308))
+	(= time_prev' (ite (= time (- 1)) time_prev time))
+	(=
+	 seen_rising_edge'
+	 (ite (not seen_rising_edge)
+	      (and (not button_pressed_prev) button_pressed)
+	      seen_rising_edge))))))
+
+
+(define-transition-system T state_type initial_states transition)
+
+(assume T
+   (and 
+    (let ((cs!321 (<= time time_arri!0))
+	  (cs!322 (<= time time_arri!1))
+	  (cs!323 (<= time time_arri!2))
+	  (cs!324 (<= time time_arri!3))
+	  (cs!325 (<= time time_arri!4)))
+       (and
+	cs!321
+	cs!322
+	cs!323
+	cs!324
+	cs!325
+	(or
+	 (= time time_arri!0)
+	 (= time time_arri!1)
+	 (= time time_arri!2)
+	 (= time time_arri!3)
+	 (= time time_arri!4))))
+
+    (<= 0 NODE2_PHASE) (< NODE2_PHASE NODE_CLOCK_PERIOD)
+    (<= 0 NODE3_PHASE) (< NODE3_PHASE NODE_CLOCK_PERIOD)
+    (<= 0 NODE4_PHASE) (< NODE4_PHASE NODE_CLOCK_PERIOD)
+    (<= 0 NODE5_PHASE) (< NODE5_PHASE NODE_CLOCK_PERIOD)
+    (<= 0 button_dispatch_time)
+    (<= 0 button_width)
+    (<= 0 time)
+    (<= 0 time_arri!0)
+    (<= 0 time_arri!1)
+    (<= 0 time_arri!2)
+    (<= 0 time_arri!3)
+    (<= 0 time_arri!4)
+    (<= 0 time_prev)))
+
+(query T (not chan_a_mon_agreement_failure))
+
