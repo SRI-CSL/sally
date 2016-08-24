@@ -25,25 +25,32 @@ mvs_with_timeouts3: CONTEXT =
 
   A: REAL = amplitude / (plant_period/2);
 
-  waveform(t: REAL): REAL = 
-    IF t < 0 OR t > plant_period THEN 0
-    ELSIF t <= plant_period/2 THEN A * t
-    ELSE amplitude - A * (t - plant_period/2)
-    ENDIF;
-
+  %
+  % Absolute value.
+  %
+  abs(x: REAL): REAL = IF (x < 0) THEN -x ELSE x ENDIF;
 
   %
-  % Source module: at time t, the output is x = waveform(t - k * period) 
-  % where period * k <= t < period * (k + 1)
+  % Source module: f(t) at time t. The function f should be rate bounded, 
+  % i.e., for all t1, t2 
+  %   |f(t1) - f(t2)| <= A*|t1-t2|. 
+  % We remember the previous value and make sure that new value is within
+  % the range.
   %
   source: MODULE =
     BEGIN 
       INPUT time: TIME
-      LOCAL period_counter: INTEGER
       OUTPUT x: REAL
-    DEFINITION
-      period_counter IN { n: INTEGER | n * plant_period <= time AND time < (n+1) * plant_period };
-      x = waveform(time - period_counter * plant_period);
+      LOCAL time_prev: TIME
+      LOCAL x_prev: REAL
+    TRANSITION
+      x' IN { v: REAL | abs(v - x_prev) <= A*abs(time - time_prev) };
+      time_prev' = time;
+      x_prev' = x;      
+    INITIALIZATION
+      x = 0;
+      x_prev = 0;
+      time_prev = 0;
     END;
 
   
@@ -135,11 +142,11 @@ mvs_with_timeouts3: CONTEXT =
      DEFINITION
 
 	c1_b1 = true;
-	c1_b2 IN { true, false } ;
+	c1_b2 = true; % IN { true, false } ;
 	c1_b3 = true;
 	
 	c2_b1 = true;
-	c2_b2 IN { true, false };
+	c2_b2 = true; % IN { true, false };
         c2_b3 = true;
 
      END;
