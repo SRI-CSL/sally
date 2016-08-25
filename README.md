@@ -19,6 +19,8 @@ sudo apt-get install cmake
 sudo apt-get install libgmp-dev
 sudo apt-get install libboost-program-options-dev libboost-iostreams-dev libboost-test-dev libboost-thread-dev libboost-system-dev
 sudo apt-get install default-jre
+sudo apt-get install libppl-dev libmpfr-dev
+opam install -y ocamlbuild ounit menhir ocamlfind conf-ppl bddapron
 ```
 In addition, Sally needs an SMT solver for reasoning about the systems. It currently supports [Yices2](http://yices.csl.sri.com/) and [MathSAT5](http://mathsat.fbk.eu/), and for best results we recommend using both of them. 
 

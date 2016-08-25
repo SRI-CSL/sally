@@ -28,7 +28,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 # Come settings based on word size
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(ANTLR_CONFIG_FLAG "--enable-64bit")
-else (CMAKE_SIZEOF_VOID_P EQUAL 8) 
+else (CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(ANTLR_CONFIG_FLAG "")
 endif (CMAKE_SIZEOF_VOID_P EQUAL 8)
 
@@ -50,7 +50,7 @@ SET(YICES2_HOME CACHE STRING "Yices2 installation directory")
 find_package(Yices2 2.3.0)
 if (YICES2_FOUND)
   add_definitions(-DWITH_YICES2)
-  include_directories(${YICES2_INCLUDE_DIR}) 
+  include_directories(${YICES2_INCLUDE_DIR})
 endif()
 
 # Find MathSAT5
@@ -61,9 +61,6 @@ if (MATHSAT5_FOUND)
   include_directories(${MATHSAT5_INCLUDE_DIR})
 endif()
 
-find_package(OCaml)
-add_subdirectory(frontend)
-
 # Find Z3
 SET(Z3_HOME CACHE STRING "Z3 installation directory")
 find_package(Z3 4.4.1)
@@ -72,9 +69,12 @@ if (Z3_FOUND)
   include_directories(${Z3_INCLUDE_DIR})
 endif()
 
+# Find opam and all the required packages
+find_package(Opam COMPONENTS ocamlbuild ocamlfind ounit menhir conf-ppl bddapron REQUIRED)
+add_subdirectory(frontend)
 
 # Make sure antlr C runtime is here
-include(ExternalProject) 
+include(ExternalProject)
 ExternalProject_Add(
    libantlr3c-3.4
    URL "${sally_SOURCE_DIR}/antlr/libantlr3c-3.4.tar.gz"
@@ -91,7 +91,7 @@ link_directories(${ANTLR3C_LIBRARY_DIR})
 # The antl3 binary
 set(ANTLR "${sally_SOURCE_DIR}/antlr/antlr3")
 
-# Add includes 
+# Add includes
 include_directories(${sally_SOURCE_DIR}/src ${ANTLR3C_INCLUDE_DIR})
 
 # Configure the subdirectories
