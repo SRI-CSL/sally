@@ -39,14 +39,14 @@ if (OPAM_BIN)
     # Run the check
     execute_process(
       COMMAND
-        ${OPAM_BIN} show -f version ${COMPONENT}
+        ${OPAM_BIN} show -f installed-version ${COMPONENT}
       RESULT_VARIABLE COMPONENT_EXITCODE
       OUTPUT_VARIABLE COMPONENT_VERSION OUTPUT_STRIP_TRAILING_WHITESPACE
       ERROR_QUIET
     )
 
     # Found if exitcode = 0
-    if(NOT ${COMPONENT_EXITCODE})
+    if(NOT ${COMPONENT_EXITCODE} AND NOT ("${COMPONENT_VERSION}" STREQUAL ""))
       message (STATUS "  ${COMPONENT} version ${COMPONENT_VERSION}")
     else()
       message (STATUS "  ${COMPONENT} NOT FOUND")
