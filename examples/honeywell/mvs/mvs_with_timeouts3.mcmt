@@ -1,132 +1,132 @@
 (define-state-type state_type (
-  (c1_b1 Bool)
-  (c1_b2 Bool)
-  (c1_b3 Bool)
-  (c2_b1 Bool)
-  (c2_b2 Bool)
-  (c2_b3 Bool)
-  (fcm_timeout1 Real)
-  (fcm_timeout2 Real)
-  (fcm_timeout3 Real)
-  (mvs1 Real)
-  (mvs2 Real)
-  (mvs_timeout1 Real)
-  (mvs_timeout2 Real)
-  ;; We need integers here
-  (period_counter Int)
-  (pre_y1 Real)
-  (pre_y3 Real)
-  (time Real)
-  (x Real)
-  (y1 Real)
-  (y2 Real)
-  (y3 Real))
-)
+      (c1_b1 Bool)
+      (c1_b2 Bool)
+      (c1_b3 Bool)
+      (c2_b1 Bool)
+      (c2_b2 Bool)
+      (c2_b3 Bool)
+      (fcm_timeout1 Real)
+      (fcm_timeout2 Real)
+      (fcm_timeout3 Real)
+      (mvs1 Real)
+      (mvs2 Real)
+      (mvs_timeout1 Real)
+      (mvs_timeout2 Real)
+      (pre_y1 Real)
+      (pre_y3 Real)
+      (time Real)
+      (time_prev Real)
+      (x Real)
+      (x_prev Real)
+      (y1 Real)
+      (y2 Real)
+      (y3 Real)
+))
 
 (define-states definitions state_type
-  (let ((cs!77 (* period_counter 2)))
-  (let ((t!9 (- time cs!77)))
-    (and
-      (= c1_b1 true)
-      (= c1_b3 true)
-      (= c2_b1 true)
-      (= c2_b3 true)
-      (and 
-        (<= cs!77 time) 
-        (< time (* (+ period_counter 1) 2))
-      )
-      (= x (cond ((or (< t!9 0) (not (<= t!9 2))) 0) ((<= t!9 1) t!9)
-            (else (- 1 (- t!9 1))))))
-  ))
+        (and
+          (= c1_b1 true)
+          (= c1_b3 true)
+          (= c2_b1 true)
+          (= c2_b3 true)
+        )
 )
 
-(define-states initial_states state_type
-  (and
-    (and (<= 0 fcm_timeout1) (< fcm_timeout1 (/ 1 5)))
-    (= y1 0)
-    (= pre_y1 0)
-    (and (<= 0 fcm_timeout2) (< fcm_timeout2 (/ 1 5)))
-    (and (<= 0 fcm_timeout3) (< fcm_timeout3 (/ 1 5)))
-    (= y3 0)
-    (= pre_y3 0)
-    (and (<= 0 mvs_timeout1) (< mvs_timeout1 (/1 20)))
-    (= mvs1 0)
-    (and (<= 0 mvs_timeout2) (< mvs_timeout2 (/1 20)))
-    (= mvs2 0)
-    (= time 0)
-  )
+(define-states initialization state_type
+        (and
+          (and (<= 0 fcm_timeout1) (< fcm_timeout1 (/ 1 5)))
+          (= y1 0)
+          (= pre_y1 0)
+          (and (<= 0 fcm_timeout2) (< fcm_timeout2 (/ 1 5)))
+          (and (<= 0 fcm_timeout3) (< fcm_timeout3 (/ 1 5)))
+          (= y3 0)
+          (= pre_y3 0)
+          (and (<= 0 mvs_timeout1) (< mvs_timeout1 (/ 1 20)))
+          (= mvs1 0)
+          (and (<= 0 mvs_timeout2) (< mvs_timeout2 (/ 1 20)))
+          (= mvs2 0)
+          (= time 0)
+          (= x 0)
+          (= x_prev 0)
+          (= time_prev 0)
+        )
 )
 
 (define-transition transition state_type
-        (let ((cs!54 (not c1_b2'))
-              (cs!56 (+ time (/1 20)))
-              (cs!58 (not c2_b2'))
-              (cs!60 (= pre_y1' pre_y1))
-              (cs!61 (= y1' y1))
-              (cs!62 (= fcm_timeout1' fcm_timeout1))
-              (cs!63 (= y2' y2))
-              (cs!64 (= fcm_timeout2' fcm_timeout2))
-              (cs!65 (= pre_y3' pre_y3))
-              (cs!66 (= y3' y3))
-              (cs!67 (= fcm_timeout3' fcm_timeout3))
-              (cs!68 (= mvs1' mvs1))
-              (cs!69 (= mvs_timeout1' mvs_timeout1))
-              (cs!70 (= mvs2' mvs2))
-              (cs!71 (= mvs_timeout2' mvs_timeout2))
-              (cs!72 (+ time (/ 1 5))))
+        (let ((cs!50 (not c1_b2'))
+              (cs!52 (+ time (/ 1 20)))
+              (cs!54 (not c2_b2'))
+              (cs!56 (= pre_y1' pre_y1))
+              (cs!57 (= y1' y1))
+              (cs!58 (= fcm_timeout1' fcm_timeout1))
+              (cs!59 (= y2' y2))
+              (cs!60 (= fcm_timeout2' fcm_timeout2))
+              (cs!61 (= pre_y3' pre_y3))
+              (cs!62 (= y3' y3))
+              (cs!63 (= fcm_timeout3' fcm_timeout3))
+              (cs!64 (= mvs1' mvs1))
+              (cs!65 (= mvs_timeout1' mvs_timeout1))
+              (cs!66 (= mvs2' mvs2))
+              (cs!67 (= mvs_timeout2' mvs_timeout2))
+              (cs!68 (+ time (/ 1 5)))
+              (x!4 (- x' x_prev))
+              (x!5 (- time time_prev)))
           (let ((y2!3 (ite c1_b2' y2' mvs1))
                 (y2!4 (ite c2_b2' y2' mvs2)))
-            (let ((cs!73 (<= y1' y3'))
-                  (cs!74 (<= y2!3 y3'))
-                  (cs!75 (<= y1' y3'))
-                  (cs!76 (<= y2!4 y3')))
+            (let ((cs!69 (<= y1' y3'))
+                  (cs!70 (<= y2!3 y3'))
+                  (cs!71 (<= y1' y3'))
+                  (cs!72 (<= y2!4 y3')))
               (or
                 (and
                   (or
                     (and
                       (= time fcm_timeout1)
-                      (= fcm_timeout1' cs!72)
+                      (= fcm_timeout1' cs!68)
                       (= y1' x')
                       (= pre_y1' y1))
-                    (and (/= time fcm_timeout1) cs!60 cs!62 cs!61))
+                    (and (/= time fcm_timeout1) cs!56 cs!58 cs!57))
                   (or
                     (and
                       (= time fcm_timeout2)
                       (<= (+ time (/ 1 1000)) fcm_timeout2')
                       true)
-                    (and (/= time fcm_timeout2) cs!64 cs!63))
+                    (and (/= time fcm_timeout2) cs!60 cs!59))
                   (or
                     (and
                       (= time fcm_timeout3)
-                      (= fcm_timeout3' cs!72)
+                      (= fcm_timeout3' cs!68)
                       (= y3' x')
                       (= pre_y3' y3))
-                    (and (/= time fcm_timeout3) cs!65 cs!67 cs!66))
+                    (and (/= time fcm_timeout3) cs!61 cs!63 cs!62))
                   (or
                     (and
                       (= time mvs_timeout1)
-                      (= mvs_timeout1' cs!56)
+                      (= mvs_timeout1' cs!52)
                       (=
                         mvs1'
                         (cond
-                          ((<= y1' y2!3) (cond (cs!74 y2!3) (cs!73 y3') (else y1')))
-                          (cs!73 y1')
-                          (cs!74 y3')
+                          ((<= y1' y2!3) (cond (cs!70 y2!3) (cs!69 y3') (else y1')))
+                          (cs!69 y1')
+                          (cs!70 y3')
                           (else y2!3))))
-                    (and (/= time mvs_timeout1) cs!68 cs!69))
+                    (and (/= time mvs_timeout1) cs!64 cs!65))
                   (or
                     (and
                       (= time mvs_timeout2)
-                      (= mvs_timeout2' cs!56)
+                      (= mvs_timeout2' cs!52)
                       (=
                         mvs2'
                         (cond
-                          ((<= y1' y2!4) (cond (cs!76 y2!4) (cs!75 y3') (else y1')))
-                          (cs!75 y1')
-                          (cs!76 y3')
+                          ((<= y1' y2!4) (cond (cs!72 y2!4) (cs!71 y3') (else y1')))
+                          (cs!71 y1')
+                          (cs!72 y3')
                           (else y2!4))))
-                    (and (/= time mvs_timeout2) cs!70 cs!71))
-                  (= time' time))
+                    (and (/= time mvs_timeout2) cs!66 cs!67))
+                  (= time' time)
+                  (= x_prev' x_prev)
+                  (= time_prev' time_prev)
+                  (= x' x))
                 (and
                   (< time fcm_timeout1)
                   (< time fcm_timeout2)
@@ -145,6 +145,15 @@
                       (= time' fcm_timeout3)
                       (= time' mvs_timeout1)
                       (= time' mvs_timeout2)))
+                  (<=
+                    (ite (< x!4 0) (- 0 x!4) x!4)
+                    (ite (< x!5 0) (- 0 x!5) x!5))
+                  (= time_prev' time)
+                  (= x_prev' x)
+                  cs!56
+                  cs!57
+                  cs!58
+                  cs!59
                   cs!60
                   cs!61
                   cs!62
@@ -152,18 +161,11 @@
                   cs!64
                   cs!65
                   cs!66
-                  cs!67
-                  cs!68
-                  cs!69
-                  cs!70
-                  cs!71)))))
+                  cs!67)))))
 )
 
-(define-transition-system T state_type initial_states transition)
+(define-transition-system T state_type initialization transition)
 
-(assume T
-  definitions
-)
+(assume T definitions)
 
-(query T (and (<= (- mvs1 mvs2) (/ 1 4)) (<= (- mvs2 mvs1) (/ 1 4))))
-
+(query T(and (<= (- mvs1 mvs2) (/ 1 4)) (<= (- mvs2 mvs1) (/ 1 4))))

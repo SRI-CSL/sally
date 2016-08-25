@@ -142,11 +142,11 @@ mvs_with_timeouts3: CONTEXT =
      DEFINITION
 
 	c1_b1 = true;
-	c1_b2 = true; % IN { true, false } ;
+	c1_b2 IN { true, false } ;
 	c1_b3 = true;
 	
 	c2_b1 = true;
-	c2_b2 = true; % IN { true, false };
+	c2_b2 IN { true, false };
         c2_b3 = true;
 
      END;
