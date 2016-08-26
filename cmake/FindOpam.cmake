@@ -39,18 +39,22 @@ if (OPAM_BIN)
     # Run the check
     execute_process(
       COMMAND
-        ${OPAM_BIN} show -f installed-version ${COMPONENT}
+        ${OPAM_BIN} list -i ${COMPONENT}
       RESULT_VARIABLE COMPONENT_EXITCODE
-      OUTPUT_VARIABLE COMPONENT_VERSION OUTPUT_STRIP_TRAILING_WHITESPACE
+      OUTPUT_VARIABLE COMPONENT_VERSION_OUTPUT OUTPUT_STRIP_TRAILING_WHITESPACE
       ERROR_QUIET
     )
 
-    # Found if exitcode = 0
-    if(NOT ${COMPONENT_EXITCODE} AND NOT ("${COMPONENT_VERSION}" STREQUAL ""))
-      message (STATUS "  ${COMPONENT} version ${COMPONENT_VERSION}")
-    else()
+    # Failed if exitcode != 0
+    if(${COMPONENT_EXITCODE})
       message (STATUS "  ${COMPONENT} NOT FOUND")
       set(OPAM_MISSING_PACKAGE 1)
+    else() 
+      if ("${COMPONENT_VERSION_OUTPUT}" MATCHES "${COMPONENT}[ \t]+([^ \t]+)")
+        message (STATUS "  ${COMPONENT} (${CMAKE_MATCH_1})")
+      else()
+        message (STATUS "  ${COMPONENT} (unknown)")
+      endif()
     endif()
   endforeach()
 

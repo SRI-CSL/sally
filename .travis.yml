@@ -43,7 +43,7 @@ install:
     fi
 
 before_script:
-  - opam install -y ocamlbuild ounit menhir ocamlfind conf-ppl bddapron
+  - opam install --jobs=1 -y ocamlbuild ounit menhir ocamlfind conf-ppl bddapron
   
 script:
   - cd build
