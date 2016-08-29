@@ -52,7 +52,9 @@ int main(int argc, char* argv[]) {
     options opts(boost_opts);
 
     // Get the files to run
-    vector<string>& files = boost_opts.at("input").as<vector<string> >();
+    vector<string> files;
+	if(boost_opts.count("input") > 0)
+		files = boost_opts.at("input").as<vector<string> >();
 
     // Set the verbosity
     output::set_verbosity(cout, opts.get_unsigned("verbosity"));
@@ -134,6 +136,21 @@ int main(int argc, char* argv[]) {
       }
     }
 
+	if(boost_opts.count("from-stdin")) {
+
+      MSG(1) << "Processing stdin" << endl;
+
+      parser::parser p(ctx, parser::INPUT_MCMT, NULL);
+
+      // Parse an process each command
+      for (parser::command* cmd = p.parse_command(); cmd != 0; delete cmd, cmd = p.parse_command()) {
+
+        MSG(2) << "Got command " << *cmd << endl;
+        // Run the command
+        cmd->run(&ctx, engine_to_use);
+      }
+	}
+
     // Delete the engine
     if (engine_to_use != 0) {
       delete engine_to_use;
@@ -212,12 +229,13 @@ void parse_options(int argc, char* argv[], variables_map& variables)
   description.add_options()
       ("help,h", "Prints this help message.")
       ("verbosity,v", value<unsigned>()->default_value(0), "Set the verbosity of the output.")
-      ("input,i", value<vector<string> >()->required(), "A problem to solve.")
+      ("input,i", value<vector<string> >(), "A problem to solve.")
 #ifndef NDEBUG
       ("debug,d", value<vector<string> >(), "Any tags to trace (only for debug builds).")
 #endif
       ("show-trace", "Show the counterexample trace if found.")
       ("parse-only", "Just parse, don't solve.")
+      ("from-stdin", "Load model from standard input.")
       ("engine", value<string>(), get_engines_list().c_str())
       ("solver", value<string>()->default_value(smt::factory::get_default_solver_id()), get_solver_list().c_str())
       ("solver-logic", value<string>(), "Optional smt2 logic to set to the solver (e.g. QF_LRA, QF_LIA, ...).")
@@ -250,7 +268,7 @@ void parse_options(int argc, char* argv[], variables_map& variables)
   }
 
   // If help needed, print it out
-  if (parseError || variables.count("help") > 0 || variables.count("input") == 0) {
+  if (parseError || variables.count("help") > 0 || (variables.count("input") == 0 && variables.count("from-stdin") == 0)) {
     if (parseError) {
       cout << "Error parsing command line!" << endl;
     }

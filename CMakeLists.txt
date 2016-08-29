@@ -61,6 +61,9 @@ if (MATHSAT5_FOUND)
   include_directories(${MATHSAT5_INCLUDE_DIR})
 endif()
 
+find_package(OCaml)
+add_subdirectory(frontend)
+
 # Find Z3
 SET(Z3_HOME CACHE STRING "Z3 installation directory")
 find_package(Z3 4.4.1)

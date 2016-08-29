@@ -187,6 +187,10 @@ term_ref term_manager::mk_boolean_constant(bool value) {
   return d_tm->mk_term<CONST_BOOL>(value);
 }
 
+term_ref term_manager::mk_quantified_constant(int value, term_ref ty) {
+  return d_tm->mk_term<TERM_QUANTIFIED_VARIABLE>(value, ty);
+}
+
 term_ref term_manager::mk_rational_constant(const rational& value) {
   return d_tm->mk_term<CONST_RATIONAL>(value);
 }
@@ -215,6 +219,12 @@ bool term_manager::get_boolean_constant(const term& t) const {
   assert(t.op() == CONST_BOOL);
   return d_tm->payload_of<bool>(t);
 }
+
+int term_manager::get_integer_constant(const term& t) const {
+  assert(t.op() == TERM_QUANTIFIED_VARIABLE);
+  return d_tm->payload_of<int>(t);
+}
+
 
 rational term_manager::get_rational_constant(const term& t) const {
   assert(t.op() == CONST_RATIONAL);
@@ -335,11 +345,22 @@ void term_manager::pop_namespace() {
   d_tm->pop_namespace();
 }
 
+struct process_matcher {
+  bool operator() (const term& t) const {
+    return t.op() == TYPE_PROCESS;
+  }
+};
+
+
 struct variable_matcher {
   bool operator() (const term& t) const {
     return t.op() == VARIABLE;
   }
 };
+
+void term_manager::get_process_types(term_ref ref, std::vector<term_ref>& out) const {
+  d_tm->get_subterms(ref, process_matcher(), out);
+}
 
 void term_manager::get_variables(term_ref ref, std::vector<term_ref>& out) const {
   d_tm->get_subterms(ref, variable_matcher(), out);
@@ -545,6 +566,7 @@ void term_manager::gc() {
   for (; it != d_gc_participants.end(); ++ it) {
     (*it)->gc_collect(gc_reloc);
   }
+  term_ref mk_term(term_op op, const term_ref* children_begin, const term_ref* children_end);
 
   TRACE("gc") << "term_manager::gc(): done" << std::endl;
 }
@@ -561,6 +583,16 @@ void term_manager::gc_deregister(gc_participant* o) {
 
 size_t term_manager::id() const {
   return d_id;
+}
+
+term_ref term_manager::mk_process_type(std::string id) {
+  expr::term_ref t =  d_tm->mk_process_type(id);
+  mk_variable(id, t);
+  return t;
+}
+
+term_ref term_manager::mk_array_type(term_ref from, term_ref to) {
+	return mk_term(TYPE_ARRAY, from, to);
 }
 
 }

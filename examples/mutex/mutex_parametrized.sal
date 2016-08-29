@@ -1,0 +1,53 @@
+mutex: CONTEXT =
+	BEGIN
+  	P1: TYPE = PROCESS_TYPE;
+  	%P1: TYPE = [1..3];
+
+		mutex: MODULE =
+			BEGIN
+				OUTPUT
+					want: ARRAY P1 OF BOOLEAN,
+					crit: ARRAY P1 OF BOOLEAN,
+					turn: P1
+
+				INITIALIZATION
+				    % want = [[P1] False]
+					% crit = [False]
+					want IN { a: ARRAY P1 OF BOOLEAN | FORALL(i:P1): NOT a[i] };
+					crit IN { a: ARRAY P1 OF BOOLEAN | FORALL(i:P1): NOT a[i] };
+
+				TRANSITION
+				[
+				  (i: P1): NOT want[i] -->
+				  		% want' = want WITH [i] = True
+						want' IN { a: ARRAY P1 OF BOOLEAN |
+							FORALL(j: P1):
+								a[j] = (i = j OR want[j])
+						};
+				[]
+					(i: P1): want[i] AND NOT crit[i] AND turn = i -->
+  					% crit' = crit WITH [i] = True
+						crit' IN { a: ARRAY P1 OF BOOLEAN |
+							FORALL(j: P1):
+								a[j] = (i = j OR crit[j])
+						};
+				[]
+					(i:P1): crit[i] -->
+   					% want = with WITH [i] = False
+	  				% crit' = crit WITH [i] = False
+						turn' IN { a : P1 | TRUE };
+						crit' IN { a: ARRAY P1 OF BOOLEAN |
+							FORALL(j: P1):
+								a[j] = (i /= j AND crit[j])
+						};
+						want' IN { a: ARRAY P1 OF BOOLEAN |
+							FORALL(j: P1):
+								a[j] = (i /= j AND want[j])
+						};
+				]
+			END;
+
+		safe: LEMMA
+			mutex |- G(FORALL (i, j: P1): i /= j => NOT crit[i] OR NOT crit[j]);
+
+	END

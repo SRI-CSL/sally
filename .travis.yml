@@ -1,6 +1,6 @@
 language: cpp
 
-sudo: false
+sudo: required
 
 compiler:
   # - clang (Disabling until boost and clang play well)
@@ -34,15 +34,21 @@ cache:
     - $HOME/yices2
 
 install:
+  - wget https://raw.githubusercontent.com/ocaml/ocaml-ci-scripts/master/.travis-ocaml.sh && bash -ex .travis-ocaml.sh
   - bash contrib/install_yices2.sh
   - if [[ $ENABLE_COVERAGE == ON ]]; then 
       pip install --user cpp-coveralls;
     fi
+
+before_script:
+  - opam install -y ocamlbuild ounit menhir ocamlfind
   
 script:
+  - eval $(opam config env)
+  - mkdir build
   - cd build
   - cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DENABLE_COVERAGE=${ENABLE_COVERAGE} -DYICES2_HOME=$HOME/yices2 ..
-  - make 
+  - make -j16
   - make check
 
 after_script:

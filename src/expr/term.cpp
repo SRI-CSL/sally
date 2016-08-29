@@ -78,14 +78,17 @@ void term::mk_let_cache(term_manager& tm, expr_let_cache& let_cache, std::vector
   case TYPE_BITVECTOR:
   case TYPE_STRING:
   case TYPE_TYPE:
+  case TYPE_ARRAY:
   case VARIABLE:
   case CONST_BOOL:
   case CONST_RATIONAL:
   case CONST_BITVECTOR:
   case CONST_STRING:
+  case TERM_QUANTIFIED_VARIABLE:
     record_let = false;
     break;
   case TERM_EQ:
+  case TYPE_PROCESS:
   case TERM_AND:
   case TERM_OR:
   case TERM_NOT:
@@ -129,6 +132,12 @@ void term::mk_let_cache(term_manager& tm, expr_let_cache& let_cache, std::vector
   case TERM_BV_SUB:
   case TERM_BV_EXTRACT:
   case TERM_BV_SGN_EXTEND:
+  case TERM_FORALL:
+  case TERM_SELECT:
+  case TERM_STORE:
+  case TERM_COUNTING:
+  case TERM_TYPE_SIZE:
+  case TERM_EXISTS:
     for (const term_ref* it = begin(); it != end(); ++ it) {
       const term& child = tm.term_of(*it);
       child.mk_let_cache(tm, let_cache, definitions);
@@ -214,6 +223,16 @@ std::string get_smt_keyword(term_op op) {
     return ">";
   case TERM_ITE:
     return "ite";
+  case TERM_COUNTING:
+    return "#";
+  case TERM_SELECT:
+    return "select";
+  case TERM_STORE:
+    return "store";
+  case TERM_FORALL:
+    return "forall";
+  case TERM_EXISTS:
+    return "exists";
 
   case TERM_BV_ADD:
     return "bvadd";
@@ -280,13 +299,17 @@ std::string get_smt_keyword(term_op op) {
     return "String";
   case TYPE_TYPE:
     return "Type";
+  case TYPE_ARRAY:
+  	return "Array";
+  case TYPE_PROCESS:
+  	return "Int";
   default:
     assert(false);
     return "unknown";
   }
 }
 
-void term::to_stream_smt_with_let(std::ostream& out, term_manager& tm, const expr_let_cache& let_cache, const std::vector<expr::term_ref>& definitions) const {
+void term::to_stream_smt_with_let(std::ostream& out, term_manager& tm, const expr_let_cache& let_cache, const std::vector<expr::term_ref>& definitions, int level) const {
 
   assert(let_cache.size() == definitions.size());
 
@@ -297,23 +320,23 @@ void term::to_stream_smt_with_let(std::ostream& out, term_manager& tm, const exp
     assert(find != let_cache.end());
     out << "(" << find->second << " ";
     const term& t = tm.term_of(find->first);
-    t.to_stream_smt_without_let(out, tm, let_cache, false);
+    t.to_stream_smt_without_let(out, tm, let_cache, false, level);
     out << ")) ";
   }
   // t
-  to_stream_smt_without_let(out, tm, let_cache);
+  to_stream_smt_without_let(out, tm, let_cache, level);
   // close the lets
   for (size_t i = 0; i < definitions.size(); ++ i) {
     out << ")";
   }
 }
 
-#define SMT_REF_OUT(ref) tm.term_of(ref).to_stream_smt_without_let(out, tm, let_cache);
+#define SMT_REF_OUT(ref) tm.term_of(ref).to_stream_smt_without_let(out, tm, let_cache, use_cache, level);
 
 static inline
 bool isalnum_not(char c) { return !isalnum(c); }
 
-void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const expr_let_cache& let_cache, bool use_cache) const {
+void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const expr_let_cache& let_cache, bool use_cache, int level) const {
 
   // The internals
   const term_manager_internal& tm_internal = *tm.get_internal();
@@ -375,6 +398,18 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
   case CONST_BOOL:
     out << (tm_internal.payload_of<bool>(*this) ? "true" : "false");
     break;
+  case TYPE_PROCESS:
+    out << (tm_internal.payload_of<utils::string>(*this));
+    break;
+  case TERM_TYPE_SIZE:
+    assert(size() == 1);
+    out << "N_";
+    SMT_REF_OUT(child(0));
+    break;
+  case TERM_COUNTING:
+  case TERM_FORALL:
+  case TYPE_ARRAY:
+  case TERM_EXISTS:
   case TERM_EQ:
   case TERM_AND:
   case TERM_OR:
@@ -413,13 +448,23 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
   case TERM_BV_SDIV:
   case TERM_BV_UREM:
   case TERM_BV_SREM:
+  case TERM_SELECT:
+  case TERM_STORE:
   case TERM_BV_SMOD:
   {
     if (size() > 0) {
       out << "(";
     }
     out << get_smt_keyword(d_op);
-    for (const term_ref* it = begin(); it != end(); ++ it) {
+	const term_ref* it = begin();
+	if(d_op == TERM_FORALL || d_op == TERM_EXISTS || d_op == TERM_COUNTING) {
+		out << " ((|var!!" << level << "| ";
+		SMT_REF_OUT(*it);
+		out << "))";
+		it++;
+  		level++;
+	}
+    for (; it != end(); ++ it) {
       out << " ";
       SMT_REF_OUT(*it);
     }
@@ -482,6 +527,10 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
   case CONST_BITVECTOR:
     out << tm_internal.payload_of<bitvector>(*this);
     break;
+  case TERM_QUANTIFIED_VARIABLE:
+    out << "|var!!";
+    out << (level - tm_internal.payload_of<int>(*this)) << "|";
+    break;
   case CONST_STRING:
     out << tm_internal.payload_of<utils::string>(*this);
     break;
@@ -528,7 +577,7 @@ std::string get_nuxmv_operator(expr::term_op op) {
 
 #define SMV_REF_OUT(ref) tm.term_of(ref).to_stream_nuxmv_without_let(out, tm, let_cache);
 
-void term::to_stream_nuxmv_without_let(std::ostream& out, term_manager& tm, const expr_let_cache& let_cache, bool use_cache_for_root) const {
+void term::to_stream_nuxmv_without_let(std::ostream& out, term_manager& tm, const expr_let_cache& let_cache, bool use_cache_for_root, int level) const {
 
   // The internals
   const term_manager_internal& tm_internal = *tm.get_internal();

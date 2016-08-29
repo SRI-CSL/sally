@@ -1,5 +1,23 @@
 %{
-  open Sal_ast
+(*
+ * This file is part of sally.
+ * Copyright (C) 2016 SRI International.
+ *
+ * Sally is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Sally is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with sally.  If not, see <http://www.gnu.org/licenses/>.
+ *)
+
+  open Ast.Sal_ast
 %}
 
 /*
@@ -27,6 +45,9 @@
 %token OF
 %token LEMMA
 %token THEOREM
+%token PROCESS_TYPE
+%token TRUE
+%token FALSE
 
 %token OPEN_PAR
 %token CLOSE_PAR
@@ -50,6 +71,7 @@
 %token EQUAL DISEQUAL GT LT GE LE
 %token FORALL EXISTS
 %token PLUS MINUS TIMES DIV
+%token HASH
 
 
 %token EOF
@@ -57,7 +79,7 @@
 
 %start context
 
-%type <Sal_ast.sal_context> context
+%type <Ast.Sal_ast.sal_context> context
 
 %%
 
@@ -82,6 +104,7 @@ declaration:
 type_declaration:
 | IDENT COLUMN TYPE                 { Type_decl($1) }
 | IDENT COLUMN TYPE EQUAL stype     { Type_def($1,$5) }
+| IDENT COLUMN PROCESS_TYPE         { Proctype_decl ($1) }
 ;
 
 constant_declaration:
@@ -121,6 +144,7 @@ stype:
 
 simple_type:
 | IDENT                                           { Base_type($1) }
+| PROCESS_TYPE                                    { Process }
 | OPEN_BRACKET expr ELLIPSIS expr CLOSE_BRACKET   { Range($2,$4) }
 | OPEN_BRACE enumlist CLOSE_BRACE                 { Enum($2) }
 ;
@@ -264,6 +288,8 @@ not_expression:
 
 eq_r_expression:
 | eq_expression         { $1 }
+| TRUE { True }
+| FALSE { False }
 | q_expression          { $1 }
 ;
 
@@ -313,6 +339,8 @@ simple_expression:
 | if_then_else                { $1 }
 | array_literal               { $1 }
 | set_literal                 { $1 }
+| set_cardinal                { $1 }
+| proc_cardinal               { $1 }
 | OPEN_PAR expr CLOSE_PAR     { $2 }
 ;
 
@@ -323,7 +351,7 @@ number:
 
 var_or_next:
 | IDENT       { Ident($1) }
-| IDENT NEXT  { Next($1) }
+| IDENT NEXT  { Ident($1 ^ "'") }
 ;
 
 function_call:
@@ -345,6 +373,7 @@ array_access:
 if_then_else:
 | IF expr THEN expr elsif ELSE expr ENDIF     { Cond(($2,$4)::$5,$7) }
 ;
+
 elsif:
 | ELSIF expr THEN expr elsif     { ($2,$4)::$5 }
 |                                { [] }
@@ -358,8 +387,18 @@ array_literal:
 set_literal:
 | OPEN_BRACE IDENT COLUMN stype BAR expr CLOSE_BRACE
    { Set_literal($2,$4,$6) }
+
+set_cardinal:
+| HASH set_literal
+   { match $2 with
+     | Set_literal (id, t, e) -> SSet_cardinal (id, t, e)
+     | _ -> assert false }
 ;
 
+proc_cardinal:
+| HASH IDENT
+   { SProc_cardinal $2 }
+;
 
 /*
  * MODULES
@@ -419,8 +458,8 @@ assignments:
 ;
 
 assignment:
-| var_or_next EQUAL expr         { Assign(to_state_var($1),$3) }
-| var_or_next IN set_literal     { Member(to_state_var($1),$3) }
+| array_access EQUAL expr         { Assign($1, $3) }
+| var_or_next IN set_literal      { Member($1, $3) }
 ;
 
 guarded_commands:
@@ -429,6 +468,10 @@ guarded_commands:
 ;
 
 guarded_command:
+| OPEN_PAR var_declarations CLOSE_PAR COLUMN expr ARROW assignments           {
+	List.fold_left (fun expr decl ->
+		ExistentialGuarded(decl, expr)
+	) (Guarded($5, $7)) $2 }
 | expr ARROW assignments           { Guarded($1,$3) }
 | expr ARROW                       { Guarded($1,[]) }
 | ELSE ARROW assignments           { Default($3) }

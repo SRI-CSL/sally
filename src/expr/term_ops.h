@@ -43,6 +43,8 @@ enum term_op {
   TYPE_STRING,
   TYPE_BITVECTOR,
   TYPE_STRUCT,
+  TYPE_PROCESS,
+  TYPE_ARRAY,
 
   // Variables
   VARIABLE,
@@ -107,6 +109,17 @@ enum term_op {
   // Constant strings
   CONST_STRING,
 
+  // Quantifiers
+  TERM_FORALL,
+  TERM_EXISTS,
+  TERM_QUANTIFIED_VARIABLE,
+  TERM_COUNTING,
+  TERM_TYPE_SIZE,
+
+  // Arrays
+  TERM_SELECT,
+  TERM_STORE,
+
   // Marker for the last
   OP_LAST
 };
@@ -136,6 +149,11 @@ struct term_op_traits<TYPE_BITVECTOR> {
   typedef size_t payload_type;
 };
 
+template<>
+struct term_op_traits<TYPE_PROCESS> {
+  typedef utils::string payload_type;
+};
+
 /**
  * Bitvector extract.
  */
@@ -159,6 +177,15 @@ template<>
 struct term_op_traits<CONST_BOOL> {
   typedef bool payload_type;
 };
+
+/**
+ * Quantified variables have a payload of type int.
+ */
+template<>
+struct term_op_traits<TERM_QUANTIFIED_VARIABLE> {
+  typedef int payload_type;
+};
+
 
 /**
  * Rational constants terms have a payload of type rational (gmp) and no children.

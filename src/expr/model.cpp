@@ -262,6 +262,10 @@ public:
     case CONST_BOOL:
       v = d_tm.get_boolean_constant(t_term);
       break;
+    // Quantified variable terms
+    case TERM_QUANTIFIED_VARIABLE:
+      v = d_tm.get_integer_constant(t_term);
+      break;
     case TERM_AND:
       v = d_true;
       for (size_t i = 0; i < t_size; ++ i) {

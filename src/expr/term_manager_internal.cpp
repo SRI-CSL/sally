@@ -79,6 +79,8 @@ bool is_type(term_op op) {
   case TYPE_STRUCT:
   case TYPE_BITVECTOR:
   case TYPE_STRING:
+  case TYPE_ARRAY:
+  case TYPE_PROCESS:
     return true;
   default:
     return false;
@@ -90,6 +92,10 @@ bool term_manager_internal::is_subtype_of(term_ref t1, term_ref t2) const {
     return true;
   }
   if (t1 == integer_type() && t2 == real_type()) {
+    return true;
+  }
+  const term& t = term_of(t1);
+  if (t.op() == TYPE_PROCESS && t2 == integer_type()) {
     return true;
   }
   return false;
@@ -206,10 +212,18 @@ public:
     case TYPE_BOOL:
     case TYPE_INTEGER:
     case TYPE_REAL:
+	case TYPE_PROCESS:
     case TYPE_STRING:
       d_ok = t.size() == 0;
       if (d_ok) t_type = d_tm.type_type();
       break;
+	case TYPE_ARRAY:
+      t_type = d_tm.type_type();
+	  d_ok = true;
+	  break;
+    case TERM_QUANTIFIED_VARIABLE:
+	  t_type = d_tm.integer_type();
+	  break;
     case VARIABLE:
       // Type in payload
       d_ok = t.size() == 1;
@@ -259,6 +273,61 @@ public:
         if (d_ok) t_type = d_tm.supertype_of(t1, t2);
       }
       break;
+    case TERM_FORALL:
+      if (t.size() != 2) {
+        d_ok = false;
+      } else {
+        term_ref t0 = type_of(t[1]);
+        d_ok = true;
+        t_type = t0;
+      }
+      break;
+    case TERM_EXISTS:
+      if (t.size() != 2) {
+        d_ok = false;
+      } else {
+        term_ref t0 = type_of(t[1]);
+        d_ok = true;
+        t_type = t0;
+      }
+      break;
+	case TERM_SELECT:
+	  if (t.size() != 2) {
+	    d_ok = false;
+	  } else {
+	    /*term_ref t0 = type_of(t[0]);
+		term_ref t1 = type_of(t[1]);*/
+		// TODO: check types
+		d_ok = true;
+		t_type = d_tm.boolean_type();
+	  }
+	  break;
+	case TERM_STORE:
+	  if (t.size() != 3) {
+	    d_ok = false;
+	  } else {
+		// TODO: check types
+		d_ok = true;
+		t_type = type_of(t[0]);
+	  }
+	  break;
+	case TERM_COUNTING:
+      if (t.size() != 2) {
+        d_ok = false;
+      } else {
+        d_ok = true;
+        t_type = d_tm.real_type();
+      }
+      break;
+	case TERM_TYPE_SIZE:
+      if (t.size() != 1) {
+        d_ok = false;
+      } else {
+        d_ok = true;
+        t_type = d_tm.real_type();
+      }
+      break;
+    
     // Boolean terms
     case CONST_BOOL:
       d_ok = t.size() == 0;
@@ -667,6 +736,12 @@ term_ref term_manager_internal::bitvector_type(size_t size) {
    d_bitvectorType[size] = term_ref_strong(*this, new_type);
    return new_type;
 }
+
+term_ref term_manager_internal::mk_process_type(std::string u) {
+   term_ref new_type = mk_term<TYPE_PROCESS>(u);
+   return new_type;
+}
+
 
 bool term_manager_internal::is_bitvector_type(term_ref t) const {
   return term_of(t).d_op == TYPE_BITVECTOR;

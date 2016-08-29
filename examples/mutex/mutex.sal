@@ -1,0 +1,50 @@
+mutex: CONTEXT =
+	BEGIN
+		N: NATURAL = 2;
+		PROC: TYPE = [1..N];
+
+		mutex: MODULE =
+			BEGIN
+				OUTPUT
+					want: ARRAY PROC OF BOOLEAN,
+					crit: ARRAY PROC OF BOOLEAN,
+					turn: PROC
+
+				INITIALIZATION
+					want IN { a: ARRAY PROC OF BOOLEAN | FORALL(i:PROC): NOT a[i] };
+					crit IN { a: ARRAY PROC OF BOOLEAN | FORALL(i:PROC): NOT a[i] };
+
+				TRANSITION
+				[
+					i: PROC AND NOT want[i] -->
+
+						want IN { a: ARRAY PROC OF BOOLEAN |
+							FORALL(j: PROC):
+								a[j] = (i = j OR want[j])
+						};
+				[]
+					i: PROC AND want[i] AND NOT crit[i] AND turn = i -->
+						
+						crit IN { a: ARRAY PROC OF BOOLEAN |
+							FORALL(j: PROC):
+								a[j] = (i = j OR crit[j])
+						};
+				[]
+					i: PROC AND crit[i] -->
+
+						turn IN { a : PROC | 1 = 1 };
+						crit IN { a: ARRAY PROC OF BOOLEAN |
+							FORALL(j: PROC):
+								a[j] = (i /= j AND crit[j])
+						};
+						want IN { a: ARRAY PROC OF BOOLEAN |
+							FORALL(j: PROC):
+								a[j] = (i /= j AND want[j])
+						};
+				]
+			END;
+
+		safe: LEMMA
+			mutex |- G(FORALL (i, j: PROC): i /= j => NOT crit[i] OR NOT crit[j]);
+
+	END

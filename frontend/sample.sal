@@ -1,0 +1,39 @@
+sample: CONTEXT =
+BEGIN
+
+  N: NATURAL = 12;  % number of processes
+  M: NATURAL = 4;  % number of relays
+
+  plusone(x: NATURAL): NATURAL =
+    x+1;
+
+  plusone(x: NATURAL): NATURAL =
+    x+1;
+
+  OM: MODULE =
+  BEGIN
+    OUTPUT
+      round:NATURAL
+    INITIALIZATION
+      round = 0;
+
+    TRANSITION
+     [ round = 0 -->
+         round' = plusone(round);
+    []
+       round = 1 -->
+         round' = 2;
+    []
+       round = 2 -->
+         round' = 3;
+    []
+       round = 3 --> round'= N; %% don
+	[] 
+		ELSE --> round' = round;
+     ]
+  END;
+
+  agreement: LEMMA
+    OM |- G(round >= 4 => round = N);
+  
+END

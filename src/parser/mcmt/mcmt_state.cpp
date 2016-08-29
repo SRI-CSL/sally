@@ -24,6 +24,8 @@
 
 #include <cassert>
 
+#include <sstream> 
+
 using namespace sally;
 using namespace parser;
 using namespace expr;
@@ -60,6 +62,15 @@ term_ref mcmt_state::get_bitvector_type(size_t size) const {
 }
 
 term_ref mcmt_state::get_variable(std::string id) const {
+  int i = 0;
+  lambda_variables_list::const_iterator it = lambda_variables.begin();
+  for(; it != lambda_variables.end(); ++ it) {
+    i++;
+    if(it->first == id) {
+      term_ref result = tm().mk_quantified_constant(i, it->second);
+      return result;
+    }
+  }
   if (!d_variables.has_entry(id)) {
     throw parser_exception(id + "undeclared");
   }
@@ -172,6 +183,8 @@ bool mcmt_state::is_declared(std::string id, mcmt_object type) const {
   case MCMT_OBJECT_LAST:
     // Always no op
     return false;
+  case MCMT_PROCESS_TYPE:
+    return false;
   default:
     assert(false);
   }
@@ -181,6 +194,12 @@ bool mcmt_state::is_declared(std::string id, mcmt_object type) const {
 
 void mcmt_state::ensure_declared(std::string id, mcmt_object type, bool declared) const {
   if (declared != is_declared(id, type)) {
+    lambda_variables_list::const_iterator it = lambda_variables.begin();
+    for(; it != lambda_variables.end(); ++ it) {
+      if (it->first == id) {
+	return;
+      }
+    }
     if (declared) throw parser_exception(id + " not declared");
     else throw parser_exception(id + " already declared");
   }
@@ -215,4 +234,27 @@ bool mcmt_state::no_input_namespace() const {
 void mcmt_state::gc_collect(const expr::gc_relocator& gc_reloc) {
   d_variables.gc_relocate(gc_reloc);
   d_types.gc_relocate(gc_reloc);
+}
+
+void mcmt_state::mk_process_type(std::string id) {
+  term_manager& tm = d_context.tm();
+  d_types.add_entry(id, term_ref_strong(tm, tm.mk_process_type(id)));
+}
+
+expr::term_ref mcmt_state::mk_array_type(expr::term_ref from, expr::term_ref to) {
+  /* FIXME: not very elegant way to get a unique but reproducible id for the array type */
+  std::stringstream ss;
+  term_manager& tm = d_context.tm();
+  ss << term_ref_strong(tm, from).hash() << "^" << term_ref_strong(tm, to).hash();
+  term_ref_strong array = term_ref_strong(tm, tm.mk_array_type(from, to));
+  d_types.add_entry(ss.str(), array);
+  return array;
+}
+
+void mcmt_state::push_lambda(std::string v, expr::term_ref type) {
+	lambda_variables.push_front(std::make_pair(v, type));
+}
+
+void mcmt_state::pop_lambda() {
+	lambda_variables.pop_front();
 }

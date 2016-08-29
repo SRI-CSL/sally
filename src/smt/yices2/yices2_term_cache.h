@@ -30,7 +30,9 @@
  * otherwise it has no effect (because the boost file indirectly
  * includes <stdint.h>).
  */
-#define __STDC_LIMIT_MACROS 1
+#ifndef __STDC_LIMIT_MACROS
+#  define __STDC_LIMIT_MACROS 1
+#endif
 
 
 #include <map>

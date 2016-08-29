@@ -47,7 +47,7 @@ BEGIN
   %
   all_good3(a, b, c: BOOLEAN): BOOLEAN = a AND b AND c;
 
-  one_fault3(a, b, c: BOOLEAN): BOOLEAN = (a AND b) OR (a AND c) or (b AND c);
+  one_fault3(a, b, c: BOOLEAN): BOOLEAN = (a AND b) OR (a AND c) OR (b AND c);
 
   two_faults3(a, b, c: BOOLEAN): BOOLEAN = a OR b OR c;
 

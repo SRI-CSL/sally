@@ -1,40 +1,61 @@
+(*
+ * This file is part of sally.
+ * Copyright (C) 2016 SRI International.
+ *
+ * Sally is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Sally is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with sally.  If not, see <http://www.gnu.org/licenses/>.
+ *)
+
 {
-  open Salparse2
+  open Sal_parser
   let keyword_table = Hashtbl.create 53
   let keyword k = try Hashtbl.find keyword_table k with Not_found -> IDENT(k)
-  let _ =
+  let () =
     List.iter (fun (kwd, tok) -> Hashtbl.add keyword_table kwd tok)
       [
-	"CONTEXT", CONTEXT;
-	"BEGIN", BEGIN;
-	"END", END;
-	"MODULE", MODULE;
-	"INPUT", INPUT;
-	"OUTPUT", OUTPUT;
-	"GLOBAL", GLOBAL;
-	"LOCAL", LOCAL;
-	"INVARIANT", INVARIANT;
-	"INITIALIZATION", INITIALIZATION;
-	"DEFINITION", DEFINITION;
-	"TRANSITION", TRANSITION;
-	"ARRAY", ARRAY;
-	"TYPE", TYPE;
-	"OF", OF;
-	"LEMMA", LEMMA;
-	"THEOREM", THEOREM;
-	"LET", LET;
-	"IN", IN;
-	"FORALL", FORALL;
-	"EXISTS", EXISTS;
-	"IF", IF;
-	"THEN", THEN;
-	"ELSE", ELSE;
-	"ELSIF", ELSIF;
-	"ENDIF", ENDIF;
-	"XOR", XOR;
-	"OR", OR;
-	"AND", AND;
-	"NOT", NOT;
+        "AND", AND;
+        "ARRAY", ARRAY;
+        "BEGIN", BEGIN;
+        "CONTEXT", CONTEXT;
+        "DEFINITION", DEFINITION;
+        "ELSE", ELSE;
+        "ELSIF", ELSIF;
+        "END", END;
+        "ENDIF", ENDIF;
+        "EXISTS", EXISTS;
+        "FALSE", FALSE;
+        "FORALL", FORALL;
+        "GLOBAL", GLOBAL;
+        "IF", IF;
+        "IN", IN;
+        "INITIALIZATION", INITIALIZATION;
+        "INPUT", INPUT;
+        "INVARIANT", INVARIANT;
+        "LEMMA", LEMMA;
+        "LET", LET;
+        "LOCAL", LOCAL;
+        "MODULE", MODULE;
+        "NOT", NOT;
+        "OF", OF;
+        "OR", OR;
+        "OUTPUT", OUTPUT;
+        "PROCESS_TYPE", PROCESS_TYPE;
+        "THEN", THEN;
+        "THEOREM", THEOREM;
+        "TRANSITION", TRANSITION;
+        "TRUE", TRUE;
+        "TYPE", TYPE;
+        "XOR", XOR
       ]
 }
 
@@ -51,6 +72,7 @@ rule token =
      | alpha alphanum*             { keyword (Lexing.lexeme lexbuf) }
      | digit+ '.' digit+ (['e' 'E'] plusminus? digit+)? { FLOAT (Lexing.lexeme lexbuf) }
      | digit+                      { DECIMAL (Lexing.lexeme lexbuf) }
+     | '#'                         { HASH }
      | '+'                         { PLUS }
      | '-'                         { MINUS }
      | '*'                         { TIMES }
@@ -94,3 +116,8 @@ rule token =
 	  failwith "Syntax error" in
       ctx
 }
+
+(* Local Variables: *)
+(* compile-command: "make -C ../../../build/ -j 4" *)
+(* caml-annot-dir: "../../../build/frontend/sal/" *)
+(* End: *)

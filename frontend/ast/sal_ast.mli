@@ -1,4 +1,22 @@
 (*
+ * This file is part of sally.
+ * Copyright (C) 2016 SRI International.
+ *
+ * Sally is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Sally is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with sally.  If not, see <http://www.gnu.org/licenses/>.
+ *)
+
+(*
  * Abtract syntax for the simplified SAL language
  *)
 
@@ -18,6 +36,8 @@ type sal_type =
   | Enum of (string list)                      (* Enumeration/scalar type *)
   | Array of sal_type * sal_type               (* ARRAY index_type OF value_type *)
   | Subtype of string * sal_type * sal_expr    (* Predicate subtype *)
+  | Process                                    (* Unnamed process type *)
+  | Process_type of string                     (* Named process type *)
 
 and sal_decl = (string list) * sal_type
 
@@ -32,6 +52,8 @@ and sal_expr =
   | Array_access of sal_expr * sal_expr
   | Array_literal of string * sal_type * sal_expr
   | Set_literal of string * sal_type * sal_expr
+  | SSet_cardinal of string * sal_type * sal_expr
+  | SProc_cardinal of string
   | Cond of ((sal_expr * sal_expr) list) * sal_expr  (* if-then-else *)
   | Opp of sal_expr
   | Add of sal_expr * sal_expr
@@ -53,18 +75,17 @@ and sal_expr =
   | Exists of sal_decl list * sal_expr
   | Forall of sal_decl list * sal_expr
   | Let of let_decl list * sal_expr
+  | True
+  | False
 
 type state_var_decl = state_var_tag * (sal_decl list)
 
-type var_or_next =
-  | SVar of string
-  | NVar of string
-
 type sal_assignment =
-  | Assign of var_or_next * sal_expr (* x := value or x' := value *)
-  | Member of var_or_next * sal_expr (* x IN set of x' IN set *)
+  | Assign of sal_expr * sal_expr (* x := value or x' := value *)
+  | Member of sal_expr * sal_expr (* x IN set of x' IN set *)
 
 type guarded_command =
+  | ExistentialGuarded of sal_decl * guarded_command
   | Guarded of sal_expr * (sal_assignment list)  (* expr -> assignments *)
   | Default of (sal_assignment list)             (* ELSE -> assignments *)
 
@@ -84,6 +105,7 @@ type sal_module = {
 type sal_def = 
   | Type_decl of string
   | Type_def of string * sal_type
+  | Proctype_decl of string
   | Constant_decl of string * sal_type
   | Constant_def of string * sal_type * sal_expr
   | Function_def of string * (sal_decl list) * sal_type * sal_expr
@@ -94,28 +116,8 @@ type sal_context = {
   ctx_name: string;
   definitions: sal_def list;
 }
-  
-(*
- * Conversion from sal_expr to var_or_next:
- *  Ident(x) --> SVar(x)
- *  Next(s)  --> NVar(x)
- *)
-val to_state_var: sal_expr -> var_or_next
 
-
-(*
- * Pretty printing
- *)
-val pp_type: Format.formatter -> sal_type -> unit
-val pp_expr: Format.formatter -> sal_expr -> unit
-val pp_module: Format.formatter -> sal_module -> unit
-val pp_context: Format.formatter -> sal_context -> unit
-
-(*
- * Variant: use the given output channel
- *)
-val print_type: out_channel -> sal_type -> unit
-val print_expr: out_channel -> sal_expr -> unit
-val print_module: out_channel -> sal_module -> unit
-val print_context: out_channel -> sal_context -> unit
-
+(* Local Variables: *)
+(* compile-command: "make -C ../../build/ -j 4" *)
+(* caml-annot-dir: "../../build/frontend/ast/" *)
+(* End: *)

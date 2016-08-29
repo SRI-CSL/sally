@@ -82,7 +82,7 @@ public:
 
   /** Get the Real type */
   term_ref real_type() const;
-
+  
   /** Get the type of bitvectors of given size > 0. */
   term_ref bitvector_type(size_t size);
 
@@ -106,6 +106,11 @@ public:
 
   /** Make a term, given children */
   term_ref mk_term(term_op op, const term_ref* children_begin, const term_ref* children_end);
+  term_ref mk_array_type(term_ref children_begin, term_ref children_end);
+  
+  term_ref mk_process_type(std::string id);
+
+  term_ref mk_array_type(std::string index_id, std::string to_id);
 
   /** Make a term, given children */
   term_ref mk_term(term_op op, const term_ref* children, size_t n) {
@@ -135,6 +140,12 @@ public:
 
   /** Returns the boolan constant value */
   bool get_boolean_constant(const term& t) const;
+
+  /** Make a new quantified constant */
+  term_ref mk_quantified_constant(int value, term_ref type);
+
+  /** Returns the quantifier or integer constant value */
+  int get_integer_constant(const term& t) const;
 
   /** Returns the default value for the given type */
   term_ref get_default_value(term_ref type) const;
@@ -265,6 +276,9 @@ public:
 
   /** Get the variables of the term */
   void get_variables(term_ref ref, std::vector<term_ref>& out) const;
+  
+  /** Get the variables of the term */
+  void get_process_types(term_ref ref, std::vector<term_ref>& out) const;
 
   /** Get the variables of the term */
   void get_variables(term_ref ref, std::set<term_ref>& out) const;

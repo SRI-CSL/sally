@@ -1,0 +1,62 @@
+%
+% Byzantine fault tolerant OM protocol without relays
+%
+
+test_parametric1: CONTEXT =
+BEGIN
+  
+  PID: TYPE = PROCESS_TYPE;
+  
+  DATA: TYPE = BOOLEAN;
+  val: DATA;
+   
+  % Data from the source
+  source: PID;
+    
+  %
+  % Fault assumptions
+  %
+  faults(a: ARRAY PID OF BOOLEAN): INTEGER =
+    #PID - #{x:PID | a[x]};
+  
+  all_good(a: ARRAY PID OF BOOLEAN): BOOLEAN =
+    faults(a) = 0;
+  
+
+  %
+  % OM protocol: flat representation
+  %  cx[i][j] = channel from process i to process j
+  %  good_p[i] = true if process i is non-faulty
+  %  v[i] = value chosen by process i
+  %  round = round counter
+  % Process 1 is the Byzantine general
+  %
+  % Fault model: a faulty process is Byzantine
+  %
+  OM: MODULE =
+  BEGIN
+    OUTPUT
+      cx: ARRAY PID OF DATA,
+      good_p: ARRAY PID OF BOOLEAN,
+      round: NATURAL
+    INITIALIZATION
+      round = 0;
+      cx[source] = val;
+      good_p IN { a: ARRAY PID OF BOOLEAN | 3*faults(a) < #PID  };
+      
+    TRANSITION
+      [ round < 2 -->
+        cx' IN { c: ARRAY PID OF DATA |
+          FORALL (i: PID):
+            (good_p[i] => c[i] = val)
+        };
+        round' = round + 1;
+      []
+        round = 2 -->
+      ]
+  END;
+
+  agreement: LEMMA
+    OM |- G(round >= 3 AND good_p[source] => #{i: PID | good_p[i] => cx[i] = val} = #PID);
+
+END
