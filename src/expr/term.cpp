@@ -273,7 +273,7 @@ std::string get_smt_keyword(term_op op) {
   case TYPE_BOOL:
     return "Bool";
   case TYPE_INTEGER:
-    return "Integer";
+    return "Int";
   case TYPE_REAL:
     return "Real";
   case TYPE_STRING:
