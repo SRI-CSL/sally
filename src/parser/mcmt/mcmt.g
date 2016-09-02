@@ -48,7 +48,7 @@ options {
 }
 
 /** Parses a command */
-command returns [parser::command* cmd = 0] 
+command returns [cmd::command* cmd = 0] 
   : (internal_command*) c = system_command { $cmd = c; }
   ;
 
