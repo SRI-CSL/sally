@@ -76,6 +76,15 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
 
       MSG(1) << "BMC: checking " << k << std::endl;
 
+      if (ctx().get_options().get_bool("bmc-check-deadlock")) {
+        smt::solver::result r = d_solver->check();
+        if (r == smt::solver::UNSAT) {
+          std::stringstream ss;
+          ss << "Error: System in deadlock at step " << k << ".";
+          throw exception(ss.str());
+        }
+      }
+
       scope.push();
       expr::term_ref property_not = tm().mk_term(expr::TERM_NOT, property);
       d_solver->add(d_trace->get_state_formula(property_not, k), smt::solver::CLASS_A);

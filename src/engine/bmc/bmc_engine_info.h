@@ -32,6 +32,7 @@ struct bmc_engine_info {
     options.add_options()
         ("bmc-max", value<unsigned>()->default_value(10), "Maximal unrolling length to check.")
         ("bmc-min", value<unsigned>()->default_value(0), "Minimal unrolling length to check.")
+        ("bmc-check-deadlock", "Check for deadlocks throughout the algorithm.")
         ;
   }
 
