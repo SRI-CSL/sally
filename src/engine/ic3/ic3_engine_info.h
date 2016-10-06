@@ -38,8 +38,7 @@ struct ic3_engine_info {
         ("ic3-minimize-interpolants", "Try to minimize interpolants")
         ("ic3-minimize-generalizations", "Try to minimize generalizations")
         ("ic3-minimize-frames", "Try to minimize frames")
-        ("ic3-classic-push", "Try the simple IC3 push")
-    ;
+        ;
   }
 
   static std::string get_id() {

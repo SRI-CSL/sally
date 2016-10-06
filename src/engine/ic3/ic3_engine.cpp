@@ -132,11 +132,6 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
     return INDUCTION_SUCCESS;
   }
 
-  // If clasic push, just drop it
-  if (ctx().get_options().get_bool("ic3-classic-push")) {
-    return INDUCTION_FAIL;
-  }
-
   // If more than cutoff, just break
   if (ind.d >= d_induction_cutoff) {
     return INDUCTION_FAIL;
