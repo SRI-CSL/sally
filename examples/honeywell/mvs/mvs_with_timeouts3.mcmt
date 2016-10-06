@@ -26,8 +26,10 @@
 (define-states definitions state_type
         (and
           (= c1_b1 true)
+          (= c1_b2 true) ;; Added
           (= c1_b3 true)
           (= c2_b1 true)
+          (= c2_b1 true) ;; Added
           (= c2_b3 true)
         )
 )
