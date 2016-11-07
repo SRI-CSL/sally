@@ -36,285 +36,205 @@ options {
 
 @parser::context
 {
-  /** The sally part of the parser state */
+  /** The sally part of the parser state. */
   parser::sal_state* pState;
 }
 
+/** SAL context returned as a sequence command. */
 command returns [parser::command* cmd = 0]
   : context
   | EOF
   ; 
 
+/** SAL context, with parameters for parametrization. */
 context 
-  : identifier ('{' parameters '}')? ':' 'CONTEXT' '=' contextbody   
+  : identifier ('{' var_declaration_list '}')? ':' KW_CONTEXT '=' context_body   
   ;
 
-parameters 
-  : type_declarations? ';' var_declarations?
+/** Body of the context */
+context_body 
+  : KW_BEGIN declaration (';' declaration)* ';'? KW_END 
   ;
 
-contextbody 
-  : 'BEGIN' declarations 'END' 
-  ;
-
-declarations 
- : (declaration ';')+ 
- ;
-
+/** 
+ * Individual declarations in the context. Usually, defined by defining a some 
+ * constants (these are either instantiated to a value, or don't change during 
+ * evolution), types, then the modules, and finally at least one property to 
+ * check.  
+ */
 declaration 
-  : type_declaration 
-  | assertion_declaration
-  | context_declaration 
+  : constant_declaration
+  | type_declaration     
   | module_declaration
-  | constant_declaration
+  | assertion_declaration
   ;
 
+/** Declaration of constants (including functions) */
 constant_declaration 
-  : identifier ('(' var_declarations ')')? ':' type ('=' expression)?
+  : identifier ('(' var_declaration_list ')')? ':' type ('=' term)?
   ;
 
+/** Declations of types */
 type_declaration 
-  : identifier ':' 'TYPE' ('=' type_definition)?
+  : identifier ':' KW_TYPE ('=' type)?
   ;
 
+/** Assertions (lemmas, theorems, ...) */
 assertion_declaration 
-  : identifier ':' assertion_form assertion_expression
+  : identifier ':' assertion_form assertion_term
   ;
 
+/** Types of assertions (there is no semantics attached to these names) */
 assertion_form 
-  : ('OBLIGATION' | 'CLAIM' | 'LEMMA' | 'THEOREM')
+  : (KW_OBLIGATION | KW_CLAIM | KW_LEMMA | KW_THEOREM)
   ;
 
-assertion_expression 
-  : module '|-' expression
+/** The actual assertion, does 'term' hold in the 'module' */
+assertion_term 
+  : module '|-' term
   ;
 
-assertion_proposition 
-  : ((AND|OR|IMPLIES|IFF) '(' assertion_expression ',' assertion_expression ')')
-  | (NOT '(' assertion_expression ')')
-  ;
-
-quantified_assertion 
-  : ('FORALL' | 'EXISTS') '(' var_declarations ')' ':' assertion_expression
-  ;
-
-context_declaration 
-  : identifier ':' 'CONTEXT' '=' context_name
-  ;
-
-context_name 
-  : identifier ('{' actual_parameters '}')?
-  ;
-
+/** Definition of a module */
 module_declaration 
-  : identifier ('[' var_declarations ']')? ':' 'MODULE' '=' module
+  : identifier ('[' var_declaration_list ']')? ':' 'MODULE' '=' module
   ;
 
-// Types
-
-type_definition 
-  : type 
-  | scalar_type 
-  | datatype 
-  ;
-
+/** Types */ 
 type
   : type_name
-  | basic_type
-  | (subrange_type)     => subrange_type
+  | scalar_type 
+  | subrange_type
   | array_type
-  | (function_type) => function_type
-  | tuple_type
-  | record_type
   | subtype
+  | record_type
   ;
 
+/** Subtype of a type */
 subtype
-  : '{' identifier ':' type '|' expression '}'
+  : '{' identifier ':' type '|' term '}'
   ;
 
+/** Name of an existing type */
 type_name 
-  : name
+  : identifier
   ;
 
+/** List of scalars (an enum) */
 scalar_type
-  : '{' scalar_elements '}'
+  : '{' identifier (',' identifier)* '}'
   ;
 
-scalar_elements 
-  : identifier (',' identifier)* 
-  ;
-
-datatype
-  : 'DATATYPE' constructors 'END'
-  ;
-
-constructors 
-  : constructor (',' constructor)* 
-  ;
-
-constructor
-  : identifier ('(' accessors ')')?
-  ;
-
-accessors 
-  : accessor (',' accessor)* 
-  ;
-
-accessor 
-  : identifier ':' type 
-  ;
-
+/** Types that can be used for indexing */
 index_type 
-  : 'BOOLEAN'
-  | 'NATURAL'
-  | 'INTEGER'
-  | name 
+  : identifier 
   | subrange_type 
   ;
 
-name 
-  : (qualified_name) => qualified_name
-  | identifier
-  ;
+/** Bound is either a term or infinity */
+bound: term | '_';
 
-qualified_name
-  : identifier ('{' actual_parameters '}' )? '!' identifier
-  ;
-
-basic_type 
-  : 'BOOLEAN'
-  | 'REAL' 
-  | 'INTEGER' 
-  | 'NZINTEGER' 
-  | 'NATURAL'
-  | 'NZREAL' 
-  ;
-
-bound 
-  : expression 
-  | '_'
-  ;
-
+/** Range types */
 subrange_type 
   : '[' bound '..' bound ']'
   ;
 
+/** Array type, from indices to elements */
 array_type 
-  : 'ARRAY' index_type 'OF' type
+  : KW_ARRAY index_type KW_OF type
   ;
 
-tuple_type 
-  : '[' type (',' type)+ ']'
-  ;
 
-function_type 
-  : '[' type '->' type ']'
-  ;
-
+/** Record types */
 record_type
-  : '[#' field_declaration (',' field_declaration)* '#]'
+  : '[#' var_declaration_list '#]'
   ;
 
-field_declaration 
-  : identifier ':' type
+// Expressions: typical
+
+term 
+  : iff_term
   ;
 
-// Expressions
-
-expression 
-  : iff_expression
+iff_term 
+  : implies_term (OP_IFF implies_term)?
   ;
 
-iff_expression 
-  : implies_expression (IFF implies_expression)?
+implies_term 
+  : or_term (OP_IMPLIES or_term)?
   ;
 
-implies_expression 
-  : or_expression (IMPLIES or_expression)?
+or_term 
+  : and_term ((KW_OR | KW_XOR) and_term)*
   ;
 
-or_expression 
-  : and_expression ((OR | XOR) and_expression)*
+and_term 
+  : not_term (KW_AND not_term)*
   ;
 
-and_expression 
-  : not_expression (AND not_expression)*
+not_term 
+  : NOT not_term
+  | eq_term 
   ;
 
-not_expression 
-  : NOT not_expression
-  | eq_expression 
+eq_term 
+  : rel_term ((OP_EQ | OP_NEQ) rel_term)?
   ;
 
-eq_expression 
-  : rel_expression (('=' | '/=') rel_expression)?
-  ;
-
-rel_expression 
-  : infix_application (('>' | '>=' | '<' | '<=') infix_application)?
+rel_term 
+  : additive_term ((OP_GT | OP_GEQ | OP_LT | OP_LEQ) additive_term)?
   ;
 
 infix_application 
-  : additive_expression (IDENTIFIER additive_expression)?
+  : additive_term (IDENTIFIER additive_term)?
   ;
 
-additive_expression 
-  : multiplicative_expression  (('+' | '-') multiplicative_expression)*
+additive_term 
+  : multiplicative_term  ((OP_ADD | OP_SUB) multiplicative_term)*
   ;
 
-multiplicative_expression 
-  : unary_expression (('*' | '/') unary_expression)*
+multiplicative_term 
+  : unary_term ((OP_MUL | OP_DIV | KW_MOD | KW_DIV) unary_term)*
   ;
 
-unary_expression 
-  : ('-' unary_expression)
-  | simpleExpression
+unary_term 
+  : (OP_SUB unary_term)
+  | simple_expression
   ;
 
-simpleExpression 
-  : expression_prefix (expression_suffix)*
+simple_expression 
+  : term_prefix (term_suffix)*
   ;
 
-name_expression 
-  : name
-  ;
-
-expression_prefix 
-  : next_variable
-  | name_expression
+term_prefix 
+  : identifier '\''?
   | numeral
-  | lambda_expression
-  | quantified_expression
-  | let_expression
+  | lambda_term
+  | quantified_term
+  | let_term
   | array_literal 
   | record_literal 
   | tuple_literal 
-  | set_expression
-  | conditional
+  | set_term
+  | conditional_term
   ;
 
-expression_suffix 
+term_suffix 
   : argument
   | access
-  | updatesuffix
+  | update_suffix
   ;
 
-next_variable 
-  : identifier '\'' 
+lambda_term 
+  : KW_LAMBDA '(' var_declaration_list ')' ':' term // TODO: recursion here
   ;
 
-lambda_expression 
-  : 'LAMBDA' '(' var_declarations ')' ':' expression // TODO: recursion here
+quantified_term 
+  : KW_FORALL '(' var_declaration_list ')' ':' term // TODO: recursion here
+  | KW_EXISTS '(' var_declaration_list ')' ':' term // TODO: recursion here
   ;
 
-quantified_expression 
-  : 'FORALL' '(' var_declarations ')' ':' expression // TODO: recursion here
-  | 'EXISTS' '(' var_declarations ')' ':' expression // TODO: recursion here
-  ;
-
-let_expression 
-  : 'LET' let_declarations 'IN' expression
+let_term 
+  : KW_LET let_declarations KW_IN term
   ;
 
 let_declarations 
@@ -322,11 +242,11 @@ let_declarations
   ;
 
 let_declaration 
-  : identifier ':' type '=' expression
+  : identifier ':' type '=' term
   ;
 
 array_literal 
-  : '[' '[' index_var_declaration ']' expression ']'
+  : '[' '[' index_var_declaration ']' term ']'
   ;
 
 record_literal
@@ -334,55 +254,43 @@ record_literal
   ;
 
 record_entry 
-  : identifier ':=' expression
+  : identifier ':=' term
   ;
 
 tuple_literal 
-  : '(' expressions ')' 
+  : '(' term_list ')' 
   ;
 
-set_expression 
-  : set_predicate_expression
-  | set_list_expression
+set_term 
+  : '{' identifier ':' type '|' term '}'
+  | '{' (term (',' term)*)? '}'
   ;
 
-set_predicate_expression
-  : '{' identifier ':' type '|' expression '}'
+conditional_term 
+  : KW_IF   term
+    KW_THEN term
+    ('ELSIF' term KW_THEN term)*   
+    KW_ELSE term
+    KW_ENDIF
   ;
 
-set_list_expression 
-  : '{' (expression (',' expression)*)? '}' 
-  ;
-
-conditional 
-  : 'IF'   expression
-    'THEN' expression
-    (elsif)*   
-    'ELSE' expression
-    'ENDIF'
-  ;
-
-elsif 
-  : 'ELSIF' expression 'THEN' expression 
-  ;
-  
 argument
-  : '(' expressions ')' 
+  : '(' term_list ')' 
   ;
 
-expressions 
-  : expression (',' expression )* 
+term_list 
+  : term (',' term )* 
   ;
 
-updatesuffix 
-  : 'WITH' update
+update_suffix 
+  : KW_WITH update
   ;
 
 update 
-  : updateposition ':=' expression 
+  : update_position ':=' term 
   ;
 
-updateposition 
+update_position 
   : (argument | access)+
   ;
 
@@ -390,79 +298,72 @@ index_var_declaration
   : identifier ':' index_type
   ;
 
-identifiers 
+identifier_list 
   : identifier (',' identifier)* 
   ;
 
-pidentifiers 
-  : identifiers;
+pidentifier_list 
+  : identifier_list;
 
 var_declaration 
-  : identifiers ':' type 
+  : identifier_list ':' type 
   ;
 
-var_declarations 
+var_declaration_list 
   : var_declaration (',' var_declaration)*
   ;
 
 /* The Transition Language */
 
-lhs 
+lvalue 
   : identifier '\''? access*
   ;
 
 access 
-  : '[' expression ']' 
+  : '[' term ']' 
   | '.' identifier
   | '.' numeral
   ;
 
-rhsexpression 
-  : '=' expression
-  ;
-
-rhsselection 
-  : 'IN' expression
-  ;
-
-rhsdefinition 
-  : rhsexpression 
-  | rhsselection 
+rhs_definition 
+  : OP_EQ term 
+  | KW_IN term 
   ;
 
 simple_definition 
-  : lhs rhsdefinition
+  : lvalue rhs_definition
   ;
 
-foralldefinition 
-  : '(' 'FORALL' '(' var_declarations ')' ':' definitions ')' 
+forall_definition 
+  : '(' KW_FORALL '(' var_declaration_list ')' ':' definitions ')' 
   ;
 
 definition 
   : simple_definition 
-  | foralldefinition 
+  | forall_definition 
   ;
 
 definitions :
   definition (';' definition)* ';'?;
 
 guard 
-  : expression
+  : term
   ;
 
 assignments 
   : simple_definition (';' simple_definition)* ';'?
   ;
 
-guardedcommand 
+guarded_command 
   : guard '-->' assignments?
-  | 'ELSE' '-->' assignments? 
+  | KW_ELSE '-->' assignments? 
   ;
 
 /* The Module Language */
 
+// TODO: What's the precedence here
 module 
-  : basic_module ((ASYNC|SYNC) basic_module)*
+  : basic_module ((OP_ASYNC|OP_SYNC) basic_module)*
   ;
 
 basic_module 
@@ -479,11 +380,11 @@ basic_module
   ;
 
 base_module
-  : 'BEGIN' base_declarations 'END'
+  : KW_BEGIN base_declaration_list KW_END
   ;
 
-base_declarations 
-  : (base_declaration)* 
+base_declaration_list 
+  : base_declaration* 
   ;
 
 base_declaration 
@@ -499,98 +400,98 @@ base_declaration
   ;
 
 multi_synchronous 
-  : '(' SYNC '(' index_var_declaration ')' ':' module ')'
+  : '(' OP_SYNC '(' index_var_declaration ')' ':' module ')'
   ;
 
 multi_asynchronous 
-  : '(' ASYNC '(' index_var_declaration ')' ':' module ')'
+  : '(' OP_ASYNC '(' index_var_declaration ')' ':' module ')'
   ;
 
 hiding
-  : 'LOCAL' pidentifiers 'IN' module
+  : KW_LOCAL pidentifier_list KW_IN module
   ;
 
 new_output 
-  : 'OUTPUT' pidentifiers 'IN' module
+  : KW_OUTPUT pidentifier_list KW_IN module
   ;
 
 renaming 
-  : 'RENAME' renames 'IN' module
+  : KW_RENAME rename_list KW_IN module
   ;
 
-renames 
+rename_list 
   : rename (',' rename)*
   ;
 
 rename 
-  : lhs 'TO' lhs
+  : lvalue KW_TO lvalue
   ;
 
 with_module
-  : 'WITH' new_var_declarations module
+  : KW_WITH new_var_declaration_list module
   ;
 
 module_name 
-  : name module_actuals
+  : identifier module_actuals
   ;
 
 module_actuals 
-  : ('[' expressions ']')?
+  : ('[' term_list ']')?
   ;
 
 observe_module 
-  : 'OBSERVE' module 'WITH' module
+  : KW_OBSERVE module KW_WITH module
   ;
 
 /* Declarations within modules */
 
 input_declaration 
-  : 'INPUT' var_declarations
+  : KW_INPUT var_declaration_list
   ;
 
 output_declaration 
-  : 'OUTPUT' var_declarations
+  : KW_OUTPUT var_declaration_list
   ;
 
 global_declaration 
-  : 'GLOBAL' var_declarations
+  : KW_GLOBAL var_declaration_list
   ;
 
 local_declaration
-  : 'LOCAL' var_declarations
+  : KW_LOCAL var_declaration_list
   ;
 
 definition_declaration
-  : 'DEFINITION' definitions
+  : KW_DEFINITION definitions
   ;
 
 invariant_declaration
-  : 'INVARIANT' expression
+  : KW_INVARIANT term
   ;
 
 init_formula_declaration 
-  : 'INITFORMULA' expression
+  : KW_INITFORMULA term
   ;
 
 init_declaration 
-  : 'INITIALIZATION' definition_or_command (';' definition_or_command)* ';'?
+  : KW_INITIALIZATION definition_or_command (';' definition_or_command)* ';'?
   ;
 
 transition_declaration 
-  : 'TRANSITION' definition_or_command (';' definition_or_command)*
+  : KW_TRANSITION definition_or_command (';' definition_or_command)* ';'?
   ; 
 
-multicommand 
-  : '(' ASYNC '(' var_declarations ')' ':' some_command ')' 
+multi_command 
+  : '(' OP_ASYNC '(' var_declaration_list ')' ':' some_command ')' 
   ;
 
 some_command 
-  : (identifier ':') ? guardedcommand 
-  | (identifier ':') ? multicommand 
+  : (identifier ':') ? guarded_command 
+  | (identifier ':') ? multi_command 
   ;
 
 some_commands 
-  : some_command (ASYNC some_command)*
+  : some_command (OP_ASYNC some_command)*
   ;
 
 definition_or_command
@@ -604,24 +505,12 @@ new_var_declaration
   | global_declaration
   ;
 
-new_var_declarations 
+new_var_declaration_list 
   : new_var_declaration (';' new_var_declaration)*
   ;
 
 type_declarations 
-  : identifiers ':' 'TYPE';
-
-actual_parameters 
-  : actual_types? ';' actual_expressions?
-  ;
-
-actual_types 
-  : type (',' type)*
-  ;
-
-actual_expressions 
-  : expression (',' expression)*
-  ;
+  : identifier_list ':' KW_TYPE;
 
 identifier 
   : IDENTIFIER
@@ -633,22 +522,69 @@ numeral
 
 /** Numerals */
 NUMERAL: DIGIT+;
- 
-// Boolean operators
-AND: 'AND';
-OR: 'OR';
-XOR: 'XOR';
-NOT: 'NOT';
-IMPLIES: '=>' ;
-IFF : '<=>' ;
+
+/** Keywords */ 
+KW_ARRAY: A R R A Y; 
+KW_BEGIN: B E G I N;
+KW_CONTEXT: C O N T E X T;
+KW_CLAIM: C L A I M;
+KW_DEFINITION: D E F I N I T I O N;
+KW_DIV: D I V;
+KW_ELSE: E L S E;
+KW_ENDIF: E N D I F;
+KW_END: E N D;
+KW_EXISTS: E X I S T S;
+KW_FORALL: F O R A L L;
+KW_GLOBAL: G L O B A L;
+KW_INITFORMULA: I N I T F O R M U L A;
+KW_INITIALIZATION: I N I T I A L I Z A T I O N;
+KW_INVARIANT: I N V A R I A N T;
+KW_INPUT: I N P U T; // Had to rename because it clashes with antlr #define INPUT
+KW_IF: I F;
+KW_IN: I N;
+KW_LAMBDA: L A M B D A;
+KW_LET: L E T;
+KW_LEMMA: L E M M A;
+KW_LOCAL: L O C A L;
+KW_MOD: M O D;
+KW_OF: O F;
+KW_OUTPUT: O U T P U T;
+KW_OBLIGATION: O B L I G A T I O N;
+KW_OBSERVE: O B S E R V E;
+KW_RENAME: R E N A M E;
+KW_THEN: T H E N;
+KW_THEOREM: T H E O R E M;
+KW_TRANSITION: T R A N S I T I O N;
+KW_TYPE: T Y P E;
+KW_TO: T O;
+KW_WITH: W I T H;
+
+
+/** Boolean opearators */
+KW_AND: A N D;
+KW_OR: O R;
+KW_XOR: X O R;
+NOT: N O T;
+OP_IMPLIES: '=>';
+OP_IFF: '<=>';
+
+// Arithmetic Operators
+OP_SUB: '-';
+OP_ADD: '+';
+OP_MUL: '*';
+OP_DIV: '/';
+
+// Relational Operators
+OP_LEQ: '<=';
+OP_LT: '<';
+OP_GEQ: '>=';
+OP_GT: '>';
+OP_NEQ: '/=';
+OP_EQ: '=';
 
 // Combination operators
-SYNC: '||' ;
-ASYNC: '[]';
-
-/** Special symbols */
-fragment
-SPECIAL_SYMBOL : '(' | ')' | '[' | ']' | '{' | '}' | '%' | ',' | '.' | ';' | '\'' | '!' | '#' | '?' | '_';
+OP_SYNC: '||' ;
+OP_ASYNC: '[]';
 
 /** Letters */ 
 fragment                                     
@@ -661,10 +597,6 @@ DIGIT : '0'..'9';
 /** Whitespace characters */
 fragment
 WHITESPACE : ' ' | '\t' | '\n' | '\r' | '\f';
-
-/** Opchar: anything not a letter, digit, special symbol, or whitespace */
-fragment
-OPCHAR : ~(LETTER | DIGIT | SPECIAL_SYMBOL | WHITESPACE);
 
 /** Comments (which we skip) */
 SL_COMMENT
@@ -679,5 +611,33 @@ WHITESPACE_SKIP
 /** Identifiers */
 IDENTIFIER
   : LETTER (LETTER | DIGIT | '?' | '_' )*
-  | OPCHAR+
   ;
+
+/** Case insensitive matches */
+fragment A:('a'|'A');
+fragment B:('b'|'B');
+fragment C:('c'|'C');
+fragment D:('d'|'D');
+fragment E:('e'|'E');
+fragment F:('f'|'F');
+fragment G:('g'|'G');
+fragment H:('h'|'H');
+fragment I:('i'|'I');
+fragment J:('j'|'J');
+fragment K:('k'|'K');
+fragment L:('l'|'L');
+fragment M:('m'|'M');
+fragment N:('n'|'N');
+fragment O:('o'|'O');
+fragment P:('p'|'P');
+fragment Q:('q'|'Q');
+fragment R:('r'|'R');
+fragment S:('s'|'S');
+fragment T:('t'|'T');
+fragment U:('u'|'U');
+fragment V:('v'|'V');
+fragment W:('w'|'W');
+fragment X:('x'|'X');
+fragment Y:('y'|'Y');
+fragment Z:('z'|'Z');  
+  

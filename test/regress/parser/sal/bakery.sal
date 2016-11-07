@@ -1,4 +1,4 @@
-bakery{; N : nznat, B : nznat}: CONTEXT =
+bakery{N : nznat, B : nznat}: CONTEXT =
 BEGIN
   Job_Idx: TYPE = [1..N];
 
