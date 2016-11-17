@@ -101,7 +101,7 @@ module_declaration
 
 /** Types */ 
 type
-  : type_name
+  : identifier
   | scalar_type 
   | subrange_type
   | array_type
@@ -112,11 +112,6 @@ type
 /** Subtype of a type */
 subtype
   : '{' identifier ':' type '|' term '}'
-  ;
-
-/** Name of an existing type */
-type_name 
-  : identifier
   ;
 
 /** List of scalars (an enum) */
@@ -143,7 +138,6 @@ array_type
   : KW_ARRAY index_type KW_OF type
   ;
 
-
 /** Record types */
 record_type
   : '[#' var_declaration_list '#]'
@@ -151,28 +145,34 @@ record_type
 
 // Expressions: typical
 
-term 
+term  
   : iff_term
   ;
 
 iff_term 
-  : implies_term (OP_IFF implies_term)?
+  : implies_term (OP_IFF implies_term)*
   ;
 
 implies_term 
-  : or_term (OP_IMPLIES or_term)?
+  : or_term (OP_IMPLIES or_term)*
   ;
 
 or_term 
-  : and_term ((KW_OR | KW_XOR) and_term)*
-  ;
-
+  : and_term (KW_OR and_term)*
+  ; 
+  
 and_term 
-  : not_term (KW_AND not_term)*
+  : xor_term (KW_AND xor_term)*
   ;
 
-not_term 
-  : NOT not_term
+xor_term 
+  : unary_bool_term (KW_XOR unary_bool_term)*
+  ;
+
+unary_bool_term 
+  : NOT unary_bool_term
+  | KW_FORALL '(' var_declaration_list ')' ':' unary_bool_term
+  | KW_EXISTS '(' var_declaration_list ')' ':' unary_bool_term   
   | eq_term 
   ;
 
@@ -184,86 +184,40 @@ rel_term
   : additive_term ((OP_GT | OP_GEQ | OP_LT | OP_LEQ) additive_term)?
   ;
 
-infix_application 
-  : additive_term (IDENTIFIER additive_term)?
-  ;
-
+/** Associative reading, evaluate from left to right. */
 additive_term 
-  : multiplicative_term  ((OP_ADD | OP_SUB) multiplicative_term)*
+  : multiplicative_term ((OP_ADD | OP_SUB) multiplicative_term)*
   ;
 
+/** Associative reading, evaluate from left to right. */
 multiplicative_term 
-  : unary_term ((OP_MUL | OP_DIV | KW_MOD | KW_DIV) unary_term)*
+  : unary_nonboolean_term ((OP_MUL | OP_DIV | KW_MOD | KW_DIV) unary_nonboolean_term)*
   ;
 
-unary_term 
-  : (OP_SUB unary_term)
-  | simple_expression
+unary_nonboolean_term 
+  : OP_SUB unary_nonboolean_term
+  | update_term
   ;
 
-simple_expression 
-  : term_prefix (term_suffix)*
+update_term 
+  : base_term (KW_WITH term_access+ ':=' base_term)*
   ;
 
-term_prefix 
+/** 
+ * Base term is a non-breakable unit with potential let declaration ahead of it.
+ */
+base_term 
+  : KW_LET let_declarations KW_IN base_term
+  | base_term_prefix base_term_suffix* 
+  ;
+
+base_term_prefix 
   : identifier '\''?
-  | numeral
-  | lambda_term
-  | quantified_term
-  | let_term
-  | array_literal 
-  | record_literal 
-  | tuple_literal 
-  | set_term
+  | rational_constant
+  | '[' '[' index_var_declaration ']' term ']'
+  | '(#' record_entry (',' record_entry)* '#)' 
+  | '(' term_list ')' 
   | conditional_term
-  ;
-
-term_suffix 
-  : argument
-  | access
-  | update_suffix
-  ;
-
-lambda_term 
-  : KW_LAMBDA '(' var_declaration_list ')' ':' term // TODO: recursion here
-  ;
-
-quantified_term 
-  : KW_FORALL '(' var_declaration_list ')' ':' term // TODO: recursion here
-  | KW_EXISTS '(' var_declaration_list ')' ':' term // TODO: recursion here
-  ;
-
-let_term 
-  : KW_LET let_declarations KW_IN term
-  ;
-
-let_declarations 
-  : let_declaration (',' let_declaration)*
-  ;
-
-let_declaration 
-  : identifier ':' type '=' term
-  ;
-
-array_literal 
-  : '[' '[' index_var_declaration ']' term ']'
-  ;
-
-record_literal
-  : '(#' record_entry (',' record_entry)* '#)'
-  ;
-
-record_entry 
-  : identifier ':=' term
-  ;
-
-tuple_literal 
-  : '(' term_list ')' 
-  ;
-
-set_term 
-  : '{' identifier ':' type '|' term '}'
-  | '{' (term (',' term)*)? '}'
   ;
 
 conditional_term 
@@ -274,24 +228,34 @@ conditional_term
     KW_ENDIF
   ;
 
-argument
+base_term_suffix 
+  : term_argument
+  | term_access
+  ;
+
+let_declarations 
+  : let_declaration (',' let_declaration)*
+  ;
+
+let_declaration 
+  : identifier (':' type)? '=' term
+  ;
+
+record_entry 
+  : identifier ':=' term
+  ;
+
+set_term 
+  : '{' identifier ':' type '|' term '}'
+  | '{' (term (',' term)*)? '}'
+  ;
+
+term_argument
   : '(' term_list ')' 
   ;
 
 term_list 
   : term (',' term )* 
-  ;
-
-update_suffix 
-  : KW_WITH update
-  ;
-
-update 
-  : update_position ':=' term 
-  ;
-
-update_position 
-  : (argument | access)+
   ;
 
 index_var_declaration 
@@ -316,18 +280,17 @@ var_declaration_list
 /* The Transition Language */
 
 lvalue 
-  : identifier '\''? access*
+  : identifier '\''? term_access*
   ;
 
-access 
+term_access 
   : '[' term ']' 
   | '.' identifier
-  | '.' numeral
   ;
 
 rhs_definition 
   : OP_EQ term 
-  | KW_IN term 
+  | KW_IN set_term 
   ;
 
 simple_definition 
@@ -335,50 +298,118 @@ simple_definition
   ;
 
 forall_definition 
-  : '(' KW_FORALL '(' var_declaration_list ')' ':' definitions ')' 
+  : '(' KW_FORALL '(' var_declaration_list ')' ':' definition_list ')' 
   ;
 
+/**
+ * Definitions are the basic constructs used to build up the invariants, 
+ * initializations, and transitions of a module. Definitions are used to specify 
+ * the trajectory of variables in a computation by providing constraints on the 
+ * controlled variables in a transition system. For variables ranging over 
+ * aggregate data structures like records or arrays, it is possible to define 
+ * each component separately. For example,
+ *   
+ *  x’ = x + 1
+ * 
+ * simply increments the state variable x, where x’ is the newstate of the 
+ * variable,
+ *  
+ *  y’[i] = 3
+ * 
+ * sets the new state of the array y to be 3 at index i, and to remain unchanged
+ * on all other indices, and
+ *
+ *  z.foo.1[0] = y
+ * 
+ * constrains state variable z, which is a record whose foo component is a 
+ * tuple, whose first component in turn is an array of the same type as y.
+ */
 definition 
   : simple_definition 
   | forall_definition 
   ;
 
-definitions :
-  definition (';' definition)* ';'?;
-
-guard 
-  : term
+definition_list
+  : definition (';' definition)* ';'?
   ;
 
 assignments 
   : simple_definition (';' simple_definition)* ';'?
   ;
 
+/** 
+ * Each guarded command consists of a guard formula and an assignment part. The 
+ * guard is a boolean expression in the current controlled (local, global, and 
+ * output) variables and current and next state input variables. The assignment 
+ * part is a list of equalities between a left-hand side next state variable and 
+ * a right-hand side expression in current and next state variables.
+ */
 guarded_command 
-  : guard '-->' assignments?
+  : term '-->' assignments?
   | KW_ELSE '-->' assignments? 
   ;
 
 /* The Module Language */
 
-// TODO: What's the precedence here
+/** 
+ * A module is a self-contained specification of a transition system in SAL. 
+ * Modules can be independently analyzed for properties and composed 
+ * synchronously or asynchronously.
+ */
 module 
-  : basic_module ((OP_ASYNC|OP_SYNC) basic_module)*
+  : synchronous_module_composition 
+  ;  
+
+/**
+ * The semantics of synchronous composition is that the module M1 || M2 
+ * consists of:
+ * - The initializations are the combination of initializations.
+ * - The transitions are the combination of the individual transitions.
+ * - The definitions are the union of the definition.
+ * - The initializations are the pairwise combination of the initializations. 
+ * - Two guarded initializations are combined by conjoining the guards and by 
+ *   taking the union of the assignments. 
+ */
+synchronous_module_composition
+  : asynchronous_module_composition (OP_SYNC asynchronous_module_composition)*
+  ;  
+
+/**
+ * The semantics of asynchronous composition of two modules is given by the 
+ * conjunction of the initializations, and the interleaving of the transitions 
+ * of the two modules.
+ */
+asynchronous_module_composition
+  : unary_module_modifier (OP_ASYNC unary_module_modifier)*
+  ; 
+  
+/** Prefix module operations */
+unary_module_modifier
+  : OP_SYNC '(' index_var_declaration ')' ':' unary_module_modifier
+  | OP_ASYNC '(' index_var_declaration ')' ':' unary_module_modifier
+  | KW_LOCAL pidentifier_list KW_IN unary_module_modifier
+  | KW_OUTPUT pidentifier_list KW_IN unary_module_modifier
+  | KW_RENAME rename_list KW_IN unary_module_modifier
+  | KW_WITH new_var_declaration_list unary_module_modifier
+  | KW_OBSERVE module KW_WITH unary_module_modifier
+  | module_base
   ;
 
-basic_module 
-  : base_module
-  | multi_synchronous
-  | multi_asynchronous
-  | hiding
-  | new_output
-  | renaming
-  | with_module
-  | module_name
-  | observe_module
+/** The base of the module expressions */
+module_base
+  : module_name
+  | base_module
   | ('(' module ')') 
   ;
 
+/**
+ * A BaseModule identifies the pairwise distinct sets of input, output, global, 
+ * and local variables. This characterizes the state of the module. Base modules 
+ * also may consist of several sections that can be given in any order. There 
+ * may, for example, be 3 distinct TRANSITION sections. In every case, it is the 
+ * same as if there was a prescribed order, with each class of variable and 
+ * section being the union of the individual declarations.
+ */
 base_module
   : KW_BEGIN base_declaration_list KW_END
   ;
@@ -393,30 +424,10 @@ base_declaration
   | global_declaration 
   | local_declaration 
   | definition_declaration 
-  | invariant_declaration
+  | invariant_declaration // TODO: maybe remove
   | init_formula_declaration 
-  | init_declaration 
+  | initialization_declaration 
   | transition_declaration
-  ;
-
-multi_synchronous 
-  : '(' OP_SYNC '(' index_var_declaration ')' ':' module ')'
-  ;
-
-multi_asynchronous 
-  : '(' OP_ASYNC '(' index_var_declaration ')' ':' module ')'
-  ;
-
-hiding
-  : KW_LOCAL pidentifier_list KW_IN module
-  ;
-
-new_output 
-  : KW_OUTPUT pidentifier_list KW_IN module
-  ;
-
-renaming 
-  : KW_RENAME rename_list KW_IN module
   ;
 
 rename_list 
@@ -427,10 +438,6 @@ rename
   : lvalue KW_TO lvalue
   ;
 
-with_module
-  : KW_WITH new_var_declaration_list module
-  ;
-
 module_name 
   : identifier module_actuals
   ;
@@ -439,11 +446,19 @@ module_actuals
   : ('[' term_list ']')?
   ;
 
-observe_module 
-  : KW_OBSERVE module KW_WITH module
-  ;
-
 /* Declarations within modules */
+
+/**
+ * From the SAL manual:
+ * 
+ * The state type is defined by four pairwise disjoint sets of input, output, 
+ * global, and local variables. The input and global variables are the observed 
+ * variables of a module and the output, global, and local variables are the 
+ * controlled variables of the module.
+ *
+ * TODO: Can the module change global variables?
+ */
+
 
 input_declaration 
   : KW_INPUT var_declaration_list
@@ -461,10 +476,51 @@ local_declaration
   : KW_LOCAL var_declaration_list
   ;
 
+/**
+ * Definitions appearing in the DEFINITION section(s) are treated as invariants
+ * for the system. When composed with other modules, the definitions remain true
+ * even during the transitions of the other modules. This section is usually 
+ * used to define controlled variables whose values ultimately depend on the 
+ * inputs, for example, a boolean variable that becomes true when the 
+ * temperature goes above a specified value.
+ */
 definition_declaration
-  : KW_DEFINITION definitions
+  : KW_DEFINITION definition_list
   ;
 
+/**
+ * The INITIALIZATION section(s) constrain the possible initial values for the 
+ * local, global, and output declarations. Input variables may not be 
+ * initialized. The INITIALIZATION section(s) determine a state predicate that 
+ * holds of the initial state of the base module. Definitions and guarded 
+ * commands appearing in the INITIALIZATION section must not contain any 
+ * NextVariable occurrences, i.e., both sides of the defining equation must be 
+ * current expressions.
+ * 
+ * Guards may refer to any variables, this acts as a form of postcondition when
+ * controlled variables are involved. This is like backtracking: operationally a 
+ * guarded initialization is selected, the assignments made, and if the 
+ * assignments violate the guard the assignments are undone and a new guarded 
+ * initialization is selected. 
+ */
+initialization_declaration 
+  : KW_INITIALIZATION definition_or_command (';' definition_or_command)* ';'?
+  ;
+
+/**
+ * The TRANSITION section(s) constrain the possible next states for the local,
+ * global, and output declarations. As this is generally defined relative to the
+ * previous state of the module, the transition section(s) determine a state 
+ * relation. Input variables may not appear on the Lhs of any assignments. 
+ * Guards may refer to any variables, even NextVariables. As with guarded 
+ * initial transitions, guards involving NextVariables have to be evaluated 
+ * after the assignments have been made, and if they are false the assignments 
+ * must be undone and a new guarded transition selected.
+ */
+transition_declaration 
+  : KW_TRANSITION definition_or_command (';' definition_or_command)* ';'?
+  ; 
+ 
 invariant_declaration
   : KW_INVARIANT term
   ;
@@ -472,14 +528,6 @@ invariant_declaration
 init_formula_declaration 
   : KW_INITFORMULA term
   ;
-
-init_declaration 
-  : KW_INITIALIZATION definition_or_command (';' definition_or_command)* ';'?
-  ;
-
-transition_declaration 
-  : KW_TRANSITION definition_or_command (';' definition_or_command)* ';'?
-  ; 
 
 multi_command 
   : '(' OP_ASYNC '(' var_declaration_list ')' ':' some_command ')' 
@@ -516,8 +564,8 @@ identifier
   : IDENTIFIER
   ;
 
-numeral 
-  : NUMERAL
+rational_constant
+  : NUMERAL ('.' NUMERAL)?
   ;
 
 /** Numerals */
@@ -542,7 +590,6 @@ KW_INVARIANT: I N V A R I A N T;
 KW_INPUT: I N P U T; // Had to rename because it clashes with antlr #define INPUT
 KW_IF: I F;
 KW_IN: I N;
-KW_LAMBDA: L A M B D A;
 KW_LET: L E T;
 KW_LEMMA: L E M M A;
 KW_LOCAL: L O C A L;
