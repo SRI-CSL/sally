@@ -22,6 +22,8 @@
 #include "expr/term_manager.h"
 #include "system/context.h"
 #include "utils/symbol_table.h"
+#include "parser/command.h"
+#include "parser/sal/sal_module.h"
 
 #include <iosfwd>
 
@@ -31,13 +33,19 @@ namespace sally {
 
 namespace parser {
 
+/** Types of model-checking obligations */
+enum sal_assertion_form {
+  SAL_OBLIGATION,
+  SAL_CLAIM,
+  SAL_LEMMA,
+  SAL_THEOREM
+};
+
+/** Types of SAL objects that we keep in the symbol tables */
 enum sal_object {
   SAL_VARIABLE,
   SAL_TYPE,
-  SAL_STATE_TYPE,
-  SAL_STATE_FORMULA,
-  SAL_TRANSITION_FORMULA,
-  SAL_TRANSITION_SYSTEM,
+  SAL_MODULE,
   SAL_OBJECT_LAST
 };
 
@@ -52,6 +60,9 @@ class sal_state {
 
   /** Symbol table for types */
   utils::symbol_table<expr::term_ref_strong> d_types;
+
+  /** Symbol table for modules */
+  utils::symbol_table<sal::module::ref> d_modules;
 
 public:
 
@@ -108,6 +119,12 @@ public:
 
   /** Collect terms */
   void gc_collect(const expr::gc_relocator& gc_reloc);
+
+  /** Finalize parsing and return a command representing all the queries */
+  command* finalize();
+
+  /** Make a rational from the token */
+  expr::term_ref token_to_rational(pANTLR3_COMMON_TOKEN token);
 };
 
 }

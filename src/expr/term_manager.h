@@ -86,6 +86,30 @@ public:
   /** Get the type of bitvectors of given size > 0. */
   term_ref bitvector_type(size_t size);
 
+  /** Make a function type (t1, t2, ..., tn), with ti being types, tn being co-domain */
+  term_ref function_type(const std::vector<term_ref>& args);
+
+  /** Get the domain type of a function type */
+  term_ref get_function_type_domain(term_ref fun_type, size_t i) const;
+
+  /** Get the co-domain type of a function type */
+  term_ref get_function_type_codomain(term_ref fun_type) const;
+
+  /** Make an array type t1 -> t2 */
+  term_ref array_type(term_ref index_type, term_ref element_type);
+
+  /** Get the index type of the array type */
+  term_ref get_array_type_index(term_ref arr_type) const;
+
+  /** Get the element type of the array type */
+  term_ref get_array_type_element(term_ref arr_type) const;
+
+  /** Make a tuple type (t1, t2, ..., tn) with ti being types */
+  term_ref tuple_type(const std::vector<term_ref>& args);
+
+  /** Get the k-th element of the tuple type */
+  term_ref get_tuple_type_element(term_ref tuple_type, size_t i) const;
+
   /** Get the size of a bitvector type */
   size_t get_bitvector_type_size(term_ref bv_type) const;
 
@@ -193,6 +217,54 @@ public:
   /** Get the sgn extend of the extend term */
   bitvector_sgn_extend get_bitvector_sgn_extend(const term& t) const;
 
+  /** Make an array read term */
+  term_ref mk_array_read(term_ref a, term_ref index);
+
+  /** Get array from the array read */
+  term_ref get_array_read_array(term_ref aread) const;
+
+  /** Get the index from the array read */
+  term_ref get_array_read_index(term_ref aread) const;
+
+  /** Make an array write term */
+  term_ref mk_array_write(term_ref a, term_ref index, term_ref element);
+
+  /** Get the array from the array write */
+  term_ref get_array_write_array(term_ref awrite) const;
+
+  /** Get the index from the array write */
+  term_ref get_array_write_index(term_ref awrite) const;
+
+  /** Get the element from the array write */
+  term_ref get_array_write_element(term_ref awrite) const;
+
+  /** Construct tuple */
+  term_ref mk_tuple(const std::vector<term_ref>& elements) const;
+
+  /** Make a tuple acess term */
+  term_ref mk_tuple_access(term_ref t, size_t i);
+
+  /** Get the tuple access base tuple */
+  term_ref get_tuple_access_tuple(term_ref taccess) const;
+
+  /** Get the tuple access index */
+  size_t get_tuple_access_index(term_ref taccess) const;
+
+  /** Make a new tuple write term */
+  term_ref mk_tuple_write(term_ref t, size_t i, term_ref e);
+
+  /** Get the tuple write base tuple */
+  term_ref get_tuple_write_tuple(term_ref twrite) const;
+
+  /** Get the tuple write index */
+  size_t get_tuple_write_index(term_ref twrite) const;
+
+  /** Get the tuple write written element */
+  term_ref get_tuple_write_element(term_ref twrite) const;
+
+  /** Make function application */
+  term_ref mk_function_application(term_ref fun, const std::vector<term_ref>& args);
+
   /** Make a new string constant */
   term_ref mk_string_constant(std::string value);
 
@@ -216,6 +288,77 @@ public:
 
   /** Get the field of a struct variable */
   term_ref get_struct_field(const term& t, size_t i) const;
+
+  /**
+   * Helper for constructing abstraction variables and creating lambdas and
+   * quantified terms. One can create variable, and the only way to remove
+   * variables from the helper is to create a term.
+   */
+  class abstraction_helper {
+
+    /** The term manager */
+    term_manager& d_term_manager;
+
+    /** Variables */
+    std::vector<term_ref> d_variables;
+
+    /** Variable names */
+    std::vector<std::string> d_names;
+
+    /** Make the abstraction, taking n top variables */
+    term_ref mk_abstraction(term_op, size_t n, term_ref body);
+
+  public:
+
+    /** Create an abstraction helper */
+    abstraction_helper(term_manager& term_manager);
+
+    /** Check that all variables have been used */
+    ~abstraction_helper();
+
+    /** Create new bound variable */
+    term_ref new_bound_variable(term_ref type);
+
+    /** Create new bound variable with a name */
+    term_ref new_bound_variable(std::string name, term_ref type);
+
+    /** Create a lambda term (pops all variables) */
+    term_ref mk_lambda(term_ref body);
+
+    /** Create an exist quantifier (pops n variables) */
+    term_ref mk_exists(term_ref body, size_t n);
+
+    /** Create a forall quantifier (pops n variables) */
+    term_ref mk_forall(term_ref body, size_t n);
+
+    /** Create a predicate sub-type (pops the one variable) */
+    term_ref mk_predicate_subtype(term_ref body);
+  };
+
+  /** Get the index of an abstraction variable */
+  size_t get_bound_variable_idx(term_ref x) const;
+
+  /** Get the arity of the abstraction */
+  size_t get_abstraction_arity(term_ref abstraction) const;
+  size_t get_lambda_arity(term_ref lambda) const;
+  size_t get_quantifier_arity(term_ref quantifier) const;
+
+  /** The the body of the abstraction */
+  term_ref get_abstraction_body(term_ref abstraction) const;
+  term_ref get_lambda_body(term_ref lambda) const;
+  term_ref get_quantifier_body(term_ref quantifier) const;
+  term_ref get_predicate_subtype_body(term_ref pred_type) const;
+
+  /** Get the i-th bound variable of the term (lambda, exists, forall) */
+  term_ref get_abstraction_variable(term_ref abstraction, size_t i) const;
+  term_ref get_lambda_variable(term_ref lambda, size_t i) const;
+  term_ref get_quantifier_variable(term_ref quantifier, size_t i) const;
+  term_ref get_predicate_subtype_variable(term_ref pred_type) const;
+
+  /** Get all the variables of the lambda, in order */
+  void get_abstraction_variables(term_ref lambda, std::vector<term_ref>& vars_out) const;
+  void get_lambda_variables(term_ref lambda, std::vector<term_ref>& vars_out) const;
+  void get_quantifier_variables(term_ref lambda, std::vector<term_ref>& vars_out) const;
 
   /** Get all fields of a struct variable */
   void get_struct_fields(const term& t, std::vector<term_ref>& out) const;
@@ -271,6 +414,15 @@ public:
 
   /** Get number of variables that the term has */
   size_t get_variables_count(term_ref ref) const;
+
+  /** Get the bound variables of the term, in order from outermost scope to innermost scope */
+  void get_bound_variables(term_ref ref, std::vector<term_ref>& out) const;
+
+  /** Get the variables of the term */
+  void get_bound_variables(term_ref ref, std::set<term_ref>& out) const;
+
+  /** Get number of variables that the term has */
+  size_t get_bound_variables_count(term_ref ref) const;
 
   /** Get the subterms of the term */
   void get_subterms(term_ref ref, std::vector<term_ref>& out) const;

@@ -270,6 +270,11 @@ std::string get_smt_keyword(term_op op) {
   case TERM_BV_SMOD:
     return "bvsmod";
 
+  case TERM_ARRAY_READ:
+    return "select";
+  case TERM_ARRAY_WRITE:
+    return "store";
+
   case TYPE_BOOL:
     return "Bool";
   case TYPE_INTEGER:
@@ -280,6 +285,7 @@ std::string get_smt_keyword(term_op op) {
     return "String";
   case TYPE_TYPE:
     return "Type";
+
   default:
     assert(false);
     return "unknown";
@@ -347,6 +353,38 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
     out << ")";
     break;
   }
+  case TYPE_ARRAY:
+  {
+    out << "(Array";
+    for (size_t i = 0; i < size(); ++ i) {
+      out << " ";
+      SMT_REF_OUT(child(i));
+    }
+    out << ")";
+    break;
+    break;
+  }
+  case TYPE_TUPLE:
+  {
+    out << "(tuple";
+    for (size_t i = 0; i < size(); ++ i) {
+      out << " ";
+      SMT_REF_OUT(child(i));
+    }
+    out << ")";
+    break;
+  }
+  case TYPE_FUNCTION:
+  {
+    out << "(";
+    for (size_t i = 0; i+1 < size(); ++ i) {
+      if (i) { out << " "; }
+      SMT_REF_OUT(child(i));
+    }
+    out << ") ";
+    SMT_REF_OUT(child(size()-1));
+    break;
+  }
   case TYPE_BITVECTOR: {
     size_t size = tm_internal.payload_of<size_t>(*this);
     out << "(_ BitVec " << size << ")";
@@ -370,6 +408,11 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
       }
       out << "]";
     }
+    break;
+  }
+  case VARIABLE_BOUND: {
+    std::stringstream ss;
+    out << "x" << tm_internal.payload_of<size_t>(*this);
     break;
   }
   case CONST_BOOL:
@@ -414,6 +457,8 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
   case TERM_BV_UREM:
   case TERM_BV_SREM:
   case TERM_BV_SMOD:
+  case TERM_ARRAY_READ:
+  case TERM_ARRAY_WRITE:
   {
     if (size() > 0) {
       out << "(";
@@ -472,6 +517,61 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
     const bitvector_sgn_extend& extend = tm_internal.payload_of<bitvector_sgn_extend>(*this);
     out << "((_ sign_extend " << extend.size << ") ";
     SMT_REF_OUT(child(0));
+    out << ")";
+    break;
+  }
+  case TERM_TUPLE_CONSTRUCT: {
+    out << "(mk-tuple";
+    for (size_t i = 0; i < size(); ++ i) {
+      out << " ";
+      SMT_REF_OUT(child(i));
+    }
+    out << ")";
+    break;
+  }
+  case TERM_TUPLE_ACCESS: {
+    out << "(tuple-select ";
+    SMT_REF_OUT(child(0));
+    out << " " << tm_internal.payload_of<size_t>(*this) << ")";
+    break;
+  }
+  case TERM_TUPLE_WRITE: {
+    out << "(tuple-write ";
+    SMT_REF_OUT(child(0));
+    out << " " << tm_internal.payload_of<size_t>(*this) << " ";
+    SMT_REF_OUT(child(1));
+    out << ")";
+    break;
+  }
+  case TERM_FUN_APP: {
+    out << "(";
+    for (size_t i = 0; i < size(); ++ i) {
+      if (i) { out << " "; }
+      SMT_REF_OUT(child(i));
+    }
+    out << ")";
+    break;
+  }
+  case TERM_LAMBDA:
+  case TERM_EXISTS:
+  case TERM_FORALL:
+  case TYPE_PREDICATE_SUBTYPE: {
+    if (d_op == TERM_LAMBDA) { out << "(lambda ("; }
+    if (d_op == TERM_EXISTS) { out << "(exists ("; }
+    if (d_op == TERM_FORALL) { out << "(forall ("; }
+    if (d_op == TYPE_PREDICATE_SUBTYPE) { out << "(subtype ("; }
+    for (size_t i = 0; i + 1 < size(); ++ i) {
+      if (i) { out << " "; }
+      out << "(";
+      term_ref a = child(i);
+      term_ref a_type = tm_internal.type_of_if_exists(a);
+      SMT_REF_OUT(a);
+      out << " ";
+      SMT_REF_OUT(a_type);
+      out << ")";
+    }
+    out << ") ";
+    SMT_REF_OUT(child(size()-1));
     out << ")";
     break;
   }

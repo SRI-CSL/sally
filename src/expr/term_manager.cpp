@@ -207,6 +207,107 @@ term_ref term_manager::mk_bitvector_sgn_extend(term_ref t, const bitvector_sgn_e
   return result;
 }
 
+term_ref term_manager::mk_array_read(term_ref a, term_ref index) {
+  term_ref result = d_tm->mk_term<TERM_ARRAY_READ>(a, index);
+  d_tm->typecheck(result);
+  return result;
+}
+
+term_ref term_manager::get_array_read_array(term_ref aread) const {
+  const term& t = term_of(aread);
+  assert(t.op() == TERM_ARRAY_READ);
+  return t[0];
+}
+
+term_ref term_manager::get_array_read_index(term_ref aread) const {
+  const term& t = term_of(aread);
+  assert(t.op() == TERM_ARRAY_READ);
+  return t[1];
+}
+
+term_ref term_manager::mk_array_write(term_ref a, term_ref index, term_ref element) {
+  term_ref result = d_tm->mk_term<TERM_ARRAY_WRITE>(a, index, element);
+  d_tm->typecheck(result);
+  return result;
+}
+
+term_ref term_manager::get_array_write_array(term_ref awrite) const {
+  const term& t = term_of(awrite);
+  assert(t.op() == TERM_ARRAY_WRITE);
+  return t[0];
+}
+
+term_ref term_manager::get_array_write_index(term_ref awrite) const {
+  const term& t = term_of(awrite);
+  assert(t.op() == TERM_ARRAY_WRITE);
+  return t[1];
+}
+
+term_ref term_manager::get_array_write_element(term_ref awrite) const {
+  const term& t = term_of(awrite);
+  assert(t.op() == TERM_ARRAY_WRITE);
+  return t[2];
+}
+
+term_ref term_manager::mk_tuple(const std::vector<term_ref>& elements) const {
+  term_ref result = d_tm->mk_term<TERM_TUPLE_CONSTRUCT>(elements.begin(), elements.end());
+  d_tm->typecheck(result);
+  return result;
+}
+
+term_ref term_manager::mk_tuple_access(term_ref t, size_t i) {
+  term_ref result = d_tm->mk_term<TERM_TUPLE_ACCESS>(i, t);
+  d_tm->typecheck(result);
+  return result;
+}
+
+term_ref term_manager::get_tuple_access_tuple(term_ref taccess) const {
+  const term& t = term_of(taccess);
+  assert(t.op() == TERM_TUPLE_ACCESS);
+  return t[0];
+}
+
+size_t term_manager::get_tuple_access_index(term_ref taccess) const {
+  const term& t = term_of(taccess);
+  assert(t.op() == TERM_TUPLE_ACCESS);
+  return d_tm->payload_of<size_t>(taccess);
+}
+
+term_ref term_manager::mk_tuple_write(term_ref t, size_t i, term_ref e) {
+  term_ref children[2] = { t, e };
+  term_ref result = d_tm->mk_term<TERM_TUPLE_WRITE>(i, children, children + 2);
+  d_tm->typecheck(result);
+  return result;
+}
+
+term_ref term_manager::get_tuple_write_tuple(term_ref twrite) const {
+  const term& t = term_of(twrite);
+  assert(t.op() == TERM_TUPLE_WRITE);
+  return t[0];
+}
+
+size_t term_manager::get_tuple_write_index(term_ref twrite) const {
+  const term& t = term_of(twrite);
+  assert(t.op() == TERM_TUPLE_WRITE);
+  return d_tm->payload_of<size_t>(twrite);
+}
+
+term_ref term_manager::get_tuple_write_element(term_ref twrite) const {
+  const term& t = term_of(twrite);
+  assert(t.op() == TERM_TUPLE_WRITE);
+  return t[1];
+}
+
+term_ref term_manager::mk_function_application(term_ref fun, const std::vector<term_ref>& args) {
+  std::vector<term_ref> children;
+  children.push_back(fun);
+  children.insert(children.end(), args.begin(), args.end());
+  term_ref result = d_tm->mk_term<TERM_FUN_APP>(args.begin(), args.end());
+  d_tm->typecheck(result);
+  return result;
+}
+
+
 term_ref term_manager::mk_string_constant(std::string value) {
   return d_tm->mk_term<CONST_STRING>(value);
 }
@@ -239,6 +340,38 @@ bitvector_sgn_extend term_manager::get_bitvector_sgn_extend(const term& t) const
 std::string term_manager::get_string_constant(const term& t) const {
   assert(t.op() == CONST_STRING);
   return d_tm->payload_of<utils::string>(t).c_str();
+}
+
+term_ref term_manager::function_type(const std::vector<term_ref>& args) {
+  return d_tm->function_type(args);
+}
+
+term_ref term_manager::get_function_type_domain(term_ref fun_type, size_t i) const {
+  return d_tm->get_function_type_domain(fun_type, i);
+}
+
+term_ref term_manager::get_function_type_codomain(term_ref fun_type) const {
+  return d_tm->get_function_type_codomain(fun_type);
+}
+
+term_ref term_manager::array_type(term_ref index_type, term_ref element_type) {
+  return d_tm->array_type(index_type, element_type);
+}
+
+term_ref term_manager::get_array_type_index(term_ref arr_type) const {
+  return d_tm->get_array_type_index(arr_type);
+}
+
+term_ref term_manager::get_array_type_element(term_ref arr_type) const {
+  return d_tm->get_array_type_element(arr_type);
+}
+
+term_ref term_manager::tuple_type(const std::vector<term_ref>& args) {
+  return d_tm->tuple_type(args);
+}
+
+term_ref term_manager::get_tuple_type_element(term_ref tuple_type, size_t i) const {
+  return d_tm->get_tuple_type_element(tuple_type, i);
 }
 
 term_ref term_manager::mk_struct_type(const std::vector<std::string>& names, const std::vector<term_ref>& types) {
@@ -280,6 +413,167 @@ term_ref term_manager::get_struct_field(const term& t, size_t i) const {
   assert(t.op() == VARIABLE);
   assert(i + 1 < t.size());
   return t[i + 1];
+}
+
+term_manager::abstraction_helper::abstraction_helper(term_manager& term_manager)
+: d_term_manager(term_manager)
+{}
+
+term_manager::abstraction_helper::~abstraction_helper() {
+  assert(d_variables.size() == 0);
+}
+
+term_ref term_manager::abstraction_helper::new_bound_variable(term_ref type) {
+  return new_bound_variable("", type);
+}
+
+term_ref term_manager::abstraction_helper::new_bound_variable(std::string name, term_ref type) {
+  size_t idx = d_variables.size();
+  term_ref x = d_term_manager.d_tm->mk_term<VARIABLE_BOUND>(idx, type);
+  d_variables.push_back(x);
+  d_names.push_back(name);
+  return x;
+}
+
+term_ref term_manager::abstraction_helper::mk_lambda(term_ref body) {
+  return mk_abstraction(TERM_LAMBDA, d_variables.size(), body);
+}
+
+term_ref term_manager::abstraction_helper::mk_exists(term_ref body, size_t n) {
+  return mk_abstraction(TERM_EXISTS, n, body);
+}
+
+term_ref term_manager::abstraction_helper::mk_forall(term_ref body, size_t n) {
+  return mk_abstraction(TERM_FORALL, n, body);
+}
+
+term_ref term_manager::abstraction_helper::mk_predicate_subtype(term_ref body) {
+  assert(d_names.size() == 1);
+  return mk_abstraction(TYPE_PREDICATE_SUBTYPE, 1, body);
+}
+
+size_t term_manager::get_bound_variable_idx(term_ref x) const {
+  const term& t = term_of(x);
+  assert(t.op() == VARIABLE_BOUND);
+  return d_tm->payload_of<size_t>(t);
+}
+
+term_ref term_manager::abstraction_helper::mk_abstraction(term_op op, size_t n, term_ref body) {
+
+  assert(n <= d_variables.size());
+
+  // Make the term
+  d_variables.push_back(body); // Temp
+  term_ref result;
+  const std::vector<term_ref>::const_iterator begin = d_variables.end() - n - 1, end = d_variables.end();
+  switch (op) {
+  case TERM_LAMBDA:
+    result = d_term_manager.d_tm->mk_term<TERM_LAMBDA>(begin, end);
+    break;
+  case TERM_EXISTS:
+    result = d_term_manager.d_tm->mk_term<TERM_EXISTS>(begin, end);
+    break;
+  case TERM_FORALL:
+    result = d_term_manager.d_tm->mk_term<TERM_FORALL>(begin, end);
+    break;
+  case TYPE_PREDICATE_SUBTYPE:
+    result = d_term_manager.d_tm->mk_term<TYPE_PREDICATE_SUBTYPE>(begin, end);
+    break;
+  default:
+    assert(false);
+  }
+  d_variables.pop_back();
+
+  // Pop the variables
+  for (size_t i = 0; i < n; ++ i) {
+    d_variables.pop_back();
+    d_names.pop_back();
+  }
+
+  // Typecheck
+  d_term_manager.d_tm->typecheck(result);
+
+  // Done
+  return result;
+}
+
+term_ref term_manager::get_abstraction_body(term_ref abstraction) const {
+  const term& t = term_of(abstraction);
+  assert(t.op() == TERM_LAMBDA || t.op() == TERM_EXISTS || t.op() == TERM_FORALL || t.op() == TYPE_PREDICATE_SUBTYPE);
+  assert(t.size() > 2);
+  return t[t.size() - 1];
+}
+
+size_t term_manager::get_abstraction_arity(term_ref abstraction) const {
+  const term& t = term_of(abstraction);
+  assert(t.op() == TERM_LAMBDA || t.op() == TERM_EXISTS || t.op() == TERM_FORALL || t.op() == TYPE_PREDICATE_SUBTYPE);
+  assert(t.size() >= 2); // At least term and one argument
+  return t.size() - 1;
+}
+
+term_ref term_manager::get_abstraction_variable(term_ref abstraction, size_t i) const {
+  const term& t = term_of(abstraction);
+  assert(t.op() == TERM_LAMBDA || t.op() == TERM_EXISTS || t.op() == TERM_FORALL || t.op() == TYPE_PREDICATE_SUBTYPE);
+  return t[i];
+}
+
+void term_manager::get_abstraction_variables(term_ref abstraction, std::vector<expr::term_ref>& vars_out) const {
+  const term& t = term_of(abstraction);
+  assert(t.op() == TERM_LAMBDA || t.op() == TERM_EXISTS || t.op() == TERM_FORALL);
+  assert(t.size() > 1);
+  for(size_t i = 0; i < t.size() - 1; ++ i) {
+    vars_out.push_back(t[i]);
+  }
+}
+
+size_t term_manager::get_lambda_arity(term_ref lambda) const {
+  assert(term_of(lambda).op() == TERM_LAMBDA);
+  return get_abstraction_arity(lambda);
+}
+
+size_t term_manager::get_quantifier_arity(term_ref quantifier) const {
+  assert(term_of(quantifier).op() == TERM_EXISTS || term_of(quantifier).op() == TERM_FORALL);
+  return get_abstraction_arity(quantifier);
+}
+
+term_ref term_manager::get_lambda_body(term_ref lambda) const {
+  assert(term_of(lambda).op() == TERM_LAMBDA);
+  return get_abstraction_body(lambda);
+}
+
+term_ref term_manager::get_quantifier_body(term_ref quantifier) const {
+  assert(term_of(quantifier).op() == TERM_EXISTS || term_of(quantifier).op() == TERM_FORALL);
+  return get_abstraction_body(quantifier);
+}
+
+term_ref term_manager::get_predicate_subtype_body(term_ref pred_type) const {
+  assert(term_of(pred_type).op() == TYPE_PREDICATE_SUBTYPE);
+  return get_abstraction_body(pred_type);
+}
+
+term_ref term_manager::get_lambda_variable(term_ref lambda, size_t i) const {
+  assert(term_of(lambda).op() == TERM_LAMBDA);
+  return get_abstraction_variable(lambda, i);
+}
+
+term_ref term_manager::get_quantifier_variable(term_ref quantifier, size_t i) const {
+  assert(term_of(quantifier).op() == TERM_EXISTS || term_of(quantifier).op() == TERM_FORALL);
+  return get_abstraction_variable(quantifier, i);
+}
+
+term_ref term_manager::get_predicate_subtype_variable(term_ref subtype) const {
+  assert(term_of(subtype).op() == TYPE_PREDICATE_SUBTYPE);
+  return get_abstraction_variable(subtype, 0);
+}
+
+void term_manager::get_lambda_variables(term_ref lambda, std::vector<expr::term_ref>& vars_out) const {
+  assert(term_of(lambda).op() == TERM_LAMBDA);
+  get_abstraction_variables(lambda, vars_out);
+}
+
+void term_manager::get_quantifier_variables(term_ref quantifer, std::vector<expr::term_ref>& vars_out) const {
+  assert(term_of(quantifer).op() == TERM_EXISTS || term_of(quantifer).op() == TERM_FORALL);
+  get_abstraction_variables(quantifer, vars_out);
 }
 
 /** Get all fields of a struct variable */
@@ -335,23 +629,31 @@ void term_manager::pop_namespace() {
   d_tm->pop_namespace();
 }
 
-struct variable_matcher {
-  bool operator() (const term& t) const {
-    return t.op() == VARIABLE;
-  }
-};
-
 void term_manager::get_variables(term_ref ref, std::vector<term_ref>& out) const {
-  d_tm->get_subterms(ref, variable_matcher(), out);
+  d_tm->get_variables(ref, out);
 }
 
 void term_manager::get_variables(term_ref ref, std::set<term_ref>& out) const {
-  d_tm->get_subterms(ref, variable_matcher(), out);
+  d_tm->get_variables(ref, out);
 }
 
 size_t term_manager::get_variables_count(term_ref ref) const {
   std::vector<expr::term_ref> vars;
-  d_tm->get_subterms(ref, variable_matcher(), vars);
+  get_variables(ref, vars);
+  return vars.size();
+}
+
+void term_manager::get_bound_variables(term_ref ref, std::vector<term_ref>& out) const {
+  d_tm->get_bound_variables(ref, out);
+}
+
+void term_manager::get_bound_variables(term_ref ref, std::set<term_ref>& out) const {
+  d_tm->get_subterms(ref, term_manager_internal::bound_variable_matcher(), out);
+}
+
+size_t term_manager::get_bound_variables_count(term_ref ref) const {
+  std::vector<expr::term_ref> vars;
+  get_variables(ref, vars);
   return vars.size();
 }
 
@@ -359,6 +661,7 @@ struct all_matcher {
   bool operator() (const term& t) const {
     return true;
   }
+  bool ignore(const term& t) const { return false; }
 };
 
 void term_manager::get_subterms(term_ref ref, std::vector<term_ref>& out) const {

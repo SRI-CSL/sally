@@ -276,6 +276,46 @@ public:
   /** Is t the bitvector type */
   bool is_bitvector_type(term_ref t) const;
 
+  /** Make a function type (t1, t2, ..., tn), with ti being types, tn being co-domain */
+  term_ref function_type(const std::vector<term_ref>& args);
+
+  /** Is t a function type */
+  bool is_function_type(term_ref t) const;
+
+  /** Is this a type */
+  static
+  bool is_type(const term& t);
+
+  /** Is this a type */
+  bool is_type(term_ref t) const { return is_type(term_of(t)); }
+
+  /** Get the domain type of a function type */
+  term_ref get_function_type_domain(term_ref fun_type, size_t i) const;
+
+  /** Get the co-domain type of a function type */
+  term_ref get_function_type_codomain(term_ref fun_type) const;
+
+  /** Make an array type t1 -> t2 */
+  term_ref array_type(term_ref index_type, term_ref element_type);
+
+  /** Is t an array type */
+  bool is_array_type(term_ref t) const;
+
+  /** Get the index type of the array type */
+  term_ref get_array_type_index(term_ref arr_type) const;
+
+  /** Get the element type of the array type */
+  term_ref get_array_type_element(term_ref arr_type) const;
+
+  /** Make a tuple type (t1, t2, ..., tn) with ti being types */
+  term_ref tuple_type(const std::vector<term_ref>& args);
+
+  /** Is t an array type */
+  bool is_tuple_type(term_ref t) const;
+
+  /** Get the k-th element of the tuple type */
+  term_ref get_tuple_type_element(term_ref tuple_type, size_t i) const;
+
   /** Returns the size of the bitvector type */
   size_t bitvector_type_size(term_ref t) const;
 
@@ -303,6 +343,13 @@ public:
     return mk_term<op, term_ref*>(alloc::empty_type(), children, children + 2);
   }
 
+  /** Make a term from three children and no payload */
+  template<term_op op>
+  term_ref mk_term(term_ref child1, term_ref child2, term_ref child3) {
+    term_ref children[3] = { child1, child2, child3 };
+    return mk_term<op, term_ref*>(alloc::empty_type(), children, children + 3);
+  }
+
   /** Make a term with a list of children and no payload */
   template <term_op op, typename iterator_type>
   term_ref mk_term(iterator_type children_begin, iterator_type children_end) {
@@ -314,13 +361,6 @@ public:
   term_ref mk_term(const typename term_op_traits<op>::payload_type& payload, term_ref child) {
     term_ref children[1] = { child };
     return mk_term<op, term_ref*>(payload, children, children + 1);
-  }
-
-  /** Make a term from two children and payload */
-  template<term_op op>
-  term_ref mk_term(const typename term_op_traits<op>::payload_type& payload, term_ref child1, term_ref child2) {
-    term_ref children[2] = { child1, child2 };
-    return mk_term<op, term_ref*>(payload, children, children + 2);
   }
 
   /** Make a term, given children */
@@ -371,9 +411,17 @@ public:
   /** Get the type of the term */
   term_ref type_of(const term& t);
 
+  /** Get the type of the term if it has been computed */
+  term_ref type_of_if_exists(const term& t) const;
+
   /** Get the type of the term */
   term_ref type_of(term_ref t) {
     return type_of(term_of(t));
+  }
+
+  /** Get the type of the term if it has been computed */
+  term_ref type_of_if_exists(term_ref t) const {
+    return type_of_if_exists(term_of(t));
   }
 
   /** Get the TCC of the term */
@@ -403,9 +451,52 @@ public:
   /** Pop the last added namespace */
   void pop_namespace();
 
+  /** Matcher for variables */
+  struct variable_matcher {
+    bool operator() (const term& t) const {
+      return t.op() == VARIABLE;
+    }
+    bool ignore(const term& t) const { return false; }
+  };
+
+  /** Matcher for bound variables */
+  struct bound_variable_matcher {
+    bool operator() (const term& t) const {
+      return t.op() == VARIABLE_BOUND;
+    }
+    bool ignore(const term& t) const {
+      // Ignore types
+      if (term_manager_internal::is_type(t)) return true;
+      return false;
+    }
+  };
+
+  /** Comparison for bound variables (sort by different indices) */
+  struct bound_variable_cmp {
+    const term_manager_internal& d_tm;
+    bound_variable_cmp(const term_manager_internal& tm): d_tm(tm) {}
+    bool operator() (const term_ref v1, const term_ref v2) const {
+      const term& v1_term = d_tm.term_of(v1);
+      const term& v2_term = d_tm.term_of(v2);
+      return d_tm.payload_of<size_t>(v1_term) < d_tm.payload_of<size_t>(v2_term);
+    }
+  };
+
   /** Return the subterms what return true on m(t) */
   template<typename collection, typename matcher>
-  void get_subterms(term_ref t, const matcher& m, collection& out);
+  void get_subterms(term_ref t, const matcher& m, collection& out) const;
+
+  /** Returns the variables of the term */
+  template<typename collection>
+  void get_variables(term_ref t, collection& out) const {
+    get_subterms(t, variable_matcher(), out);
+  }
+
+  /** Returns the bound variables of the term, in order */
+  void get_bound_variables(term_ref t, std::vector<term_ref>& out) const {
+    get_subterms(t, bound_variable_matcher(), out);
+    std::sort(out.begin(), out.end(), bound_variable_cmp(*this));
+  }
 
   /** Returns the default value for the given type */
   term_ref get_default_value(term_ref type);
@@ -625,6 +716,8 @@ term_ref term_manager_internal::mk_term(term_op op, iterator begin, iterator end
     SWITCH_TO_TERM(TERM_BV_NOR)
     SWITCH_TO_TERM(TERM_BV_XNOR)
     SWITCH_TO_TERM(TERM_BV_CONCAT)
+    SWITCH_TO_TERM(TERM_FUN_APP)
+    SWITCH_TO_TERM(TERM_TUPLE_CONSTRUCT)
   default:
     assert(false);
   }
@@ -635,16 +728,23 @@ term_ref term_manager_internal::mk_term(term_op op, iterator begin, iterator end
 }
 
 template<typename collection, typename matcher>
-void term_manager_internal::get_subterms(term_ref t, const matcher& m, collection& out) {
+void term_manager_internal::get_subterms(term_ref t, const matcher& m, collection& out) const {
   typedef boost::unordered_set<term_ref, term_ref_hasher> visited_set;
 
   visited_set v;
   std::queue<term_ref> queue;
+
+  // If matcher ignores this term, just return
+  if (m.ignore(term_of(t))) {
+    return;
+  }
+
+  // Start with the term itself, then process
   queue.push(t);
   v.insert(t);
 
-  std::insert_iterator<collection> insert(out, out.end());
 
+  std::insert_iterator<collection> insert(out, out.end());
   while (!queue.empty()) {
 
     // Process current
@@ -658,8 +758,10 @@ void term_manager_internal::get_subterms(term_ref t, const matcher& m, collectio
     const term& current_term = term_of(current);
     for (size_t i = 0; i < current_term.size(); ++ i) {
       if (v.find(current_term[i]) == v.end()) {
-        queue.push(current_term[i]);
-        v.insert(current_term[i]);
+        if (!m.ignore(term_of(current_term[i]))) {
+          queue.push(current_term[i]);
+          v.insert(current_term[i]);
+        }
       }
     }
   }

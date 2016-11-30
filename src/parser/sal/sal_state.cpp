@@ -18,6 +18,7 @@
 
 #include "parser/sal/sal_state.h"
 #include "parser/parser.h"
+#include "parser/command.h"
 
 #include "expr/term_manager.h"
 #include "expr/gc_relocator.h"
@@ -34,6 +35,7 @@ sal_state::sal_state(const system::context& context)
 : d_context(context)
 , d_variables("local vars")
 , d_types("types")
+, d_modules("modules")
 {
   // Add the basic types
   term_manager& tm = context.tm();
@@ -126,18 +128,8 @@ void sal_state::ensure_declared(std::string id, sal_object type, bool declared) 
   case SAL_TYPE:
     ok = d_types.has_entry(id);
     break;
-  case SAL_STATE_TYPE:
-    ok = d_context.has_state_type(id);
-    break;
-  case SAL_STATE_FORMULA:
-    ok = d_context.has_state_formula(id);
-    break;
-  case SAL_TRANSITION_FORMULA:
-    ok = d_context.has_transition_formula(id);
-    break;
-  case SAL_TRANSITION_SYSTEM:
-    ok = d_context.has_transition_system(id);
-    break;
+  case SAL_MODULE:
+    ok = d_modules.has_entry(id);
   case SAL_OBJECT_LAST:
     // Always noop
     return;
@@ -154,4 +146,13 @@ void sal_state::ensure_declared(std::string id, sal_object type, bool declared) 
 void sal_state::gc_collect(const expr::gc_relocator& gc_reloc) {
   d_variables.gc_relocate(gc_reloc);
   d_types.gc_relocate(gc_reloc);
+}
+
+command* sal_state::finalize() {
+  return 0;
+}
+
+expr::term_ref sal_state::token_to_rational(pANTLR3_COMMON_TOKEN token) {
+  expr::rational value(token_text(token));
+  return ctx().tm().mk_rational_constant(value);
 }

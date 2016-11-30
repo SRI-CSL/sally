@@ -7,6 +7,7 @@ add_library(expr
   value.cpp
   term_manager_internal.cpp 
   term_manager.cpp
+  type_computation_visitor.cpp
   model.cpp
   gc_participant.cpp
   gc_relocator.cpp

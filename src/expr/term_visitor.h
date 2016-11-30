@@ -37,7 +37,6 @@ enum visitor_match_result {
   DONT_VISIT_AND_CONTINUE
 };
 
-
 /** Generic term visitor. */
 template<typename visitor, typename term_type, typename term_type_hasher = utils::hash<term_type> >
 class term_visit_topological {

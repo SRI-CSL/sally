@@ -43,9 +43,15 @@ enum term_op {
   TYPE_STRING,
   TYPE_BITVECTOR,
   TYPE_STRUCT,
+  TYPE_TUPLE,
+  TYPE_FUNCTION,
+  TYPE_ARRAY,
+  TYPE_PREDICATE_SUBTYPE,
 
   // Variables
   VARIABLE,
+  // Bound variables (lambdas, quantifiers, ...)
+  VARIABLE_BOUND,
 
   // ITE
   TERM_ITE,
@@ -103,6 +109,23 @@ enum term_op {
   TERM_BV_UGT,
   TERM_BV_SGT,
   TERM_BV_SGN_EXTEND,
+
+  // Arrays
+  TERM_ARRAY_READ,
+  TERM_ARRAY_WRITE,
+
+  // Tuples
+  TERM_TUPLE_CONSTRUCT,
+  TERM_TUPLE_ACCESS,
+  TERM_TUPLE_WRITE,
+
+  // Abstractions
+  TERM_LAMBDA,
+  TERM_EXISTS,
+  TERM_FORALL,
+
+  // Function application
+  TERM_FUN_APP,
 
   // Constant strings
   CONST_STRING,
@@ -185,6 +208,32 @@ template<>
 struct term_op_traits<VARIABLE> {
   typedef utils::string payload_type;
 };
+
+/**
+ * Bound variables have a payload that is their index, and one child,
+ * which is the type of the variable.
+ */
+template<>
+struct term_op_traits<VARIABLE_BOUND> {
+  typedef size_t payload_type;
+};
+
+/**
+ * Tuple access, payload is the index.
+ */
+template<>
+struct term_op_traits<TERM_TUPLE_ACCESS> {
+  typedef size_t payload_type;
+};
+
+/**
+ * Tuple write, payload is the index.
+ */
+template<>
+struct term_op_traits<TERM_TUPLE_WRITE> {
+  typedef size_t payload_type;
+};
+
 
 /**
  * Strings just have string payloads.

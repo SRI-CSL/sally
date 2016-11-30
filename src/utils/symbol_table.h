@@ -26,14 +26,21 @@
 namespace sally {
 namespace utils {
 
+/**
+ * Symbol table from strings to T. T should be comparable.
+ */
 template<typename T, bool free_pointers = true>
 class symbol_table {
+
+public:
 
   typedef std::list<T> T_list;
   typedef typename T_list::iterator T_list_iterator;
   typedef boost::unordered_map<std::string, T_list, utils::hash<std::string> > id_to_T_map;
   typedef typename id_to_T_map::iterator iterator;
   typedef typename id_to_T_map::const_iterator const_iterator;
+
+private:
 
   template<typename T1>
   struct symbol_table_entry {
@@ -130,6 +137,9 @@ public:
       return true;
     }
   }
+
+  const_iterator begin() const { return d_table.begin(); }
+  const_iterator end() const { return d_table.end(); }
 
   /** Print the table to stream */
   void to_stream(std::ostream& out) const {
