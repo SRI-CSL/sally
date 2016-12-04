@@ -61,8 +61,8 @@ BOOST_AUTO_TEST_CASE(tuple) {
   term_ref tuple_type_new = tm.type_of(tuple);
   cout << tuple_type_new << endl;
 
-  term_ref read0 = tm.mk_tuple_access(tuple, 0);
-  term_ref read1 = tm.mk_tuple_access(tuple, 1);
+  term_ref read0 = tm.mk_tuple_read(tuple, 0);
+  term_ref read1 = tm.mk_tuple_read(tuple, 1);
   term_ref write0 = tm.mk_tuple_write(tuple, 0, c1);
   term_ref write1 = tm.mk_tuple_write(tuple, 1, c1);
   cout << read0 << " : " << tm.type_of(read0) << endl;
@@ -89,11 +89,11 @@ BOOST_AUTO_TEST_CASE(function_and_lambda) {
   cout << "function type: " << fun << endl;
 
   // Make a lambda
-  term_manager::abstraction_helper ah(tm);
-  term_ref x0 = ah.new_bound_variable(t0);
-  term_ref x1 = ah.new_bound_variable(t1);
+  term_ref x0 = tm.mk_variable(t0);
+  term_ref x1 = tm.mk_variable(t1);
+  args.clear(); args.push_back(x0); args.push_back(x1);
   term_ref body = tm.mk_term(TERM_LT, x0, x1);
-  term_ref lambda = ah.mk_lambda(body);
+  term_ref lambda = tm.mk_lambda(args, body);
   term_ref lambda_type = tm.type_of(lambda);
   cout << "lambda: " << lambda << endl;
   cout << "lambda_type: " << lambda_type << endl;
@@ -103,19 +103,22 @@ BOOST_AUTO_TEST_CASE(function_and_lambda) {
 
 BOOST_AUTO_TEST_CASE(quantifiers) {
 
+  std::vector<term_ref> args;
+
   // Set term manager for output
   cout << set_tm(tm);
 
   // Make a quantifier
-  term_manager::abstraction_helper ah(tm);
-  term_ref x0 = ah.new_bound_variable(tm.real_type());
-  term_ref x1 = ah.new_bound_variable(tm.integer_type());
-  term_ref x2 = ah.new_bound_variable(tm.integer_type());
+  term_ref x0 = tm.mk_variable(tm.real_type());
+  term_ref x1 = tm.mk_variable(tm.integer_type());
+  term_ref x2 = tm.mk_variable(tm.integer_type());
   term_ref body = tm.mk_term(TERM_LT, x0, tm.mk_term(TERM_ADD, x1, x2));
   cout << "body: " << body << endl;
-  body = ah.mk_exists(body, 2);
+  args.clear(); args.push_back(x1); args.push_back(x2);
+  body = tm.mk_exists(args, body);
   cout << "body: " << body << endl;
-  term_ref quantifier = ah.mk_forall(body, 1);
+  args.clear(); args.push_back(x0);
+  term_ref quantifier = tm.mk_forall(args, body);
   term_ref quantifier_type = tm.type_of(quantifier);
 
   cout << "quantifier: " << quantifier << endl;
@@ -162,14 +165,13 @@ BOOST_AUTO_TEST_CASE(predicate_sybtype) {
 
   // Make array type
   term_ref base_type = tm.real_type();
-  term_manager::abstraction_helper ah(tm);
-  term_ref x = ah.new_bound_variable(base_type);
+  term_ref x = tm.mk_variable(base_type);
   term_ref predicate = tm.mk_term(TERM_LEQ, x, tm.mk_rational_constant(rational(100, 1)));
-  term_ref type = ah.mk_predicate_subtype(predicate);
+  term_ref type = tm.mk_predicate_subtype(x, predicate);
   cout << "predicate_type: " << type << endl;
-  x = ah.new_bound_variable(type);
+  x = tm.mk_variable(type);
   predicate = tm.mk_term(TERM_GEQ, x, tm.mk_rational_constant(rational(0, 1)));
-  type = ah.mk_predicate_subtype(predicate);
+  type = tm.mk_predicate_subtype(x, predicate);
   cout << "predicate_type: " << type << endl;
 
 }

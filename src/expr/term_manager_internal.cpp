@@ -70,44 +70,9 @@ term_ref term_manager_internal::tcc_of(const term& t) const {
   }
 }
 
-bool term_manager_internal::is_subtype_of(term_ref t1, term_ref t2) const {
-  if (t1 == t2) {
-    return true;
-  }
-  if (t1 == integer_type() && t2 == real_type()) {
-    return true;
-  }
-  if (term_of(t1).op() == TYPE_PREDICATE_SUBTYPE) {
-    term_ref arg = term_of(t1)[0];
-    return is_subtype_of(type_of_if_exists(arg), t2);
-  }
-  return false;
-}
-
-term_ref term_manager_internal::supertype_of(term_ref t1, term_ref t2) const {
-  assert(types_comparable(t1, t2));
-
-  if (t1 == t2) {
-    return t1;
-  }
-  if (t1 == integer_type() && t2 == real_type()) {
-    return t2;
-  }
-  if (t2 == integer_type() && t1 == real_type()) {
-    return t1;
-  }
-
-  assert(false);
-  return t1;
-}
-
-bool term_manager_internal::types_comparable(term_ref t1, term_ref t2) const {
-  return (is_subtype_of(t1, t2) || is_subtype_of(t2, t1));
-}
-
 void term_manager_internal::compute_type(term_ref t) {
   if (d_type_cache.find(t) == d_type_cache.end()) {
-    type_computation_visitor visitor(*this, d_type_cache);
+    type_computation_visitor visitor(*this, d_type_cache, d_base_type_cache);
     term_visit_topological<type_computation_visitor, term_ref, term_ref_hasher> visit_topological(visitor);
     visit_topological.run(t);
   }
@@ -153,6 +118,77 @@ term_ref term_manager_internal::type_of_if_exists(const term& t) const {
     return find->second;
   }
 }
+
+term_ref term_manager_internal::base_type_of(const term& t) {
+  // For types
+  if (is_type(t)) {
+    // For primitive types, we just get the type itself
+    if (is_primitive_type(t)) {
+      switch (t.op()) {
+      case TYPE_INTEGER:
+        // Base of integers is real
+        return real_type();
+      case TYPE_TYPE:
+      case TYPE_BOOL:
+      case TYPE_REAL:
+      case TYPE_STRING:
+      case TYPE_BITVECTOR:
+      case TYPE_ENUM:
+        return ref_of(t);
+      default:
+        assert(false);
+        return ref_of(t);
+      }
+    }
+    // Otherwise, compute the type, and get the base type
+    term_ref t_ref = ref_of(t);
+    compute_type(t_ref);
+    term_to_term_map::const_iterator find = d_base_type_cache.find(t_ref);
+    assert (find != d_base_type_cache.end());
+    return find->second;
+  } else {
+    // For terms, just compute the type, and get the base type of the type
+    term_ref t_ref = ref_of(t);
+    compute_type(t_ref);
+    return base_type_of(type_of(t));
+  }
+}
+
+term_ref term_manager_internal::base_type_of_if_exists(const term& t) const {
+  // For types
+  if (is_type(t)) {
+    // For primitive types, we just get the type itself
+    if (is_primitive_type(t)) {
+      switch (t.op()) {
+      case TYPE_INTEGER:
+        // Base of integers is real
+        return real_type();
+      case TYPE_TYPE:
+      case TYPE_BOOL:
+      case TYPE_REAL:
+      case TYPE_STRING:
+      case TYPE_BITVECTOR:
+      case TYPE_ENUM:
+        return ref_of(t);
+      default:
+        assert(false);
+        return ref_of(t);
+      }
+    }
+    // Otherwise, compute the type, and get the base type
+    term_ref t_ref = ref_of(t);
+    term_to_term_map::const_iterator find = d_base_type_cache.find(t_ref);
+    if (find != d_base_type_cache.end()) {
+      return find->second;
+    } else {
+      return term_ref();
+    }
+  } else {
+    // For terms, just compute the type, and get the base type of the type
+    return base_type_of_if_exists(type_of_if_exists(t));
+  }
+}
+
 
 /** Add a namespace entry (will be removed from prefix when printing. */
 void term_manager_internal::use_namespace(std::string ns) {
@@ -241,6 +277,18 @@ term_ref term_manager_internal::bitvector_type(size_t size) {
    return new_type;
 }
 
+bool term_manager_internal::is_integer_type(term_ref t) const {
+  const term& t_term = term_of(t);
+  if (t_term.d_op == TYPE_INTEGER) return true;
+  if (t_term.d_op == TYPE_PREDICATE_SUBTYPE) {
+    term_ref var = t_term[0];
+    term_ref var_type = type_of_if_exists(var);
+    assert(!var_type.is_null());
+    return  is_integer_type(var_type);
+  }
+  return false;
+}
+
 bool term_manager_internal::is_bitvector_type(term_ref t) const {
   return term_of(t).d_op == TYPE_BITVECTOR;
 }
@@ -257,6 +305,10 @@ bool term_manager_internal::is_tuple_type(term_ref t) const {
   return term_of(t).d_op == TYPE_TUPLE;
 }
 
+bool term_manager_internal::is_record_type(term_ref t) const {
+  return term_of(t).d_op == TYPE_RECORD;
+}
+
 bool term_manager_internal::is_type(const term& t) {
   switch (t.op()) {
   case TYPE_TYPE:
@@ -267,9 +319,26 @@ bool term_manager_internal::is_type(const term& t) {
   case TYPE_BITVECTOR:
   case TYPE_STRUCT:
   case TYPE_TUPLE:
+  case TYPE_RECORD:
+  case TYPE_ENUM:
   case TYPE_FUNCTION:
   case TYPE_ARRAY:
   case TYPE_PREDICATE_SUBTYPE:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool term_manager_internal::is_primitive_type(const term& t) {
+  switch (t.op()) {
+  case TYPE_TYPE:
+  case TYPE_BOOL:
+  case TYPE_INTEGER:
+  case TYPE_REAL:
+  case TYPE_STRING:
+  case TYPE_BITVECTOR:
+  case TYPE_ENUM:
     return true;
   default:
     return false;
@@ -331,6 +400,53 @@ term_ref term_manager_internal::get_tuple_type_element(term_ref tuple_type, size
   assert(i < t.size());
   return t[i];
 }
+
+term_ref term_manager_internal::enum_type(const std::vector<std::string>& values) {
+  std::vector<term_ref> string_values;
+  for (size_t i = 0; i < values.size(); ++ i) {
+    string_values.push_back(mk_term<CONST_STRING>(values[i]));
+  }
+  term_ref result = mk_term<TYPE_ENUM>(string_values.begin(), string_values.end());
+  typecheck(result);
+  return result;
+}
+
+term_ref term_manager_internal::record_type(const id_to_term_map& fields) {
+  std::vector<term_ref> elements;
+  id_to_term_map::const_iterator it = fields.begin(), end = fields.end();
+  for (; it != end; ++ it) {
+    term_ref id = mk_term<CONST_STRING>(it->first);
+    term_ref type = it->second;
+    elements.push_back(id);
+    elements.push_back(type);
+  }
+  term_ref result = mk_term<TYPE_RECORD>(elements.begin(), elements.end());
+  typecheck(result);
+  return result;
+}
+
+term_ref term_manager_internal::get_record_type_field_type(term_ref rec_type, std::string field) const {
+  const term& rec_type_term = term_of(rec_type);
+  assert(rec_type_term.op() == TYPE_RECORD);
+  for (size_t i = 0; i < rec_type_term.size(); i += 2) {
+    std::string id = payload_of<utils::string>(rec_type_term[i]);
+    if (id == field) {
+      return rec_type_term[i+1];
+    }
+  }
+  return term_ref();
+}
+
+void term_manager_internal::get_record_type_fields(term_ref rec_type, id_to_term_map& fields) const {
+  const term& rec_type_term = term_of(rec_type);
+  assert(rec_type_term.op() == TYPE_RECORD);
+  for (size_t i = 0; i < rec_type_term.size(); i += 2) {
+    std::string id = payload_of<utils::string>(rec_type_term[i]);
+    term_ref type = rec_type_term[i+1];
+    fields[id] = type;
+  }
+}
+
 
 term_ref term_manager_internal::get_default_value(term_ref type_ref) {
   const term& type = term_of(type_ref);
@@ -410,4 +526,77 @@ void term_manager_internal::gc(std::map<expr::term_ref, expr::term_ref>& reloc_m
   }
 
   TRACE("gc") << "term_manager_internal::gc(): end" << std::endl;
+}
+
+term_ref term_manager_internal::mk_abstraction(term_op op, const std::vector<term_ref>& vars, term_ref body) {
+
+  std::vector<term_ref> children(vars.begin(), vars.end());
+  children.push_back(body);
+
+  // Make the term
+  term_ref result;
+  const std::vector<term_ref>::const_iterator begin = children.begin(), end = children.end();
+  switch (op) {
+  case TERM_LAMBDA:
+    result = mk_term<TERM_LAMBDA>(begin, end);
+    break;
+  case TERM_EXISTS:
+    result = mk_term<TERM_EXISTS>(begin, end);
+    break;
+  case TERM_FORALL:
+    result = mk_term<TERM_FORALL>(begin, end);
+    break;
+  case TYPE_PREDICATE_SUBTYPE:
+    result = mk_term<TYPE_PREDICATE_SUBTYPE>(begin, end);
+    break;
+  case TERM_ARRAY_LAMBDA:
+    result = mk_term<TERM_ARRAY_LAMBDA>(begin, end);
+    break;
+  default:
+    assert(false);
+  }
+
+  // Typecheck
+  typecheck(result);
+
+  // Done
+  return result;
+}
+
+bool term_manager_internal::is_abstraction(const term& t) const {
+  switch (t.op()) {
+  case TERM_LAMBDA:
+  case TERM_EXISTS:
+  case TERM_FORALL:
+  case TYPE_PREDICATE_SUBTYPE:
+  case TERM_ARRAY_LAMBDA:
+    return true;
+  default:
+    return false;
+  }
+}
+
+term_ref term_manager_internal::get_abstraction_body(term_ref abstraction) const {
+  const term& t = term_of(abstraction);
+  assert(is_abstraction(t));
+  assert(t.size() > 2);
+  return t[t.size() - 1];
+}
+
+size_t term_manager_internal::get_abstraction_arity(term_ref abstraction) const {
+  const term& t = term_of(abstraction);
+  assert(is_abstraction(t));
+  assert(t.size() >= 2); // At least term and one argument
+  return t.size() - 1;
+}
+
+term_ref term_manager_internal::get_abstraction_variable(term_ref abstraction, size_t i) const {
+  const term& t = term_of(abstraction);
+  assert(is_abstraction(t));
+  return t[i];
+}
+
+bool term_manager_internal::compatible(term_ref t1, term_ref t2) {
+  if (t1 == t2) return true;
+  return base_type_of(t1) == base_type_of(t2);
 }

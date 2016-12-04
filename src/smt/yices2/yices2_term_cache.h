@@ -30,8 +30,9 @@
  * otherwise it has no effect (because the boost file indirectly
  * includes <stdint.h>).
  */
+#ifndef __STDC_LIMIT_MACROS
 #define __STDC_LIMIT_MACROS 1
-
+#endif
 
 #include <map>
 #include <vector>

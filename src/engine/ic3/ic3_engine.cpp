@@ -73,7 +73,6 @@ ic3_engine::~ic3_engine() {
 }
 
 void ic3_engine::reset() {
-
   d_transition_system = 0;
   d_property = 0;
   delete d_trace;
@@ -91,10 +90,6 @@ void ic3_engine::reset() {
   d_properties.clear();
   d_property_invalid = false;
   d_reachability.clear();
-
-  if (ai()) {
-    ai()->clear();
-  }
 }
 
 induction_obligation ic3_engine::pop_induction_obligation() {

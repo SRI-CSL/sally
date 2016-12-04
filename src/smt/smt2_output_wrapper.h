@@ -53,6 +53,9 @@ class smt2_output_wrapper : public solver {
   /** Size of assertions by push */
   std::vector<size_t> d_assertions_size;
 
+  /** Have variables been added */
+  bool d_vars_added;
+
 public:
 
   /** Takes over the solver and will destruct it on destruction */

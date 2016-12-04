@@ -22,6 +22,7 @@
 #include <boost/unordered_set.hpp>
 
 #include "utils/hash.h"
+#include "utils/trace.h"
 
 namespace sally {
 namespace expr {
@@ -86,12 +87,15 @@ void term_visit_topological<visitor, term_type, term_type_hasher>::run(term_type
   visited_set v;
 
   // Add initial one
+  assert(d_visitor.is_good_term(t));
   dfs_stack.push_back(term_visitor_dfs_entry(t, false, d_visitor.match(t)));
 
   while (!dfs_stack.empty()) {
 
     // Process current
     term_visitor_dfs_entry& current = dfs_stack.back();
+
+    TRACE("term::visitor") << "current: " << current.t << std::endl;
 
     // If visited already, we just skip it
     if (v.find(current.t) != v.end()) {
@@ -101,8 +105,7 @@ void term_visit_topological<visitor, term_type, term_type_hasher>::run(term_type
 
     // If children added, then we visit this node
     if (current.children_added) {
-      if (current.visit == VISIT_AND_BREAK ||
-          current.visit == VISIT_AND_CONTINUE) {
+      if (current.visit == VISIT_AND_BREAK || current.visit == VISIT_AND_CONTINUE) {
         d_visitor.visit(current.t);
       }
       // Done with this node
@@ -114,12 +117,12 @@ void term_visit_topological<visitor, term_type, term_type_hasher>::run(term_type
     // Children not added yet, so we add them
     current.children_added = true;
     // Whether we add them, depends on the visitor request
-    if (current.visit == DONT_VISIT_AND_CONTINUE ||
-        current.visit == VISIT_AND_CONTINUE) {
+    if (current.visit == DONT_VISIT_AND_CONTINUE || current.visit == VISIT_AND_CONTINUE) {
       // We should add them
       children.clear();
       d_visitor.get_children(current.t, children);
       for (size_t i = 0; i < children.size(); ++ i) {
+        assert(d_visitor.is_good_term(children[i]));
         dfs_stack.push_back(term_visitor_dfs_entry(children[i], false, d_visitor.match(children[i])));
       }
     }

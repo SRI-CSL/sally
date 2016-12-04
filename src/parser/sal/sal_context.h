@@ -27,10 +27,24 @@ namespace sally {
 namespace parser {
 namespace sal {
 
+/** Types of model-checking obligations */
+enum assertion_form {
+  SAL_OBLIGATION,
+  SAL_CLAIM,
+  SAL_LEMMA,
+  SAL_THEOREM
+};
+
 class context {
 
   /** The term manager */
   expr::term_manager& d_tm;
+
+  /** Context name */
+  std::string d_name;
+
+  /** Symbol table of parameters */
+  utils::symbol_table<expr::term_ref> d_parameters;
 
   /** Symbol table of modules */
   utils::symbol_table<module::ref> d_modules;
@@ -41,10 +55,30 @@ class context {
   /** Symbol table of types */
   utils::symbol_table<expr::term_ref> d_types;
 
+  struct assertion {
+
+    std::string name;
+    assertion_form form;
+    sal::module::ref m;
+    expr::term_ref formula;
+
+    assertion(std::string name, assertion_form form, sal::module::ref m, expr::term_ref formula)
+    : name(name), form(form), m(m), formula(formula) {}
+  };
+
+  /** List of added assertions */
+  std::vector<assertion> d_assertions;
+
 public:
 
-  context(expr::term_manager& tm);
+  context(expr::term_manager& tm, std::string name);
   ~context();
+
+  void add_parameter(std::string name, expr::term_ref var);
+
+  void add_module(std::string name, sal::module::ref m);
+
+  void add_assertion(std::string id, assertion_form form, sal::module::ref m, expr::term_ref a);
 
 };
 

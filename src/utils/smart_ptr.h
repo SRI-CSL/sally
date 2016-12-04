@@ -19,6 +19,7 @@
 #pragma once
 
 #include <cassert>
+#include <iosfwd>
 
 namespace sally {
 namespace utils {
@@ -26,7 +27,7 @@ namespace utils {
 template <typename T>
 class smart_ptr {
 
-  /** Object to capture T and a smart_ptrerence count */
+  /** Object to capture T and a smart_ptr count */
   class T_counted {
     T* d_obj;
     size_t d_smart_ptrcount;
@@ -54,7 +55,7 @@ public:
   T* operator -> ();
   const T* operator -> () const;
   bool operator < (const smart_ptr& other) const;
-
+  operator bool () const { return d_obj; }
 };
 
 template <typename T>

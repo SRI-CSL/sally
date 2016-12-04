@@ -17,13 +17,26 @@
  */
 
 #include "utils/exception.h"
+#include "utils/output.h"
 
 #include <iostream>
 
 namespace sally {
 
+exception::exception(expr::term_manager* tm) {
+  output::set_term_manager(d_msg, tm);
+}
+
+exception::exception(expr::term_manager& tm) {
+  output::set_term_manager(d_msg, &tm);
+}
+
+exception::exception(const exception& e) {
+  e.to_stream(d_msg);
+}
+
 void exception::to_stream(std::ostream& out) const {
-  out << d_msg;
+  out << d_msg.str();
 }
 
 std::ostream& operator << (std::ostream& out, const exception& e) {

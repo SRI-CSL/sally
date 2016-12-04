@@ -211,7 +211,7 @@ BEGIN
   %%
   %% Sanity check2: n[i] is at least 3 (except for round 0 since we don't initialize n[i]).
   %%
-  min_received: LEMMA approx |- G(round = 0 OR FORALL (i:PID): n[i] >= 3);
+  min_received: LEMMA approx |- G(round = 0 OR (FORALL (i:PID): n[i] >= 3));
 
   %%
   %% Convergence property

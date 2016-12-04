@@ -28,6 +28,7 @@ smt2_output_wrapper::smt2_output_wrapper(expr::term_manager& tm, const options& 
 , d_solver(solver)
 , d_output(filename.c_str())
 , d_total_assertions_count(0)
+, d_vars_added(false)
 {
   // Setup the stream
   output::set_output_language(d_output, output::MCMT);
@@ -62,6 +63,8 @@ bool smt2_output_wrapper::supports(feature f) const {
 }
 
 void smt2_output_wrapper::add(expr::term_ref f, formula_class f_class) {
+  assert(d_vars_added);
+
   assertion a(d_total_assertions_count ++, f, f_class);
   d_assertions.push_back(a);
 
@@ -157,6 +160,7 @@ void smt2_output_wrapper::add_variable(expr::term_ref var, variable_class f_clas
   d_output << "(declare-fun " << var << " () " << d_tm.type_of(var) << ")" << std::endl;
   solver::add_variable(var, f_class);
   d_solver->add_variable(var, f_class);
+  d_vars_added = true;
 }
 
 void smt2_output_wrapper::gc_collect(const expr::gc_relocator& gc_reloc) {

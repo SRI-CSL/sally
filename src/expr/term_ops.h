@@ -44,14 +44,14 @@ enum term_op {
   TYPE_BITVECTOR,
   TYPE_STRUCT,
   TYPE_TUPLE,
+  TYPE_ENUM,
+  TYPE_RECORD,
   TYPE_FUNCTION,
   TYPE_ARRAY,
   TYPE_PREDICATE_SUBTYPE,
 
   // Variables
   VARIABLE,
-  // Bound variables (lambdas, quantifiers, ...)
-  VARIABLE_BOUND,
 
   // ITE
   TERM_ITE,
@@ -73,6 +73,7 @@ enum term_op {
   TERM_SUB,
   TERM_MUL,
   TERM_DIV,
+  TERM_MOD,
   TERM_LEQ,
   TERM_LT,
   TERM_GEQ,
@@ -113,11 +114,20 @@ enum term_op {
   // Arrays
   TERM_ARRAY_READ,
   TERM_ARRAY_WRITE,
+  TERM_ARRAY_LAMBDA,
 
   // Tuples
   TERM_TUPLE_CONSTRUCT,
-  TERM_TUPLE_ACCESS,
+  TERM_TUPLE_READ,
   TERM_TUPLE_WRITE,
+
+  // Enum constants
+  CONST_ENUM,
+
+  // Records
+  TERM_RECORD_CONSTRUCT,
+  TERM_RECORD_READ,
+  TERM_RECORD_WRITE,
 
   // Abstractions
   TERM_LAMBDA,
@@ -199,6 +209,13 @@ struct term_op_traits<CONST_BITVECTOR> {
   typedef bitvector payload_type;
 };
 
+/**
+ * Enumeration constants have a payload of type size_t (index).
+ */
+template<>
+struct term_op_traits<CONST_ENUM> {
+  typedef size_t payload_type;
+};
 
 /**
  * Variables have a payload that is their name, and one child, which is the
@@ -210,19 +227,10 @@ struct term_op_traits<VARIABLE> {
 };
 
 /**
- * Bound variables have a payload that is their index, and one child,
- * which is the type of the variable.
- */
-template<>
-struct term_op_traits<VARIABLE_BOUND> {
-  typedef size_t payload_type;
-};
-
-/**
  * Tuple access, payload is the index.
  */
 template<>
-struct term_op_traits<TERM_TUPLE_ACCESS> {
+struct term_op_traits<TERM_TUPLE_READ> {
   typedef size_t payload_type;
 };
 

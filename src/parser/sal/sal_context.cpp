@@ -17,21 +17,39 @@
  */
 
 #include "parser/sal/sal_context.h"
+#include "parser/parser.h"
+
 
 namespace sally {
 namespace parser {
 namespace sal {
 
-context::context(expr::term_manager& tm)
+context::context(expr::term_manager& tm, std::string name)
 : d_tm(tm)
+, d_name(name)
+, d_parameters("parameters")
 , d_modules("modules")
 , d_constants("constants")
 , d_types("types")
 {
-  // Add the basic types
-  d_types.add_entry("REAL", d_tm.real_type());
-  d_types.add_entry("INTEGER", d_tm.integer_type());
-  d_types.add_entry("BOOLEAN", d_tm.boolean_type());
+}
+
+void context::add_parameter(std::string name, expr::term_ref var) {
+  if (d_parameters.has_entry(name)) {
+    throw parser_exception(name + " already declared");
+  }
+  d_parameters.add_entry(name, var);
+}
+
+void context::add_module(std::string name, sal::module::ref m) {
+  if (d_modules.has_entry(name)) {
+    throw parser_exception(name + " already declared");
+  }
+  d_modules.add_entry(name, m);
+}
+
+void context::add_assertion(std::string id, assertion_form form, sal::module::ref m, expr::term_ref a) {
+  d_assertions.push_back(assertion(id, form, m, a));
 }
 
 }

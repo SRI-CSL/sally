@@ -46,6 +46,8 @@ public:
   char operator[] (size_t i) const;
   const char* c_str() const;
 
+  operator std::string () const;
+
   void to_stream(std::ostream& out) const;
 
 };

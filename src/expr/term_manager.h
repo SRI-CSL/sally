@@ -110,6 +110,24 @@ public:
   /** Get the k-th element of the tuple type */
   term_ref get_tuple_type_element(term_ref tuple_type, size_t i) const;
 
+  /** Make an enumeration type */
+  term_ref enum_type(const std::vector<std::string>& values);
+
+  /** Map from names to terms */
+  typedef std::map<std::string, term_ref> id_to_term_map;
+
+  /** Make a record type */
+  term_ref record_type(const id_to_term_map& fields);
+
+  /** Get the type a record field (returns null if not there) */
+  term_ref get_record_type_field_type(term_ref rec_type, std::string field) const;
+
+  /** Get all record type fields */
+  void get_record_type_fields(term_ref rec_type, id_to_term_map& fields) const;
+
+  /** Get the size of the enumeration */
+  size_t get_enum_type_size(term_ref enum_type) const;
+
   /** Get the size of a bitvector type */
   size_t get_bitvector_type_size(term_ref bv_type) const;
 
@@ -238,32 +256,77 @@ public:
   /** Get the element from the array write */
   term_ref get_array_write_element(term_ref awrite) const;
 
+  /** Make an array lambda [i : body] */
+  term_ref mk_array_lambda(term_ref i, term_ref body);
+
+  /** Get array lambda index */
+  term_ref get_array_lambda_variable(term_ref a_lambda) const;
+
+  /** Get array lambda body */
+  term_ref get_array_lambda_body(term_ref a_lambda) const;
+
   /** Construct tuple */
-  term_ref mk_tuple(const std::vector<term_ref>& elements) const;
+  term_ref mk_tuple(const std::vector<term_ref>& elements);
 
-  /** Make a tuple acess term */
-  term_ref mk_tuple_access(term_ref t, size_t i);
+  /** Make a tuple read term */
+  term_ref mk_tuple_read(term_ref t, size_t i);
 
-  /** Get the tuple access base tuple */
-  term_ref get_tuple_access_tuple(term_ref taccess) const;
+  /** Get the tuple read base tuple */
+  term_ref get_tuple_read_tuple(term_ref t_read) const;
 
-  /** Get the tuple access index */
-  size_t get_tuple_access_index(term_ref taccess) const;
+  /** Get the tuple read index */
+  size_t get_tuple_read_index(term_ref t_read) const;
 
   /** Make a new tuple write term */
   term_ref mk_tuple_write(term_ref t, size_t i, term_ref e);
 
   /** Get the tuple write base tuple */
-  term_ref get_tuple_write_tuple(term_ref twrite) const;
+  term_ref get_tuple_write_tuple(term_ref t_write) const;
 
   /** Get the tuple write index */
-  size_t get_tuple_write_index(term_ref twrite) const;
+  size_t get_tuple_write_index(term_ref t_write) const;
 
   /** Get the tuple write written element */
-  term_ref get_tuple_write_element(term_ref twrite) const;
+  term_ref get_tuple_write_element(term_ref t_write) const;
+
+  /** Construct a record (and infer type) */
+  term_ref mk_record(const id_to_term_map& elements);
+
+  /** Make a record read term */
+  term_ref mk_record_read(term_ref rec, term_ref field_id);
+
+  /** Get the record read base record */
+  term_ref get_record_read_record(term_ref rec_read) const;
+
+  /** Get the record read field */
+  term_ref get_record_read_field(term_ref rec_read) const;
+
+  /** Make a new record write term */
+  term_ref mk_record_write(term_ref t, term_ref field_id, term_ref value);
+
+  /** Get the record write base record */
+  term_ref get_record_write_record(term_ref rec_write) const;
+
+  /** Get the record write field */
+  term_ref get_record_write_field(term_ref rec_write) const;
+
+  /** Get the record write written element */
+  term_ref get_record_write_element(term_ref rec_write) const;
 
   /** Make function application */
   term_ref mk_function_application(term_ref fun, const std::vector<term_ref>& args);
+
+  /** Make an enum constant */
+  term_ref mk_enum_constant(std::string value, term_ref type);
+
+  /** Make an enum constant */
+  term_ref mk_enum_constant(size_t value, term_ref type);
+
+  /** Get the enum constant id */
+  size_t get_enum_constant_value(term_ref t) const;
+
+  /** get the enum constant value */
+  std::string get_enum_constant_id(term_ref t) const;
 
   /** Make a new string constant */
   term_ref mk_string_constant(std::string value);
@@ -289,74 +352,26 @@ public:
   /** Get the field of a struct variable */
   term_ref get_struct_field(const term& t, size_t i) const;
 
-  /**
-   * Helper for constructing abstraction variables and creating lambdas and
-   * quantified terms. One can create variable, and the only way to remove
-   * variables from the helper is to create a term.
-   */
-  class abstraction_helper {
-
-    /** The term manager */
-    term_manager& d_term_manager;
-
-    /** Variables */
-    std::vector<term_ref> d_variables;
-
-    /** Variable names */
-    std::vector<std::string> d_names;
-
-    /** Make the abstraction, taking n top variables */
-    term_ref mk_abstraction(term_op, size_t n, term_ref body);
-
-  public:
-
-    /** Create an abstraction helper */
-    abstraction_helper(term_manager& term_manager);
-
-    /** Check that all variables have been used */
-    ~abstraction_helper();
-
-    /** Create new bound variable */
-    term_ref new_bound_variable(term_ref type);
-
-    /** Create new bound variable with a name */
-    term_ref new_bound_variable(std::string name, term_ref type);
-
-    /** Create a lambda term (pops all variables) */
-    term_ref mk_lambda(term_ref body);
-
-    /** Create an exist quantifier (pops n variables) */
-    term_ref mk_exists(term_ref body, size_t n);
-
-    /** Create a forall quantifier (pops n variables) */
-    term_ref mk_forall(term_ref body, size_t n);
-
-    /** Create a predicate sub-type (pops the one variable) */
-    term_ref mk_predicate_subtype(term_ref body);
-  };
-
-  /** Get the index of an abstraction variable */
-  size_t get_bound_variable_idx(term_ref x) const;
+  term_ref mk_lambda(const std::vector<term_ref>&, term_ref body);
+  term_ref mk_exists(const std::vector<term_ref>& vars, term_ref body);
+  term_ref mk_forall(const std::vector<term_ref>& vars, term_ref body);
+  term_ref mk_predicate_subtype(term_ref x, term_ref body);
 
   /** Get the arity of the abstraction */
-  size_t get_abstraction_arity(term_ref abstraction) const;
   size_t get_lambda_arity(term_ref lambda) const;
   size_t get_quantifier_arity(term_ref quantifier) const;
 
   /** The the body of the abstraction */
-  term_ref get_abstraction_body(term_ref abstraction) const;
   term_ref get_lambda_body(term_ref lambda) const;
   term_ref get_quantifier_body(term_ref quantifier) const;
   term_ref get_predicate_subtype_body(term_ref pred_type) const;
 
   /** Get the i-th bound variable of the term (lambda, exists, forall) */
-  term_ref get_abstraction_variable(term_ref abstraction, size_t i) const;
   term_ref get_lambda_variable(term_ref lambda, size_t i) const;
   term_ref get_quantifier_variable(term_ref quantifier, size_t i) const;
   term_ref get_predicate_subtype_variable(term_ref pred_type) const;
 
   /** Get all the variables of the lambda, in order */
-  void get_abstraction_variables(term_ref lambda, std::vector<term_ref>& vars_out) const;
   void get_lambda_variables(term_ref lambda, std::vector<term_ref>& vars_out) const;
   void get_quantifier_variables(term_ref lambda, std::vector<term_ref>& vars_out) const;
 
@@ -386,8 +401,34 @@ public:
     return type_of(term_of(t));
   }
 
-  /** Check if t1 is a subtype of t2 (say integer and real) */
-  bool is_subtype_of(term_ref t1, term_ref t2) const;
+  /** Get the base type of the term */
+  term_ref base_type_of(const term& t) const;
+
+  /** Get the base type of the term */
+  term_ref base_type_of(term_ref t) {
+    return base_type_of(term_of(t));
+  }
+
+  /** Check if the two types are compatible (looking at base types only) */
+  bool compatible(term_ref t1, term_ref t2);
+
+  /** Check if t is a type */
+  bool is_type(term_ref t) const;
+
+  /** Check if t is a function type */
+  bool is_function_type(term_ref t) const;
+
+  /** Check if t is an array type */
+  bool is_array_type(term_ref t) const;
+
+  /** Check if t is an integer type */
+  bool is_integer_type(term_ref t) const;
+
+  /** Check if t is a tuple type */
+  bool is_tuple_type(term_ref t) const;
+
+  /** Check if t is a record type */
+  bool is_record_type(term_ref t) const;
 
   /** Get the TCC of the term */
   term_ref tcc_of(const term& t) const;
@@ -414,15 +455,6 @@ public:
 
   /** Get number of variables that the term has */
   size_t get_variables_count(term_ref ref) const;
-
-  /** Get the bound variables of the term, in order from outermost scope to innermost scope */
-  void get_bound_variables(term_ref ref, std::vector<term_ref>& out) const;
-
-  /** Get the variables of the term */
-  void get_bound_variables(term_ref ref, std::set<term_ref>& out) const;
-
-  /** Get number of variables that the term has */
-  size_t get_bound_variables_count(term_ref ref) const;
 
   /** Get the subterms of the term */
   void get_subterms(term_ref ref, std::vector<term_ref>& out) const;

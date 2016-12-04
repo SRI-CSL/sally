@@ -1,0 +1,41 @@
+adder: CONTEXT =
+BEGIN
+  
+  onebitadder: MODULE =
+  BEGIN
+    INPUT 
+      cin, a, b: BOOLEAN
+    OUTPUT 
+      cout, sum: BOOLEAN
+    DEFINITION
+      sum = (a XOR b) XOR cin ;
+      cout = (a AND b) OR (a AND cin) OR (b AND cin)
+  END;
+
+  Nbitadder [N : {n: NATURAL | n > 1}] : MODULE =
+  WITH 
+    INPUT 
+      A, B : ARRAY [0 .. N-1] OF BOOLEAN, 
+      carryin: BOOLEAN;
+    OUTPUT 
+      S, C : ARRAY [0 .. N-1] OF BOOLEAN
+    RENAME 
+      a TO A[0], 
+      b TO B[0], 
+      cin TO carryin,
+      sum TO S[0], 
+      cout TO C[0] 
+    IN 
+      (onebitadder || (|| (i : [1 .. N-1]): 
+           (RENAME 
+              a TO A[i], 
+              b TO B[i], 
+              cin TO C[i-1],
+              sum TO S[i], 
+              cout TO C[i] 
+            IN 
+              onebitadder
+           )
+         )
+      );
+END

@@ -23,11 +23,10 @@
 #include <iosfwd>
 
 #include "utils/hash.h"
+#include "expr/integer.h"
 
 namespace sally {
 namespace expr {
-
-class integer;
 
 class term_ref;
 class term_manager;
@@ -46,9 +45,11 @@ public:
   /** Construct from GMP */
   rational(const mpq_class& gmp_rat) : d_gmp_rat(gmp_rat) { d_gmp_rat.canonicalize(); }
   /** Construct from GMP */
-  rational(mpq_t gmp_rat) : d_gmp_rat(gmp_rat) { d_gmp_rat.canonicalize(); }
+  rational(mpq_t gmp_rat): d_gmp_rat(gmp_rat) { d_gmp_rat.canonicalize(); }
   /** Construct from GMP integer */
-  rational(mpz_t gmp_z) : d_gmp_rat(mpz_class(gmp_z)) { d_gmp_rat.canonicalize(); }
+  rational(mpz_t gmp_z): d_gmp_rat(mpz_class(gmp_z)) { d_gmp_rat.canonicalize(); }
+  /** Construct p/q */
+  rational(const integer& p, const integer& q): d_gmp_rat(p.mpz(), q.mpz()) { d_gmp_rat.canonicalize(); }
   /** Construct p/q */
   rational(long p, unsigned long q) : d_gmp_rat(p, q) { d_gmp_rat.canonicalize(); }
   /** Construct from string representation */
@@ -97,7 +98,7 @@ public:
   bool operator > (const rational& other) const;
   bool operator >= (const rational& other) const;
 
-  /** Assignment for itnegers */
+  /** Assignment for integers */
   rational& operator = (const integer& z);
 
   /** Returns true if it's an integer */

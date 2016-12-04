@@ -10,6 +10,9 @@ BEGIN
   RSRC: TYPE =  [# data: ARRAY Job_Idx OF Ticket_Idx,
                    next_ticket: Next_Ticket_Idx #];
 
+  %% Minimum for tickets
+  min(x : Ticket_Idx, y : Ticket_Idx) : Ticket_Idx = IF x < y THEN x ELSE y ENDIF;
+
   %% min_non_zero_ticket returns
   %% 0 - if the ticket of each job is 0
   %% n, where n is the minimal non zero ticket
@@ -32,7 +35,7 @@ BEGIN
   can_enter_critical?(rsrc : RSRC, job_idx : Job_Idx): BOOLEAN =
     LET min_ticket: Ticket_Idx = min_non_zero_ticket(rsrc),
         job_ticket: Ticket_Idx = rsrc.data[job_idx]
-    IN job_ticket <= min_ticket;
+    IN (job_ticket <= min_ticket);
 
   %% the number of tickets was exhausted
   saturated?(rsrc : RSRC): BOOLEAN =

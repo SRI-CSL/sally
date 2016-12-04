@@ -159,6 +159,11 @@ public:
 
   ~evaluation_visitor() {}
 
+  // Non-null terms are good
+  bool is_good_term(expr::term_ref t) const {
+    return !t.is_null();
+  }
+
   // Get the children of t
   void get_children(expr::term_ref t, std::vector<expr::term_ref>& children) {
     const expr::term& t_term = d_tm.term_of(t);

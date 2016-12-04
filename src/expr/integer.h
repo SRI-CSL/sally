@@ -70,6 +70,8 @@ public:
   bool operator > (const integer& other) const;
   bool operator >= (const integer& other) const;
 
+  integer pow(unsigned long n) const;
+
   /** Get the sign */
   int sgn() const;
 

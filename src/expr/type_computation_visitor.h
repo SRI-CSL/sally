@@ -36,22 +36,32 @@ class type_computation_visitor {
   /** The term manager */
   term_manager_internal& d_tm;
 
-  /** Cache of the term manager */
+  /** Cache of the term manager: term/type -> type */
   term_to_term_map& d_type_cache;
+
+  /** Cache of the term manager: non-primitive type -> type */
+  term_to_term_map& d_base_type_cache;
 
   /** Set to false whenever type computation fails */
   bool d_ok;
 
-  void error(expr::term_ref t_ref) const;
-  expr::term_ref type_of(expr::term_ref t_ref) const;
-  const term& term_of(expr::term_ref t_ref) const;
+  void error(term_ref t_ref, std::string message) const;
+  term_ref type_of(term_ref t_ref) const;
+  term_ref base_type_of(term_ref t_ref) const;
+  const term& term_of(term_ref t_ref) const;
+  bool compatible(term_ref t1, term_ref t2) const;
 
 public:
 
-  type_computation_visitor(expr::term_manager_internal& tm, term_to_term_map& type_cache);
+  type_computation_visitor(term_manager_internal& tm, term_to_term_map& type_cache, term_to_term_map& base_type_cache);
+
+  // Non-null terms are good
+  bool is_good_term(expr::term_ref t) const {
+    return !t.is_null();
+  }
 
   /** Get the children of the term t that are relevant for the type computation */
-  void get_children(expr::term_ref t, std::vector<expr::term_ref>& children);
+  void get_children(term_ref t, std::vector<term_ref>& children);
 
   /** We visit only nodes that don't have types yet and are relevant for type computation */
   visitor_match_result match(term_ref t);

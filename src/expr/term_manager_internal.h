@@ -165,10 +165,11 @@ private:
 
   typedef boost::unordered_map<term_ref, term_ref, term_ref_hasher> term_to_term_map;
 
-  /**
-   * Map from term to their types. It's built on demand.
-   */
+  /** Map from term to their types. It's built on demand. */
   term_to_term_map d_type_cache;
+
+  /** Map from the to their base types. It's build on demand. */
+  term_to_term_map d_base_type_cache;
 
   /**
    * Map from terms to their type-checking conditions. If the entry is empty
@@ -282,12 +283,25 @@ public:
   /** Is t a function type */
   bool is_function_type(term_ref t) const;
 
+  /** Check if this is an integer type */
+  bool is_integer_type(term_ref t) const;
+
+  /** Check if this is a real type */
+  bool is_real_type(term_ref t) const;
+
   /** Is this a type */
   static
   bool is_type(const term& t);
 
+  /** Is this a primitive type */
+  static
+  bool is_primitive_type(const term& t);
+
   /** Is this a type */
   bool is_type(term_ref t) const { return is_type(term_of(t)); }
+
+  /** Is this a primitive type */
+  bool is_primitive_type(term_ref t) const { return is_primitive_type(term_of(t)); }
 
   /** Get the domain type of a function type */
   term_ref get_function_type_domain(term_ref fun_type, size_t i) const;
@@ -310,11 +324,32 @@ public:
   /** Make a tuple type (t1, t2, ..., tn) with ti being types */
   term_ref tuple_type(const std::vector<term_ref>& args);
 
-  /** Is t an array type */
+  /** Is t a tuple type */
   bool is_tuple_type(term_ref t) const;
 
   /** Get the k-th element of the tuple type */
   term_ref get_tuple_type_element(term_ref tuple_type, size_t i) const;
+
+  /** Make an enumeration type */
+  term_ref enum_type(const std::vector<std::string>& args);
+
+  /** Is t an enumeration type */
+  bool is_enum_type(term_ref t) const;
+
+  /** Map from names to terms */
+  typedef std::map<std::string, term_ref> id_to_term_map;
+
+  /** Make a record type */
+  term_ref record_type(const id_to_term_map& fields);
+
+  /** Is t a record type */
+  bool is_record_type(term_ref t) const;
+
+  /** Get the type of a field */
+  term_ref get_record_type_field_type(term_ref rec_type, std::string field) const;
+
+  /** Get all fields */
+  void get_record_type_fields(term_ref rec_type, id_to_term_map& fields) const;
 
   /** Returns the size of the bitvector type */
   size_t bitvector_type_size(term_ref t) const;
@@ -416,13 +451,36 @@ public:
 
   /** Get the type of the term */
   term_ref type_of(term_ref t) {
+    if (t.is_null()) return t;
     return type_of(term_of(t));
   }
 
   /** Get the type of the term if it has been computed */
   term_ref type_of_if_exists(term_ref t) const {
+    if (t.is_null()) return t;
     return type_of_if_exists(term_of(t));
   }
+
+  /** Get the base type of the term or type */
+  term_ref base_type_of(const term& t);
+
+  /** Get th ebase type of the term or type if it has been computed */
+  term_ref base_type_of_if_exists(const term& t) const;
+
+  /** Get the base type of the term or type */
+  term_ref base_type_of(term_ref t) {
+    if (t.is_null()) return t;
+    return base_type_of(term_of(t));
+  }
+
+  /** Get the base type of the term or type if it has been computed */
+  term_ref base_type_of_if_exists(term_ref t) const {
+    if (t.is_null()) return t;
+    return base_type_of_if_exists(term_of(t));
+  }
+
+  /** Are the types compatible (potentially, looking at base types */
+  bool compatible(term_ref t1, term_ref t2);
 
   /** Get the TCC of the term */
   term_ref tcc_of(const term& t) const;
@@ -451,35 +509,31 @@ public:
   /** Pop the last added namespace */
   void pop_namespace();
 
+  struct subterm_visitor_state {
+    const term& t;
+    std::set<term_ref> bound_vars;
+    subterm_visitor_state(const term& t)
+    : t(t) {}
+    subterm_visitor_state(const term& t, const std::set<term_ref>& vars)
+    : t(t), bound_vars(vars) {}
+  };
+
   /** Matcher for variables */
   struct variable_matcher {
-    bool operator() (const term& t) const {
-      return t.op() == VARIABLE;
-    }
-    bool ignore(const term& t) const { return false; }
-  };
-
-  /** Matcher for bound variables */
-  struct bound_variable_matcher {
-    bool operator() (const term& t) const {
-      return t.op() == VARIABLE_BOUND;
-    }
-    bool ignore(const term& t) const {
-      // Ignore types
-      if (term_manager_internal::is_type(t)) return true;
+    const term_manager_internal& tm;
+    variable_matcher(const term_manager_internal& tm): tm(tm) {}
+    bool operator() (const subterm_visitor_state& state) const {
+      // Only get the (non-function) variables that are not bound
+      if (state.t.op() == VARIABLE && state.bound_vars.count(tm.ref_of(state.t)) == 0) {
+        term_ref var_type = tm.type_of_if_exists(state.t);
+        assert(!var_type.is_null());
+        if (!tm.is_function_type(var_type)) {
+          return true;
+        }
+      }
       return false;
     }
-  };
-
-  /** Comparison for bound variables (sort by different indices) */
-  struct bound_variable_cmp {
-    const term_manager_internal& d_tm;
-    bound_variable_cmp(const term_manager_internal& tm): d_tm(tm) {}
-    bool operator() (const term_ref v1, const term_ref v2) const {
-      const term& v1_term = d_tm.term_of(v1);
-      const term& v2_term = d_tm.term_of(v2);
-      return d_tm.payload_of<size_t>(v1_term) < d_tm.payload_of<size_t>(v2_term);
-    }
+    bool ignore(const term& t) const { return false; }
   };
 
   /** Return the subterms what return true on m(t) */
@@ -489,13 +543,7 @@ public:
   /** Returns the variables of the term */
   template<typename collection>
   void get_variables(term_ref t, collection& out) const {
-    get_subterms(t, variable_matcher(), out);
-  }
-
-  /** Returns the bound variables of the term, in order */
-  void get_bound_variables(term_ref t, std::vector<term_ref>& out) const {
-    get_subterms(t, bound_variable_matcher(), out);
-    std::sort(out.begin(), out.end(), bound_variable_cmp(*this));
+    get_subterms(t, variable_matcher(*this), out);
   }
 
   /** Returns the default value for the given type */
@@ -516,20 +564,44 @@ public:
   /** Returns the id normalized with resepct to the current namespaces and the name transformer */
   std::string name_normalize(std::string id) const;
 
-  /** Returns true if the types are comparable by equality */
-  bool types_comparable(term_ref t1, term_ref t2) const;
-
-  /** Returns true if t1 is a subtype of t2 */
-  bool is_subtype_of(term_ref t1, term_ref t2) const;
-
-  /** Returns the supertype of the two types */
-  term_ref supertype_of(term_ref t1, term_ref t2) const;
-
   /**
    * Collect the non-used terms, and compact the term database. The relocation
    * map is added to the given map.
    */
   void gc(std::map<expr::term_ref, expr::term_ref>& reloc_map);
+
+  /** Make an abstraction */
+  term_ref mk_abstraction(term_op op, const std::vector<term_ref>& vars, term_ref body);
+
+  /** Is this an abstraction */
+  bool is_abstraction(const term& t) const;
+  bool is_abstraction(term_ref t) const { return is_abstraction(term_of(t)); }
+
+  /** Get body of abstraction */
+  term_ref get_abstraction_body(term_ref abstraction) const;
+
+  /** Get abstraction arity */
+  size_t get_abstraction_arity(term_ref abstraction) const;
+
+  /** Get i-th abstraction variable */
+  term_ref get_abstraction_variable(term_ref abstraction, size_t i) const;
+
+  /** Get all abstraction variables */
+  template <typename collection>
+  void get_abstraction_variables(const term& t, collection& vars_out) const {
+    assert(is_abstraction(t));
+    assert(t.size() > 1);
+    std::insert_iterator<collection> insert(vars_out, vars_out.end());
+    for(size_t i = 0; i < t.size() - 1; ++ i) {
+      *insert = t[i];
+    }
+  }
+
+  template <typename collection>
+  void get_abstraction_variables(term_ref t, collection& vars_out) const {
+    get_abstraction_variables(term_of(t), vars_out);
+  }
+
 };
 
 inline
@@ -685,6 +757,7 @@ term_ref term_manager_internal::mk_term(term_op op, iterator begin, iterator end
     SWITCH_TO_TERM(TERM_SUB)
     SWITCH_TO_TERM(TERM_MUL)
     SWITCH_TO_TERM(TERM_DIV)
+    SWITCH_TO_TERM(TERM_MOD)
     SWITCH_TO_TERM(TERM_LEQ)
     SWITCH_TO_TERM(TERM_LT)
     SWITCH_TO_TERM(TERM_GEQ)
@@ -732,7 +805,7 @@ void term_manager_internal::get_subterms(term_ref t, const matcher& m, collectio
   typedef boost::unordered_set<term_ref, term_ref_hasher> visited_set;
 
   visited_set v;
-  std::queue<term_ref> queue;
+  std::queue<subterm_visitor_state> queue;
 
   // If matcher ignores this term, just return
   if (m.ignore(term_of(t))) {
@@ -740,27 +813,32 @@ void term_manager_internal::get_subterms(term_ref t, const matcher& m, collectio
   }
 
   // Start with the term itself, then process
-  queue.push(t);
+  queue.push(subterm_visitor_state(term_of(t)));
   v.insert(t);
-
 
   std::insert_iterator<collection> insert(out, out.end());
   while (!queue.empty()) {
 
     // Process current
-    term_ref current = queue.front();
+    subterm_visitor_state current = queue.front();
     queue.pop();
-    if (m(term_of(current))) {
-      *insert = current;
+    if (m(current)) {
+      *insert = ref_of(current.t);
     }
 
-    // Add any unvisited children
-    const term& current_term = term_of(current);
-    for (size_t i = 0; i < current_term.size(); ++ i) {
-      if (v.find(current_term[i]) == v.end()) {
-        if (!m.ignore(term_of(current_term[i]))) {
-          queue.push(current_term[i]);
-          v.insert(current_term[i]);
+    // Collect any bound variables
+    std::set<term_ref> bound_vars(current.bound_vars.begin(), current.bound_vars.end());
+    if (is_abstraction(current.t)) {
+      get_abstraction_variables(current.t, bound_vars);
+    }
+
+    // For abstraction only visit the body, otherwise go into all children
+    size_t i = is_abstraction(current.t) ? current.t.size() - 1 : 0;
+    for (; i < current.t.size(); ++ i) {
+      if (v.find(current.t[i]) == v.end()) {
+        if (!m.ignore(term_of(current.t[i]))) {
+          queue.push(subterm_visitor_state(term_of(current.t[i]), bound_vars));
+          v.insert(current.t[i]);
         }
       }
     }

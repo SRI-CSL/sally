@@ -21,7 +21,6 @@
 #include <boost/program_options.hpp>
 #include <boost/thread.hpp>
 
-#include "ai/factory.h"
 #include "expr/term_manager.h"
 #include "utils/output.h"
 #include "system/context.h"
@@ -102,12 +101,6 @@ int main(int argc, char* argv[]) {
       engine_to_use = engine_factory::mk_engine(boost_opts.at("engine").as<string>(), ctx);
     }
 
-    analyzer* analyzer_to_use = 0;
-    if (opts.has_option("ai")) {
-      analyzer_to_use = analyzer_factory::mk_analyzer(boost_opts.at("ai").as<string>(), ctx);
-      engine_to_use->set_analyzer(analyzer_to_use);
-    }
-
     // Setup live stats if asked
     boost::thread *stats_worker = 0;
     if (opts.has_option("live-stats")) {
@@ -137,11 +130,6 @@ int main(int argc, char* argv[]) {
     // Delete the engine
     if (engine_to_use != 0) {
       delete engine_to_use;
-    }
-
-    // Delete the analyzer
-    if (analyzer_to_use != 0) {
-      delete analyzer_to_use;
     }
 
     // Stop the live stats thread
@@ -182,19 +170,6 @@ std::string get_solver_list() {
   return out.str();
 }
 
-std::string get_analyzer_list() {
-  std::vector<string> analyzers;
-  analyzer_factory::get_analyzers(analyzers);
-  std::stringstream out;
-  out << "The analyzer to use: ";
-  for (size_t i = 0; i < analyzers.size(); ++ i) {
-    if (i) { out << ", "; }
-    out << analyzers[i];
-  }
-  return out.str();
-}
-
-
 std::string get_output_languages_list() {
   std::stringstream out;
   out << "Output language to use: ";
@@ -227,7 +202,6 @@ void parse_options(int argc, char* argv[], variables_map& variables)
       ("live-stats", value<string>(), "Output live statistic to the given file (- for stdout).")
       ("live-stats-time", value<unsigned>()->default_value(100), "Time period for statistics output (in miliseconds)")
       ("smt2-output", value<string>(), "Generate smt2 logs of solver queries with given prefix.")
-      ("ai", value<string>(), get_analyzer_list().c_str())
       ("no-lets", "Don't use let expressions in printouts.");
       ;
 
