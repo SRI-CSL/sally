@@ -311,7 +311,12 @@ engine::result ic3_engine::search() {
     // If we pushed everything, we're done
     if (d_induction_frame.size() == d_induction_obligations_next.size()) {
       if (ctx().get_options().get_bool("ic3-show-invariant")) {
+        const system::state_type* state_type = d_transition_system->get_state_type();
+        state_type->use_namespace();
+        state_type->use_namespace(system::state_type::STATE_CURRENT);
         d_smt->print_formulas(d_induction_frame, std::cout);
+        tm().pop_namespace();
+        tm().pop_namespace();
       }
       return engine::VALID;
     }
