@@ -78,6 +78,7 @@ void ic3_engine::reset() {
   d_property = 0;
   delete d_trace;
   d_trace = 0;
+  d_invariant = expr::term_ref();
   d_induction_frame.clear();
   d_induction_frame_index = 0;
   d_induction_frame_depth = 0;
@@ -310,14 +311,10 @@ engine::result ic3_engine::search() {
 
     // If we pushed everything, we're done
     if (d_induction_frame.size() == d_induction_obligations_next.size()) {
-      if (ctx().get_options().get_bool("ic3-show-invariant")) {
-        const system::state_type* state_type = d_transition_system->get_state_type();
-        state_type->use_namespace();
-        state_type->use_namespace(system::state_type::STATE_CURRENT);
-        d_smt->print_formulas(d_induction_frame, std::cout);
-        tm().pop_namespace();
-        tm().pop_namespace();
-      }
+      std::set<expr::term_ref> invariant;
+      induction_frame_type::const_iterator it = d_induction_frame.begin(), end = d_induction_frame.end();
+      for (; it != end; ++ it) { invariant.insert(it->F_fwd); }
+      d_invariant = tm().mk_and(invariant);
       return engine::VALID;
     }
 
@@ -454,6 +451,9 @@ void ic3_engine::gc_collect(const expr::gc_relocator& gc_reloc) {
   d_reachability.gc_collect(gc_reloc);
 }
 
+expr::term_ref ic3_engine::get_invariant() {
+  return d_invariant;
+}
 
 }
 }

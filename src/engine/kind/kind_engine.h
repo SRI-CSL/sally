@@ -60,6 +60,9 @@ public:
   /** Trace */
   const system::state_trace* get_trace();
 
+  /** Invariant (not supported) */
+  expr::term_ref get_invariant();
+
   /** Nothing to collect */
   void gc_collect(const expr::gc_relocator& gc_reloc) {}
 

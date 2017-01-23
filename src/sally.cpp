@@ -217,6 +217,7 @@ void parse_options(int argc, char* argv[], variables_map& variables)
       ("debug,d", value<vector<string> >(), "Any tags to trace (only for debug builds).")
 #endif
       ("show-trace", "Show the counterexample trace if found.")
+      ("show-invariant", "Show the invariant if property is proved.")
       ("parse-only", "Just parse, don't solve.")
       ("engine", value<string>(), get_engines_list().c_str())
       ("solver", value<string>()->default_value(smt::factory::get_default_solver_id()), get_solver_list().c_str())

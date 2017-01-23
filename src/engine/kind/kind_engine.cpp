@@ -25,6 +25,7 @@
 
 #include <sstream>
 #include <iostream>
+#include <cassert>
 
 namespace sally {
 namespace kind {
@@ -198,6 +199,9 @@ const system::state_trace* kind_engine::get_trace() {
   return d_trace;
 }
 
+expr::term_ref kind_engine::get_invariant() {
+  throw exception("Not supported.");
+}
 
 }
 }

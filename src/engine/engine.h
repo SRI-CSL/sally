@@ -83,6 +83,11 @@ public:
   /** Get the counter-example trace, if previous query allows it */
   virtual
   const system::state_trace* get_trace() = 0;
+
+  /** Get the invariant, if the previous query allows it, return null if not applicable */
+  virtual
+  expr::term_ref get_invariant() = 0;
+
 };
 
 std::ostream& operator << (std::ostream& out, engine::result result);
