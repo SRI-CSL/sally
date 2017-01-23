@@ -173,6 +173,7 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
         return UNKNOWN;
       case smt::solver::UNSAT:
         // Proved it, done
+        d_invariant = property;
         return VALID;
         break;
       default:
@@ -200,7 +201,7 @@ const system::state_trace* kind_engine::get_trace() {
 }
 
 expr::term_ref kind_engine::get_invariant() {
-  throw exception("Not supported.");
+  return d_invariant;
 }
 
 }

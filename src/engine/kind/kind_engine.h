@@ -49,6 +49,9 @@ class kind_engine : public engine {
   /** The trace we're building */
   system::state_trace* d_trace;
 
+  /** The invariant if proven */
+  expr::term_ref d_invariant;
+
 public:
 
   kind_engine(const system::context& ctx);
