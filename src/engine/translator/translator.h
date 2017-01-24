@@ -57,7 +57,7 @@ public:
   const system::state_trace* get_trace();
 
   /** Invariant (not supported) */
-  expr::term_ref get_invariant();
+  invariant get_invariant();
 
   /** Nothing to do */
   void gc_collect(const expr::gc_relocator& gc_reloc) {}

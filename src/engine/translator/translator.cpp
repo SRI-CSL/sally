@@ -314,7 +314,7 @@ const system::state_trace* translator::get_trace() {
   throw exception("Not supported.");
 }
 
-expr::term_ref translator::get_invariant() {
+engine::invariant translator::get_invariant() {
   throw exception("Not supported.");
 }
 

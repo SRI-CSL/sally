@@ -87,7 +87,7 @@ class ic3_engine : public engine {
   system::state_trace* d_trace;
 
   /** The invariant, if we prove it */
-  expr::term_ref d_invariant;
+  engine::invariant d_invariant;
 
   /** The solvers */
   solvers* d_smt;
@@ -227,7 +227,7 @@ public:
   const system::state_trace* get_trace();
 
   /** Invariant if valid */
-  expr::term_ref get_invariant();
+  invariant get_invariant();
 
   /** Collect terms */
   void gc_collect(const expr::gc_relocator& gc_reloc);

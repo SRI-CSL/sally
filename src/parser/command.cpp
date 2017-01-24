@@ -137,11 +137,11 @@ void query_command::run(system::context* ctx, engine* e) {
     std::cout << *trace;
   }
   if (result == engine::VALID && ctx->get_options().has_option("show-invariant")) {
-    expr::term_ref invariant = e->get_invariant();
+    engine::invariant inv = e->get_invariant();
     const system::state_type* state_type = T->get_state_type();
     state_type->use_namespace();
     state_type->use_namespace(system::state_type::STATE_CURRENT);
-    std::cout << invariant << std::endl;
+    std::cout << "(invariant " << inv.depth << " " << inv.F << ")" << std::endl;
     ctx->tm().pop_namespace();
     ctx->tm().pop_namespace();
   }

@@ -50,7 +50,7 @@ class kind_engine : public engine {
   system::state_trace* d_trace;
 
   /** The invariant if proven */
-  expr::term_ref d_invariant;
+  invariant d_invariant;
 
 public:
 
@@ -64,7 +64,7 @@ public:
   const system::state_trace* get_trace();
 
   /** Invariant (not supported) */
-  expr::term_ref get_invariant();
+  invariant get_invariant();
 
   /** Nothing to collect */
   void gc_collect(const expr::gc_relocator& gc_reloc) {}

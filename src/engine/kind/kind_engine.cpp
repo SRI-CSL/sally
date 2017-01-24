@@ -33,6 +33,7 @@ namespace kind {
 kind_engine::kind_engine(const system::context& ctx)
 : engine(ctx)
 , d_trace(0)
+, d_invariant(expr::term_ref(), 0)
 {
   // Make the solvers
   d_solver_1 = smt::factory::mk_default_solver(ctx.tm(), ctx.get_options(), ctx.get_statistics());
@@ -173,7 +174,7 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
         return UNKNOWN;
       case smt::solver::UNSAT:
         // Proved it, done
-        d_invariant = property;
+        d_invariant = invariant(property, k);
         return VALID;
         break;
       default:
@@ -200,7 +201,7 @@ const system::state_trace* kind_engine::get_trace() {
   return d_trace;
 }
 
-expr::term_ref kind_engine::get_invariant() {
+engine::invariant kind_engine::get_invariant() {
   return d_invariant;
 }
 
