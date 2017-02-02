@@ -63,3 +63,8 @@ foreach(FILE ${regressions})
   endif()
   
 endforeach(FILE)
+
+# Add the install target
+# this installs sally into <prefix>/bin
+install(TARGETS sally DESTINATION bin)
+
