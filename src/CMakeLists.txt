@@ -67,3 +67,4 @@ endforeach(FILE)
 # Add the install target
 install(TARGETS sally DESTINATION bin)
 target_link_libraries(sally libantlr3c)
+SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
