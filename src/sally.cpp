@@ -26,6 +26,7 @@
 #include "system/context.h"
 #include "parser/parser.h"
 #include "engine/factory.h"
+#include "ai/factory.h"
 #include "smt/factory.h"
 #include "utils/trace.h"
 #include "utils/statistics.h"
@@ -158,6 +159,18 @@ std::string get_engines_list() {
   return out.str();
 }
 
+std::string get_ai_list() {
+  std::vector<string> engines;
+  ai::factory::get_interpreters(engines);
+  std::stringstream out;
+  out << "The abstract interpreter to use: ";
+  for (size_t i = 0; i < engines.size(); ++ i) {
+    if (i) { out << ", "; }
+    out << engines[i];
+  }
+  return out.str();
+}
+
 std::string get_solver_list() {
   std::vector<string> solvers;
   smt::factory::get_solvers(solvers);
@@ -195,6 +208,7 @@ void parse_options(int argc, char* argv[], variables_map& variables)
       ("show-invariant", "Show the invariant if property is proved.")
       ("parse-only", "Just parse, don't solve.")
       ("engine", value<string>(), get_engines_list().c_str())
+      ("ai", value<string>(), get_ai_list().c_str())
       ("solver", value<string>()->default_value(smt::factory::get_default_solver_id()), get_solver_list().c_str())
       ("solver-logic", value<string>(), "Optional smt2 logic to set to the solver (e.g. QF_LRA, QF_LIA, ...).")
       ("output-language", value<string>()->default_value("mcmt"), get_output_languages_list().c_str())
@@ -211,6 +225,9 @@ void parse_options(int argc, char* argv[], variables_map& variables)
 
   // Get the individual solver options
   smt::factory::setup_options(description);
+
+  // Get the abstract interpreter options
+  ai::factory::setup_options(description);
 
   // The input files can be positional
   positional_options_description positional;
