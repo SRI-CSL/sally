@@ -1,0 +1,12 @@
+#!/bin/bash
+
+#
+# Used for Eclipse setup: Mac and Linux have different cmake paths
+#
+if [ -f "/usr/bin/cmake" ]; then 
+  /usr/bin/cmake $@
+elif [ -f "/usr/local/bin/cmake" ]; then
+  /usr/local/bin/cmake $@
+else
+  cmake $@
+fi

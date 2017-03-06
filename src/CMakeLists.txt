@@ -33,7 +33,7 @@ endif()
 if (Z3_FOUND)
   target_link_libraries(sally ${Z3_LIBRARY})
 endif()
-target_link_libraries(sally ${Boost_LIBRARIES} ${ANTLR3C_LIBRARY} ${GMP_LIBRARY})
+target_link_libraries(sally ${Boost_LIBRARIES} ${GMP_LIBRARY})
 
 # Add tests
 
@@ -63,3 +63,8 @@ foreach(FILE ${regressions})
   endif()
   
 endforeach(FILE)
+
+# Add the install target
+install(TARGETS sally DESTINATION bin)
+target_link_libraries(sally libantlr3c)
+SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)

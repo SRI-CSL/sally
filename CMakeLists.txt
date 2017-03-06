@@ -83,7 +83,8 @@ ExternalProject_Get_Property(libantlr3c-3.4 INSTALL_DIR)
 set(ANTLR3C_INCLUDE_DIR "${INSTALL_DIR}/include")
 set(ANTLR3C_LIBRARY_DIR "${INSTALL_DIR}/lib")
 set(ANTLR3C_LIBRARY "antlr3c")
-link_directories(${ANTLR3C_LIBRARY_DIR})
+add_library(libantlr3c STATIC IMPORTED)
+set_property(TARGET libantlr3c PROPERTY IMPORTED_LOCATION ${ANTLR3C_LIBRARY_DIR}/libantlr3c.a)
 
 # The antl3 binary
 set(ANTLR "${sally_SOURCE_DIR}/antlr/antlr3")

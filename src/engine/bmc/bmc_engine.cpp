@@ -125,5 +125,9 @@ const system::state_trace* bmc_engine::get_trace() {
   return d_trace;
 }
 
+engine::invariant bmc_engine::get_invariant() {
+  throw exception("Not supported.");
+}
+
 }
 }

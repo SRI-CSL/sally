@@ -73,6 +73,20 @@ public:
   /** Get the counter-example trace, if previous query allows it */
   virtual
   const system::state_trace* get_trace() = 0;
+
+  struct invariant {
+    // The state formula
+    expr::term_ref F;
+    // Induction depth
+    size_t depth;
+    invariant(expr::term_ref F, size_t depth)
+    : F(F), depth(depth) {}
+  };
+
+  /** Get the invariant, if the previous query allows it, return null if not applicable */
+  virtual
+  invariant get_invariant() = 0;
+
 };
 
 std::ostream& operator << (std::ostream& out, engine::result result);

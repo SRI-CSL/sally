@@ -337,7 +337,6 @@ Z3_ast z3_internal::to_z3_term(expr::term_ref ref) {
     Z3_inc_ref(d_ctx, Z3_sort_to_ast(d_ctx, sort));
     to_decref.push_back(Z3_sort_to_ast(d_ctx, sort));
     result = Z3_mk_const(d_ctx, symbol, sort);
-    d_conversion_cache->set_term_cache(result, ref);
     break;
   }
   case expr::CONST_BOOL:

@@ -24,6 +24,7 @@
 #include <sstream>
 #include <iostream>
 #include <algorithm>
+#include <cassert>
 
 namespace sally {
 namespace output {
@@ -310,6 +311,10 @@ engine::result translator::query(const system::transition_system* ts, const syst
 }
 
 const system::state_trace* translator::get_trace() {
+  throw exception("Not supported.");
+}
+
+engine::invariant translator::get_invariant() {
   throw exception("Not supported.");
 }
 
