@@ -106,7 +106,7 @@ assertion_declaration
   ;
 
 /** Types of assertions (there is no semantics attached to these names) */
-assertion_form returns [parser::sal::assertion_form form] 
+assertion_form returns [parser::sal::assertion_form form = parser::sal::SAL_LEMMA] 
   : KW_OBLIGATION { form = parser::sal::SAL_OBLIGATION; } 
   | KW_CLAIM { form = parser::sal::SAL_CLAIM; }
   | KW_LEMMA { form = parser::sal::SAL_LEMMA; }
