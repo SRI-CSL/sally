@@ -55,6 +55,7 @@ public:
   T* operator -> ();
   const T* operator -> () const;
   bool operator < (const smart_ptr& other) const;
+  bool operator == (const smart_ptr& other) const;
   operator bool () const { return d_obj; }
 };
 
@@ -180,6 +181,11 @@ const T* smart_ptr<T>::operator -> () const {
 template <typename T>
 bool smart_ptr<T>::operator < (const smart_ptr& other) const {
   return d_obj->get() < other.d_obj->get();
+}
+
+template <typename T>
+bool smart_ptr<T>::operator == (const smart_ptr& other) const {
+  return d_obj->get() == other.d_obj->get();
 }
 
 }

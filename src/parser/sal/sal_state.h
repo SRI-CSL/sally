@@ -72,6 +72,9 @@ class sal_state {
   /** Symbol table for modules */
   utils::symbol_table<sal::module::ref> d_modules;
 
+  /** Current module stack */
+  std::vector<sal::module::ref> d_current_module;
+
   expr::term_ref d_boolean_type;
   expr::term_ref d_integer_type;
   expr::term_ref d_natural_type;
@@ -89,8 +92,17 @@ class sal_state {
   /** Map from variable to their next version */
   term_to_term_map d_var_to_next_map;
 
+  /** Map from next variable to their next version */
+  term_to_term_map d_next_to_var_map;
+
   /** Create a new variable and it's next version */
   expr::term_ref new_variable(std::string name, expr::term_ref type);
+
+  /** Tracking of lvalues for command blocks */
+  std::set<expr::term_ref> d_lvalues;
+  
+  /** Are lvalues passed in as next variables? */
+  bool d_lvalues_next;
 
 public:
 
@@ -124,6 +136,12 @@ public:
 
   /** Get a variable (throw exception if not found) */
   expr::term_ref get_variable(std::string name, bool next) const;
+
+  /** Get the next state version of the variable */
+  expr::term_ref get_next_state_variable(expr::term_ref var) const;
+
+  /** Get the state version from the next-state variable */
+  expr::term_ref get_state_variable(expr::term_ref next_var) const;
 
   /** Get a module (throw exception if not found) */
   sal::module::ref get_module(std::string name, const std::vector<expr::term_ref>& actuals);
@@ -313,32 +331,50 @@ public:
   /** Change given module variables to the given class */
   void change_module_variables_to(sal::module::ref m, const var_declarations_ctx& vars, sal::variable_class var_class);
 
-  /** Add a new definition to m */
+  /** Start an initialization block (to collect lvalues) */
+  void start_initialization();
+
+  /** Add a new initialization to m (uses and clears lvalues) */
+  void add_initialization(sal::module::ref m, expr::term_ref initialization);
+  
+  /** End the initialization block */
+  void end_initialization();
+
+  /** Start a definition block */
+  void start_definition();
+
+  /** Add a new definition to m (lvalues are all lvalues in this definition) */
   void add_definition(sal::module::ref m, expr::term_ref definition);
 
-  /** Add a new initialization to m */
-  void add_initialization(sal::module::ref m, expr::term_ref initialization);
+  /** End a definition block */
+  void end_definition();
 
-  /** Add a new transition to m */
+  /** Start a transition block */
+  void start_transition();
+
+  /** Add a new transition to m (lvalues are all lvalues in this definition) */
   void add_transition(sal::module::ref m, expr::term_ref transition);
 
-  /** Add a new invariant to m */
-  void add_invariant(sal::module::ref m, expr::term_ref invariant);
-
-  /** Ad an init formula to m */
-  void add_init_formula(sal::module::ref m, expr::term_ref init_formula);
+  /** End a transition block */
+  void end_transition();
 
   /** Make a term from a list of commands (guarder and multi) */
   expr::term_ref mk_term_from_commands(const std::vector<expr::term_ref>& cmds);
 
-  /** Make a term from a guarded command */
-  expr::term_ref mk_term_from_guarded(expr::term_ref guards, const std::vector<expr::term_ref>& assignments);
+  /**
+   * Make a term from a guarded command (single guard, vector of assignments).
+   * Guard can be null to cover the else case.
+   */
+  expr::term_ref mk_term_from_guarded(expr::term_ref guard, const std::vector<expr::term_ref>& assignments);
 
   /** Check that the term is OK */
   void check_term(expr::term_ref t) const;
 
   /** Check that the index type is really an index type */
   void check_index_type(expr::term_ref t) const;
+
+  /** Add an lvalue to the set of lvalues and do some checking */
+  void add_lvalue(expr::term_ref t);
 
 };
 

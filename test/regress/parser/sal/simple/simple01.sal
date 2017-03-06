@@ -1,0 +1,37 @@
+%% Labels for IDs
+simple01: CONTEXT = 
+BEGIN
+
+  N: NATURAL = 2;
+
+  %% Labels for IDs
+  Label: TYPE = {a, b};
+  NodeId: TYPE = [1..N];
+
+  %% Testing semantics of multi-commands and guarded commands
+  m: MODULE = 
+  BEGIN
+    % Main node: go from a to b
+    LOCAL main_PC: Label
+    % Other nodes: go from a to b 
+    LOCAL nodes_PC: Array NodeId of Label
+    INITIALIZATION
+      main_PC = a;
+      nodes_PC = [[j : NodeId] a];
+    TRANSITION
+    [
+      main_PC = a 
+        --> main_PC' = b
+      []
+      ([] (i : NodeId):
+        main_PC = b AND nodes_PC[i] = a
+          --> nodes_PC'[i] = b;
+      )
+    ]  
+  END;
+ 
+  %% Just for the heck of it
+  prove_this: THEOREM m |- TRUE;
+
+END
+

@@ -1,0 +1,31 @@
+simple02: CONTEXT = 
+BEGIN
+
+  m: MODULE = 
+  BEGIN
+    INPUT
+	  x_in: INTEGER
+    OUTPUT 
+      x_out: INTEGER
+	LOCAL 
+	  x_local: INTEGER
+	GLOBAL
+	  x_global: INTEGER
+    INITIALIZATION
+      %% x_in = 0; INPUT CAN NOT BE INITIALZED ("x_in" is an input variable)
+	  x_out = 0;
+	  x_local = 0;
+	  x_global = 0;
+    TRANSITION
+      [ %% x_in < 0 --> x_in' = x_in + 1            []
+        x_out < 0 --> x_out' = x_out + 1            []
+	    x_local < 0 --> x_local' = x_local + 1      []
+	    x_global < 0 --> x_global' = x_global + 1
+	  ]
+  END;
+ 
+  prove_this:
+  THEOREM m |- x_out > 0;
+
+END
+

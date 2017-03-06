@@ -106,7 +106,7 @@ assertion_declaration
   ;
 
 /** Types of assertions (there is no semantics attached to these names) */
-assertion_form returns [parser::sal::assertion_form form] 
+assertion_form returns [parser::sal::assertion_form form = parser::sal::SAL_LEMMA] 
   : KW_OBLIGATION { form = parser::sal::SAL_OBLIGATION; } 
   | KW_CLAIM { form = parser::sal::SAL_CLAIM; }
   | KW_LEMMA { form = parser::sal::SAL_LEMMA; }
@@ -506,7 +506,8 @@ rhs_definition[expr::term_ref lhs] returns [expr::term_ref t]
   ;
 
 simple_definition returns [expr::term_ref t] 
-  : t1 = lvalue t2 = rhs_definition[t1] { t = t2; }
+  : t1 = lvalue { STATE->add_lvalue(t1); } 
+    t2 = rhs_definition[t1] { t = t2; }
   ;
 
 forall_definition returns [expr::term_ref t] 
@@ -543,9 +544,9 @@ forall_definition returns [expr::term_ref t]
  * constrains state variable z, which is a record whose foo component is a 
  * tuple, whose first component in turn is an array of the same type as y.
  */
-definition returns [expr::term_ref t] 
-  : t_simple = simple_definition { t = t_simple; } 
-  | t_forall = forall_definition { t = t_forall; } 
+definition returns [expr::term_ref t]
+  : t_simple = simple_definition { t = t_simple; STATE->check_term(t_simple); } 
+  | t_forall = forall_definition { t = t_forall; STATE->check_term(t_forall); } 
   ;
 
 /** Definitions return a conjunction of definitions (or a single definition) */
@@ -571,8 +572,8 @@ guarded_command returns [expr::term_ref t]
 @declarations{
   std::vector<expr::term_ref> a;
 }
-  : guard = term '-->' assignments[a]? { STATE->mk_term_from_guarded(guard, a); }
-  | KW_ELSE '-->' assignments[a]?  { STATE->mk_term_from_guarded(expr::term_ref(), a); }
+  : guard = term '-->' assignments[a]? { t = STATE->mk_term_from_guarded(guard, a); STATE->check_term(t); }
+  | KW_ELSE '-->' assignments[a]?  { t = STATE->mk_term_from_guarded(expr::term_ref(), a); STATE->check_term(t); }
   ;
 
 /* The Module Language */
@@ -698,8 +699,8 @@ base_declaration[parser::sal::module::ref m]
   | global_declaration[vars_ctx] { STATE->declare_variables(m, parser::sal::SAL_VARIABLE_GLOBAL, vars_ctx); }
   | local_declaration[vars_ctx] { STATE->declare_variables(m, parser::sal::SAL_VARIABLE_LOCAL, vars_ctx); }
   | definition_declaration[m] 
-  | invariant_declaration[m]
-  | init_formula_declaration[m] 
+// DJ: removed, not in manual  | invariant_declaration[m] 
+// DJ: removed, not in manual  | init_formula_declaration[m] 
   | initialization_declaration[m]
   | transition_declaration[m]
   ;
@@ -766,7 +767,9 @@ local_declaration[parser::var_declarations_ctx& var_ctx]
  * temperature goes above a specified value.
  */
 definition_declaration[parser::sal::module::ref m]
-  : KW_DEFINITION t = definition_list { STATE->add_definition(m, t); }
+  : KW_DEFINITION { STATE->start_definition(); }
+      t = definition_list { STATE->add_definition(m, t); }
+    { STATE->end_definition(); }
   ;
 
 /**
@@ -785,10 +788,11 @@ definition_declaration[parser::sal::module::ref m]
  * initialization is selected. 
  */
 initialization_declaration[parser::sal::module::ref m]
-  : KW_INITIALIZATION 
+  : KW_INITIALIZATION { STATE->start_initialization(); }
       t1 = definition_or_command { STATE->add_initialization(m, t1); }  
       (';' t2 = definition_or_command { STATE->add_initialization(m, t2); } )* 
       ';'?
+    { STATE->end_initialization(); }
   ;
 
 /**
@@ -801,20 +805,23 @@ initialization_declaration[parser::sal::module::ref m]
  * after the assignments have been made, and if they are false the assignments 
  * must be undone and a new guarded transition selected.
  */
-transition_declaration[parser::sal::module::ref m] 
-  : KW_TRANSITION 
+transition_declaration[parser::sal::module::ref m]
+  : KW_TRANSITION { STATE->start_transition(); }
       t1 = definition_or_command { STATE->add_transition(m, t1); }
       (';' t2 = definition_or_command { STATE->add_transition(m, t2); })* 
       ';'?
+    { STATE->end_transition(); }
   ; 
  
-invariant_declaration[parser::sal::module::ref m]
-  : KW_INVARIANT t = term { STATE->add_invariant(m, t); }
-  ;
+// DJ: removed, not in manual
+// invariant_declaration[parser::sal::module::ref m]
+//  : KW_INVARIANT t = term { STATE->add_invariant(m, t); }
+//  ;
 
-init_formula_declaration[parser::sal::module::ref m]
-  : KW_INITFORMULA t = term { STATE->add_init_formula(m, t); }
-  ;
+// DJ: removed, not in manual
+// init_formula_declaration[parser::sal::module::ref m]
+//  : KW_INITFORMULA t = term { STATE->add_init_formula(m, t); }
+// ;
 
 multi_command returns [expr::term_ref t]
 @declarations{
@@ -830,18 +837,18 @@ some_command returns [expr::term_ref t]
 @declarations{
   std::string id;
 }
-  : (identifier[id] ':') ? t_guarded = guarded_command { t = t_guarded; } 
-  | (identifier[id] ':') ? t_multi = multi_command { t = t_multi; } 
+  : (identifier[id] ':') ? t_guarded = guarded_command { t = t_guarded; STATE->check_term(t); } 
+  | (identifier[id] ':') ? t_multi = multi_command { t = t_multi; STATE->check_term(t); } 
   ;
 
 some_commands[std::vector<expr::term_ref>& cmd_out]
-  : t1 = some_command { cmd_out.push_back(t1); } 
-    (OP_ASYNC t2 = some_command { cmd_out.push_back(t2); })*
+  : t1 = some_command { cmd_out.push_back(t1); STATE->check_term(t1); } 
+    (OP_ASYNC t2 = some_command { cmd_out.push_back(t2); STATE->check_term(t2); })*
   ;
 
 definition_or_command returns [expr::term_ref t]
 @declarations{
-  std::vector<expr::term_ref> cmds;
+  std::vector<expr::term_ref> cmds;  
 }
   : t_def = definition { t = t_def; }
   | ('[' some_commands[cmds] ']') { t = STATE->mk_term_from_commands(cmds); }
@@ -886,9 +893,9 @@ KW_END: E N D;
 KW_EXISTS: E X I S T S;
 KW_FORALL: F O R A L L;
 KW_GLOBAL: G L O B A L;
-KW_INITFORMULA: I N I T F O R M U L A;
+// DJ: removed, not in manual KW_INITFORMULA: I N I T F O R M U L A;
 KW_INITIALIZATION: I N I T I A L I Z A T I O N;
-KW_INVARIANT: I N V A R I A N T;
+// DJ: removed, not in manual KW_INVARIANT: I N V A R I A N T;
 KW_INPUT: I N P U T; // Had to rename because it clashes with antlr #define INPUT
 KW_IF: I F;
 KW_IN: I N;

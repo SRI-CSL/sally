@@ -1,0 +1,52 @@
+(flat-module
+
+  (input x_in::INTEGER)
+  (output x_out::INTEGER)
+  (local x_local::INTEGER)
+  (global x_global::INTEGER)
+
+  (input choice!1::(subrange 0 2))
+
+  (definition true)
+
+  (initialization
+    (and 
+	  (= x_out 0) 
+	  (= x_local 0) 
+	  (= x_global 0))
+	)
+  )
+
+  (transition
+    (or
+      (and
+        (= choice!1 0)
+        (< x_out 0)
+        (= x_out' (+ x_out 1))
+        (= x_global' x_global)
+        (= x_local' x_local)
+	  )
+      (and
+        (= choice!1 1)
+        (< x_local 0)
+        (= x_local' (+ x_local 1))
+        (= x_global' x_global)
+        (= x_out' x_out)
+	  )
+      (and
+        (= choice!1 2)
+        (< x_global 0)
+        (= x_global' (+ x_global 1))
+        (= x_local' x_local)
+        (= x_out' x_out)
+	  )
+	)
+  )
+  
+  (skip (and (= x_local' x_local) (= x_out' x_out)))
+  
+  (valid-input true)
+  (valid-state true)
+  
+  (valid-constant true)
+)

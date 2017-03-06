@@ -1,0 +1,62 @@
+(flat-module
+
+  (local main_PC::Label)
+  (local nodes_PC!0::Label)
+  (local nodes_PC!1::Label)
+
+  (input choice!1::(subrange 0 1))
+  (input choice!2::NodeId)
+
+  (definition true)
+
+  (initialization
+    (and (= main_PC a) (= nodes_PC!0 a) (= nodes_PC!1 a)))
+
+  (transition
+    (or
+      
+      (and
+        (= choice!1 0)
+        (= main_PC a)
+        (= main_PC' b)
+        (= nodes_PC!0' nodes_PC!0)
+        (= nodes_PC!1' nodes_PC!1)
+      )
+      
+      (and
+        (= choice!1 1)
+        (= main_PC b)
+        (= main_PC' main_PC)
+        
+        (or
+          (and
+            (= choice!2 1)
+            (= nodes_PC!0 a)
+            (= nodes_PC!0' b)
+            (= nodes_PC!1' nodes_PC!1)
+          )
+          (and
+            (= choice!2 2)
+            (= nodes_PC!1 a)
+            (= nodes_PC!0' nodes_PC!0)
+            (= nodes_PC!1' b)
+          )
+        )
+      )
+    )
+  )
+  
+  (skip  
+    (and
+      (= nodes_PC!0' nodes_PC!0)
+      (= nodes_PC!1' nodes_PC!1)
+      (= main_PC' main_PC)
+    )
+  )
+
+(valid-input true)
+(valid-state true)
+(valid-constant true)
+
+)
+

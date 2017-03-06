@@ -160,7 +160,7 @@ public:
     const_iterator it = other.begin(), end = other.end();
     for (; it != end; ++ it) {
       std::string id = it->first;
-      const T& value = it->second.back();
+      const T& value = it->second.front();
       add_entry(id, value);
     }
   }
@@ -172,7 +172,7 @@ public:
   void to_stream(std::ostream& out) const {
     out << "[" << d_name << ":";
     for (const_iterator it = d_table.begin(); it != d_table.end(); ++ it) {
-      out << " " << it->first << " -> " << it->second.back();
+      out << " " << it->first << " -> " << it->second.front();
     }
     out << "]";
   }

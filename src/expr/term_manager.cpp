@@ -23,7 +23,6 @@
 #include "expr/gc_participant.h"
 #include "expr/gc_relocator.h"
 
-
 #include <string>
 #include <iostream>
 #include <sstream>
@@ -275,7 +274,7 @@ term_ref term_manager::get_tuple_read_tuple(term_ref taccess) const {
 size_t term_manager::get_tuple_read_index(term_ref taccess) const {
   const term& t = term_of(taccess);
   assert(t.op() == TERM_TUPLE_READ);
-  return d_tm->payload_of<size_t>(taccess);
+  return d_tm->payload_of<size_t>(t);
 }
 
 term_ref term_manager::mk_tuple_write(term_ref t, size_t i, term_ref e) {
@@ -294,7 +293,7 @@ term_ref term_manager::get_tuple_write_tuple(term_ref twrite) const {
 size_t term_manager::get_tuple_write_index(term_ref twrite) const {
   const term& t = term_of(twrite);
   assert(t.op() == TERM_TUPLE_WRITE);
-  return d_tm->payload_of<size_t>(twrite);
+  return d_tm->payload_of<size_t>(t);
 }
 
 term_ref term_manager::get_tuple_write_element(term_ref twrite) const {

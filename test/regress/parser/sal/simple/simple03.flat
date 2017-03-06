@@ -1,0 +1,49 @@
+(flat-module
+
+  (local a!0::bool)
+  (local a!1::bool)
+  (input i::PID)
+  (input j::PID)
+  (input x::INTEGER)
+  (input choice!1::(subrange 0 2))
+
+  (definition true)
+
+  (initialization true)
+
+  (transition
+    (or
+
+      ;; a'[i] = FALSE; 
+      (and 
+		(< x 0) 
+	    (= choice!1 0) 
+		(= a!0' (and (/= i 1) a!0)) 
+		(= a!1' (and (/= i 2) a!1))
+	  )
+      
+	  ;; a' in { b: ARRAY PID of BOOLEAN | b[i] = a[j] }
+	  (and
+        (not (<= x 0))
+        (= choice!1 1)
+        (= (if (= i 2) a!1' a!0') (if (= j 2) a!1 a!0))
+	  )
+
+	  ;; a' = (a WITH [i] := FALSE) WITH [j] := FALSE
+	  (and
+        (not (< x 0))
+        (<= x 0)
+        (= choice!1 2)
+        (= a!0' (and (/= j 1) (and (/= i 1) a!0)))
+        (= a!1' (and (/= j 2) (and (/= i 2) a!1)))
+	   )
+	
+	)
+  )
+
+  (skip (and (= a!0' a!0) (= a!1' a!1)))
+
+  (valid-input true)
+  (valid-state true)
+  (valid-constant true)
+)

@@ -1,0 +1,30 @@
+simple03: CONTEXT = 
+BEGIN
+
+  N : NATURAL = 2;
+  PID: TYPE = [1..N];
+  
+  m: MODULE = 
+  BEGIN
+	LOCAL 
+	  a: ARRAY PID of BOOLEAN
+	INPUT 
+	  i: PID,
+	  j: PID,
+	  x: INTEGER
+    TRANSITION
+    [ x < 0 -->
+        a'[i] = FALSE; 
+%% Can't have two updates: a'[j] = FALSE
+   [] x > 0 --> 
+	    a' in { b: ARRAY PID of BOOLEAN | b[i] = a[j] }
+   [] ELSE -->
+        a' = (a WITH [i] := FALSE) WITH [j] := FALSE
+	]
+  END;
+ 
+  prove_this:
+  THEOREM m |- TRUE;
+
+END
+

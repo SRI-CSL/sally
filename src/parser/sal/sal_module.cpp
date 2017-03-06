@@ -158,8 +158,6 @@ void module::load(const module& m) {
   insert_from_module(d_definitions, m);
   insert_from_module(d_initializations, m);
   insert_from_module(d_transitions, m);
-  insert_from_module(d_invariants, m);
-  insert_from_module(d_init_formulas, m);
 }
 
 module::ref module::instantiate(const std::vector<expr::term_ref>& actuals) const {
@@ -168,7 +166,7 @@ module::ref module::instantiate(const std::vector<expr::term_ref>& actuals) cons
     throw parser_exception("actuals don't match the module parameters");
   }
   for (size_t i = 0; i < d_parameters.size(); ++ i) {
-    if (d_tm.type_of(d_parameters[i]) != d_tm.type_of(actuals[i])) {
+    if (!d_tm.compatible(d_parameters[i], actuals[i])) {
       std::stringstream ss;
       ss << "argument " << i + 1 << " doesn't match the module parameter type";
       throw parser_exception(ss.str());
@@ -248,19 +246,6 @@ void module::to_stream(std::ostream& out) const {
     term_set_to_stream(out, d_initializations);
     out << std::endl;
   }
-
-  if (d_invariants.size() > 0) {
-    out << "invariants";
-    term_set_to_stream(out, d_invariants);
-    out << std::endl;
-  }
-
-  if (d_init_formulas.size() > 0) {
-    out << "init formulas";
-    term_set_to_stream(out, d_init_formulas);
-    out << std::endl;
-  }
-
 }
 
 std::ostream& operator << (std::ostream& out, const module& m) {
@@ -275,6 +260,7 @@ void module::add_definition(expr::term_ref definition) {
       add_definition(t[i]);
     }
   } else {
+    TRACE("parser::sal") << "module::add_definition: " << definition << std::endl;
     d_transitions.insert(definition);
   }
 }
@@ -286,6 +272,7 @@ void module::add_initialization(expr::term_ref initialization) {
       add_initialization(t[i]);
     }
   } else {
+    TRACE("parser::sal") << "module::add_initialization: " << initialization << std::endl;
     d_initializations.insert(initialization);
   }
 }
@@ -297,29 +284,8 @@ void module::add_transition(expr::term_ref transition) {
       add_transition(t[i]);
     }
   } else {
+    TRACE("parser::sal") << "module::add_transition: " << transition << std::endl;
     d_transitions.insert(transition);
-  }
-}
-
-void module::add_invariant(expr::term_ref invariant) {
-  const expr::term& t = d_tm.term_of(invariant);
-  if (t.op() == expr::TERM_AND) {
-    for (size_t i = 0; i < t.size(); ++ i) {
-      add_invariant(t[i]);
-    }
-  } else {
-    d_invariants.insert(invariant);
-  }
-}
-
-void module::add_init_formula(expr::term_ref init_formula) {
-  const expr::term& t = d_tm.term_of(init_formula);
-  if (t.op() == expr::TERM_AND) {
-    for (size_t i = 0; i < t.size(); ++ i) {
-      add_init_formula(t[i]);
-    }
-  } else {
-    d_init_formulas.insert(init_formula);
   }
 }
 
@@ -341,6 +307,9 @@ module::ref module::compose(const module& other, composition_type type) {
   return result;
 }
 
+const module::symbol_table& module::get_symbol_table() const {
+  return d_variables;
+}
 
 }
 }

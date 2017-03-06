@@ -97,8 +97,6 @@ private:
   term_set d_definitions;
   term_set d_initializations;
   term_set d_transitions;
-  term_set d_invariants;
-  term_set d_init_formulas;
 
 public:
 
@@ -161,12 +159,6 @@ public:
 
   /** Add a transition */
   void add_transition(expr::term_ref transition);
-
-  /** Add an invariant */
-  void add_invariant(expr::term_ref invariant);
-
-  /** Add an init formula */
-  void add_init_formula(expr::term_ref init_formula);
 
   /** Perform composition over given index variables */
   void compose(const module& m_from, composition_type type, const std::vector<expr::term_ref>& index_vars);
