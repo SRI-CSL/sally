@@ -18,6 +18,8 @@
 
 #include "crab.h"
 
+#include "utils/trace.h"
+
 namespace sally {
 namespace ai {
 
@@ -31,22 +33,29 @@ crab::~crab() {
   // Destruct crab
 }
 
-void crab::run(system::transition_system* ts) {
+void crab::run(const system::transition_system* ts, std::vector<system::state_formula*>& out) {
 
   // Run the interpreter
+  MSG(1) << "Crab: starting" << std::endl;
 
+  // Initial states
+  expr::term_ref I = ts->get_initial_states();
+  expr::term_ref T = ts->get_transition_relation();
+
+  TRACE("crab") << "crab: I = " << I << std::endl;
+  TRACE("crab") << "crab: T = " << T << std::endl;
 
   // Invariant as a term
-  expr::term_ref invariant_term;
+  expr::term_ref invariant_term = I;
 
   // State type has all the transition system variables
   const system::state_type* state_type = ts->get_state_type();
 
+  MSG(1) << "Crab: done" << std::endl;
+
   // Invariant as a state formula
   system::state_formula* invariant = new system::state_formula(tm(), state_type, invariant_term);
-
-  // Attach invariant to the transition system
-  ts->add_invariant(invariant);
+  out.push_back(invariant);
 }
 
 void crab::gc_collect(const expr::gc_relocator& gc_reloc) {

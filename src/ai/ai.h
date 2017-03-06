@@ -53,7 +53,7 @@ public:
 
   /** Run the interpreter on the engine */
   virtual
-  void run(system::transition_system* ts) = 0;
+  void run(const system::transition_system* ts, std::vector<system::state_formula*>& out) = 0;
 
 };
 

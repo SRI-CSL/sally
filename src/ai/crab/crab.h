@@ -38,7 +38,7 @@ public:
   ~crab();
 
   /** Run the interpreter on the transition system */
-  void run(system::transition_system* ts);
+  void run(const system::transition_system* ts, std::vector<system::state_formula*>& out);
 
   /** Garbage collection */
   void gc_collect(const expr::gc_relocator& gc_reloc);

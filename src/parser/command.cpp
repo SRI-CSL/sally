@@ -18,6 +18,8 @@
 
 #include "parser/command.h"
 
+#include "ai/factory.h"
+
 #include <cassert>
 #include <iostream>
 
@@ -121,10 +123,19 @@ void query_command::to_stream(std::ostream& out) const  {
 void query_command::run(system::context* ctx, engine* e) {
   // If in parse only mode, we're done
   if (ctx->get_options().has_option("parse-only")) { return; }
-  // We need an engine
-  if (e == 0) { throw exception("Engine needed to do a query."); }
   // Get the transition system
   const system::transition_system* T = ctx->get_transition_system(d_system_id);
+  // Run abstract interpreter if asked
+  if (ctx->get_options().has_option("ai")) {
+    ai::abstract_interpreter* interpreter = ai::factory::mk_interpreter(ctx->get_options().get_string("ai"), *ctx);
+    std::vector<system::state_formula*> invariants;
+    interpreter->run(T, invariants);
+    for (size_t i = 0; i < invariants.size(); ++ i) {
+      ctx->add_invariant_to(d_system_id, invariants[i]);
+    }
+  }
+  // We need an engine
+  if (e == 0) { throw exception("Engine needed to do a query."); }
   // Check the formula
   engine::result result = e->query(T, d_query);
   // Output the result if not silent
