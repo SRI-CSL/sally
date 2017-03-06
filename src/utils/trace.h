@@ -20,6 +20,8 @@
 
 #include "utils/output.h"
 
+#include <iostream>
+
 //
 // ONLY TO BE USED IN IMPLEMENTATION, NOT IN HEADER FILES
 //
