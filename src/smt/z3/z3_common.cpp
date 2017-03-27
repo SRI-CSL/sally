@@ -20,6 +20,7 @@
 
 #include "z3_common.h"
 #include "expr/gc_relocator.h"
+#include "utils/trace.h"
 
 #include <iomanip>
 #include <iostream>
@@ -64,6 +65,7 @@ void z3_common::set_term_cache(expr::term_ref t, Z3_ast t_z3) {
   if (d_tm.term_of(t).op() == expr::VARIABLE) {
     d_permanent_terms.push_back(t);
     d_permanent_terms_z3.push_back(t_z3);
+    d_z3_to_term_cache[t_z3] = t;
   } else {
     // Mark cache as dirty
     d_cache_is_clean = false;
@@ -98,6 +100,7 @@ void z3_common::set_term_cache(expr::term_ref t, Z3_ast t_z3) {
 }
 
 void z3_common::set_term_cache(Z3_ast t_z3, expr::term_ref t) {
+  TRACE("z3::terms") << t << std::endl;
   assert(d_z3_to_term_cache.find(t_z3) == d_z3_to_term_cache.end());
 
   d_z3_to_term_cache[t_z3] = t;
@@ -107,6 +110,7 @@ void z3_common::set_term_cache(Z3_ast t_z3, expr::term_ref t) {
   if (d_tm.term_of(t).op() == expr::VARIABLE) {
     d_permanent_terms.push_back(t);
     d_permanent_terms_z3.push_back(t_z3);
+    d_term_to_z3_cache[t] = t_z3;
   } else {
     // Mark cache as dirty
     d_cache_is_clean = false;

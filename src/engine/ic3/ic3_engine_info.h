@@ -30,10 +30,9 @@ struct ic3_engine_info {
   static void setup_options(boost::program_options::options_description& options) {
     using namespace boost::program_options;
     options.add_options()
-        ("ic3-show-invariant", "Show the invariant if a property is proved true.")
         ("ic3-max", value<unsigned>()->default_value(0), "Maximal frame to consider.")
         ("ic3-add-backward", "Add learnts to previous frames in reachability checks.")
-        ("ic3-check-deadlock", "Check for deadlocks throughout the algorighm.")
+        ("ic3-check-deadlock", "Check for deadlocks throughout the algorithm.")
         ("ic3-induction-max", value<unsigned>()->default_value(0), "Max induction depth")
         ("ic3-minimize-interpolants", "Try to minimize interpolants")
         ("ic3-minimize-generalizations", "Try to minimize generalizations")

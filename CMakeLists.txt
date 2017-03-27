@@ -76,6 +76,8 @@ ExternalProject_Add(
    libantlr3c-3.4
    URL "${sally_SOURCE_DIR}/antlr/libantlr3c-3.4.tar.gz"
    URL_MD5 08b1420129d5dccd0f4461cedf2a0d7d
+   PATCH_COMMAND chmod -R u+w src include 
+         COMMAND patch -p1 -t -N < "${sally_SOURCE_DIR}/antlr/libantlr3c-3.4.patch"
    CONFIGURE_COMMAND <SOURCE_DIR>/configure ${ANTLR_CONFIG_FLAG} --enable-debuginfo --disable-antlrdebug --prefix=<INSTALL_DIR>
    BUILD_IN_SOURCE 1
 )
@@ -83,7 +85,8 @@ ExternalProject_Get_Property(libantlr3c-3.4 INSTALL_DIR)
 set(ANTLR3C_INCLUDE_DIR "${INSTALL_DIR}/include")
 set(ANTLR3C_LIBRARY_DIR "${INSTALL_DIR}/lib")
 set(ANTLR3C_LIBRARY "antlr3c")
-link_directories(${ANTLR3C_LIBRARY_DIR})
+add_library(libantlr3c STATIC IMPORTED)
+set_property(TARGET libantlr3c PROPERTY IMPORTED_LOCATION ${ANTLR3C_LIBRARY_DIR}/libantlr3c.a)
 
 # The antl3 binary
 set(ANTLR "${sally_SOURCE_DIR}/antlr/antlr3")

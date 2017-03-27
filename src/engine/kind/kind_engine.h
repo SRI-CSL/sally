@@ -49,6 +49,9 @@ class kind_engine : public engine {
   /** The trace we're building */
   system::trace_helper* d_trace;
 
+  /** The invariant if proven */
+  invariant d_invariant;
+
 public:
 
   kind_engine(const system::context& ctx);
@@ -59,6 +62,9 @@ public:
 
   /** Trace */
   const system::trace_helper* get_trace();
+
+  /** Invariant (not supported) */
+  invariant get_invariant();
 
   /** Nothing to collect */
   void gc_collect(const expr::gc_relocator& gc_reloc) {}

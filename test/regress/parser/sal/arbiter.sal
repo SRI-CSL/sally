@@ -1,4 +1,4 @@
-arbiter{; n : {x : NATURAL | x > 1}}: CONTEXT =
+arbiter{n : {x : NATURAL | x > 1}}: CONTEXT =
 BEGIN
 
   cell [initial_t : BOOLEAN]: MODULE =
@@ -29,14 +29,14 @@ BEGIN
     END;
 
   Range: TYPE = [1..n];
-  Array: TYPE = ARRAY Range OF BOOLEAN;
+  RangeArray: TYPE = ARRAY Range OF BOOLEAN;
 
   arbiter: MODULE =
-    WITH OUTPUT Ack : Array;
-          INPUT Req : Array;
-          OUTPUT Token : Array;
-          OUTPUT Grant : Array;
-          OUTPUT Override : Array
+    WITH OUTPUT Ack : RangeArray;
+          INPUT Req : RangeArray;
+          OUTPUT Token : RangeArray;
+          OUTPUT Grant : RangeArray;
+          OUTPUT Override : RangeArray
       (RENAME aux TO Override[n], inv_aux TO Grant[n]
        IN BEGIN
            OUTPUT zero_const : BOOLEAN

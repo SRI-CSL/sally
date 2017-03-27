@@ -29,7 +29,7 @@
 namespace sally {
 
 /**
- * Abstract engine class, and an entrypoint for creating new engines.
+ * Abstract engine class, and an entry point for creating new engines.
  */
 class engine : public expr::gc_participant {
 
@@ -83,6 +83,20 @@ public:
   /** Get the counter-example trace, if previous query allows it */
   virtual
   const system::trace_helper* get_trace() = 0;
+
+  struct invariant {
+    // The state formula
+    expr::term_ref F;
+    // Induction depth
+    size_t depth;
+    invariant(expr::term_ref F, size_t depth)
+    : F(F), depth(depth) {}
+  };
+
+  /** Get the invariant, if the previous query allows it, return null if not applicable */
+  virtual
+  invariant get_invariant() = 0;
+
 };
 
 std::ostream& operator << (std::ostream& out, engine::result result);

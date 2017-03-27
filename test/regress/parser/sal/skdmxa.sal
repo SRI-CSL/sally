@@ -6,7 +6,7 @@
 %% L should be greater than or equal to N.
 %%
 
-skdmxa{; N : nznat, L : nznat, M : nznat}: CONTEXT =
+skdmxa{N : nznat, L : nznat, M : nznat}: CONTEXT =
 BEGIN
   %%
   %% Data types and their functions are defined.

@@ -5,7 +5,7 @@
 %% L should be greater than or equal to N.
 %%
 
-inf_skdmxa{; N : nznat, L : nznat}: CONTEXT =
+inf_skdmxa{N : nznat, L : nznat}: CONTEXT =
 BEGIN
   %%
   %% Data types and their functions are defined.

@@ -1,7 +1,7 @@
 %% N : the number of processes
 %% L : the capacity of the queue
 
-qlock1{; N : nznat, L : nznat}: CONTEXT =
+qlock1{N : nznat, L : nznat}: CONTEXT =
 BEGIN
   Process_Id: TYPE = [1..N];
 

@@ -89,6 +89,9 @@ class ic3_engine : public engine {
   /** The trace we're building for counterexamples */
   system::trace_helper* d_trace;
 
+  /** The invariant, if we prove it */
+  engine::invariant d_invariant;
+
   /** The solvers */
   solvers* d_smt;
 
@@ -225,6 +228,9 @@ public:
 
   /** Trace */
   const system::trace_helper* get_trace();
+
+  /** Invariant if valid */
+  invariant get_invariant();
 
   /** Collect terms */
   void gc_collect(const expr::gc_relocator& gc_reloc);
