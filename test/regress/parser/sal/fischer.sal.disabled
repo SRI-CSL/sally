@@ -45,9 +45,11 @@ BEGIN
   %  Minimum of an array
   %-----------------------
 
+  min_time(x: TIME, y: TIME): TIME = IF x < y THEN x ELSE y ENDIF;
+  
   recur_min(x: TIMEOUT_ARRAY, min_sofar: TIME, idx: [0 .. N]): TIME =
     IF idx = 0 THEN min_sofar 
-       ELSE recur_min(x, min(min_sofar, x[idx]), idx-1) 
+       ELSE recur_min(x, min_time(min_sofar, x[idx]), idx-1) 
     ENDIF;
 
   min(x: TIMEOUT_ARRAY): TIME = recur_min(x, x[N], N-1);

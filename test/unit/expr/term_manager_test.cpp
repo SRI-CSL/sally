@@ -28,6 +28,155 @@ public:
 
 BOOST_FIXTURE_TEST_SUITE(term_manager_tests, term_manager_test_fixture)
 
+BOOST_AUTO_TEST_CASE(tuple) {
+
+  // Set term manager for output
+  cout << set_tm(tm);
+
+  // Tuple arguments
+  term_ref t0 = tm.real_type();
+  term_ref t1 = tm.integer_type();
+
+  // Construct and output
+  std::vector<term_ref> args;
+  args.push_back(t0);
+  args.push_back(t1);
+  term_ref tuple_type = tm.tuple_type(args);
+  cout << tuple_type << endl;
+  args.clear();
+
+  // Access the tuple type arguments
+  term_ref t0_access = tm.get_tuple_type_element(tuple_type, 0);
+  term_ref t1_access = tm.get_tuple_type_element(tuple_type, 1);
+  BOOST_CHECK_EQUAL(t0, t0_access);
+  BOOST_CHECK_EQUAL(t1, t1_access);
+
+  // Make a constant and test access and write
+  term_ref c1 = tm.mk_rational_constant(rational(1, 2));
+  term_ref c2 = tm.mk_rational_constant(rational(1, 1));
+  args.push_back(c1);
+  args.push_back(c2);
+  term_ref tuple = tm.mk_tuple(args);
+  cout << tuple << endl;
+  term_ref tuple_type_new = tm.type_of(tuple);
+  cout << tuple_type_new << endl;
+
+  term_ref read0 = tm.mk_tuple_read(tuple, 0);
+  term_ref read1 = tm.mk_tuple_read(tuple, 1);
+  term_ref write0 = tm.mk_tuple_write(tuple, 0, c1);
+  term_ref write1 = tm.mk_tuple_write(tuple, 1, c1);
+  cout << read0 << " : " << tm.type_of(read0) << endl;
+  cout << read1 << " : " << tm.type_of(read1) << endl;
+  cout << write0 << " : " << tm.type_of(write0) << endl;
+  cout << write1 << " : " << tm.type_of(write0) << endl;
+}
+
+BOOST_AUTO_TEST_CASE(function_and_lambda) {
+
+  // Set term manager for output
+  cout << set_tm(tm);
+
+  // Tuple arguments
+  term_ref t0 = tm.real_type();
+  term_ref t1 = tm.integer_type();
+  term_ref t2 = tm.boolean_type();
+  std::vector<term_ref> args;
+  args.push_back(t0);
+  args.push_back(t1);
+  args.push_back(t2);
+  term_ref fun = tm.function_type(args);
+  args.clear();
+  cout << "function type: " << fun << endl;
+
+  // Make a lambda
+  term_ref x0 = tm.mk_variable(t0);
+  term_ref x1 = tm.mk_variable(t1);
+  args.clear(); args.push_back(x0); args.push_back(x1);
+  term_ref body = tm.mk_term(TERM_LT, x0, x1);
+  term_ref lambda = tm.mk_lambda(args, body);
+  term_ref lambda_type = tm.type_of(lambda);
+  cout << "lambda: " << lambda << endl;
+  cout << "lambda_type: " << lambda_type << endl;
+
+  BOOST_CHECK_EQUAL(fun, lambda_type);
+}
+
+BOOST_AUTO_TEST_CASE(quantifiers) {
+
+  std::vector<term_ref> args;
+
+  // Set term manager for output
+  cout << set_tm(tm);
+
+  // Make a quantifier
+  term_ref x0 = tm.mk_variable(tm.real_type());
+  term_ref x1 = tm.mk_variable(tm.integer_type());
+  term_ref x2 = tm.mk_variable(tm.integer_type());
+  term_ref body = tm.mk_term(TERM_LT, x0, tm.mk_term(TERM_ADD, x1, x2));
+  cout << "body: " << body << endl;
+  args.clear(); args.push_back(x1); args.push_back(x2);
+  body = tm.mk_exists(args, body);
+  cout << "body: " << body << endl;
+  args.clear(); args.push_back(x0);
+  term_ref quantifier = tm.mk_forall(args, body);
+  term_ref quantifier_type = tm.type_of(quantifier);
+
+  cout << "quantifier: " << quantifier << endl;
+  cout << "quantifier type: " << quantifier_type << endl;
+
+  BOOST_CHECK_EQUAL(quantifier_type, tm.boolean_type());
+}
+
+BOOST_AUTO_TEST_CASE(arrays) {
+
+  // Set term manager for output
+  cout << set_tm(tm);
+
+  // Make array type
+  term_ref index_type = tm.boolean_type();
+  term_ref element_type = tm.real_type();
+  term_ref array_type = tm.array_type(index_type, element_type);
+  cout << array_type;
+
+  // Make array read
+  term_ref a = tm.mk_variable("a", array_type);
+  term_ref t = tm.mk_boolean_constant(true);
+  term_ref aread = tm.mk_array_read(a, t);
+  term_ref aread_type = tm.type_of(aread);
+  cout << "array read: " << aread << endl;
+  cout << "array read type: " << aread_type << endl;
+  BOOST_CHECK_EQUAL(element_type, aread_type);
+
+  // Make array write
+  term_ref f = tm.mk_boolean_constant(false);
+  term_ref zero = tm.mk_rational_constant(rational(0, 1));
+  term_ref awrite = tm.mk_array_write(a, f, zero);
+  term_ref awrite_type = tm.type_of(awrite);
+  cout << "array write: " << awrite << endl;
+  cout << "array write type:" << awrite_type << endl;
+  BOOST_CHECK_EQUAL(awrite_type, array_type);
+
+}
+
+BOOST_AUTO_TEST_CASE(predicate_sybtype) {
+
+  // Set term manager for output
+  cout << set_tm(tm);
+
+  // Make array type
+  term_ref base_type = tm.real_type();
+  term_ref x = tm.mk_variable(base_type);
+  term_ref predicate = tm.mk_term(TERM_LEQ, x, tm.mk_rational_constant(rational(100, 1)));
+  term_ref type = tm.mk_predicate_subtype(x, predicate);
+  cout << "predicate_type: " << type << endl;
+  x = tm.mk_variable(type);
+  predicate = tm.mk_term(TERM_GEQ, x, tm.mk_rational_constant(rational(0, 1)));
+  type = tm.mk_predicate_subtype(x, predicate);
+  cout << "predicate_type: " << type << endl;
+
+}
+
+
 BOOST_AUTO_TEST_CASE(mk_term) {
 
   // Set the term manager for output

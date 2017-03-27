@@ -96,6 +96,7 @@ void term::mk_let_cache(term_manager& tm, expr_let_cache& let_cache, std::vector
   case TERM_SUB:
   case TERM_MUL:
   case TERM_DIV:
+  case TERM_MOD:
   case TERM_LEQ:
   case TERM_LT:
   case TERM_GEQ:
@@ -204,6 +205,8 @@ std::string get_smt_keyword(term_op op) {
     return "*";
   case TERM_DIV:
     return "/";
+  case TERM_MOD:
+    return "%";
   case TERM_LEQ:
     return "<=";
   case TERM_LT:
@@ -270,6 +273,11 @@ std::string get_smt_keyword(term_op op) {
   case TERM_BV_SMOD:
     return "bvsmod";
 
+  case TERM_ARRAY_READ:
+    return "select";
+  case TERM_ARRAY_WRITE:
+    return "store";
+
   case TYPE_BOOL:
     return "Bool";
   case TYPE_INTEGER:
@@ -280,6 +288,7 @@ std::string get_smt_keyword(term_op op) {
     return "String";
   case TYPE_TYPE:
     return "Type";
+
   default:
     assert(false);
     return "unknown";
@@ -347,6 +356,61 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
     out << ")";
     break;
   }
+  case TYPE_ARRAY:
+  {
+    out << "(Array";
+    for (size_t i = 0; i < size(); ++ i) {
+      out << " ";
+      SMT_REF_OUT(child(i));
+    }
+    out << ")";
+    break;
+    break;
+  }
+  case TYPE_TUPLE:
+  {
+    out << "(tuple";
+    for (size_t i = 0; i < size(); ++ i) {
+      out << " ";
+      SMT_REF_OUT(child(i));
+    }
+    out << ")";
+    break;
+  }
+  case TYPE_RECORD:
+  {
+    out << "(record";
+    for (size_t i = 0; i < size(); i += 2) {
+      out << " (";
+      SMT_REF_OUT(child(i))
+      out << " ";
+      SMT_REF_OUT(child(i+1));
+      out << ")";
+    }
+    out << ")";
+    break;
+  }
+  case TYPE_ENUM:
+  {
+    out << "(enum";
+    for (size_t i = 0; i < size(); ++ i) {
+      out << " ";
+      SMT_REF_OUT(child(i));
+    }
+    out << ")";
+    break;
+  }
+  case TYPE_FUNCTION:
+  {
+    out << "(";
+    for (size_t i = 0; i+1 < size(); ++ i) {
+      if (i) { out << " "; }
+      SMT_REF_OUT(child(i));
+    }
+    out << ") ";
+    SMT_REF_OUT(child(size()-1));
+    break;
+  }
   case TYPE_BITVECTOR: {
     size_t size = tm_internal.payload_of<size_t>(*this);
     out << "(_ BitVec " << size << ")";
@@ -386,6 +450,7 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
   case TERM_SUB:
   case TERM_MUL:
   case TERM_DIV:
+  case TERM_MOD:
   case TERM_LEQ:
   case TERM_LT:
   case TERM_GEQ:
@@ -414,6 +479,8 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
   case TERM_BV_UREM:
   case TERM_BV_SREM:
   case TERM_BV_SMOD:
+  case TERM_ARRAY_READ:
+  case TERM_ARRAY_WRITE:
   {
     if (size() > 0) {
       out << "(";
@@ -475,6 +542,94 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
     out << ")";
     break;
   }
+  case TERM_TUPLE_CONSTRUCT: {
+    out << "(mk-tuple";
+    for (size_t i = 0; i < size(); ++ i) {
+      out << " ";
+      SMT_REF_OUT(child(i));
+    }
+    out << ")";
+    break;
+  }
+  case TERM_TUPLE_READ: {
+    out << "(tuple-read ";
+    SMT_REF_OUT(child(0));
+    out << " " << tm_internal.payload_of<size_t>(*this) << ")";
+    break;
+  }
+  case TERM_TUPLE_WRITE: {
+    out << "(tuple-write ";
+    SMT_REF_OUT(child(0));
+    out << " " << tm_internal.payload_of<size_t>(*this) << " ";
+    SMT_REF_OUT(child(1));
+    out << ")";
+    break;
+  }
+  case TERM_RECORD_CONSTRUCT: {
+    out << "(mk-record";
+    for (size_t i = 0; i < size(); i += 2) {
+      out << " (";
+      SMT_REF_OUT(child(i));
+      out << " ";
+      SMT_REF_OUT(child(i+1));
+      out << ")";
+    }
+    out << ")";
+    break;
+  }
+  case TERM_RECORD_READ: {
+    out << "(record-read ";
+    SMT_REF_OUT(child(0));
+    out << " ";
+    SMT_REF_OUT(child(1));
+    out << ")";
+    break;
+  }
+  case TERM_RECORD_WRITE: {
+    out << "(record-write ";
+    SMT_REF_OUT(child(0));
+    out << " ";
+    SMT_REF_OUT(child(1));
+    out << " ";
+    SMT_REF_OUT(child(2));
+    out << ")";
+    break;
+  }
+  case TERM_FUN_APP: {
+    out << "(";
+    for (size_t i = 0; i < size(); ++ i) {
+      if (i) { out << " "; }
+      SMT_REF_OUT(child(i));
+    }
+    out << ")";
+    break;
+  }
+  case TERM_LAMBDA:
+  case TERM_EXISTS:
+  case TERM_FORALL:
+  case TYPE_PREDICATE_SUBTYPE:
+  case TERM_ARRAY_LAMBDA:
+  {
+    if (d_op == TERM_LAMBDA) { out << "(lambda ("; }
+    if (d_op == TERM_EXISTS) { out << "(exists ("; }
+    if (d_op == TERM_FORALL) { out << "(forall ("; }
+    if (d_op == TYPE_PREDICATE_SUBTYPE) { out << "(subtype ("; }
+    if (d_op == TERM_ARRAY_LAMBDA) { out << "(array ("; }
+    for (size_t i = 0; i + 1 < size(); ++ i) {
+      if (i) { out << " "; }
+      out << "(";
+      term_ref a = child(i);
+      term_ref a_type = tm_internal.type_of_if_exists(a);
+      SMT_REF_OUT(a);
+      out << " ";
+      SMT_REF_OUT(a_type);
+      out << ")";
+    }
+    out << ") ";
+    SMT_REF_OUT(child(size()-1));
+    out << ")";
+    break;
+  }
   case CONST_RATIONAL:
     // Stream is already in SMT mode
     out << tm_internal.payload_of<rational>(*this);
@@ -485,6 +640,12 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
   case CONST_STRING:
     out << tm_internal.payload_of<utils::string>(*this);
     break;
+  case CONST_ENUM: {
+    size_t id = tm_internal.payload_of<size_t>(*this);
+    const term& enum_type = tm_internal.term_of(child(0));
+    out << enum_type[id];
+    break;
+  }
   default:
     assert(false);
   }

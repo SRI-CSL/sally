@@ -16,37 +16,26 @@
  * along with sally.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
 #include "ai/ai.h"
 
-namespace boost { namespace program_options {
-  class options_description;
-}}
+#include <iostream>
 
 namespace sally {
 namespace ai {
 
-/**
- * Factory to create engines.
- */
-class factory {
+abstract_interpreter::abstract_interpreter(const system::context& ctx)
+: gc_participant(ctx.tm())
+, d_ctx(ctx)
+{}
 
-public:
+const system::context& abstract_interpreter::ctx() const {
+  return d_ctx;
+}
 
-  /** Construct an interpreter of the given name */
-  static
-  abstract_interpreter* mk_interpreter(std::string id, const system::context& ctx);
-
-  /** Get all the interpreters to setup the options */
-  static
-  void setup_options(boost::program_options::options_description& options);
-
-  /** Get the list of all interpreters */
-  static
-  void get_interpreters(std::vector<std::string>& out);
-
-};
+expr::term_manager& abstract_interpreter::tm() const {
+  return ctx().tm();
+}
 
 }
 }
+

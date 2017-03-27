@@ -29,6 +29,20 @@
 namespace sally {
 namespace parser {
 
+parser_exception::parser_exception(expr::term_manager* tm)
+: exception(tm)
+, d_filename("")
+, d_line(-1)
+, d_pos(-1)
+{}
+
+parser_exception::parser_exception(expr::term_manager& tm)
+: exception(tm)
+, d_filename("")
+, d_line(-1)
+, d_pos(-1)
+{}
+
 parser_exception::parser_exception(std::string msg)
 : exception(msg)
 , d_filename("")

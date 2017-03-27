@@ -88,18 +88,6 @@ class solvers {
   /** Relation used in the induction solver */
   expr::term_ref d_transition_relation;
 
-  /** Counter-example solver */
-  smt::solver* d_counterexample_solver;
-
-  /** Number of transition releations asserted to counterexample solver */
-  size_t d_counterexample_solver_depth;
-
-  /** One past the frame number where variables are known to the solver */
-  size_t d_counterexample_solver_variables_depth;
-
-  /** Boolean variable (enabling the frame) */
-  std::vector<expr::term_ref> d_frame_variables;
-
   /** Returns the induction solver */
   smt::solver* get_initial_solver();
 
@@ -112,9 +100,6 @@ class solvers {
   /** Generalize the given model that satisfies assertions */
   expr::term_ref generalize_sat(smt::solver* solver, expr::model::ref m);
 
-  /** Get the enabling varibale of frame k */
-  expr::term_ref get_frame_variable(size_t k);
-
   /** Returns the unique reachability solver */
   smt::solver* get_reachability_solver();
 
@@ -123,26 +108,6 @@ class solvers {
 
   /** Returns the minimization solver */
   smt::solver* get_minimization_solver();
-
-  /** Notify class to reset the cex solver to its previous depth */
-  class cex_destruct_notify : public smt::solver_scope::destructor_notify {
-    solvers* d_solvers;
-    size_t d_depth;
-  public:
-    cex_destruct_notify(solvers* s)
-    : d_solvers(s)
-    , d_depth(s->get_counterexample_solver_depth())
-    {}
-    ~cex_destruct_notify() {
-      d_solvers->d_counterexample_solver_depth = d_depth;
-    }
-  };
-
-  /** Returns the counterexample solver */
-  smt::solver* get_counterexample_solver();
-
-  /** Assert frame selection variables */
-  void assert_frame_selection(size_t k, smt::solver* solver);
 
   /** Whether to generate models for queries */
   bool d_generate_models_for_queries;
@@ -230,15 +195,6 @@ public:
 
   /** Learn forward to refute G at k from k-1 and initial state using reachability solvers */
   expr::term_ref learn_forward(size_t k, expr::term_ref G);
-
-  /** Returns the counterexample solver */
-  void get_counterexample_solver(smt::solver_scope& solver);
-
-  /** Returns the depth of the counterexample solver */
-  size_t get_counterexample_solver_depth() const;
-
-  /** Make sure that the counter-example solver has frames 0, ..., k */
-  void ensure_counterexample_solver_depth(size_t k);
 
   /** Whether to return models with queries */
   void generate_models_for_queries(bool flag);

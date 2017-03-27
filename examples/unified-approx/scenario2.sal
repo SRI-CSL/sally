@@ -239,7 +239,7 @@ BEGIN
   %%
   %% Sanity check2: n[i] is at least 3
   %%
-  sanity2: LEMMA approx |- G(round > 0 => FORALL (i: PID): n[i] >= 3);
+  sanity2: LEMMA approx |- G(round > 0 => (FORALL (i: PID): n[i] >= 3));
 
   %%
   %% Convergence property

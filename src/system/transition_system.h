@@ -52,6 +52,13 @@ class transition_system {
     return !d_assumptions.empty();
   }
 
+  /** Invariants */
+  std::vector<state_formula*> d_invariants;
+
+  const std::vector<state_formula*>& get_invariants() const {
+    return d_invariants;
+  }
+
   /** Get the assumptions in one state formula */
   expr::term_ref get_assumption() const;
 
@@ -79,6 +86,9 @@ public:
 
   /** Add an assumption on the state type (takes over the pointer) */
   void add_assumption(state_formula* assumption);
+
+  /** Add an invariant to the system (takes over the pointer) */
+  void add_invariant(state_formula* invariant);
 
   /** Print it to the stream */
   void to_stream(std::ostream& out) const;

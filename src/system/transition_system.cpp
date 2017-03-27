@@ -31,15 +31,6 @@ transition_system::transition_system(const state_type* state_type, state_formula
   d_trace_helper = new trace_helper(state_type);
 }
 
-transition_system::~transition_system() {
-  for (size_t i = 0; i < d_assumptions.size(); ++ i) {
-    delete d_assumptions[i];
-  }
-  delete d_initial_states;
-  delete d_transition_relation;
-  delete d_trace_helper;
-}
-
 void transition_system::to_stream(std::ostream& out) const {
   out << "[" << std::endl;
   out << "type: " << *d_state_type << std::endl;
@@ -77,6 +68,10 @@ void transition_system::add_assumption(state_formula* assumption) {
   d_assumptions.push_back(assumption);
 }
 
+void transition_system::add_invariant(state_formula* invariant) {
+  d_invariants.push_back(invariant);
+}
+
 expr::term_ref transition_system::get_assumption() const {
   std::vector<expr::term_ref> assumption_terms;
   for (size_t i = 0; i < d_assumptions.size(); ++ i) {
@@ -87,6 +82,18 @@ expr::term_ref transition_system::get_assumption() const {
 
 trace_helper* transition_system::get_trace_helper() const {
   return d_trace_helper;
+}
+
+transition_system::~transition_system() {
+  for (size_t i = 0; i < d_assumptions.size(); ++ i) {
+    delete d_assumptions[i];
+  }
+  for (size_t i = 0; i < d_invariants.size(); ++ i) {
+    delete d_invariants[i];
+  }
+  delete d_initial_states;
+  delete d_transition_relation;
+  delete d_trace_helper;
 }
 
 }

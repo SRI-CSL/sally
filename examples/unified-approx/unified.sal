@@ -65,7 +65,7 @@ BEGIN
   % value received when x is transmitted. This is used for the
   % non-faulty processes.
   %
-  received(x: DATA, y: DATA): bool = x - epsilon <= y AND y <= x + epsilon;
+  received(x: DATA, y: DATA): BOOLEAN = x - epsilon <= y AND y <= x + epsilon;
 
   %
   % Sort and filter function
@@ -82,7 +82,7 @@ BEGIN
                   m: ARRAY PID OF BOOLEAN,
                   n: [0 .. N],
                   p: ARRAY PID OF PID): BOOLEAN =
-        (FORALL (i: PID): i>n <=> m[p[i]])
+        (FORALL (i: PID): (i>n <=> m[p[i]]))
     AND (FORALL (i: PID): i<n AND i<N => v[p[i]] <= v[p[i+1]])   %% We need i<N to convince SAL that this is type correct
     AND (FORALL (i, j: PID): p[i] = p[j] => i = j);
 
@@ -238,12 +238,12 @@ BEGIN
   %%
   %% Sanity check (for the fault free case): no message missing
   %%
-  sanity: LEMMA approx |- G(round > 0 => FORALL (i, j: PID): NOT m[i][j]);
+  sanity: LEMMA approx |- G(round > 0 => (FORALL (i, j: PID): NOT m[i][j]));
 
   %%
   %% Sanity check2: n[i] is 5
   %%
-  sanity2: LEMMA approx |- G(round > 0 => FORALL (i: PID): n[i] = N);
+  sanity2: LEMMA approx |- G(round > 0 => (FORALL (i: PID): n[i] = N));
 
   %%
   %% Convergence property

@@ -22,22 +22,35 @@
 #include "expr/term_manager.h"
 #include "system/context.h"
 #include "utils/symbol_table.h"
+#include "command/command.h"
+#include "parser/sal/sal_context.h"
+#include "parser/sal/sal_module.h"
 
 #include <iosfwd>
 
 #include <antlr3.h>
 
 namespace sally {
-
 namespace parser {
 
+/** Helper for variable declaration lists */
+struct var_declarations_ctx {
+
+  std::vector<std::string> var_names;
+  std::vector<expr::term_ref> var_types;
+
+  size_t size() const { return var_names.size(); }
+
+  void add(std::string name, expr::term_ref type);
+  void add(std::string name);
+  void add(expr::term_ref type);
+};
+
+/** Types of SAL objects that we keep in the symbol tables */
 enum sal_object {
   SAL_VARIABLE,
   SAL_TYPE,
-  SAL_STATE_TYPE,
-  SAL_STATE_FORMULA,
-  SAL_TRANSITION_FORMULA,
-  SAL_TRANSITION_SYSTEM,
+  SAL_MODULE,
   SAL_OBJECT_LAST
 };
 
@@ -47,67 +60,286 @@ class sal_state {
   /** The context */
   const system::context& d_context;
 
+  /** SAL context */
+  sal::context* d_sal_context;
+
   /** Symbol table for variables */
-  utils::symbol_table<expr::term_ref_strong> d_variables;
+  utils::symbol_table<expr::term_ref> d_variables;
 
   /** Symbol table for types */
-  utils::symbol_table<expr::term_ref_strong> d_types;
+  utils::symbol_table<expr::term_ref> d_types;
+
+  /** Symbol table for modules */
+  utils::symbol_table<sal::module::ref> d_modules;
+
+  expr::term_ref d_boolean_type;
+  expr::term_ref d_integer_type;
+  expr::term_ref d_natural_type;
+  expr::term_ref d_nznat_type;
+  expr::term_ref d_real_type;
+
+  /** Variable for subrange types */
+  expr::term_ref d_x;
+
+  typedef expr::term_ref_hash_map<expr::term_ref> term_to_term_map;
+
+  /** Map from functions to their definitions */
+  term_to_term_map d_fun_to_definition_map;
+
+  /** Map from variable to their next version */
+  term_to_term_map d_var_to_next_map;
+
+  /** Create a new variable and it's next version */
+  expr::term_ref new_variable(std::string name, expr::term_ref type);
 
 public:
 
   /** Construct the parser state */
   sal_state(const system::context& context);
 
+  /** Finalize parsing and return a command representing all the queries */
+  cmd::command* finalize();
+
   /** Returns the term manager for the parser */
   expr::term_manager& tm() const { return d_context.tm(); }
+
+  /** Basic types */
+  expr::term_ref boolean_type() { return d_boolean_type; }
+  expr::term_ref integer_type() { return d_integer_type; }
+  expr::term_ref natural_type() { return d_natural_type; }
+  expr::term_ref nznat_type() { return d_nznat_type; }
+  expr::term_ref real_type() { return d_real_type; }
 
   /** Returns the context for the parser */
   const system::context& ctx() const { return d_context; }
 
-  /** Create a new state type. */
-  system::state_type* mk_state_type(std::string id,
-      const std::vector<std::string>& state_vars, const std::vector<expr::term_ref>& state_types,
-      const std::vector<std::string>& input_vars, const std::vector<expr::term_ref>& input_types) const;
-
-  /** Create a new state formula */
-  system::state_formula* mk_state_formula(std::string id, std::string type_id, expr::term_ref sf) const;
-
-  /** Create a new transition formula */
-  system::transition_formula* mk_transition_formula(std::string id, std::string type_id, expr::term_ref tf) const;
-
-  /**
-   * Use the state type, i.e. declare the variables var_class.x, var_class.y, ...
-   * If use_namespace is true, then "var_class." is not used in the name.
-   */
-  void use_state_type(std::string id, system::state_type::var_class var_class, bool use_namespace);
-
-  /**
-   * Use the state type, i.e. declare the variables var_class.x, var_class.y, ...
-   * If use_namespace is true, then "var_class." is not used in the name.
-   */
-  void use_state_type(const system::state_type* state_type, system::state_type::var_class var_class, bool use_namespace);
-
-  /** Push a new scope for local declarations */
+  /** Push a new scope in variable and type symbol tables */
   void push_scope();
 
-  /** Pop the locate declarations */
+  /** Pop a scope in variable and type symbol tables */
   void pop_scope();
 
-  /** Returns the type with the given id */
+  /** Get a type (throw exception if not found) */
   expr::term_ref get_type(std::string id) const;
 
-  /** Returns the a variable with the given id */
-  expr::term_ref get_variable(std::string id) const;
+  /** Get a variable (throw exception if not found) */
+  expr::term_ref get_variable(std::string name, bool next) const;
+
+  /** Get a module (throw exception if not found) */
+  sal::module::ref get_module(std::string name, const std::vector<expr::term_ref>& actuals);
+
+  /** Define a variable id -> term in the symbol table */
+  void define_var_in_scope(std::string id, expr::term_ref type, expr::term_ref term);
+
+  /** Define a type id -> type in the symbol table */
+  void define_type_in_scope(std::string id, expr::term_ref type);
+
+  /** Define a constant in the SAL context */
+  void define_constant(std::string id, expr::term_ref type, expr::term_ref term);
+
+  /** Declare a constant in the SAL context */
+  void declare_constant(std::string id, expr::term_ref type);
+
+  /** Define type in the SAL context */
+  void define_type(std::string id, expr::term_ref type);
 
   /** Get the string of a token begin parsed */
   static
   std::string token_text(pANTLR3_COMMON_TOKEN token);
 
-  /** Ensure that the object is declared = true/false locally, throw exception otherwise */
-  void ensure_declared(std::string id, sal_object type, bool declared);
-
   /** Collect terms */
   void gc_collect(const expr::gc_relocator& gc_reloc);
+
+  /** Return a new context */
+  sal::context* new_context(std::string name);
+
+  /** Return a new module and push scope */
+  sal::module::ref start_module();
+
+  /** Finalize module and pop scope */
+  void finish_module(sal::module::ref m);
+
+  /** Add parameters to SAL context */
+  void add_context_parameters(const var_declarations_ctx& vars);
+
+  /** Make an integer from the token */
+  expr::rational mk_integer(pANTLR3_COMMON_TOKEN token);
+
+  /** Make an integer from the token1 '.' token2 */
+  expr::rational mk_rational(pANTLR3_COMMON_TOKEN token1, pANTLR3_COMMON_TOKEN token2);
+
+  /** Make an rational constant */
+  expr::term_ref mk_rational_constant(const expr::rational& rat);
+
+  /** Make a Boolean constant */
+  expr::term_ref mk_boolean_constant(bool value);
+
+  /** Make a string constant */
+  expr::term_ref mk_string(std::string s);
+
+  /** Make a term given the children */
+  expr::term_ref mk_term(expr::term_op, expr::term_ref child);
+
+  /** Make a term given the children */
+  expr::term_ref mk_term(expr::term_op, expr::term_ref child1, expr::term_ref child2);
+
+  /** Make a tuple */
+  expr::term_ref mk_tuple(const std::vector<expr::term_ref>& elements);
+
+  /** Make a record */
+  expr::term_ref mk_record(const expr::term_manager::id_to_term_map& content);
+
+  /** Make an array read */
+  expr::term_ref mk_array_read(expr::term_ref a, expr::term_ref i);
+
+  /** Make a record read */
+  expr::term_ref mk_record_read(expr::term_ref base, expr::term_ref id);
+
+  /** Make an ITE from the vector of conditions/terms */
+  expr::term_ref mk_ite(const std::vector<expr::term_ref>& ite_terms);
+
+  /** Make a subrange type [b1, ..., b2]. If bi is null it is +-\infty */
+  expr::term_ref mk_subrange_type(expr::term_ref b1, expr::term_ref b2);
+
+  /** Make a single select */
+  expr::term_ref mk_term_access(expr::term_ref base, expr::term_ref accessor);
+
+  /** Make a sequence of selects */
+  expr::term_ref mk_term_access(expr::term_ref base, const std::vector<expr::term_ref>& accessors);
+
+  /** Make a single update */
+  expr::term_ref mk_term_update(expr::term_ref base, expr::term_ref accessor, expr::term_ref value);
+
+  /** Make a sequence of updates starting from i-th */
+  expr::term_ref mk_term_update(expr::term_ref base, size_t i, const std::vector<expr::term_ref>& accessors, expr::term_ref value);
+
+  /** Make a sequence of updates */
+  expr::term_ref mk_term_update(expr::term_ref base, const std::vector<expr::term_ref>& accessors, expr::term_ref value);
+
+  /** Make a function application */
+  expr::term_ref mk_fun_app(expr::term_ref f, const std::vector<expr::term_ref>& args);
+
+  /** Add an assertion to check */
+  void add_assertion(std::string id, sal::assertion_form form, sal::module::ref m, expr::term_ref assertion);
+
+  /** Make a predicate subtype using the state's abstractino helper */
+  expr::term_ref mk_predicate_subtype(expr::term_ref body);
+
+  /** Make an enumerated type */
+  expr::term_ref mk_enum_type(const std::vector<std::string>& id_set);
+
+  /** Register enumeration values as variables */
+  void register_enumeration(expr::term_ref enum_type);
+
+  /** Make an array type */
+  expr::term_ref mk_array_type(expr::term_ref index_type, expr::term_ref element_type);
+
+  /** Make a record type */
+  expr::term_ref mk_record_type(const var_declarations_ctx& elements);
+
+  /** Start a constant declaration */
+  void start_constant_declaration(std::string id, const var_declarations_ctx& args, expr::term_ref type);
+
+  /** Finish a constant declaration */
+  void finish_constant_declaration(std::string id, const var_declarations_ctx& args, expr::term_ref type, expr::term_ref definition);
+
+  /** Start a module declaration */
+  void start_module_declaration(const var_declarations_ctx& args);
+
+  /** Finish module declaration */
+  void finish_module_declaration(sal::module::ref m, const var_declarations_ctx& args);
+
+  /** Define a module */
+  void define_module(std::string id, sal::module::ref m);
+
+  /** Start a definitino of predicate subtype */
+  void start_predicate_subtype(std::string id, expr::term_ref base_type);
+
+  /** Finish a predicate subtype definitions */
+  expr::term_ref finish_predicate_subtype(expr::term_ref predicate);
+
+  /** Start construction of a quantifier */
+  void start_quantifier(const var_declarations_ctx& bindings);
+
+  /** Finish construction of a previously started quantifier */
+  expr::term_ref finish_quantifier(expr::term_op op, expr::term_ref body);
+
+  /** Start construction of an indexed composition */
+  void start_indexed_composition(const var_declarations_ctx& bindings);
+
+  /** Finish construction of a previously started indexed composition */
+  void finish_indexed_composition(sal::module::ref m_from, sal::module::ref m_into, sal::composition_type comp_type);
+
+  /** Start construction of a lambda (adds to abstraction helper) */
+  void start_lambda(const var_declarations_ctx& bindings);
+
+  /** Finish construction of a previously started lambda */
+  expr::term_ref finish_lambda(expr::term_ref body);
+
+  /** Start set abstraction lhs = { id : type | ... } */
+  void start_set_abstraction(expr::term_ref lhs, std::string id, expr::term_ref type);
+
+  /** End set abstraction */
+  void end_set_abstraction();
+
+  /** Start an indexed array with the given declaration */
+  void start_indexed_array(const var_declarations_ctx& bindings);
+
+  /** Finish an indexed array */
+  expr::term_ref finish_indexed_array(expr::term_ref body);
+
+  /** Make a set enumeration t in { e1, ..., en} : t = e1 || t = e2 || ... || t = en*/
+  expr::term_ref mk_set_enumeration(expr::term_ref t, const std::vector<expr::term_ref>& set_elements);
+
+  /** Add to map and make sure check that the names are not clashing with each other */
+  static
+  void add_to_map(expr::term_manager::id_to_term_map& map, std::string id, expr::term_ref t);
+
+  /** Create a module that is a composition of m1 and m2 */
+  sal::module::ref composition(sal::module::ref m1, sal::module::ref m2, sal::composition_type);
+
+  /** Declare variables in the scope */
+  void declare_variables(const var_declarations_ctx& vars);
+
+  /** Declare variables in the scope and in the module m */
+  void declare_variables(sal::module::ref m, sal::variable_class var_class, const var_declarations_ctx& vars);
+
+  /** Load the module variables into the state */
+  void load_module_variables(sal::module::ref m);
+
+  /** Load the module m_from content to the module m_to */
+  void load_module_to_module(sal::module::ref m_from, sal::module::ref m_to);
+
+  /** Change given module variables to the given class */
+  void change_module_variables_to(sal::module::ref m, const var_declarations_ctx& vars, sal::variable_class var_class);
+
+  /** Add a new definition to m */
+  void add_definition(sal::module::ref m, expr::term_ref definition);
+
+  /** Add a new initialization to m */
+  void add_initialization(sal::module::ref m, expr::term_ref initialization);
+
+  /** Add a new transition to m */
+  void add_transition(sal::module::ref m, expr::term_ref transition);
+
+  /** Add a new invariant to m */
+  void add_invariant(sal::module::ref m, expr::term_ref invariant);
+
+  /** Ad an init formula to m */
+  void add_init_formula(sal::module::ref m, expr::term_ref init_formula);
+
+  /** Make a term from a list of commands (guarder and multi) */
+  expr::term_ref mk_term_from_commands(const std::vector<expr::term_ref>& cmds);
+
+  /** Make a term from a guarded command */
+  expr::term_ref mk_term_from_guarded(expr::term_ref guards, const std::vector<expr::term_ref>& assignments);
+
+  /** Check that the term is OK */
+  void check_term(expr::term_ref t) const;
+
+  /** Check that the index type is really an index type */
+  void check_index_type(expr::term_ref t) const;
+
 };
 
 }

@@ -1,0 +1,17 @@
+simple{N: {x : NATURAL | x > 1}}: CONTEXT = 
+BEGIN
+
+  m: MODULE = 
+  BEGIN
+    OUTPUT 
+      x: INTEGER
+    INITIALIZATION
+      x = 0
+    TRANSITION
+      x' = IF (x < N) THEN x + 1 ELSE 0 ENDIF
+  END;
+ 
+  THEOREM m |- x < N;
+
+END
+

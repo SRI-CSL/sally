@@ -26,14 +26,21 @@
 namespace sally {
 namespace utils {
 
+/**
+ * Symbol table from strings to T. T should be comparable.
+ */
 template<typename T, bool free_pointers = true>
 class symbol_table {
+
+public:
 
   typedef std::list<T> T_list;
   typedef typename T_list::iterator T_list_iterator;
   typedef boost::unordered_map<std::string, T_list, utils::hash<std::string> > id_to_T_map;
   typedef typename id_to_T_map::iterator iterator;
   typedef typename id_to_T_map::const_iterator const_iterator;
+
+private:
 
   template<typename T1>
   struct symbol_table_entry {
@@ -53,6 +60,9 @@ class symbol_table {
 
   /** The added entries */
   std::vector<std::string> d_entries_added;
+
+  /** The added values */
+  std::vector<T> d_values_added;
 
   /** Number of entries per context push */
   std::vector<size_t> d_entries_added_size_per_push;
@@ -90,6 +100,7 @@ public:
   /** Start a new scope */
   void push_scope() {
     d_entries_added_size_per_push.push_back(d_entries_added.size());
+    assert(d_entries_added.size() == d_values_added.size());
   }
 
   /** Remove top scope */
@@ -99,6 +110,18 @@ public:
     while (d_entries_added.size() > pop_to_size) {
       remove_entry(d_entries_added.back());
       d_entries_added.pop_back();
+      d_values_added.pop_back();
+    }
+    assert(d_entries_added.size() == d_values_added.size());
+  }
+
+  /** Get the objects in the last scope */
+  template <typename collection>
+  void get_scope_values(collection& out) {
+    std::insert_iterator<collection> insert(out, out.end());
+    size_t i = d_entries_added_size_per_push.back();
+    for (; i < d_values_added.size(); ++ i) {
+      *insert = d_values_added[i];
     }
   }
 
@@ -106,6 +129,7 @@ public:
   void add_entry(std::string id, const T& value) {
     d_table[id].push_front(value);
     d_entries_added.push_back(id);
+    d_values_added.push_back(value);
   }
 
   /** Get the value associated to id -> value */
@@ -131,6 +155,19 @@ public:
     }
   }
 
+  /** Load variables from another table (only the current ones, not the over-written ones) */
+  void load_from(const symbol_table& other) {
+    const_iterator it = other.begin(), end = other.end();
+    for (; it != end; ++ it) {
+      std::string id = it->first;
+      const T& value = it->second.back();
+      add_entry(id, value);
+    }
+  }
+
+  const_iterator begin() const { return d_table.begin(); }
+  const_iterator end() const { return d_table.end(); }
+
   /** Print the table to stream */
   void to_stream(std::ostream& out) const {
     out << "[" << d_name << ":";
@@ -155,6 +192,9 @@ public:
     }
   }
 
+  size_t size() const {
+    return d_table.size();
+  }
 };
 
 template<typename T>

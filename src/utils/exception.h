@@ -20,8 +20,13 @@
 
 #include <string>
 #include <iosfwd>
+#include <sstream>
 
 namespace sally {
+
+namespace expr {
+  class term_manager;
+}
 
 /**
  * Generic exception class for SAL error reporting.
@@ -31,17 +36,23 @@ class exception {
 protected:
 
   /** The message */
-  std::string d_msg;
+  std::stringstream d_msg;
 
   /** No empty exceptions */
   exception() {}
 
 public:
 
-  /** Create an exception with the fiven message */
+  /** Create an exception with the given message */
   exception(std::string msg)
   : d_msg(msg)
   {}
+
+  /** Create an exception and set it up with the given term manager */
+  exception(expr::term_manager* tm);
+  exception(expr::term_manager& tm);
+
+  exception(const exception& e);
 
   virtual ~exception() {}
 
@@ -49,9 +60,18 @@ public:
   virtual void to_stream(std::ostream& out) const;
 
   /** Return the message */
-  std::string get_message() const { return d_msg; }
+  std::string get_message() const { return d_msg.str(); }
+
+  /** Append to the message */
+  template <typename T>
+  exception& operator << (const T& t) {
+    d_msg << t;
+    return *this;
+  }
+
 };
 
 std::ostream& operator << (std::ostream& out, const exception& e);
+
 
 }

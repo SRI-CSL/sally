@@ -56,38 +56,6 @@ model& model::operator = (const model& other) {
   return *this;
 }
 
-model::model_refcounted::model_refcounted(model* model)
-: d_model(model)
-, d_refcount(0)
-{
-  attach();
-}
-
-model::model_refcounted::~model_refcounted() {
-  assert(d_refcount == 0);
-}
-
-model* model::model_refcounted::get_model() {
-  return d_model;
-}
-
-const model* model::model_refcounted::get_model() const {
-  return d_model;
-}
-
-void model::model_refcounted::attach() {
-  d_refcount ++;
-}
-
-void model::model_refcounted::detach() {
-  assert(d_refcount > 0);
-  d_refcount --;
-  if (d_refcount == 0) {
-    delete d_model;
-    delete this;
-  }
-}
-
 void model::clear() {
   d_variable_to_value_map.clear();
   d_variables.clear();
@@ -190,6 +158,11 @@ public:
   {}
 
   ~evaluation_visitor() {}
+
+  // Non-null terms are good
+  bool is_good_term(expr::term_ref t) const {
+    return !t.is_null();
+  }
 
   // Get the children of t
   void get_children(expr::term_ref t, std::vector<expr::term_ref>& children) {
@@ -635,77 +608,6 @@ std::ostream& operator << (std::ostream& out, const model& m) {
 std::ostream& operator << (std::ostream& out, const model::ref& m_ref) {
   m_ref->to_stream(out);
   return out;
-}
-
-model::ref::ref()
-: d_model(0)
-{}
-
-model::ref::ref(model* model)
-: d_model(0)
-{
-  if (model) {
-    d_model = new model_refcounted(model);
-  }
-}
-
-model::ref::ref(const ref& r)
-: d_model(r.d_model)
-{
-  if (d_model) {
-    d_model->attach();
-  }
-}
-
-model::ref::~ref() {
-  if (d_model) {
-    d_model->detach();
-  }
-}
-
-model::ref& model::ref::operator = (const ref& other)
-{
-  if (this != &other) {
-    if (d_model) {
-      d_model->detach();
-    }
-    d_model = other.d_model;
-    if (d_model) {
-      d_model->attach();
-    }
-  }
-  return *this;
-}
-
-model::ref& model::ref::operator = (model* m)
-{
-  if (d_model) {
-    d_model->detach();
-    d_model = 0;
-  }
-  if (m) {
-    d_model = new model_refcounted(m);
-  }
-  return *this;
-}
-
-model& model::ref::operator * () {
-  assert(d_model);
-  return *d_model->get_model();
-}
-
-const model& model::ref::operator * () const {
-  assert(d_model);
-  return *d_model->get_model();
-}
-
-model* model::ref::operator -> () {
-  assert(d_model);
-  return d_model->get_model();
-}
-
-const model* model::ref::operator -> () const {
-  return d_model->get_model();
 }
 
 }

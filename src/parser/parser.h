@@ -45,6 +45,10 @@ public:
   /** Create an exceptoin with no line information */
   parser_exception(std::string msg);
 
+  /** Create a parser exception with term manager */
+  parser_exception(expr::term_manager* tm);
+  parser_exception(expr::term_manager& tm);
+
   /** Create an exception with line information */
   parser_exception(std::string msg, std::string filename, int line, int pos);
 

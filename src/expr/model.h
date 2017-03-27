@@ -21,6 +21,8 @@
 #include "expr/term_manager.h"
 #include "expr/value.h"
 
+#include "utils/smart_ptr.h"
+
 #include <map>
 #include <vector>
 #include <iosfwd>
@@ -30,39 +32,12 @@ namespace expr {
 
 class model {
 
-  class model_refcounted {
-    model* d_model;
-    size_t d_refcount;
-  public:
-    model_refcounted(model* model);
-    ~model_refcounted();
-    void attach();
-    void detach();
-    model* get_model();
-    const model* get_model() const;
-  };
-
 public:
 
   typedef std::map<term_ref, value> term_to_value_map;
   typedef term_to_value_map::const_iterator const_iterator;
   typedef term_to_value_map::iterator iterator;
-
-  /** Counted references to models */
-  class ref {
-    model_refcounted* d_model;
-  public:
-    ref();
-    ref(model* model);
-    ref(const ref& r);
-    ~ref();
-    ref& operator = (const ref& other);
-    ref& operator = (model* m);
-    model& operator * ();
-    const model& operator * () const;
-    model* operator -> ();
-    const model* operator -> () const;
-  };
+  typedef utils::smart_ptr<model> ref;
 
   /**
    * Create a model. If undef_to_default is true, it will return default

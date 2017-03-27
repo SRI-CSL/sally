@@ -16,25 +16,15 @@
  * along with sally.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "analyzer.h"
+#pragma once
 
-namespace sally {
+//
+// ADD ALL THE ENGINES HERE
+//
 
-const system::context& analyzer::ctx() const {
-  return d_ctx;
+#include "ai/crab/crab_info.h"
+
+sally::ai::interpreter_data::interpreter_data() {
+  add_module_info<ai::crab_info>();
 }
 
-expr::term_manager& analyzer::tm() const {
-  return d_ctx.tm();
-}
-
-analyzer::analyzer(const system::context& ctx)
-: gc_participant(ctx.tm())
-, d_ctx(ctx)
-{
-}
-
-analyzer::~analyzer()
-{}
-
-}

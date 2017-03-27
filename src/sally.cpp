@@ -21,12 +21,12 @@
 #include <boost/program_options.hpp>
 #include <boost/thread.hpp>
 
-#include "ai/factory.h"
 #include "expr/term_manager.h"
 #include "utils/output.h"
 #include "system/context.h"
 #include "parser/parser.h"
 #include "engine/factory.h"
+#include "ai/factory.h"
 #include "smt/factory.h"
 #include "utils/trace.h"
 #include "utils/statistics.h"
@@ -102,12 +102,6 @@ int main(int argc, char* argv[]) {
       engine_to_use = engine_factory::mk_engine(boost_opts.at("engine").as<string>(), ctx);
     }
 
-    analyzer* analyzer_to_use = 0;
-    if (opts.has_option("ai")) {
-      analyzer_to_use = analyzer_factory::mk_analyzer(boost_opts.at("ai").as<string>(), ctx);
-      engine_to_use->set_analyzer(analyzer_to_use);
-    }
-
     // Setup live stats if asked
     boost::thread *stats_worker = 0;
     if (opts.has_option("live-stats")) {
@@ -139,11 +133,6 @@ int main(int argc, char* argv[]) {
       delete engine_to_use;
     }
 
-    // Delete the analyzer
-    if (analyzer_to_use != 0) {
-      delete analyzer_to_use;
-    }
-
     // Stop the live stats thread
     if (stats_worker) {
       stats_worker->interrupt();
@@ -170,6 +159,18 @@ std::string get_engines_list() {
   return out.str();
 }
 
+std::string get_ai_list() {
+  std::vector<string> engines;
+  ai::factory::get_interpreters(engines);
+  std::stringstream out;
+  out << "The abstract interpreter to use: ";
+  for (size_t i = 0; i < engines.size(); ++ i) {
+    if (i) { out << ", "; }
+    out << engines[i];
+  }
+  return out.str();
+}
+
 std::string get_solver_list() {
   std::vector<string> solvers;
   smt::factory::get_solvers(solvers);
@@ -181,19 +182,6 @@ std::string get_solver_list() {
   }
   return out.str();
 }
-
-std::string get_analyzer_list() {
-  std::vector<string> analyzers;
-  analyzer_factory::get_analyzers(analyzers);
-  std::stringstream out;
-  out << "The analyzer to use: ";
-  for (size_t i = 0; i < analyzers.size(); ++ i) {
-    if (i) { out << ", "; }
-    out << analyzers[i];
-  }
-  return out.str();
-}
-
 
 std::string get_output_languages_list() {
   std::stringstream out;
@@ -220,6 +208,7 @@ void parse_options(int argc, char* argv[], variables_map& variables)
       ("show-invariant", "Show the invariant if property is proved.")
       ("parse-only", "Just parse, don't solve.")
       ("engine", value<string>(), get_engines_list().c_str())
+      ("ai", value<string>(), get_ai_list().c_str())
       ("solver", value<string>()->default_value(smt::factory::get_default_solver_id()), get_solver_list().c_str())
       ("solver-logic", value<string>(), "Optional smt2 logic to set to the solver (e.g. QF_LRA, QF_LIA, ...).")
       ("output-language", value<string>()->default_value("mcmt"), get_output_languages_list().c_str())
@@ -228,7 +217,6 @@ void parse_options(int argc, char* argv[], variables_map& variables)
       ("live-stats", value<string>(), "Output live statistic to the given file (- for stdout).")
       ("live-stats-time", value<unsigned>()->default_value(100), "Time period for statistics output (in miliseconds)")
       ("smt2-output", value<string>(), "Generate smt2 logs of solver queries with given prefix.")
-      ("ai", value<string>(), get_analyzer_list().c_str())
       ("no-lets", "Don't use let expressions in printouts.");
       ;
 
@@ -237,6 +225,9 @@ void parse_options(int argc, char* argv[], variables_map& variables)
 
   // Get the individual solver options
   smt::factory::setup_options(description);
+
+  // Get the abstract interpreter options
+  ai::factory::setup_options(description);
 
   // The input files can be positional
   positional_options_description positional;

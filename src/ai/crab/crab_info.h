@@ -18,13 +18,30 @@
 
 #pragma once
 
-//
-// ADD ALL THE ENGINES HERE
-//
+#include "crab.h"
+#include <boost/program_options.hpp>
 
-#include "ai/interval/interval_analyzer_info.h"
+namespace sally {
+namespace ai {
 
-sally::analyzer_data::analyzer_data() {
-  add_module_info<interval::interval_analyzer_info>();
+struct crab_info {
+
+  static void setup_options(boost::program_options::options_description& options) {
+    using namespace boost::program_options;
+    options.add_options()
+        ("crab-domain", value<std::string>()->default_value("interval"), "The domain do use (intervals, ...)")
+        ;
+  }
+
+  static std::string get_id() {
+    return "crab";
+  }
+
+  static abstract_interpreter* new_instance(const system::context& ctx) {
+    return new crab(ctx);
+  }
+
+};
+
 }
-
+}

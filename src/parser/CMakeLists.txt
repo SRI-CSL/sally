@@ -76,6 +76,8 @@ add_library(parser
   sal/salParser.c 
   sal/salLexer.c 
   sal/sal_state.cpp
+  sal/sal_context.cpp
+  sal/sal_module.cpp
   sal/sal.cpp
   aiger/aiger.cpp
   aiger/aiger-1.9.4/aiger.c

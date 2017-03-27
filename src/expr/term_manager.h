@@ -86,6 +86,48 @@ public:
   /** Get the type of bitvectors of given size > 0. */
   term_ref bitvector_type(size_t size);
 
+  /** Make a function type (t1, t2, ..., tn), with ti being types, tn being co-domain */
+  term_ref function_type(const std::vector<term_ref>& args);
+
+  /** Get the domain type of a function type */
+  term_ref get_function_type_domain(term_ref fun_type, size_t i) const;
+
+  /** Get the co-domain type of a function type */
+  term_ref get_function_type_codomain(term_ref fun_type) const;
+
+  /** Make an array type t1 -> t2 */
+  term_ref array_type(term_ref index_type, term_ref element_type);
+
+  /** Get the index type of the array type */
+  term_ref get_array_type_index(term_ref arr_type) const;
+
+  /** Get the element type of the array type */
+  term_ref get_array_type_element(term_ref arr_type) const;
+
+  /** Make a tuple type (t1, t2, ..., tn) with ti being types */
+  term_ref tuple_type(const std::vector<term_ref>& args);
+
+  /** Get the k-th element of the tuple type */
+  term_ref get_tuple_type_element(term_ref tuple_type, size_t i) const;
+
+  /** Make an enumeration type */
+  term_ref enum_type(const std::vector<std::string>& values);
+
+  /** Map from names to terms */
+  typedef std::map<std::string, term_ref> id_to_term_map;
+
+  /** Make a record type */
+  term_ref record_type(const id_to_term_map& fields);
+
+  /** Get the type a record field (returns null if not there) */
+  term_ref get_record_type_field_type(term_ref rec_type, std::string field) const;
+
+  /** Get all record type fields */
+  void get_record_type_fields(term_ref rec_type, id_to_term_map& fields) const;
+
+  /** Get the size of the enumeration */
+  size_t get_enum_type_size(term_ref enum_type) const;
+
   /** Get the size of a bitvector type */
   size_t get_bitvector_type_size(term_ref bv_type) const;
 
@@ -193,6 +235,99 @@ public:
   /** Get the sgn extend of the extend term */
   bitvector_sgn_extend get_bitvector_sgn_extend(const term& t) const;
 
+  /** Make an array read term */
+  term_ref mk_array_read(term_ref a, term_ref index);
+
+  /** Get array from the array read */
+  term_ref get_array_read_array(term_ref aread) const;
+
+  /** Get the index from the array read */
+  term_ref get_array_read_index(term_ref aread) const;
+
+  /** Make an array write term */
+  term_ref mk_array_write(term_ref a, term_ref index, term_ref element);
+
+  /** Get the array from the array write */
+  term_ref get_array_write_array(term_ref awrite) const;
+
+  /** Get the index from the array write */
+  term_ref get_array_write_index(term_ref awrite) const;
+
+  /** Get the element from the array write */
+  term_ref get_array_write_element(term_ref awrite) const;
+
+  /** Make an array lambda [i : body] */
+  term_ref mk_array_lambda(term_ref i, term_ref body);
+
+  /** Get array lambda index */
+  term_ref get_array_lambda_variable(term_ref a_lambda) const;
+
+  /** Get array lambda body */
+  term_ref get_array_lambda_body(term_ref a_lambda) const;
+
+  /** Construct tuple */
+  term_ref mk_tuple(const std::vector<term_ref>& elements);
+
+  /** Make a tuple read term */
+  term_ref mk_tuple_read(term_ref t, size_t i);
+
+  /** Get the tuple read base tuple */
+  term_ref get_tuple_read_tuple(term_ref t_read) const;
+
+  /** Get the tuple read index */
+  size_t get_tuple_read_index(term_ref t_read) const;
+
+  /** Make a new tuple write term */
+  term_ref mk_tuple_write(term_ref t, size_t i, term_ref e);
+
+  /** Get the tuple write base tuple */
+  term_ref get_tuple_write_tuple(term_ref t_write) const;
+
+  /** Get the tuple write index */
+  size_t get_tuple_write_index(term_ref t_write) const;
+
+  /** Get the tuple write written element */
+  term_ref get_tuple_write_element(term_ref t_write) const;
+
+  /** Construct a record (and infer type) */
+  term_ref mk_record(const id_to_term_map& elements);
+
+  /** Make a record read term */
+  term_ref mk_record_read(term_ref rec, term_ref field_id);
+
+  /** Get the record read base record */
+  term_ref get_record_read_record(term_ref rec_read) const;
+
+  /** Get the record read field */
+  term_ref get_record_read_field(term_ref rec_read) const;
+
+  /** Make a new record write term */
+  term_ref mk_record_write(term_ref t, term_ref field_id, term_ref value);
+
+  /** Get the record write base record */
+  term_ref get_record_write_record(term_ref rec_write) const;
+
+  /** Get the record write field */
+  term_ref get_record_write_field(term_ref rec_write) const;
+
+  /** Get the record write written element */
+  term_ref get_record_write_element(term_ref rec_write) const;
+
+  /** Make function application */
+  term_ref mk_function_application(term_ref fun, const std::vector<term_ref>& args);
+
+  /** Make an enum constant */
+  term_ref mk_enum_constant(std::string value, term_ref type);
+
+  /** Make an enum constant */
+  term_ref mk_enum_constant(size_t value, term_ref type);
+
+  /** Get the enum constant id */
+  size_t get_enum_constant_value(term_ref t) const;
+
+  /** get the enum constant value */
+  std::string get_enum_constant_id(term_ref t) const;
+
   /** Make a new string constant */
   term_ref mk_string_constant(std::string value);
 
@@ -216,6 +351,29 @@ public:
 
   /** Get the field of a struct variable */
   term_ref get_struct_field(const term& t, size_t i) const;
+
+  term_ref mk_lambda(const std::vector<term_ref>&, term_ref body);
+  term_ref mk_exists(const std::vector<term_ref>& vars, term_ref body);
+  term_ref mk_forall(const std::vector<term_ref>& vars, term_ref body);
+  term_ref mk_predicate_subtype(term_ref x, term_ref body);
+
+  /** Get the arity of the abstraction */
+  size_t get_lambda_arity(term_ref lambda) const;
+  size_t get_quantifier_arity(term_ref quantifier) const;
+
+  /** The the body of the abstraction */
+  term_ref get_lambda_body(term_ref lambda) const;
+  term_ref get_quantifier_body(term_ref quantifier) const;
+  term_ref get_predicate_subtype_body(term_ref pred_type) const;
+
+  /** Get the i-th bound variable of the term (lambda, exists, forall) */
+  term_ref get_lambda_variable(term_ref lambda, size_t i) const;
+  term_ref get_quantifier_variable(term_ref quantifier, size_t i) const;
+  term_ref get_predicate_subtype_variable(term_ref pred_type) const;
+
+  /** Get all the variables of the lambda, in order */
+  void get_lambda_variables(term_ref lambda, std::vector<term_ref>& vars_out) const;
+  void get_quantifier_variables(term_ref lambda, std::vector<term_ref>& vars_out) const;
 
   /** Get all fields of a struct variable */
   void get_struct_fields(const term& t, std::vector<term_ref>& out) const;
@@ -243,8 +401,34 @@ public:
     return type_of(term_of(t));
   }
 
-  /** Check if t1 is a subtype of t2 (say integer and real) */
-  bool is_subtype_of(term_ref t1, term_ref t2) const;
+  /** Get the base type of the term */
+  term_ref base_type_of(const term& t) const;
+
+  /** Get the base type of the term */
+  term_ref base_type_of(term_ref t) {
+    return base_type_of(term_of(t));
+  }
+
+  /** Check if the two types are compatible (looking at base types only) */
+  bool compatible(term_ref t1, term_ref t2);
+
+  /** Check if t is a type */
+  bool is_type(term_ref t) const;
+
+  /** Check if t is a function type */
+  bool is_function_type(term_ref t) const;
+
+  /** Check if t is an array type */
+  bool is_array_type(term_ref t) const;
+
+  /** Check if t is an integer type */
+  bool is_integer_type(term_ref t) const;
+
+  /** Check if t is a tuple type */
+  bool is_tuple_type(term_ref t) const;
+
+  /** Check if t is a record type */
+  bool is_record_type(term_ref t) const;
 
   /** Get the TCC of the term */
   term_ref tcc_of(const term& t) const;

@@ -48,11 +48,17 @@ command returns [cmd::command* cmd = 0]
 
 /** SAL context, with parameters for parametrization. */
 context 
-  : identifier ('{' var_declaration_list '}')? ':' KW_CONTEXT '=' context_body   
+@declarations {
+  std::string name;
+  parser::var_declarations_ctx parameters;
+}
+  : identifier[name] { STATE->new_context(name); }
+    ('{' var_declaration_list[parameters] '}' { STATE->add_context_parameters(parameters); } ) ?  
+    ':' KW_CONTEXT OP_EQ context_body
   ;
 
 /** Body of the context */
-context_body 
+context_body
   : KW_BEGIN declaration (';' declaration)* ';'? KW_END 
   ;
 
@@ -70,235 +76,448 @@ declaration
   ;
 
 /** Declaration of constants (including functions) */
-constant_declaration 
-  : identifier ('(' var_declaration_list ')')? ':' type ('=' term)?
+constant_declaration
+@declarations {
+  std::string id;
+  parser::var_declarations_ctx args;
+  bool has_definition = false;
+} 
+  : identifier[id] ('(' var_declaration_list[args] ')')? ':' 
+    t_type = type 
+    { STATE->start_constant_declaration(id, args, t_type); }
+    (OP_EQ t_definition = term)?
+    { STATE->finish_constant_declaration(id, args, t_type, t_definition); }  
   ;
 
 /** Declations of types */
 type_declaration 
-  : identifier ':' KW_TYPE ('=' type)?
+@declarations{
+  std::string id;
+}
+  : identifier[id] ':' KW_TYPE OP_EQ t = type { STATE->define_type(id, t); }
   ;
 
 /** Assertions (lemmas, theorems, ...) */
-assertion_declaration 
-  : identifier ':' assertion_form assertion_term
+assertion_declaration
+@declarations {
+  std::string id;
+} 
+  : (identifier[id] ':')? form = assertion_form assertion_term[id, form]
   ;
 
 /** Types of assertions (there is no semantics attached to these names) */
-assertion_form 
-  : (KW_OBLIGATION | KW_CLAIM | KW_LEMMA | KW_THEOREM)
+assertion_form returns [parser::sal::assertion_form form = parser::sal::SAL_LEMMA] 
+  : KW_OBLIGATION { form = parser::sal::SAL_OBLIGATION; } 
+  | KW_CLAIM { form = parser::sal::SAL_CLAIM; }
+  | KW_LEMMA { form = parser::sal::SAL_LEMMA; }
+  | KW_THEOREM { form = parser::sal::SAL_THEOREM; }
   ;
 
 /** The actual assertion, does 'term' hold in the 'module' */
-assertion_term 
-  : module '|-' term
+assertion_term[std::string id, parser::sal::assertion_form form]
+  : m = module { STATE->push_scope(); STATE->load_module_variables(m); }
+    '|-' 
+    t = term_or_g_term
+    { STATE->pop_scope(); }
+    { STATE->add_assertion(id, form, m, t); }
   ;
+
+term_or_g_term returns [expr::term_ref t]
+  : 'G' '(' t1 = term ')' { t = t1; }
+  | t2 = term { t = t2; }
+  ; 
 
 /** Definition of a module */
 module_declaration 
-  : identifier ('[' var_declaration_list ']')? ':' 'MODULE' '=' module
+@declarations{
+  std::string id;
+  parser::var_declarations_ctx args;
+}
+  : identifier[id]
+    ('[' var_declaration_list[args] ']')?
+    { STATE->start_module_declaration(args); } 
+    ':' 'MODULE' OP_EQ m = module 
+    { 
+      STATE->finish_module_declaration(m, args);
+      STATE->define_module(id, m); 
+    }
   ;
 
 /** Types */ 
-type
-  : identifier
-  | scalar_type 
-  | subrange_type
-  | array_type
-  | subtype
-  | record_type
+type returns [expr::term_ref t]
+@declarations{
+  std::string id;
+}
+  : identifier[id] { t = STATE->get_type(id); }
+  | t_builtin = builtin_type { t = t_builtin; }
+  | t_scalar = scalar_type { t = t_scalar; STATE->register_enumeration(t); }
+  | t_subrange = subrange_type { t = t_subrange; }
+  | t_array = array_type { t = t_array; }
+  | t_subtype = subtype { t = t_subtype; }
+  | t_record = record_type { t = t_record; }
+  ;
+
+/** Built-in types */
+builtin_type returns [expr::term_ref t]
+  : KW_BOOLEAN { t = STATE->boolean_type(); }
+  | KW_INTEGER { t = STATE->integer_type(); }
+  | KW_NATURAL { t = STATE->natural_type(); }
+  | KW_NZNAT   { t = STATE->nznat_type(); }
+  | KW_REAL    { t = STATE->real_type(); }
   ;
 
 /** Subtype of a type */
-subtype
-  : '{' identifier ':' type '|' term '}'
+subtype returns [expr::term_ref t]
+@declarations{
+  std::string id;
+}
+  : '{' 
+      identifier[id] ':' b = type '|' { STATE->start_predicate_subtype(id, b); } 
+      p = term { t = STATE->finish_predicate_subtype(p); }  
+    '}' 
   ;
 
 /** List of scalars (an enum) */
-scalar_type
-  : '{' identifier (',' identifier)* '}'
+scalar_type returns [expr::term_ref t]
+@declarations{
+  std::string id;
+  std::vector<std::string> ids;
+}
+  : '{' 
+      identifier[id] { ids.push_back(id); }
+      (',' identifier[id] { ids.push_back(id); } )* 
+    '}'
+    { t = STATE->mk_enum_type(ids); }
   ;
 
 /** Types that can be used for indexing */
-index_type 
-  : identifier 
-  | subrange_type 
+index_type returns [expr::term_ref t]
+@declarations{
+  std::string id;
+}
+  : t1 = type { t = t1; STATE->check_index_type(t); }
   ;
 
 /** Bound is either a term or infinity */
-bound: term | '_';
+bound returns [expr::term_ref t]
+  : t1 = term { t = t1; } 
+  | '_'
+  ;
 
 /** Range types */
-subrange_type 
-  : '[' bound '..' bound ']'
+subrange_type returns [expr::term_ref t] 
+  : '[' b1 = bound '..' b2 = bound ']' { t = STATE->mk_subrange_type(b1, b2); }
   ;
 
 /** Array type, from indices to elements */
-array_type 
-  : KW_ARRAY index_type KW_OF type
+array_type returns [expr::term_ref t]
+  : KW_ARRAY it = index_type KW_OF et = type { t = STATE->mk_array_type(it, et); }
   ;
 
 /** Record types */
-record_type
-  : '[#' var_declaration_list '#]'
+record_type returns [expr::term_ref t]
+@declarations{
+  parser::var_declarations_ctx record_elements;
+}
+  : '[#' var_declaration_list[record_elements] '#]' { t = STATE->mk_record_type(record_elements); }
   ;
 
 // Expressions: typical
 
-term  
-  : iff_term
-  ;
-
-iff_term 
-  : implies_term (OP_IFF implies_term)*
-  ;
-
-implies_term 
-  : or_term (OP_IMPLIES or_term)*
-  ;
-
-or_term 
-  : and_term (KW_OR and_term)*
+term returns [expr::term_ref t]
+  : t1 = quantified_term { t = t1; }
   ; 
   
-and_term 
-  : xor_term (KW_AND xor_term)*
+quantified_term returns [expr::term_ref t] 
+@declarations{
+  parser::var_declarations_ctx bindings;
+}
+  : KW_FORALL '(' var_declaration_list[bindings] ')' ':' { STATE->start_quantifier(bindings); } 
+    t_forall = term { t = STATE->finish_quantifier(expr::TERM_FORALL, t_forall); }
+  | KW_EXISTS '(' var_declaration_list[bindings] ')' ':' { STATE->start_quantifier(bindings); }
+    t_exists = term { t = STATE->finish_quantifier(expr::TERM_EXISTS, t_exists); }
+  | t1 = update_term { t = t1; }
   ;
 
-xor_term 
-  : unary_bool_term (KW_XOR unary_bool_term)*
+update_term returns [expr::term_ref t]
+@declarations{
+  std::vector<expr::term_ref> accessors;
+}
+  : t1 = iff_term { t = t1; }
+    (
+      { accessors.clear(); }
+      KW_WITH 
+        (t2 = term_access { accessors.push_back(t2); })+ 
+      ':=' 
+        t3 = iff_term 
+      { t = STATE->mk_term_update(t, accessors, t3); } 
+    )*
   ;
 
-unary_bool_term 
-  : NOT unary_bool_term
-  | KW_FORALL '(' var_declaration_list ')' ':' unary_bool_term
-  | KW_EXISTS '(' var_declaration_list ')' ':' unary_bool_term   
-  | eq_term 
+    
+iff_term returns [expr::term_ref t]
+  : t1 = implies_term { t = t1; }  
+    (OP_IFF t2 = implies_term { t = STATE->mk_term(expr::TERM_EQ, t, t2); } )?
   ;
 
-eq_term 
-  : rel_term ((OP_EQ | OP_NEQ) rel_term)?
+implies_term returns [expr::term_ref t]
+  : t1 = or_term { t = t1; }
+    (OP_IMPLIES t2 = or_term { t = STATE->mk_term(expr::TERM_IMPLIES, t, t2); } )?
   ;
 
-rel_term 
-  : additive_term ((OP_GT | OP_GEQ | OP_LT | OP_LEQ) additive_term)?
+or_term returns [expr::term_ref t]
+  : t1 = and_term { t = t1; } 
+    (KW_OR t2 = and_term { t = STATE->mk_term(expr::TERM_OR, t, t2); } )*
+  ; 
+  
+and_term returns [expr::term_ref t]
+  : t1 = xor_term { t = t1; }
+    (KW_AND t2 = xor_term { t = STATE->mk_term(expr::TERM_AND, t, t2); } )*
+  ;
+
+xor_term returns [expr::term_ref t]
+  : t1 = unary_bool_term { t = t1; }  
+    (KW_XOR t2 = unary_bool_term { t = STATE->mk_term(expr::TERM_XOR, t, t2); } )*    
+  ;
+
+unary_bool_term returns [expr::term_ref t]
+  : NOT t_not = unary_bool_term { t = STATE->mk_term(expr::TERM_NOT, t_not); } 
+  | KW_TRUE { t = STATE->mk_boolean_constant(true); }
+  | KW_FALSE { t = STATE->mk_boolean_constant(false); }
+  | t_eq = eq_term { t = t_eq; }
+  ;
+
+eq_term returns [expr::term_ref t]
+@declarations{
+  bool negated = false;
+}  
+  : t1 = rel_term { t = t1; }
+    ( 
+      ( OP_EQ 
+      | OP_NEQ { negated = true; }
+      ) 
+      t2 = rel_term { 
+        t = STATE->mk_term(expr::TERM_EQ, t, t2);
+        if (negated) { t = STATE->mk_term(expr::TERM_NOT, t); }  
+      } 
+    )?
+  ;
+
+rel_term returns [expr::term_ref t] 
+@declarations{
+  expr::term_op op = expr::OP_LAST;
+}  
+  : t1 = additive_term { t = t1; } 
+    (
+      ( OP_GT  { op = expr::TERM_GT; }  
+      | OP_GEQ { op = expr::TERM_GEQ; } 
+      | OP_LT  { op = expr::TERM_LT; }
+      | OP_LEQ { op = expr::TERM_LEQ; }
+      ) t2 = additive_term
+    )?
+    { if (op != expr::OP_LAST) t = STATE->mk_term(op, t, t2); }
   ;
 
 /** Associative reading, evaluate from left to right. */
-additive_term 
-  : multiplicative_term ((OP_ADD | OP_SUB) multiplicative_term)*
+additive_term returns [expr::term_ref t] 
+@declarations{
+  expr::term_op op;
+} 
+  : t1 = multiplicative_term { t = t1; } 
+    (
+      ( OP_ADD { op = expr::TERM_ADD; } 
+      | OP_SUB { op = expr::TERM_SUB; }
+      ) 
+      t2 = multiplicative_term { t = STATE->mk_term(op, t, t2); } 
+    )*
   ;
 
 /** Associative reading, evaluate from left to right. */
-multiplicative_term 
-  : unary_nonboolean_term ((OP_MUL | OP_DIV | KW_MOD | KW_DIV) unary_nonboolean_term)*
+multiplicative_term returns [expr::term_ref t] 
+@declarations{
+  expr::term_op op;
+}
+  : t1 = unary_nonboolean_term { t = t1; } 
+    (
+      ( OP_MUL { op = expr::TERM_MUL; } 
+      | OP_DIV { op = expr::TERM_DIV; }
+      | KW_MOD { op = expr::TERM_MOD; }
+      | KW_DIV { op = expr::TERM_DIV; }
+      ) 
+      t2 = unary_nonboolean_term { t = STATE->mk_term(op, t, t2); } 
+    )*
   ;
 
-unary_nonboolean_term 
-  : OP_SUB unary_nonboolean_term
-  | update_term
-  ;
-
-update_term 
-  : base_term (KW_WITH term_access+ ':=' base_term)*
+unary_nonboolean_term returns [expr::term_ref t]
+  : OP_SUB t_sub = unary_nonboolean_term { t = STATE->mk_term(expr::TERM_SUB, t_sub); } 
+  | t_base = base_term { t = t_base; }
   ;
 
 /** 
  * Base term is a non-breakable unit with potential let declaration ahead of it.
  */
-base_term 
-  : KW_LET let_declarations KW_IN base_term
-  | base_term_prefix base_term_suffix* 
+base_term returns [expr::term_ref t]
+  : KW_LET { STATE->push_scope(); } 
+      let_declarations 
+    KW_IN 
+      t_let = base_term { STATE->pop_scope(); t = t_let; }
+  | t_prefix = base_term_prefix { t = t_prefix; }  
+    (t_with_suffix = base_term_suffix[t_prefix] { t_prefix = t_with_suffix; } )* { t = t_prefix; }
   ;
 
-base_term_prefix 
-  : identifier '\''?
-  | rational_constant
-  | '[' '[' index_var_declaration ']' term ']'
-  | '(#' record_entry (',' record_entry)* '#)' 
-  | '(' term_list ')' 
-  | conditional_term
+base_term_prefix returns [expr::term_ref t] 
+@declarations{
+  std::string id;
+  std::vector<expr::term_ref> terms;
+  bool next = false;
+  parser::var_declarations_ctx var_ctx;
+  expr::term_manager::id_to_term_map rec_map;
+} 
+  : identifier[id] ('\'' { next = true; })? { t = STATE->get_variable(id, next); }
+  | r = rational_constant { t = STATE->mk_rational_constant(r); }
+  | '[' '[' index_var_declaration[var_ctx] ']' { STATE->start_indexed_array(var_ctx); }
+        t_array = term 
+    ']' { t = STATE->finish_indexed_array(t_array); }
+  | '(#' record_entry[rec_map] (',' record_entry[rec_map])* '#)' { t = STATE->mk_record(rec_map); } 
+  | '(' term_list[terms] ')' { t = (terms.size() == 1) ? terms[0] : STATE->mk_tuple(terms); } 
+  | t_cond = conditional_term { t = t_cond; }
   ;
 
-conditional_term 
-  : KW_IF   term
-    KW_THEN term
-    ('ELSIF' term KW_THEN term)*   
-    KW_ELSE term
+conditional_term returns [expr::term_ref t]
+@declarations{
+  std::vector<expr::term_ref> ite_terms;
+}
+  : KW_IF   t_cond = term { ite_terms.push_back(t_cond); }
+    KW_THEN t_then = term { ite_terms.push_back(t_then); }
+    (
+     KW_ELSIF t_else1 = term { ite_terms.push_back(t_else1); } 
+     KW_THEN t_else2 = term { ite_terms.push_back(t_else2); }
+    )* 
+    KW_ELSE t_else = term { ite_terms.push_back(t_else); }
     KW_ENDIF
+    { t = STATE->mk_ite(ite_terms); }
   ;
 
-base_term_suffix 
-  : term_argument
-  | term_access
+base_term_suffix[expr::term_ref prefix] returns [expr::term_ref t]
+@declarations{
+  std::vector<expr::term_ref> args;
+}
+  : term_argument[args] { t = STATE->mk_fun_app(prefix, args); }
+  | t1 = term_access { t = STATE->mk_term_access(prefix, t1); } 
   ;
 
 let_declarations 
   : let_declaration (',' let_declaration)*
   ;
 
-let_declaration 
-  : identifier (':' type)? '=' term
+let_declaration
+@declarations{
+  std::string id;
+} 
+  : identifier[id] 
+    (':' t_type = type )? 
+    OP_EQ 
+    t_term = term { STATE->define_var_in_scope(id, t_type, t_term); }
   ;
 
-record_entry 
-  : identifier ':=' term
+record_entry[expr::term_manager::id_to_term_map& str_term_map] 
+@declarations{
+  std::string id;
+}
+  : identifier[id] ':=' t = term { STATE->add_to_map(str_term_map, id, t); }
   ;
 
-set_term 
-  : '{' identifier ':' type '|' term '}'
-  | '{' (term (',' term)*)? '}'
+set_term[expr::term_ref in_arg] returns [expr::term_ref t]
+@declarations{
+  std::string id;
+  std::vector<expr::term_ref> set_elements;
+}
+  : '{' 
+        identifier[id] ':' t1 = type '|' { STATE->start_set_abstraction(in_arg, id, t1); }
+        t2 = term 
+    '}' { t = t2; STATE->end_set_abstraction(); }
+  | '{' (
+        t3 = term { set_elements.push_back(t3); }
+        (',' t4 = term { set_elements.push_back(t4); } )*
+        )? 
+    '}' { t = STATE->mk_set_enumeration(in_arg, set_elements); }
   ;
 
-term_argument
-  : '(' term_list ')' 
+term_argument[std::vector<expr::term_ref>& terms]
+  : '(' term_list[terms] ')' 
   ;
 
-term_list 
-  : term (',' term )* 
+term_list[std::vector<expr::term_ref>& terms] 
+  : t1 = term { terms.push_back(t1); } 
+    (',' t2 = term { terms.push_back(t2); } )* 
   ;
 
-index_var_declaration 
-  : identifier ':' index_type
+index_var_declaration[parser::var_declarations_ctx& var_ctx]
+@declarations{
+  std::string id;
+} 
+  : identifier[id] ':' t = index_type { var_ctx.add(id, t); }
   ;
 
-identifier_list 
-  : identifier (',' identifier)* 
+identifier_list[parser::var_declarations_ctx& var_ctx]
+@declarations{
+  std::string id;
+}
+  : identifier[id] { var_ctx.add(id); }  
+    (',' identifier[id] { var_ctx.add(id); } )* 
   ;
 
-pidentifier_list 
-  : identifier_list;
+pidentifier_list[parser::var_declarations_ctx& var_ctx]
+  : identifier_list[var_ctx];
 
-var_declaration 
-  : identifier_list ':' type 
+var_declaration[parser::var_declarations_ctx& var_ctx] 
+  : identifier_list[var_ctx] ':' t = type { var_ctx.add(t); } 
   ;
 
-var_declaration_list 
-  : var_declaration (',' var_declaration)*
+var_declaration_list[parser::var_declarations_ctx& var_ctx] 
+  : var_declaration[var_ctx] (',' var_declaration[var_ctx])*
   ;
 
 /* The Transition Language */
 
-lvalue 
-  : identifier '\''? term_access*
+lvalue returns [expr::term_ref t] 
+@declarations{
+  std::string id;
+  bool next = false;
+  std::vector<expr::term_ref> accessors; 
+}
+  : identifier[id] ('\'' { next = true; })? 
+    { t = STATE->get_variable(id, next); }
+    ( t1 = term_access { accessors.push_back(t1); })*
+    { t = STATE->mk_term_access(t, accessors); }
   ;
 
-term_access 
-  : '[' term ']' 
-  | '.' identifier
+term_access returns [expr::term_ref t]
+@declarations{
+  std::string id;
+}
+  : '[' i = term ']'   { t = i; }
+  | '.' identifier[id] { t = STATE->mk_string(id); }
   ;
 
-rhs_definition 
-  : OP_EQ term 
-  | KW_IN set_term 
+rhs_definition[expr::term_ref lhs] returns [expr::term_ref t] 
+  : OP_EQ rhs = term { t = STATE->mk_term(expr::TERM_EQ, lhs, rhs); }  
+  | KW_IN t1 = set_term[lhs] { t = t1; } 
   ;
 
-simple_definition 
-  : lvalue rhs_definition
+simple_definition returns [expr::term_ref t] 
+  : t1 = lvalue t2 = rhs_definition[t1] { t = t2; }
   ;
 
-forall_definition 
-  : '(' KW_FORALL '(' var_declaration_list ')' ':' definition_list ')' 
+forall_definition returns [expr::term_ref t] 
+@declarations{
+  parser::var_declarations_ctx var_ctx;
+}
+  : '(' KW_FORALL 
+      '(' var_declaration_list[var_ctx] { STATE->start_quantifier(var_ctx); } ')' 
+        ':' body = definition_list 
+    ')' 
+    { t = STATE->finish_quantifier(expr::TERM_FORALL, body); }
   ;
 
 /**
@@ -324,17 +543,21 @@ forall_definition
  * constrains state variable z, which is a record whose foo component is a 
  * tuple, whose first component in turn is an array of the same type as y.
  */
-definition 
-  : simple_definition 
-  | forall_definition 
+definition returns [expr::term_ref t] 
+  : t_simple = simple_definition { t = t_simple; } 
+  | t_forall = forall_definition { t = t_forall; } 
   ;
 
-definition_list
-  : definition (';' definition)* ';'?
+/** Definitions return a conjunction of definitions (or a single definition) */
+definition_list returns [expr::term_ref t]
+  : t1 = definition { t = t1; } 
+    (';' t2 = definition { STATE->mk_term(expr::TERM_AND, t, t2); })* 
+    ';'?
   ;
 
-assignments 
-  : simple_definition (';' simple_definition)* ';'?
+assignments[std::vector<expr::term_ref>& a] 
+  : t1 = simple_definition { a.push_back(t1); } 
+    (';' t2 = simple_definition { a.push_back(t2); })* ';'?
   ;
 
 /** 
@@ -344,9 +567,12 @@ assignments
  * part is a list of equalities between a left-hand side next state variable and 
  * a right-hand side expression in current and next state variables.
  */
-guarded_command 
-  : term '-->' assignments?
-  | KW_ELSE '-->' assignments? 
+guarded_command returns [expr::term_ref t] 
+@declarations{
+  std::vector<expr::term_ref> a;
+}
+  : guard = term '-->' assignments[a]? { STATE->mk_term_from_guarded(guard, a); }
+  | KW_ELSE '-->' assignments[a]?  { STATE->mk_term_from_guarded(expr::term_ref(), a); }
   ;
 
 /* The Module Language */
@@ -356,8 +582,8 @@ guarded_command
  * Modules can be independently analyzed for properties and composed 
  * synchronously or asynchronously.
  */
-module 
-  : synchronous_module_composition 
+module returns [parser::sal::module::ref m]
+  : m1 = synchronous_module_composition { m = m1; } 
   ;  
 
 /**
@@ -370,8 +596,9 @@ module
  * - Two guarded initializations are combined by conjoining the guards and by 
  *   taking the union of the assignments. 
  */
-synchronous_module_composition
-  : asynchronous_module_composition (OP_SYNC asynchronous_module_composition)*
+synchronous_module_composition returns [parser::sal::module::ref m]
+  : m1 = asynchronous_module_composition { m = m1; }
+    (OP_SYNC m2 = asynchronous_module_composition { m = STATE->composition(m, m2, parser::sal::SAL_COMPOSE_SYNCHRONOUS); } )*
   ;  
 
 /**
@@ -379,27 +606,69 @@ synchronous_module_composition
  * conjunction of the initializations, and the interleaving of the transitions 
  * of the two modules.
  */
-asynchronous_module_composition
-  : unary_module_modifier (OP_ASYNC unary_module_modifier)*
+asynchronous_module_composition returns [parser::sal::module::ref m]
+  : m1 = unary_module_modifier { m = m1; } 
+    (OP_ASYNC m2 = unary_module_modifier { m = STATE->composition(m, m2, parser::sal::SAL_COMPOSE_ASYNCHRONOUS); } )*
   ; 
   
 /** Prefix module operations */
-unary_module_modifier
-  : OP_SYNC '(' index_var_declaration ')' ':' unary_module_modifier
-  | OP_ASYNC '(' index_var_declaration ')' ':' unary_module_modifier
-  | KW_LOCAL pidentifier_list KW_IN unary_module_modifier
-  | KW_OUTPUT pidentifier_list KW_IN unary_module_modifier
-  | KW_RENAME rename_list KW_IN unary_module_modifier
-  | KW_WITH new_var_declaration_list unary_module_modifier
-  | KW_OBSERVE module KW_WITH unary_module_modifier
-  | module_base
+unary_module_modifier returns [parser::sal::module::ref m]
+@declarations{
+  parser::var_declarations_ctx var_ctx;
+  expr::term_manager::id_to_term_map subst_map;
+}
+  : // Synchronous composition 
+    { m = STATE->start_module(); }
+    OP_SYNC '(' index_var_declaration[var_ctx] ')' ':' 
+    { STATE->start_indexed_composition(var_ctx); }
+    m_sync = unary_module_modifier
+    { STATE->finish_indexed_composition(m_sync, m, parser::sal::SAL_COMPOSE_SYNCHRONOUS); }
+    { STATE->finish_module(m); }
+    
+  | // Asynchronous composition 
+    { m = STATE->start_module(); }
+    OP_ASYNC '(' index_var_declaration[var_ctx] ')' ':' 
+    m_async = unary_module_modifier
+    { STATE->finish_module(m); }
+    
+  | // Make listed variables *local* 
+    { m = STATE->start_module(); }
+    KW_LOCAL pidentifier_list[var_ctx] KW_IN m_local = unary_module_modifier
+    { STATE->load_module_to_module(m_local, m); }
+    { STATE->change_module_variables_to(m, var_ctx, parser::sal::SAL_VARIABLE_LOCAL); }
+    { STATE->finish_module(m); }
+      
+  | // Make listed variables *output*
+    { m = STATE->start_module(); }
+    KW_OUTPUT pidentifier_list[var_ctx] KW_IN unary_module_modifier
+    { STATE->load_module_to_module(m_local, m); }
+    { STATE->change_module_variables_to(m, var_ctx, parser::sal::SAL_VARIABLE_OUTPUT); }
+    { STATE->finish_module(m); }
+      
+  | // Make a module while renaming some variables 
+    { m = STATE->start_module(); }
+    KW_RENAME rename_list[subst_map] KW_IN unary_module_modifier
+    { STATE->finish_module(m); }
+    
+  | // Module *with* some new variables
+    { m = STATE->start_module(); } 
+    KW_WITH new_var_declaration_list[m] m_with = unary_module_modifier
+    { STATE->load_module_to_module(m_with, m); }
+    { STATE->finish_module(m); }
+    
+  | // Make an obsurver module 
+    { m = STATE->start_module(); }
+    KW_OBSERVE module KW_WITH unary_module_modifier
+    { STATE->finish_module(m); }
+        
+  | m_base = module_base { m = m_base; }
   ;
 
 /** The base of the module expressions */
-module_base
-  : module_name
-  | base_module
-  | ('(' module ')') 
+module_base returns [parser::sal::module::ref m]
+  : m_ref = module_name { STATE->load_module_to_module(m_ref, m); }
+  | m_base = base_module { m = m_base; }
+  | ('(' m_bracket = module ')') { m = m_bracket; }
   ;
 
 /**
@@ -410,40 +679,52 @@ module_base
  * same as if there was a prescribed order, with each class of variable and 
  * section being the union of the individual declarations.
  */
-base_module
-  : KW_BEGIN base_declaration_list KW_END
+base_module returns [parser::sal::module::ref m]
+  : { m = STATE->start_module(); }
+    KW_BEGIN base_declaration_list[m] KW_END
+    { STATE->finish_module(m); }
   ;
 
-base_declaration_list 
-  : base_declaration* 
+base_declaration_list[parser::sal::module::ref m]
+  : base_declaration[m]* 
   ;
 
-base_declaration 
-  : input_declaration 
-  | output_declaration 
-  | global_declaration 
-  | local_declaration 
-  | definition_declaration 
-  | invariant_declaration // TODO: maybe remove
-  | init_formula_declaration 
-  | initialization_declaration 
-  | transition_declaration
+base_declaration[parser::sal::module::ref m]
+@declarations{
+  parser::var_declarations_ctx vars_ctx;
+}
+  : input_declaration[vars_ctx] { STATE->declare_variables(m, parser::sal::SAL_VARIABLE_INPUT, vars_ctx); }
+  | output_declaration[vars_ctx] { STATE->declare_variables(m, parser::sal::SAL_VARIABLE_OUTPUT, vars_ctx); }
+  | global_declaration[vars_ctx] { STATE->declare_variables(m, parser::sal::SAL_VARIABLE_GLOBAL, vars_ctx); }
+  | local_declaration[vars_ctx] { STATE->declare_variables(m, parser::sal::SAL_VARIABLE_LOCAL, vars_ctx); }
+  | definition_declaration[m] 
+  | invariant_declaration[m]
+  | init_formula_declaration[m] 
+  | initialization_declaration[m]
+  | transition_declaration[m]
   ;
 
-rename_list 
-  : rename (',' rename)*
+rename_list[expr::term_manager::id_to_term_map& m] 
+  : rename[m] (',' rename[m])*
   ;
 
-rename 
-  : lvalue KW_TO lvalue
+rename [expr::term_manager::id_to_term_map& m]
+@declarations{
+  std::string id;
+}
+  : identifier[id] KW_TO t2 = lvalue { STATE->add_to_map(m, id, t2); } 
   ;
 
-module_name 
-  : identifier module_actuals
+module_name returns [parser::sal::module::ref m]
+@declarations{
+  std::string id;
+  std::vector<expr::term_ref> args;
+}
+  : identifier[id] module_actuals[args] { m = STATE->get_module(id, args); }
   ;
 
-module_actuals 
-  : ('[' term_list ']')?
+module_actuals[std::vector<expr::term_ref>& args] 
+  : ('[' term_list[args] ']')?
   ;
 
 /* Declarations within modules */
@@ -460,20 +741,20 @@ module_actuals
  */
 
 
-input_declaration 
-  : KW_INPUT var_declaration_list
+input_declaration[parser::var_declarations_ctx& var_ctx] 
+  : KW_INPUT var_declaration_list[var_ctx]
   ;
 
-output_declaration 
-  : KW_OUTPUT var_declaration_list
+output_declaration[parser::var_declarations_ctx& var_ctx] 
+  : KW_OUTPUT var_declaration_list[var_ctx]
   ;
 
-global_declaration 
-  : KW_GLOBAL var_declaration_list
+global_declaration[parser::var_declarations_ctx& var_ctx] 
+  : KW_GLOBAL var_declaration_list[var_ctx]
   ;
 
-local_declaration
-  : KW_LOCAL var_declaration_list
+local_declaration[parser::var_declarations_ctx& var_ctx]
+  : KW_LOCAL var_declaration_list[var_ctx]
   ;
 
 /**
@@ -484,8 +765,8 @@ local_declaration
  * inputs, for example, a boolean variable that becomes true when the 
  * temperature goes above a specified value.
  */
-definition_declaration
-  : KW_DEFINITION definition_list
+definition_declaration[parser::sal::module::ref m]
+  : KW_DEFINITION t = definition_list { STATE->add_definition(m, t); }
   ;
 
 /**
@@ -503,8 +784,11 @@ definition_declaration
  * assignments violate the guard the assignments are undone and a new guarded 
  * initialization is selected. 
  */
-initialization_declaration 
-  : KW_INITIALIZATION definition_or_command (';' definition_or_command)* ';'?
+initialization_declaration[parser::sal::module::ref m]
+  : KW_INITIALIZATION 
+      t1 = definition_or_command { STATE->add_initialization(m, t1); }  
+      (';' t2 = definition_or_command { STATE->add_initialization(m, t2); } )* 
+      ';'?
   ;
 
 /**
@@ -517,55 +801,72 @@ initialization_declaration
  * after the assignments have been made, and if they are false the assignments 
  * must be undone and a new guarded transition selected.
  */
-transition_declaration 
-  : KW_TRANSITION definition_or_command (';' definition_or_command)* ';'?
+transition_declaration[parser::sal::module::ref m] 
+  : KW_TRANSITION 
+      t1 = definition_or_command { STATE->add_transition(m, t1); }
+      (';' t2 = definition_or_command { STATE->add_transition(m, t2); })* 
+      ';'?
   ; 
  
-invariant_declaration
-  : KW_INVARIANT term
+invariant_declaration[parser::sal::module::ref m]
+  : KW_INVARIANT t = term { STATE->add_invariant(m, t); }
   ;
 
-init_formula_declaration 
-  : KW_INITFORMULA term
+init_formula_declaration[parser::sal::module::ref m]
+  : KW_INITFORMULA t = term { STATE->add_init_formula(m, t); }
   ;
 
-multi_command 
-  : '(' OP_ASYNC '(' var_declaration_list ')' ':' some_command ')' 
+multi_command returns [expr::term_ref t]
+@declarations{
+  parser::var_declarations_ctx arg_ctx;
+} 
+  : '(' OP_ASYNC 
+        '(' var_declaration_list[arg_ctx] ')' { STATE->start_quantifier(arg_ctx); }
+        ':' body = some_command { t = STATE->finish_quantifier(expr::TERM_FORALL, body); } 
+    ')' 
   ;
 
-some_command 
-  : (identifier ':') ? guarded_command 
-  | (identifier ':') ? multi_command 
+some_command returns [expr::term_ref t] 
+@declarations{
+  std::string id;
+}
+  : (identifier[id] ':') ? t_guarded = guarded_command { t = t_guarded; } 
+  | (identifier[id] ':') ? t_multi = multi_command { t = t_multi; } 
   ;
 
-some_commands 
-  : some_command (OP_ASYNC some_command)*
+some_commands[std::vector<expr::term_ref>& cmd_out]
+  : t1 = some_command { cmd_out.push_back(t1); } 
+    (OP_ASYNC t2 = some_command { cmd_out.push_back(t2); })*
   ;
 
-definition_or_command
-  : definition
-  | ('[' some_commands ']')
+definition_or_command returns [expr::term_ref t]
+@declarations{
+  std::vector<expr::term_ref> cmds;
+}
+  : t_def = definition { t = t_def; }
+  | ('[' some_commands[cmds] ']') { t = STATE->mk_term_from_commands(cmds); }
   ;
 
-new_var_declaration 
-  : input_declaration 
-  | output_declaration 
-  | global_declaration
+/** Declare new variables in the given module */
+new_var_declaration[parser::sal::module::ref m]
+@declarations{
+  parser::var_declarations_ctx vars_ctx;
+} 
+  : input_declaration[vars_ctx] { STATE->declare_variables(m, parser::sal::SAL_VARIABLE_INPUT, vars_ctx); }
+  | output_declaration[vars_ctx] { STATE->declare_variables(m, parser::sal::SAL_VARIABLE_OUTPUT, vars_ctx); }
+  | global_declaration[vars_ctx] { STATE->declare_variables(m, parser::sal::SAL_VARIABLE_GLOBAL, vars_ctx); }
   ;
 
-new_var_declaration_list 
-  : new_var_declaration (';' new_var_declaration)*
+new_var_declaration_list[parser::sal::module::ref m] 
+  : new_var_declaration[m] (';' new_var_declaration[m])*
   ;
 
-type_declarations 
-  : identifier_list ':' KW_TYPE;
-
-identifier 
-  : IDENTIFIER
+identifier[std::string& id] 
+  : IDENTIFIER { id = STATE->token_text($IDENTIFIER); }
   ;
 
-rational_constant
-  : NUMERAL ('.' NUMERAL)?
+rational_constant returns [expr::rational rat]
+  : n1 = NUMERAL ('.' n2 = NUMERAL )? { rat = STATE->mk_rational(n1, n2); }
   ;
 
 /** Numerals */
@@ -578,6 +879,7 @@ KW_CONTEXT: C O N T E X T;
 KW_CLAIM: C L A I M;
 KW_DEFINITION: D E F I N I T I O N;
 KW_DIV: D I V;
+KW_ELSIF: E L S I F;
 KW_ELSE: E L S E;
 KW_ENDIF: E N D I F;
 KW_END: E N D;
@@ -606,8 +908,16 @@ KW_TYPE: T Y P E;
 KW_TO: T O;
 KW_WITH: W I T H;
 
+/** Types */
+KW_BOOLEAN: B O O L (E A N)?;
+KW_INTEGER: I N T E G E R;
+KW_NATURAL: N A T (U R A L)?;
+KW_NZNAT: N Z N A T;
+KW_REAL: R E A L;
 
 /** Boolean opearators */
+KW_TRUE: T R U E;
+KW_FALSE: F A L S E;
 KW_AND: A N D;
 KW_OR: O R;
 KW_XOR: X O R;

@@ -19,59 +19,43 @@
 #pragma once
 
 #include "expr/term_manager.h"
-#include "expr/model.h"
 #include "expr/gc_participant.h"
 #include "system/context.h"
+
 #include <string>
-#include "../system/trace_helper.h"
 
 namespace sally {
+namespace ai {
 
 /**
- * Abstract abstract analyzer, an entry point for creating new analyzers.
+ * Abstract interpreter class, and an entry point for creating new engines.
  */
-class analyzer : public expr::gc_participant {
+class abstract_interpreter : public expr::gc_participant {
 
   /** The context */
   const system::context& d_ctx;
 
 protected:
 
-  /** Returns the context of the analyzer */
+  /** Returns the context of the engine */
   const system::context& ctx() const;
 
-  /** Returns the term manager of the analyzer */
+  /** Returns the term manager of the engine */
   expr::term_manager& tm() const;
 
 public:
 
-  /** Create the analyzer for the transition system */
-  analyzer(const system::context& ctx);
+  /** Create the engine */
+  abstract_interpreter(const system::context& ctx);
 
-  /** Destructor */
   virtual
-  ~analyzer();
+  ~abstract_interpreter() {};
 
-  /** Start the analyzer with the transition system and the property of interest */
+  /** Run the interpreter on the engine */
   virtual
-  void start(const system::transition_system* ts, const system::state_formula* p) = 0;
-
-  /** Reset error */
-  virtual
-  void clear() = 0;
-
-  /** Notification of new reachable states at frame k */
-  virtual
-  void notify_reachable(system::trace_helper* trace) = 0;
-
-  /** Notification of unreachable states at frame k */
-  virtual
-  void notify_unreachable(size_t k, const expr::model::ref m) = 0;
-
-  /** Output new inferences (potential invariants) */
-  virtual
-  void infer(std::vector<expr::term_ref>& output) = 0;
+  void run(const system::transition_system* ts, std::vector<system::state_formula*>& out) = 0;
 
 };
 
+}
 }

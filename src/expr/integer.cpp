@@ -96,9 +96,16 @@ integer& integer::operator -= (const integer& other) {
 integer integer::operator * (const integer& other) const {
   return integer(d_gmp_int * other.d_gmp_int);
 }
+
 integer& integer::operator *= (const integer& other) {
   d_gmp_int *= other.d_gmp_int;
   return *this;
+}
+
+integer integer::pow(unsigned long n) const {
+  mpz_class result;
+  mpz_pow_ui(result.get_mpz_t(), d_gmp_int.get_mpz_t(), n);
+  return integer(result);
 }
 
 bool integer::operator < (const integer& other) const {

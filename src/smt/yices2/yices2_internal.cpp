@@ -351,6 +351,11 @@ public:
   , d_conversion_cache(cache)
   {}
 
+  // Non-null terms are good
+  bool is_good_term(expr::term_ref t) const {
+    return !t.is_null();
+  }
+
   // Get the children of t
   void get_children(expr::term_ref t, std::vector<expr::term_ref>& children) {
     const expr::term& t_term = d_tm.term_of(t);
@@ -661,6 +666,11 @@ public:
   {
     d_bv0 = d_tm.mk_bitvector_constant(expr::bitvector(1, 0));
     d_bv1 = d_tm.mk_bitvector_constant(expr::bitvector(1, 1));
+  }
+
+  // Non-null terms are good
+  bool is_good_term(term_t t) const {
+    return t != NULL_TERM;
   }
 
   // Get the children of t

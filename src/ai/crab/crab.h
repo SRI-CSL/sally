@@ -18,25 +18,30 @@
 
 #pragma once
 
-#include "ai/interval/interval_analyzer.h"
-#include <boost/program_options/options_description.hpp>
+#include "system/context.h"
+#include "ai/ai.h"
 
 namespace sally {
-namespace interval {
+namespace ai {
 
-struct interval_analyzer_info {
+/**
+ * Crab static analyzer.
+ */
+class crab : public abstract_interpreter {
 
-  static void setup_options(boost::program_options::options_description& options) {
-  }
+public:
 
-  static std::string get_id() {
-    return "interval";
-  }
+  /** Construct the interpreter */
+  crab(const system::context& ctx);
 
-  static analyzer* new_instance(const system::context& ctx) {
-    return new interval_analyzer(ctx);
-  }
+  /** Destruct the interpreter */
+  ~crab();
 
+  /** Run the interpreter on the transition system */
+  void run(const system::transition_system* ts, std::vector<system::state_formula*>& out);
+
+  /** Garbage collection */
+  void gc_collect(const expr::gc_relocator& gc_reloc);
 };
 
 }

@@ -41,9 +41,6 @@ solvers::solvers(const system::context& ctx, const system::transition_system* tr
 , d_induction_generalizer(0)
 , d_minimization_solver(0)
 , d_induction_solver_depth(0)
-, d_counterexample_solver(0)
-, d_counterexample_solver_depth(0)
-, d_counterexample_solver_variables_depth(0)
 , d_generate_models_for_queries(false)
 {
 }
@@ -53,7 +50,6 @@ solvers::~solvers() {
   delete d_initial_solver;
   delete d_induction_solver;
   delete d_induction_generalizer;
-  delete d_counterexample_solver;
   delete d_minimization_solver;
   for (size_t k = 0; k < d_reachability_solvers.size(); ++ k) {
     delete d_reachability_solvers[k];
@@ -89,18 +85,11 @@ void solvers::reset(const std::vector<solvers::formula_set>& frames) {
   delete d_induction_generalizer;
   d_induction_generalizer = 0;
 
-  // Reset the counterexample solver
-  delete d_counterexample_solver;
-  d_counterexample_solver = 0;
-  d_counterexample_solver_depth = 0;
-  d_counterexample_solver_variables_depth = 0;
-
   // Reset the minimization solver
   delete d_minimization_solver;
   d_minimization_solver = 0;
 
   assert(d_size == frames.size());
-  ensure_counterexample_solver_depth(d_size-1);
 
   // Add the frame content
   for (size_t k = 0; k < frames.size(); ++ k) {
@@ -137,26 +126,6 @@ void solvers::init_reachability_solver(size_t k) {
         solver->add(d_transition_system->get_initial_states(), smt::solver::CLASS_A);
       }
     }
-  }
-}
-
-void solvers::ensure_counterexample_solver_depth(size_t k) {
-  // Make sure we unrolled the solver variables up to k
-  for (; d_counterexample_solver_variables_depth <= k; ++ d_counterexample_solver_variables_depth) {
-    // Add state variables
-    const std::vector<expr::term_ref>& state_variables = d_trace->get_state_variables(d_counterexample_solver_variables_depth);
-    get_counterexample_solver()->add_variables(state_variables.begin(), state_variables.end(), smt::solver::CLASS_A);
-    // Add input variables to get here
-    if (d_counterexample_solver_variables_depth > 0) {
-      const std::vector<expr::term_ref>& input_variables = d_trace->get_input_variables(d_counterexample_solver_variables_depth-1);
-      get_counterexample_solver()->add_variables(input_variables.begin(), input_variables.end(), smt::solver::CLASS_A);
-    }
-  }
-  // Make sure we unrolled the solver up to k
-  for (; d_counterexample_solver_depth < k; ++ d_counterexample_solver_depth) {
-    // Add transition relation k -> k + 1 to the counter-example solver
-    expr::term_ref T = d_trace->get_transition_formula(d_transition_system->get_transition_relation(), d_counterexample_solver_depth);
-    get_counterexample_solver()->add(T, smt::solver::CLASS_A);
   }
 }
 
@@ -206,39 +175,11 @@ smt::solver* solvers::get_minimization_solver() {
   return d_minimization_solver;
 }
 
-
-smt::solver* solvers::get_counterexample_solver() {
-  if (d_counterexample_solver == 0) {
-    // Make the solver
-    d_counterexample_solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options(), d_ctx.get_statistics());
-    // Add the initial state
-    expr::term_ref I0 = d_trace->get_state_formula(d_transition_system->get_initial_states(), 0);
-    d_counterexample_solver->add(I0, smt::solver::CLASS_A);
-    // Set the depth
-    d_counterexample_solver_depth = 0;
-    d_counterexample_solver_variables_depth = 0;
-  }
-  return d_counterexample_solver;
-}
-
-void solvers::get_counterexample_solver(smt::solver_scope& solver) {
-  solver.set_solver(get_counterexample_solver());
-  solver.set_destructor_notify(new cex_destruct_notify(this));
-}
-
-size_t solvers::get_counterexample_solver_depth() const {
-  return d_counterexample_solver_depth;
-
-}
-
 void solvers::gc() {
   for (size_t i = 0; i < d_reachability_solvers.size(); ++ i) {
     if (d_reachability_solvers[i]) {
       d_reachability_solvers[i]->gc();
     }
-  }
-  if (d_counterexample_solver) {
-    d_counterexample_solver->gc();
   }
   if (d_initial_solver) {
     d_initial_solver->gc();
@@ -251,26 +192,6 @@ void solvers::gc() {
   }
   if (d_reachability_solver) {
     d_reachability_solver->gc();
-  }
-}
-
-void solvers::assert_frame_selection(size_t k, smt::solver* solver) {
-  bool multiple = true;
-
-  if (multiple) {
-    // Add the frame
-    expr::term_ref frame_variable = get_frame_variable(k);
-    solver->add(frame_variable, smt::solver::CLASS_A);
-    // Add the rest
-    for (size_t i = 0; i < d_size; ++ i) {
-      frame_variable = get_frame_variable(i);
-      if (i != k) {
-        solver->add(d_tm.mk_term(expr::TERM_NOT, frame_variable), smt::solver::CLASS_A);
-      }
-    }
-  } else {
-    expr::term_ref frame_variable = get_frame_variable(k);
-    solver->add(frame_variable, smt::solver::CLASS_A);
   }
 }
 
@@ -307,11 +228,6 @@ solvers::query_result solvers::query_with_transition_at(size_t k, expr::term_ref
   scope.push();
   solver->add(f, f_class);
 
-  // Add frame selection if needed
-  if (d_ctx.get_options().get_bool("ic3-single-solver")) {
-    assert_frame_selection(k, solver);
-  }
-
   // Figure out the result
   result.result = solver->check();
   switch (result.result) {
@@ -342,7 +258,7 @@ expr::term_ref solvers::eq_to_ineq(expr::term_ref G) {
   if (G_term.op() == expr::TERM_EQ) {
     expr::term_ref lhs = G_term[0];
     expr::term_ref rhs = G_term[1];
-    if (d_tm.is_subtype_of(d_tm.type_of(lhs), d_tm.real_type())) {
+    if (d_tm.base_type_of(lhs) == d_tm.real_type()) {
       G_new.push_back(d_tm.mk_term(expr::TERM_LEQ, lhs, rhs));
       G_new.push_back(d_tm.mk_term(expr::TERM_GEQ, lhs, rhs));
       return d_tm.mk_and(G_new);
@@ -358,7 +274,7 @@ expr::term_ref solvers::eq_to_ineq(expr::term_ref G) {
       if (t.op() == expr::TERM_EQ) {
         expr::term_ref lhs = t[0];
         expr::term_ref rhs = t[1];
-        if (d_tm.is_subtype_of(d_tm.type_of(lhs), d_tm.real_type())) {
+        if (d_tm.base_type_of(lhs) == d_tm.real_type()) {
           G_new.push_back(d_tm.mk_term(expr::TERM_LEQ, lhs, rhs));
           G_new.push_back(d_tm.mk_term(expr::TERM_GEQ, lhs, rhs));
         } else {
@@ -588,9 +504,6 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
   if (k > 0) {
     // Get the interpolant T_I for: (R_{k-1} and T => T_I, T_I and G unsat
     T_solver->push();
-    if (d_ctx.get_options().get_bool("ic3-single-solver")) {
-      assert_frame_selection(k-1, T_solver);
-    }
     expr::term_ref G_next = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, G);
     T_solver->add(G_next, smt::solver::CLASS_B);
     smt::solver::result T_result = T_solver->check();
@@ -630,18 +543,8 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
   return learnt;
 }
 
-expr::term_ref solvers::get_frame_variable(size_t k) {
-  while (d_frame_variables.size() <= k) {
-    std::stringstream ss;
-    ss << "frame_" << k;
-    expr::term_ref var = d_tm.mk_variable(ss.str(), d_tm.boolean_type());
-    d_frame_variables.push_back(var);
-  }
-  return d_frame_variables[k];
-}
 
 void solvers::gc_collect(const expr::gc_relocator& gc_reloc) {
-  gc_reloc.reloc(d_frame_variables);
 }
 
 void solvers::add_to_reachability_solver(size_t k, expr::term_ref f)  {
@@ -649,23 +552,14 @@ void solvers::add_to_reachability_solver(size_t k, expr::term_ref f)  {
   assert(k > 0);
   assert(k < d_size);
 
-  // Add appropriately
-  if (d_ctx.get_options().get_bool("ic3-single-solver")) {
-    // Add te enabling variable and the implication to enable the assertion
-    expr::term_ref assertion = d_tm.mk_term(expr::TERM_IMPLIES, get_frame_variable(k), f);
-    smt::solver* solver = get_reachability_solver();
-    solver->add(assertion, smt::solver::CLASS_A);
-  } else {
-    // Add directly
-    smt::solver* solver = get_reachability_solver(k);
-    solver->add(f, smt::solver::CLASS_A);
-    if (d_ctx.get_options().get_bool("ic3-check-deadlock")) {
-      smt::solver::result result = solver->check();
-      if (result != smt::solver::SAT) {
-        std::stringstream ss;
-        ss << "ic3: deadlock detected at reachability frame " << k << ".";
-        throw exception(ss.str());
-      }
+  smt::solver* solver = get_reachability_solver(k);
+  solver->add(f, smt::solver::CLASS_A);
+  if (d_ctx.get_options().get_bool("ic3-check-deadlock")) {
+    smt::solver::result result = solver->check();
+    if (result != smt::solver::SAT) {
+      std::stringstream ss;
+      ss << "ic3: deadlock detected at reachability frame " << k << ".";
+      throw exception(ss.str());
     }
   }
 }
@@ -808,13 +702,6 @@ solvers::query_result solvers::check_inductive_model(expr::model::ref m, expr::t
 }
 
 void solvers::new_reachability_frame() {
-  // Make sure we have counter-examples space for 0, ..., size
-  ensure_counterexample_solver_depth(d_size);
-  // Add the frame selection variable if needed
-  if (d_ctx.get_options().get_bool("ic3-single-solver")) {
-    expr::term_ref frame_var = get_frame_variable(d_size);
-    get_reachability_solver()->add_variable(frame_var, smt::solver::CLASS_A);
-  }
   // Increase the size
   d_size ++;
 }
