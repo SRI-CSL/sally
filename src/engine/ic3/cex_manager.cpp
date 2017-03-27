@@ -123,7 +123,7 @@ expr::term_ref cex_manager::get_full_cex(size_t property_id, std::vector<cex_edg
   dijkstra_cmp cmp(dist);
   sp_queue Q(cmp);
 
-    // Mark all roots as sources
+  // Mark all roots as sources
   for (size_t i = 0; i < d_roots.size(); ++ i) {
     if (d_roots[i].property_id == property_id) {
       expr::term_ref A = d_roots[i].A;

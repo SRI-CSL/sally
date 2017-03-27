@@ -75,7 +75,7 @@ class trace_helper : public expr::gc_participant {
   expr::term_manager& tm() const;
 
   /**
-   * Create ta trace for the given type (only transition system can create one.
+   * Create a trace for the given type (only transition system can create one.
    * Others use the helper provided by the transition system.
    */
   trace_helper(const state_type* st);

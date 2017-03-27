@@ -21,6 +21,7 @@
 #include "expr/gc_relocator.h"
 
 #include <sstream>
+#include <cassert>
 
 namespace sally {
 namespace system {
