@@ -30,7 +30,7 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
-#include "../../system/trace_helper.h"
+#include "system/trace_helper.h"
 
 #define unused_var(x) { (void)x; }
 
@@ -115,7 +115,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
   solvers::query_result fwd_result = d_smt->check_inductive(ind.F_fwd);
 
   // If UNSAT we can push it
-  if (fwd_result.result == smt::solver::UNSAT) {    
+  if (fwd_result.result == smt::solver::UNSAT) {
     // It's pushed so add it to induction assumptions
     assert(d_induction_frame.find(ind) != d_induction_frame.end());
     TRACE("ic3") << "ic3: pushed " << ind.F_fwd << std::endl;
@@ -155,6 +155,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
     // If reachable, then G leads to F_cex, and F_cex leads to !P
     if (reachable.r == reachability::REACHABLE) {
       d_property_invalid = true;
+      d_cex_manager.add_edge(cex_result.generalization, ind.F_cex, d_induction_frame_depth, 0);
       return INDUCTION_FAIL;
     }
 
@@ -436,7 +437,91 @@ bool ic3_engine::add_property(expr::term_ref P) {
 
 const system::trace_helper* ic3_engine::get_trace() {
 
-  return 0;
+  MSG(1) << "ic3: constructing counter-example" << std::endl;
+
+  size_t property_id = 0;
+
+  // Get the trace helper we are going to setup
+  system::trace_helper* trace_helper = d_transition_system->get_trace_helper();
+
+  // Get the cex from the cex graph
+  cex_manager::edge_vector cex_edges;
+  expr::term_ref cex_start = d_cex_manager.get_full_cex(property_id, cex_edges);
+  assert(!cex_start.is_null()); // Returns null if no path to property
+
+  // Compoute the size of the counter-example
+  size_t cex_length = 0;
+  for (size_t i = 0; i < cex_edges.size(); ++ i) { cex_length += cex_edges[i].edge_length; }
+
+  // Construct the solver
+  smt::solver* solver = smt::factory::mk_default_solver(tm(), ctx().get_options(), ctx().get_statistics());
+
+  // Add all variables
+  for (size_t k = 0; k <= cex_length; ++ k) {
+    const std::vector<expr::term_ref>& x = trace_helper->get_state_variables(k);
+    solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
+  }
+
+  // Scope for push/pop on the solver
+  smt::solver_scope scope(solver);
+
+  // Get the initial model at s0 
+  scope.push();
+  expr::term_ref I = d_transition_system->get_initial_states(); 
+  I = trace_helper->get_state_formula(I, 0);
+  solver->add(I, smt::solver::CLASS_A);
+  solver->add(cex_start, smt::solver::CLASS_A);
+  TRACE("ic3::cex") << "Starting from " << cex_start << std::endl;
+  cex_start = trace_helper->get_state_formula(cex_start, 0);
+  smt::solver::result res = solver->check();
+  (void)res;
+  assert(res == smt::solver::SAT);
+  expr::model::ref model = solver->get_model();
+  scope.pop();
+
+  // Construct the counter-example
+  size_t current_depth = 0;
+  for (size_t i = 0; i < cex_edges.size(); ++ i) {
+    
+    // Next formula we are trying to reach
+    expr::term_ref cex_next = cex_edges[i].B;
+    // The steps we are taking
+    size_t cex_step = cex_edges[i].edge_length;
+
+    // Push the solver scope
+    scope.push();
+
+    // Assert the previous model as the starting point
+    trace_helper->add_model_to_solver(model, current_depth, current_depth, solver, smt::solver::CLASS_A);
+
+    // Add the transition relation
+    expr::term_ref T = d_transition_system->get_transition_relation(); 
+    for (size_t k = current_depth; k <= current_depth + cex_step; ++ k) {
+      expr::term_ref T_k = trace_helper->get_transition_formula(T, k);
+      solver->add(T_k, smt::solver::CLASS_A);
+    }
+
+    // Add the goal to reach 
+    cex_next = trace_helper->get_state_formula(cex_next, current_depth + cex_step);
+    solver->add(cex_next, smt::solver::CLASS_A);
+
+    // Check for satisfiability (it must be SAT)
+    smt::solver::result res = solver->check();
+    (void)res; // Unused
+    assert(res == smt::solver::SAT);
+
+    // Get the model and add it to the trace
+    model = solver->get_model();
+    trace_helper->set_model(model, current_depth, current_depth + cex_step);
+
+    // Done, pop the solver scope
+    scope.pop();
+
+    // Moving to next depth 
+    current_depth += cex_step;
+  }
+
+  return trace_helper;
 }
 
 void ic3_engine::gc_collect(const expr::gc_relocator& gc_reloc) {

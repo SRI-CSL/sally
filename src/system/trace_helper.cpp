@@ -30,7 +30,9 @@ trace_helper::trace_helper(const state_type* st)
 : gc_participant(st->tm())
 , d_state_type(st)
 , d_model_size(0)
-{}
+{
+  d_model = new expr::model(tm(), false);
+}
 
 size_t trace_helper::size() const {
   return d_state_variables_structs.size();
@@ -149,10 +151,34 @@ expr::model::ref trace_helper::get_model() const {
   return d_model;
 }
 
-void trace_helper::set_model(expr::model::ref m, size_t m_size) {
-  d_model = m;
-  assert(d_model_size <= d_state_variables_structs.size());
-  d_model_size = m_size;
+void trace_helper::set_model(expr::model::ref m, size_t start, size_t end) {
+
+  assert(end < d_state_variables_structs.size());
+
+  // Add individual frames
+  for (size_t k = start; k < end; ++ k) {
+    // State variables
+    const std::vector<expr::term_ref>& state_variables = get_state_variables(k);
+    for (size_t i =  0; i < state_variables.size(); ++ i) {
+      expr::term_ref x = state_variables[i];
+      d_model->set_variable_value(x, m->get_variable_value(x));
+    }
+    // Input variables
+    const std::vector<expr::term_ref>& input_variables = get_input_variables(k);
+    for (size_t i =  0; i < input_variables.size(); ++ i) {
+      expr::term_ref x = state_variables[i];
+      d_model->set_variable_value(x, m->get_variable_value(x));
+    }
+  }
+
+  // Add last frame
+  const std::vector<expr::term_ref>& state_variables = get_state_variables(end);
+  for (size_t i =  0; i < state_variables.size(); ++ i) {
+    expr::term_ref x = state_variables[i];
+    d_model->set_variable_value(x, m->get_variable_value(x));
+  }
+
+  d_model_size = std::max(end + 1, d_model_size);
 }
 
 void trace_helper::to_stream(std::ostream& out) const {
@@ -221,6 +247,42 @@ std::ostream& operator << (std::ostream& out, const trace_helper& trace) {
 
 void trace_helper::gc_collect(const expr::gc_relocator& gc_reloc) {
   gc_reloc.reloc(d_state_variables_structs);
+}
+
+expr::term_ref trace_helper::mk_equality(expr::term_ref x, expr::model::ref m) {
+  expr::value v = m->get_variable_value(x);
+  expr::term_ref v_term = v.to_term(tm());
+  expr::term_ref eq = tm().mk_term(expr::TERM_EQ, x, v_term);
+  return eq;
+}
+
+void trace_helper::add_model_to_solver(expr::model::ref m, size_t start, size_t end, smt::solver* solver, smt::solver::formula_class c) {
+
+  // Add individual frames
+  for (size_t k = start; k < end; ++ k) {
+    // State variables
+    const std::vector<expr::term_ref>& state_variables = get_state_variables(k);
+    for (size_t i =  0; i < state_variables.size(); ++ i) {
+      expr::term_ref x = state_variables[i];
+      expr::term_ref eq = mk_equality(x, m);
+      solver->add(eq, c);
+    }
+    // Input variables
+    const std::vector<expr::term_ref>& input_variables = get_input_variables(k);
+    for (size_t i =  0; i < input_variables.size(); ++ i) {
+      expr::term_ref x = input_variables[i];
+      expr::term_ref eq = mk_equality(x, m);
+      solver->add(eq, c);
+    }
+  }
+
+  // Add last frame
+  const std::vector<expr::term_ref>& state_variables = get_state_variables(end);
+  for (size_t i =  0; i < state_variables.size(); ++ i) {
+    expr::term_ref x = state_variables[i];
+    expr::term_ref eq = mk_equality(x, m);
+    solver->add(eq, c);
+  }
 }
 
 }

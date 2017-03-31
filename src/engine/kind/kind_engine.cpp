@@ -119,7 +119,7 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
       // Get the model
       expr::model::ref m = d_solver_1->get_model();
       // Add model to trace
-      d_trace->set_model(m,k+1);
+      d_trace->set_model(m,0, k);
       return INVALID;
     }
     case smt::solver::UNKNOWN:

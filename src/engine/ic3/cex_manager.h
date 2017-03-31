@@ -71,6 +71,10 @@ private:
   /** The graph */
   cex_graph d_cex_graph;
 
+  /** 
+   * A root of the counter-example: a formula A that intersects with
+   * the initial states can lead to a counter-example of the property.
+   */ 
   struct cex_root {
     expr::term_ref A;
     size_t property_id;
@@ -98,11 +102,15 @@ public:
   /** Mark the node as root of a full counter-example */
   void mark_root(expr::term_ref A, size_t property_id);
 
+  /** Vector of edges that is used in get_full_cex */
+  typedef std::vector<cex_edge> edge_vector;
+
   /**
-   * Get the next element of the counter-example (shortest) for the given
-   * property.
+   * Get the (shortest) counter-example for the given property. If the
+   * counter-example is g0 -> g1 -> g2 -> ... -> gn, the edges will
+   * contain the nodes g1, ..., gn, while the function returns g0.
    */
-  expr::term_ref get_full_cex(size_t property_id, std::vector<cex_edge>& edges) const;
+  expr::term_ref get_full_cex(size_t property_id, edge_vector& edges) const;
 
   /** Print to stream */
   void to_stream(std::ostream& out) const;

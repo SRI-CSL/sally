@@ -23,6 +23,8 @@
 
 #include <boost/heap/fibonacci_heap.hpp>
 
+#include "utils/trace.h"
+
 using namespace sally;
 using namespace ic3;
 
@@ -37,9 +39,11 @@ void cex_manager::clear() {
 
 void cex_manager::add_edge(expr::term_ref A, expr::term_ref B, size_t edge_length, size_t property_id) {
 
+  TRACE("ic3::cex") << "cex_manager: adding edge " << A << " -> " << B << " of length " << edge_length << std::endl;
+
   cex_edge new_edge(B, edge_length, property_id);
 
-  // Don't add duplicate edges
+  // Be careful not to add duplicate edges
   cex_graph::iterator graph_find = d_cex_graph.find(A);
   if (graph_find != d_cex_graph.end()) {
     edge_list& edges = graph_find->second;
@@ -63,13 +67,14 @@ void cex_manager::add_edge(expr::term_ref A, expr::term_ref B, size_t edge_lengt
         }
       }
     }
+  } else {
+    // Add new edge to the graph
+    d_cex_graph[A].push_back(new_edge);
   }
-
-  // Add edge to the graph
-  d_cex_graph[A].push_back(new_edge);
 }
 
 void cex_manager::mark_root(expr::term_ref A, size_t property_id) {
+  TRACE("ic3::cex") << "cex_manager: adding root " << A << std::endl;
   d_roots.push_back(cex_root(A, property_id));
 }
 
@@ -98,15 +103,21 @@ public:
   : dist(dist) {}
 };
 
+/** Previous node information, i.e. A -> B */
 struct prev_info {
+  
+  /** Previous node (A) */
   expr::term_ref node;
+  /** The edge taken (-> B) */
   cex_manager::cex_edge edge;
+
+  /** Constructors */
   prev_info() {}
   prev_info(expr::term_ref node, cex_manager::cex_edge edge)
   : node(node), edge(edge) {}
 };
 
-expr::term_ref cex_manager::get_full_cex(size_t property_id, std::vector<cex_edge>& edges) const {
+expr::term_ref cex_manager::get_full_cex(size_t property_id, edge_vector& edges) const {
 
   // Q: priority queue
   // dist: distance from a source to the node
@@ -141,25 +152,32 @@ expr::term_ref cex_manager::get_full_cex(size_t property_id, std::vector<cex_edg
     expr::term_ref A = Q.top();
     Q.pop();
 
-    // Distance from source to A (if infty skip it)
+    TRACE("ic3::cex") << "cex_manger: dijkstra extending from " << A << "." << std::endl;
+
+    // Distance from source to A (we only push distanced nodes to Q)
     expr::term_ref_hash_map<size_t>::iterator dist_it = dist.find(A);
-    if (dist_it == dist.end()) continue;
+    assert(dist_it != dist.end());
     size_t A_dist = dist_it->second;
-    if (A_dist == infty) continue;
+    assert(A_dist != infty);
 
     // Process the children
     const cex_graph::const_iterator graph_it = d_cex_graph.find(A);
     if (graph_it != d_cex_graph.end()) {
+      // All edges from A
       const edge_list& edges = graph_it->second;
+      // Iterate through edges A -> B
       edge_list::const_iterator edge = edges.begin();
       for (; edge != edges.end(); ++ edge) {
         if (edge->property_id == property_id) {
-          // Neighbor current distance
+          // Neighbor 
           expr::term_ref B = edge->B;
+          TRACE("ic3::cex") << "cex_manger: trying edge to " << B << "." << std::endl;
+          // Neighbor distance
           dist_it = dist.find(B);
           size_t B_dist = dist_it == dist.end() ? infty : dist_it->second;
           // If distance is 0 then B is the property
-          if (B_dist == 0) {
+          if (edge->edge_length == 0) {
+            TRACE("ic3::cex") << "cex_manger: path to " << B << " found." << std::endl;
             property = B;
             break;
           }
@@ -167,11 +185,18 @@ expr::term_ref cex_manager::get_full_cex(size_t property_id, std::vector<cex_edg
           size_t new_dist = A_dist + edge->edge_length;
           // If better, then update
           if (B_dist == infty)  {
-            dist_it->second = new_dist;
+            // Either update, or add new if not there
+            if (dist_it != dist.end()) { dist_it->second = new_dist; }
+            else { dist[B] = new_dist; }
+            // Previous of B is set to A, with the given edge
+            prev[B] = prev_info(A, *edge);
+            // Add to the queue (we went from inf to not inf, so it's not there yet)
             handle[B] = Q.push(B);
           } else if (new_dist < B_dist) {
             dist_it->second = new_dist;
+            // Previous of B is set to A, with the given edge
             prev[B] = prev_info(A, *edge);
+            // Since we're updating it must be that we haven't processed it yet
             Q.increase(handle[B]);
           }
         }
@@ -185,27 +210,29 @@ expr::term_ref cex_manager::get_full_cex(size_t property_id, std::vector<cex_edg
   }
 
   // Reconstruct the path
+  TRACE("ic3::cex") << "cex_manger: reconstructing path." << std::endl;
+  expr::term_ref current = property;
   for(;;) {
-    const expr::term_ref_hash_map<prev_info>::const_iterator prev_find = prev.find(property);
+    TRACE("ic3::cex") << "cex_manger: current = " << current << std::endl;
+    const expr::term_ref_hash_map<prev_info>::const_iterator prev_find = prev.find(current);
     if (prev_find == prev.end()) {
       break; // We found the path
     }
     edges.push_back(prev_find->second.edge);
-    property = prev_find->second.node;
+    current = prev_find->second.node;
   }
 
   // Revers the path and return the source
   std::reverse(edges.begin(), edges.end());
-  return property;
+  return current;
 }
 
 void cex_manager::to_stream(std::ostream& out) const {
-
+  // TODO: output in graphviz format
+  assert(false);
 }
 
 std::ostream& operator << (std::ostream& out, const cex_manager& cm) {
   cm.to_stream(out);
   return out;
 }
-
-
