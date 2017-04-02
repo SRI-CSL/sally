@@ -30,6 +30,7 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+
 #include "system/trace_helper.h"
 
 #define unused_var(x) { (void)x; }
@@ -394,6 +395,10 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   // Add the property we're trying to prove (if not already invalid at frame 0)
   bool ok = add_property(d_property->get_formula());
   if (!ok) {
+#ifndef NDEBUG
+    // Check trace generation if not asked for explicityly
+    if (!ctx().get_options().has_option("show-trace")) { get_trace(); }  
+#endif
     return engine::INVALID;
   }
 
@@ -406,6 +411,18 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   }
 
   MSG(1) << "ic3: search done: " << r << std::endl;
+
+  // Print cex graph if asked
+  if (ctx().get_options().has_option("ic3-output-cex-graph")) {
+    std::string filename = ctx().get_options().get_string("ic3-output-cex-graph");
+    std::ofstream cex_out(filename.c_str());
+    cex_out << expr::set_tm(tm()) << d_cex_manager;
+  }
+
+#ifndef NDEBUG
+  // Check trace generation if not asked for explicityly
+  if (r == engine::INVALID && !ctx().get_options().has_option("show-trace")) { get_trace(); }  
+#endif
 
   return r;
 }
@@ -470,9 +487,9 @@ const system::trace_helper* ic3_engine::get_trace() {
   expr::term_ref I = d_transition_system->get_initial_states(); 
   I = trace_helper->get_state_formula(I, 0);
   solver->add(I, smt::solver::CLASS_A);
-  solver->add(cex_start, smt::solver::CLASS_A);
-  TRACE("ic3::cex") << "Starting from " << cex_start << std::endl;
   cex_start = trace_helper->get_state_formula(cex_start, 0);
+  TRACE("ic3::cex") << "Starting from " << cex_start << std::endl;
+  solver->add(cex_start, smt::solver::CLASS_A);
   smt::solver::result res = solver->check();
   (void)res;
   assert(res == smt::solver::SAT);
@@ -487,6 +504,9 @@ const system::trace_helper* ic3_engine::get_trace() {
     expr::term_ref cex_next = cex_edges[i].B;
     // The steps we are taking
     size_t cex_step = cex_edges[i].edge_length;
+    assert(cex_step > 0);
+
+    TRACE("ic3::cex") << "at " << current_depth << ", step = " << cex_step << std::endl;
 
     // Push the solver scope
     scope.push();
@@ -496,13 +516,15 @@ const system::trace_helper* ic3_engine::get_trace() {
 
     // Add the transition relation
     expr::term_ref T = d_transition_system->get_transition_relation(); 
-    for (size_t k = current_depth; k <= current_depth + cex_step; ++ k) {
+    for (size_t k = current_depth; k < current_depth + cex_step; ++ k) {
       expr::term_ref T_k = trace_helper->get_transition_formula(T, k);
       solver->add(T_k, smt::solver::CLASS_A);
     }
 
     // Add the goal to reach 
+    TRACE("ic3::cex") << "cex_next = " << cex_next << std::endl;
     cex_next = trace_helper->get_state_formula(cex_next, current_depth + cex_step);
+    TRACE("ic3::cex") << "cex_next at " << current_depth + cex_step << " = " << cex_next << std::endl;
     solver->add(cex_next, smt::solver::CLASS_A);
 
     // Check for satisfiability (it must be SAT)

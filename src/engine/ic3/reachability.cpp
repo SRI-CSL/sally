@@ -132,8 +132,9 @@ reachability::result reachability::check_reachable(size_t k, expr::term_ref f, s
           expr::term_ref A = reachability_obligations[i+1].formula();
           d_cex_manager.add_edge(A, B, 1, property_id);
         }
-        break;
       }
+      // Done
+      break;
     }
 
     // Check if the obligation is reachable

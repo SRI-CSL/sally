@@ -25,8 +25,8 @@
 
 #include "utils/trace.h"
 
-using namespace sally;
-using namespace ic3;
+namespace sally {
+namespace ic3 {
 
 cex_manager::cex_manager(expr::term_manager& tm)
 : d_tm(tm)
@@ -50,27 +50,14 @@ void cex_manager::add_edge(expr::term_ref A, expr::term_ref B, size_t edge_lengt
     edge_list::iterator it = edges.begin();
     for (; it != edges.end(); ++ it) {
       if (it->B == B && it->property_id == property_id) {
-        if (it->edge_length == edge_length) {
-          // Already there
-          return;
-        }
-        if (it->edge_length < edge_length) {
-          // Smallest one, insert and done
-          edges.insert(it, new_edge);
-          return;
-        }
-        if (it->edge_length > edge_length) {
-          // Bigger one, insert after
-          it++;
-          edges.insert(it, new_edge);
-          return;
-        }
+        it->edge_length = std::min(edge_length, it->edge_length);
+        return;
       }
     }
-  } else {
-    // Add new edge to the graph
-    d_cex_graph[A].push_back(new_edge);
   }
+  
+  // Add new edge to the graph
+  d_cex_graph[A].push_back(new_edge);
 }
 
 void cex_manager::mark_root(expr::term_ref A, size_t property_id) {
@@ -228,11 +215,51 @@ expr::term_ref cex_manager::get_full_cex(size_t property_id, edge_vector& edges)
 }
 
 void cex_manager::to_stream(std::ostream& out) const {
-  // TODO: output in graphviz format
-  assert(false);
+
+  cex_graph::const_iterator v_it; 
+  
+  out << "digraph ic3 {" << std::endl;
+  out << "  rankdir=LR;" << std::endl;
+  out << std::endl;
+
+  // Mark the roots
+  out << "  node [shape = doublecircle];" << std::endl;
+  for (size_t i = 0; i < d_roots.size(); ++ i) {
+    expr::term_ref v = d_roots[i].A;
+    out << "  node_" << v.index() << ";" << std::endl;
+  }
+  out << std::endl;
+
+  // Define the nodes 
+  out << "  node [shape = circle];" << std::endl;
+  for (v_it = d_cex_graph.begin(); v_it != d_cex_graph.end(); ++ v_it) {
+    // Print the node
+    expr::term_ref v = v_it->first;
+    out << "  node_" << v.index() << ";" << std::endl;
+  }
+  out << std::endl;
+
+  // Print the graph edges
+  for (v_it = d_cex_graph.begin(); v_it != d_cex_graph.end(); ++ v_it) {
+    // Print the list of edges
+    const edge_list& A_edges = v_it->second;
+    edge_list::const_iterator e_it = A_edges.begin();
+    for (; e_it != A_edges.end(); ++ e_it) {
+      out << "  node_" << v_it->first.index() << " -> ";
+      out << "node_" << e_it->B.index() << "[label = \"" << e_it->edge_length << "\"];" << std::endl;
+    }
+    
+    // New one
+    out << std::endl;
+  }
+
+  out << "}" << std::endl;
 }
 
 std::ostream& operator << (std::ostream& out, const cex_manager& cm) {
   cm.to_stream(out);
   return out;
+}
+
+}
 }
