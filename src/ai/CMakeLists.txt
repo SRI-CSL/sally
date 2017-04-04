@@ -3,4 +3,5 @@ add_library(ai
   factory.cpp  
   crab/crab.cpp
 )
-
+ 
+target_link_libraries (ai ${CRABMCMT_LIBRARIES}) 

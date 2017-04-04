@@ -69,6 +69,15 @@ if (Z3_FOUND)
   include_directories(${Z3_INCLUDE_DIR})
 endif()
 
+# Find crab-mcmt
+SET(CRABMCMT_HOME CACHE STRING "Crab-Mcmt installation directory")
+find_package(CrabMcmt)
+if (CRABMCMT_FOUND)
+  add_definitions(-DWITH_CRAB)
+  include_directories(${CRABMCMT_INCLUDE_DIR})
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+endif()
+
 
 # Make sure antlr C runtime is here
 include(ExternalProject) 

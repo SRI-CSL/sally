@@ -45,6 +45,17 @@ make check
 Of course, you can use both Yices2 and MathSAT by adding both options to 
 cmake as expected.
 
+if you have crab installed in the $MD directory, meaning that there
+are $MD/include/crab\_mcmt and $MD/lib directories with crab headers and
+libraries, then configure and build with:
+```bash
+cd build
+cmake .. -DCRABMCMT_HOME=$MD
+make
+make check
+```
+
+
 To compile sally in debug mode then configure and build with
 ```bash
 cd build
