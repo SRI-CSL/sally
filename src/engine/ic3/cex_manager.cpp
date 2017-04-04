@@ -28,11 +28,6 @@
 namespace sally {
 namespace ic3 {
 
-cex_manager::cex_manager(expr::term_manager& tm)
-: d_tm(tm)
-{
-}
-
 void cex_manager::clear() {
   d_cex_graph.clear();
 }
@@ -112,7 +107,7 @@ expr::term_ref cex_manager::get_full_cex(size_t property_id, edge_vector& edges)
   // handle: handle of the node in the priority queue
 
   typedef boost::heap::fibonacci_heap<expr::term_ref, boost::heap::compare<dijkstra_cmp> > sp_queue;
-  typedef typename sp_queue::handle_type sp_queue_handle;
+  typedef sp_queue::handle_type sp_queue_handle;
 
   expr::term_ref_hash_map<size_t> dist;
   expr::term_ref_hash_map<prev_info> prev;

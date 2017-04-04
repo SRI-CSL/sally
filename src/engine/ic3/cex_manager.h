@@ -19,7 +19,6 @@
 #pragma once
 
 #include "expr/term.h"
-#include "expr/term_manager.h"
 #include "expr/term_map.h"
 
 #include <list>
@@ -59,9 +58,6 @@ public:
 
 private:
 
-  /** The term manager */
-  expr::term_manager& d_tm;
-
   /** List of edges */
   typedef std::list<cex_edge> edge_list;
 
@@ -86,9 +82,6 @@ private:
   std::vector<cex_root> d_roots;
 
 public:
-
-  /** Create the manager */
-  cex_manager(expr::term_manager& tm);
 
   /**
    * Add a CEX edge. This will increase the reference count of A, and, if
