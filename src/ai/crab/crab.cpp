@@ -71,6 +71,8 @@ void crab::run(const system::transition_system* ts, std::vector<system::state_fo
   // TODO: read the abstract domain from program_options
   abs_domain_t dom = q_polka;
 
+  using namespace crab_mcmt::expr;
+  
   // EXAMPLE of how to build formulas in crab-mcmt
   // TODO: translate from system::transition_system* to crab_mcmt::mcmt_trans_sys 
   ExprFactory efac;    
