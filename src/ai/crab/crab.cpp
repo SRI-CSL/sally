@@ -42,7 +42,7 @@ crab::~crab() {
 void crab::run(const system::transition_system* ts, std::vector<system::state_formula*>& out) {
 
 #ifndef WITH_CRAB
-  cerr () << "Warning: no crab found so do nothing\n";
+  std::cerr () << "Warning: no crab found so do nothing\n";
 #else  
 
   // Run the interpreter
