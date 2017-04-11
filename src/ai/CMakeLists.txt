@@ -13,3 +13,10 @@ endif()
 
 target_link_libraries (ai ${CRABMCMT_LIBRARIES} ${GMPXX_LIBRARY})
 
+## Disable pragma warnings for crab
+set_source_files_properties(
+  crab/crab.cpp  
+  PROPERTIES 
+    COMPILE_FLAGS "-Wno-unknown-pragmas"
+)
+
