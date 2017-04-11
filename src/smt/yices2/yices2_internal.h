@@ -21,7 +21,7 @@
 #ifdef WITH_YICES2
 
 #ifndef __STDC_LIMIT_MACROS
-#define __STDC_LIMIT_MACROS 1
+#define __STDC_LIMIT_MACROS
 #endif
 
 #include <gmp.h>

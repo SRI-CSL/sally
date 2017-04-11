@@ -20,7 +20,9 @@
 
 #ifdef WITH_Z3
 
-#define __STDC_LIMIT_MACROS 1
+#ifndef __STDC_LIMIT_MACROS
+#define __STDC_LIMIT_MACROS
+#endif
 
 #include <gmp.h>
 #include <vector>

@@ -31,7 +31,7 @@
  * includes <stdint.h>).
  */
 #ifndef __STDC_LIMIT_MACROS
-#define __STDC_LIMIT_MACROS 1
+#define __STDC_LIMIT_MACROS
 #endif
 
 #include <map>
