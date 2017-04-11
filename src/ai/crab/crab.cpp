@@ -20,6 +20,8 @@
 
 #include "utils/trace.h"
 
+#include <iostream>
+
 #ifdef WITH_CRAB
 #include "crab_mcmt/crab_mcmt.hpp"
 #endif
@@ -27,8 +29,10 @@
 namespace sally {
 namespace ai {
 
+#ifdef WITH_CRAB
 using namespace crab_mcmt;
-
+#endif
+  
 crab::crab(const system::context& ctx)
 : abstract_interpreter(ctx)
 {
@@ -42,7 +46,7 @@ crab::~crab() {
 void crab::run(const system::transition_system* ts, std::vector<system::state_formula*>& out) {
 
 #ifndef WITH_CRAB
-  std::cerr () << "Warning: no crab found so do nothing\n";
+  std::cerr << "Warning: no crab found so do nothing\n";
 #else  
 
   // Run the interpreter
