@@ -667,7 +667,7 @@ unary_module_modifier returns [parser::sal::module::ref m]
 
 /** The base of the module expressions */
 module_base returns [parser::sal::module::ref m]
-  : m_ref = module_name { STATE->load_module_to_module(m_ref, m); }
+  : m_ref = module_name { m = STATE->start_module(); STATE->load_module_to_module(m_ref, m); STATE->finish_module(m); }
   | m_base = base_module { m = m_base; }
   | ('(' m_bracket = module ')') { m = m_bracket; }
   ;
