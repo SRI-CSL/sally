@@ -172,7 +172,11 @@
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
 	</storageModule>
-	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets">
-		<buildTargets/>
+	<storageModule moduleId="org.eclipse.cdt.core.language.mapping">
+		<project-mappings>
+			<file-mapping configuration="" language="org.eclipse.cdt.core.g++" path="src/parser/btor/btorParser.c"/>
+			<file-mapping configuration="" language="org.eclipse.cdt.core.g++" path="src/parser/mcmt/mcmtParser.c"/>
+			<file-mapping configuration="" language="org.eclipse.cdt.core.g++" path="src/parser/sal/salParser.c"/>
+		</project-mappings>
 	</storageModule>
 </cproject>

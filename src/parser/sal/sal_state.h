@@ -22,7 +22,7 @@
 #include "expr/term_manager.h"
 #include "system/context.h"
 #include "utils/symbol_table.h"
-#include "parser/command.h"
+#include "command/command.h"
 #include "parser/sal/sal_context.h"
 #include "parser/sal/sal_module.h"
 
@@ -110,7 +110,7 @@ public:
   sal_state(const system::context& context);
 
   /** Finalize parsing and return a command representing all the queries */
-  command* finalize();
+  cmd::command* finalize();
 
   /** Returns the term manager for the parser */
   expr::term_manager& tm() const { return d_context.tm(); }

@@ -21,7 +21,6 @@
 #include "engine/factory.h"
 
 #include "smt/factory.h"
-#include "system/state_trace.h"
 #include "utils/trace.h"
 #include "expr/gc_relocator.h"
 
@@ -31,6 +30,8 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+
+#include "system/trace_helper.h"
 
 #define unused_var(x) { (void)x; }
 
@@ -44,11 +45,10 @@ ic3_engine::ic3_engine(const system::context& ctx)
 , d_trace(0)
 , d_invariant(expr::term_ref(), 0)
 , d_smt(0)
-, d_reachability(ctx)
+, d_reachability(ctx, d_cex_manager)
 , d_induction_frame_index(0)
 , d_induction_frame_depth(0)
 , d_induction_frame_depth_count(0)
-, d_induction_cutoff(0)
 , d_induction_frame_next_index(0)
 , d_property_invalid(false)
 , d_learning_type(LEARN_UNDEFINED)
@@ -69,21 +69,18 @@ ic3_engine::ic3_engine(const system::context& ctx)
 }
 
 ic3_engine::~ic3_engine() {
-  delete d_trace;
   delete d_smt;
 }
 
 void ic3_engine::reset() {
   d_transition_system = 0;
   d_property = 0;
-  delete d_trace;
   d_trace = 0;
   d_invariant = engine::invariant(expr::term_ref(), 0);
   d_induction_frame.clear();
   d_induction_frame_index = 0;
   d_induction_frame_depth = 0;
   d_induction_frame_depth_count = 0;
-  d_induction_cutoff = 1;
   d_induction_obligations.clear();
   d_induction_obligations_next.clear();
   d_induction_obligations_count.clear();
@@ -118,7 +115,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
   solvers::query_result fwd_result = d_smt->check_inductive(ind.F_fwd);
 
   // If UNSAT we can push it
-  if (fwd_result.result == smt::solver::UNSAT) {    
+  if (fwd_result.result == smt::solver::UNSAT) {
     // It's pushed so add it to induction assumptions
     assert(d_induction_frame.find(ind) != d_induction_frame.end());
     TRACE("ic3") << "ic3: pushed " << ind.F_fwd << std::endl;
@@ -127,11 +124,6 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
     d_stats.frame_pushed->get_value() = d_induction_obligations_next.size();
     // We're done
     return INDUCTION_SUCCESS;
-  }
-
-  // If more than cutoff, just break
-  if (ind.d >= d_induction_cutoff) {
-    return INDUCTION_FAIL;
   }
 
   expr::term_ref F_fwd_not = tm().mk_not(ind.F_fwd);
@@ -158,11 +150,12 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
     // Therefore i + induction_depth > frame_index, hence we check from i = frame_index - depth + 1 to frame_index
     size_t start = (d_induction_frame_index + 1) - d_induction_frame_depth;
     size_t end = d_induction_frame_index;
-    reachability::status reachable = d_reachability.check_reachable(start, end, cex_result.generalization, cex_result.model);
+    reachability::status reachable = d_reachability.check_reachable(start, end, cex_result.generalization, 0);
 
     // If reachable, then G leads to F_cex, and F_cex leads to !P
     if (reachable.r == reachability::REACHABLE) {
       d_property_invalid = true;
+      d_cex_manager.add_edge(cex_result.generalization, ind.F_cex, d_induction_frame_depth, 0);
       return INDUCTION_FAIL;
     }
 
@@ -184,6 +177,9 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
     d_smt->add_to_induction_solver(F_fwd, solvers::INDUCTION_INTERMEDIATE);
     enqueue_induction_obligation(new_ind);
 
+    // Remember the counter-example
+    d_cex_manager.add_edge(F_cex, ind.F_cex, d_induction_frame_depth, 0);
+
     // We have to learn :(, decrease the score, let others go for a change
     ind.score *= 0.9;
 
@@ -198,7 +194,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
   // Check if it's reachable
   size_t start = (d_induction_frame_index + 1) - d_induction_frame_depth;
   size_t end = d_induction_frame_index;
-  reachability::status reachable = d_reachability.check_reachable(start, end, cti_result.generalization, cti_result.model);
+  reachability::status reachable = d_reachability.check_reachable(start, end, cti_result.generalization, cex_manager::null_property_id);
 
   if (reachable.r == reachability::REACHABLE) {
     // Current obligation is false at reach + depth. So we can move to at most
@@ -211,7 +207,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
     start = d_induction_frame_index + 1;
     end = std::min(reachable.k + d_induction_frame_depth, d_induction_frame_next_index);
     if (start < end) {
-      reachable = d_reachability.check_reachable(start, end, F_fwd_not, expr::model::ref());
+      reachable = d_reachability.check_reachable(start, end, F_fwd_not, cex_manager::null_property_id);
       if (reachable.r == reachability::REACHABLE) {
         // We have to adapt the next index
         d_induction_frame_next_index = reachable.k;
@@ -285,15 +281,13 @@ engine::result ic3_engine::search() {
   // Push frame by frame */
   for(;;) {
 
-    // Set the cutoff
-    d_induction_cutoff = std::numeric_limits<size_t>::max();
     // d_induction_cutoff = d_induction_frame_index + d_induction_frame_depth;
 
     // Set how far we can go
     // d_induction_frame_next_index = d_induction_frame_index + 1;
     d_induction_frame_next_index = d_induction_frame_index + d_induction_frame_depth;
 
-    MSG(1) << "ic3: working on induction frame " << d_induction_frame_index << " (" << d_induction_frame.size() << ") with induction depth " << d_induction_frame_depth << " and cutoff " << d_induction_cutoff << std::endl;
+    MSG(1) << "ic3: working on induction frame " << d_induction_frame_index << " (" << d_induction_frame.size() << ") with induction depth " << d_induction_frame_depth << std::endl;
 
     // Push the current induction frame forward
     push_current_frame();
@@ -383,8 +377,7 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   d_property = sf;
 
   // Make the trace
-  if (d_trace) { delete d_trace; }
-  d_trace = new system::state_trace(sf->get_state_type());
+  d_trace = ts->get_trace_helper();
 
   // Initialize the solvers
   if (d_smt) { delete d_smt; }
@@ -396,12 +389,15 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   // Initialize the induction solver
   d_induction_frame_index = 0;
   d_induction_frame_depth = 1;
-  d_induction_cutoff = 1;
   d_smt->reset_induction_solver(1);
 
   // Add the property we're trying to prove (if not already invalid at frame 0)
   bool ok = add_property(d_property->get_formula());
   if (!ok) {
+#ifndef NDEBUG
+    // Check trace generation if not asked for explicityly
+    if (!ctx().get_options().has_option("show-trace")) { get_trace(); }  
+#endif
     return engine::INVALID;
   }
 
@@ -415,13 +411,30 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 
   MSG(1) << "ic3: search done: " << r << std::endl;
 
+  // Print cex graph if asked
+  if (ctx().get_options().has_option("ic3-output-cex-graph")) {
+    std::string filename = ctx().get_options().get_string("ic3-output-cex-graph");
+    std::ofstream cex_out(filename.c_str());
+    cex_out << expr::set_tm(tm()) << d_cex_manager;
+  }
+
+#ifndef NDEBUG
+  // Check trace generation if not asked for explicityly
+  if (r == engine::INVALID && !ctx().get_options().has_option("show-trace")) { get_trace(); }  
+#endif
+
   return r;
 }
 
 bool ic3_engine::add_property(expr::term_ref P) {
+  // Add to cex manager
+  expr::term_ref P_cex = tm().mk_not(P);
+  d_cex_manager.add_edge(P_cex, P_cex, 0, 0);
+
+  // Check if sat in first frame
   smt::solver::result result = d_smt->query_at_init(tm().mk_not(P));
   if (result == smt::solver::UNSAT) {
-    induction_obligation ind(tm(), P, tm().mk_not(P), /* cex depth */ 0, /* score */ 1);
+    induction_obligation ind(tm(), P, P_cex, /* cex depth */ 0, /* score */ 1);
     if (d_induction_frame.find(ind) == d_induction_frame.end()) {
       // Add to induction frame, we know it holds at 0
       assert(d_induction_frame_depth == 1);
@@ -433,12 +446,103 @@ bool ic3_engine::add_property(expr::term_ref P) {
     d_properties.insert(P);
     return true;
   } else {
+    d_cex_manager.mark_root(P_cex, 0);
     return false;
   }
 }
 
-const system::state_trace* ic3_engine::get_trace() {
-  return d_trace;
+const system::trace_helper* ic3_engine::get_trace() {
+
+  MSG(1) << "ic3: constructing counter-example" << std::endl;
+
+  size_t property_id = 0;
+
+  // Get the trace helper we are going to setup
+  system::trace_helper* trace_helper = d_transition_system->get_trace_helper();
+
+  // Get the cex from the cex graph
+  cex_manager::edge_vector cex_edges;
+  expr::term_ref cex_start = d_cex_manager.get_full_cex(property_id, cex_edges);
+  assert(!cex_start.is_null()); // Returns null if no path to property
+
+  // Compoute the size of the counter-example
+  size_t cex_length = 0;
+  for (size_t i = 0; i < cex_edges.size(); ++ i) { cex_length += cex_edges[i].edge_length; }
+
+  // Construct the solver
+  smt::solver* solver = smt::factory::mk_default_solver(tm(), ctx().get_options(), ctx().get_statistics());
+
+  // Add all variables
+  for (size_t k = 0; k <= cex_length; ++ k) {
+    const std::vector<expr::term_ref>& x = trace_helper->get_state_variables(k);
+    solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
+  }
+
+  // Scope for push/pop on the solver
+  smt::solver_scope scope(solver);
+
+  // Get the initial model at s0 
+  scope.push();
+  expr::term_ref I = d_transition_system->get_initial_states(); 
+  I = trace_helper->get_state_formula(I, 0);
+  solver->add(I, smt::solver::CLASS_A);
+  cex_start = trace_helper->get_state_formula(cex_start, 0);
+  TRACE("ic3::cex") << "Starting from " << cex_start << std::endl;
+  solver->add(cex_start, smt::solver::CLASS_A);
+  smt::solver::result res = solver->check();
+  (void)res;
+  assert(res == smt::solver::SAT);
+  expr::model::ref model = solver->get_model();
+  scope.pop();
+
+  // Construct the counter-example
+  size_t current_depth = 0;
+  for (size_t i = 0; i < cex_edges.size(); ++ i) {
+    
+    // Next formula we are trying to reach
+    expr::term_ref cex_next = cex_edges[i].B;
+    // The steps we are taking
+    size_t cex_step = cex_edges[i].edge_length;
+    assert(cex_step > 0);
+
+    TRACE("ic3::cex") << "at " << current_depth << ", step = " << cex_step << std::endl;
+
+    // Push the solver scope
+    scope.push();
+
+    // Assert the previous model as the starting point
+    trace_helper->add_model_to_solver(model, current_depth, current_depth, solver, smt::solver::CLASS_A);
+
+    // Add the transition relation
+    expr::term_ref T = d_transition_system->get_transition_relation(); 
+    for (size_t k = current_depth; k < current_depth + cex_step; ++ k) {
+      expr::term_ref T_k = trace_helper->get_transition_formula(T, k);
+      solver->add(T_k, smt::solver::CLASS_A);
+    }
+
+    // Add the goal to reach 
+    TRACE("ic3::cex") << "cex_next = " << cex_next << std::endl;
+    cex_next = trace_helper->get_state_formula(cex_next, current_depth + cex_step);
+    TRACE("ic3::cex") << "cex_next at " << current_depth + cex_step << " = " << cex_next << std::endl;
+    solver->add(cex_next, smt::solver::CLASS_A);
+
+    // Check for satisfiability (it must be SAT)
+    smt::solver::result res = solver->check();
+    (void)res; // Unused
+    assert(res == smt::solver::SAT);
+
+    // Get the model and add it to the trace
+    model = solver->get_model();
+    trace_helper->set_model(model, current_depth, current_depth + cex_step);
+
+    // Done, pop the solver scope
+    scope.pop();
+
+    // Moving to next depth 
+    current_depth += cex_step;
+  }
+
+  return trace_helper;
 }
 
 void ic3_engine::gc_collect(const expr::gc_relocator& gc_reloc) {

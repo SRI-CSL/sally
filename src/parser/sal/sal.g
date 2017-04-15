@@ -24,7 +24,7 @@ options {
  
 @parser::includes {
   #include <string>
-  #include "parser/command.h"
+  #include "command/command.h"
   #include "parser/sal/sal_state.h"
   using namespace sally;
 }
@@ -41,7 +41,7 @@ options {
 }
 
 /** SAL context returned as a sequence command. */
-command returns [parser::command* cmd = 0]
+command returns [cmd::command* cmd = 0]
   : context
   | EOF
   ; 

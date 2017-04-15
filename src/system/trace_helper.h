@@ -21,6 +21,7 @@
 #include "expr/model.h"
 #include "expr/gc_participant.h"
 #include "system/state_type.h"
+#include "smt/solver.h"
 
 #include <vector>
 #include <iosfwd>
@@ -28,7 +29,14 @@
 namespace sally {
 namespace system {
 
-class state_trace : public expr::gc_participant {
+/**
+ * Trace helper is a helper class for construcing traces. A trace
+ * helper can be obtained from the transition system. With a trace
+ * helper one can attach useful information to a trace. The simplest
+ * example is constructing a counter-example, where the user of
+ * the helper can attach models to frames of the trace.
+ */
+class trace_helper : public expr::gc_participant {
 
   /** The state type */
   const state_type* d_state_type;
@@ -74,10 +82,21 @@ class state_trace : public expr::gc_participant {
   /** Returns the term manager */
   expr::term_manager& tm() const;
 
-public:
+  /**
+   * Create a trace for the given type (only transition system can create one.
+   * Others use the helper provided by the transition system.
+   */
+  trace_helper(const state_type* st);
 
-  /** Create ta trace for the given type */
-  state_trace(const state_type* st);
+  /** Same for destructor, only transition system can use it */
+  virtual ~trace_helper() {}
+
+  friend class transition_system;
+
+  /** Make an equality x = v, where v is the value of x in the model */
+  expr::term_ref mk_equality(expr::term_ref x, expr::model::ref m);
+
+public:
 
   /** Get the size of the trace */
   size_t size() const;
@@ -113,11 +132,17 @@ public:
    */
   expr::model::ref get_model() const;
 
+  /** 
+   * Adds a part of the given model to the solver as assertions. The part that 
+   * is asserted are the variables for frames start, ..., end. 
+   */
+  void add_model_to_solver(expr::model::ref m, size_t start, size_t end, smt::solver* solver, smt::solver::formula_class c);
+
   /**
    * Add model to the trace (model over trace variables), for frames
-   * 0, ..., size-1.
+   * start, ..., end. All other model variables will not be added.
    */
-  void set_model(expr::model::ref m, size_t size);
+  void set_model(expr::model::ref m, size_t start, size_t end);
 
   /**
    * Check if formula is false in given frame.
@@ -139,7 +164,7 @@ public:
 
 };
 
-std::ostream& operator << (std::ostream& out, const state_trace& trace);
+std::ostream& operator << (std::ostream& out, const trace_helper& trace);
 
 }
 }

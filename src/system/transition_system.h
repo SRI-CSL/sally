@@ -18,9 +18,10 @@
 
 #pragma once
 
-#include "system/state_type.h"
-#include "system/state_formula.h"
-#include "system/transition_formula.h"
+#include "state_type.h"
+#include "state_formula.h"
+#include "transition_formula.h"
+#include "trace_helper.h"
 
 #include <iosfwd>
 
@@ -51,17 +52,22 @@ class transition_system {
     return !d_assumptions.empty();
   }
 
+  /** Invariants */
+  std::vector<state_formula*> d_invariants;
+
+  const std::vector<state_formula*>& get_invariants() const {
+    return d_invariants;
+  }
+
   /** Get the assumptions in one state formula */
   expr::term_ref get_assumption() const;
 
+  /** The trace helper for this transition system */
+  trace_helper* d_trace_helper;
+
 public:
 
-  transition_system(const state_type* state_type, state_formula* initial_states, transition_formula* transition_relation)
-  : d_state_type(state_type)
-  , d_initial_states(initial_states)
-  , d_transition_relation(transition_relation)
-  {}
-
+  transition_system(const state_type* state_type, state_formula* initial_states, transition_formula* transition_relation);
   ~transition_system();
 
   /** Get the state type */
@@ -75,8 +81,14 @@ public:
   /** Get the whole transition relation (disjunction) */
   expr::term_ref get_transition_relation() const;
 
+  /** Get the trace helper */
+  trace_helper* get_trace_helper() const;
+
   /** Add an assumption on the state type (takes over the pointer) */
   void add_assumption(state_formula* assumption);
+
+  /** Add an invariant to the system (takes over the pointer) */
+  void add_invariant(state_formula* invariant);
 
   /** Print it to the stream */
   void to_stream(std::ostream& out) const;

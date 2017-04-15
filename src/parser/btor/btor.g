@@ -24,7 +24,14 @@ options {
  
 @parser::includes {
   #include <string>
-  #include "parser/command.h"
+  #include "command/command.h"
+  #include "command/assume.h"
+  #include "command/declare_state_type.h"
+  #include "command/define_states.h"
+  #include "command/define_transition.h"
+  #include "command/define_transition_system.h"
+  #include "command/query.h"
+  #include "command/sequence.h"  
   #include "parser/btor/btor_state.h"
   using namespace sally;
 }
@@ -41,7 +48,7 @@ options {
 }
 
 /** Parses the file and produces the commands */
-command returns [parser::command* cmd = 0] 
+command returns [cmd::command* cmd = 0] 
   : definition* { 
   	  $cmd = STATE->finalize(); 
     } 

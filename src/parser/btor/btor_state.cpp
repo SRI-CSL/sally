@@ -22,6 +22,14 @@
 #include "expr/term_manager.h"
 #include "expr/gc_relocator.h"
 
+#include "command/assume.h"
+#include "command/declare_state_type.h"
+#include "command/define_states.h"
+#include "command/define_transition.h"
+#include "command/define_transition_system.h"
+#include "command/query.h"
+#include "command/sequence.h"
+
 #include <cassert>
 #include <sstream>
 
@@ -189,7 +197,7 @@ bool btor_state::is_register(size_t index) const {
   return d_variables_next.find(index) != d_variables_next.end();
 }
 
-command* btor_state::finalize() const {
+cmd::command* btor_state::finalize() const {
 
   // Create the state type
   std::vector<std::string> names;
@@ -205,7 +213,7 @@ command* btor_state::finalize() const {
   }
   term_ref state_type_ref = tm().mk_struct_type(names, types);
   system::state_type* state_type = new system::state_type("state_type", tm(), state_type_ref, input_type_ref);
-  command* state_type_declare = new declare_state_type_command("state_type", state_type);
+  cmd::command* state_type_declare = new cmd::declare_state_type("state_type", state_type);
 
   // Get the state variables
   const std::vector<term_ref>& current_vars = state_type->get_variables(system::state_type::STATE_CURRENT);
@@ -250,7 +258,7 @@ command* btor_state::finalize() const {
 
   // Define the transition system
   system::transition_system* transition_system = new system::transition_system(state_type, init_formula, transition_formula);
-  command* transition_system_define = new define_transition_system_command("T", transition_system);
+  cmd::command* transition_system_define = new cmd::define_transition_system("T", transition_system);
 
   // Query
   std::vector<term_ref> bad_children;
@@ -261,10 +269,10 @@ command* btor_state::finalize() const {
   term_ref property = tm().mk_or(bad_children);
   property = tm().mk_term(TERM_EQ, property, d_zero);
   system::state_formula* property_formula = new system::state_formula(tm(), state_type, property);
-  command* query = new query_command(ctx(), "T", property_formula);
+  cmd::command* query = new cmd::query(ctx(), "T", property_formula);
 
   // Make the final command
-  sequence_command* full_command = new sequence_command();
+  cmd::sequence* full_command = new cmd::sequence();
   full_command->push_back(state_type_declare);
   full_command->push_back(transition_system_define);
   full_command->push_back(query);

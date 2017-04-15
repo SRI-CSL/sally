@@ -16,9 +16,12 @@
  * along with sally.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#pragma once
+
 #include "solvers.h"
 #include "reachability.h"
 #include "induction_obligation.h"
+#include "cex_manager.h"
 
 #include "smt/solver.h"
 #include "system/context.h"
@@ -84,13 +87,16 @@ class ic3_engine : public engine {
   const system::state_formula* d_property;
 
   /** The trace we're building for counterexamples */
-  system::state_trace* d_trace;
+  system::trace_helper* d_trace;
 
   /** The invariant, if we prove it */
   engine::invariant d_invariant;
 
   /** The solvers */
   solvers* d_smt;
+
+  /** Manager for counter-examples */
+  cex_manager d_cex_manager;
 
   /** Reachability solver */
   reachability d_reachability;
@@ -133,9 +139,6 @@ class ic3_engine : public engine {
 
   /** How many times we've used the current depth */
   size_t d_induction_frame_depth_count;
-
-  /** Cutoff for the counter-examples */
-  size_t d_induction_cutoff;
 
   /** The content of the induction frame */
   typedef std::set<induction_obligation> induction_frame_type;
@@ -224,7 +227,7 @@ public:
   result query(const system::transition_system* ts, const system::state_formula* sf);
 
   /** Trace */
-  const system::state_trace* get_trace();
+  const system::trace_helper* get_trace();
 
   /** Invariant if valid */
   invariant get_invariant();

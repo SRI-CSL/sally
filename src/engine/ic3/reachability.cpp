@@ -9,12 +9,13 @@
 namespace sally {
 namespace ic3 {
 
-reachability::reachability(const system::context& ctx)
+reachability::reachability(const system::context& ctx, cex_manager& cm)
 : expr::gc_participant(ctx.tm())
 , d_tm(ctx.tm())
 , d_ctx(ctx)
 , d_transition_system(0)
 , d_smt(0)
+, d_cex_manager(cm)
 {
   d_stats.reachable = new utils::stat_int("sally::ic3::reachable", 0);
   d_stats.unreachable = new utils::stat_int("sally::ic3::unreachable", 0);
@@ -49,14 +50,12 @@ class reachability_obligation {
   size_t d_k;
   /** The formula in question */
   expr::term_ref d_P;
-  /** Local model of the formula */
-  expr::model::ref d_P_model;
 
 public:
 
   /** Construct the obligation */
-  reachability_obligation(size_t k, expr::term_ref P, expr::model::ref P_model)
-  : d_k(k), d_P(P), d_P_model(P_model)
+  reachability_obligation(size_t k, expr::term_ref P)
+  : d_k(k), d_P(P)
   {}
 
   /** Get the frame */
@@ -65,18 +64,16 @@ public:
   /** Get the formula */
   expr::term_ref formula() const { return d_P; }
 
-  /** Get the model */
-  expr::model::ref model() const { return d_P_model; }
 };
 
-reachability::status reachability::check_reachable(size_t start, size_t end, expr::term_ref f, expr::model::ref f_model) {
+reachability::status reachability::check_reachable(size_t start, size_t end, expr::term_ref f, size_t property_id) {
   assert(start <= end);
 
   status result;
 
   for (result.k = start; result.k <= end; ++ result.k) {
     // Check reachability at k
-    result.r = check_reachable(result.k, f, f_model);
+    result.r = check_reachable(result.k, f, property_id);
     // Check result of the current one
     if (result.r == REACHABLE) {
       break;
@@ -86,7 +83,7 @@ reachability::status reachability::check_reachable(size_t start, size_t end, exp
   return result;
 }
 
-reachability::result reachability::check_reachable(size_t k, expr::term_ref f, expr::model::ref f_model) {
+reachability::result reachability::check_reachable(size_t k, expr::term_ref f, size_t property_id) {
 
   TRACE("ic3") << "ic3: checking reachability at " << k << std::endl;
 
@@ -101,8 +98,9 @@ reachability::result reachability::check_reachable(size_t k, expr::term_ref f, e
       return UNREACHABLE;
     case smt::solver::SAT:
       TRACE("ic3") << "ic3: checking reachability at " << k << ": reachable" << std::endl;
-      d_cex.clear();
-      d_cex.push_front(f);
+      if (property_id != d_cex_manager.null_property_id) {
+        d_cex_manager.mark_root(f, property_id);
+      }
       return REACHABLE;
     default:
       assert(false);
@@ -111,7 +109,7 @@ reachability::result reachability::check_reachable(size_t k, expr::term_ref f, e
 
   // Queue of reachability obligations
   std::vector<reachability_obligation> reachability_obligations;
-  reachability_obligations.push_back(reachability_obligation(k, f, f_model));
+  reachability_obligations.push_back(reachability_obligation(k, f));
 
   // We're not reachable, if we hit 0 we set it to true
   bool reachable = false;
@@ -126,10 +124,16 @@ reachability::result reachability::check_reachable(size_t k, expr::term_ref f, e
       // We're reachable since we got here by going back to I, mark it
       reachable = true;
       // Remember the counterexample
-      d_cex.clear();
-      for (size_t i = 0; i < reachability_obligations.size(); ++ i) {
-        d_cex.push_front(reachability_obligations[i].formula());
+      if (property_id != d_cex_manager.null_property_id) {
+        d_cex_manager.mark_root(reach.formula(), property_id);
+        for (size_t i = 0; i + 1 < reachability_obligations.size(); ++ i) {
+          // Adding in reverse order
+          expr::term_ref B = reachability_obligations[i].formula();
+          expr::term_ref A = reachability_obligations[i+1].formula();
+          d_cex_manager.add_edge(A, B, 1, property_id);
+        }
       }
+      // Done
       break;
     }
 
@@ -153,7 +157,7 @@ reachability::result reachability::check_reachable(size_t k, expr::term_ref f, e
       }
     } else {
       // New obligation to reach the counterexample
-      reachability_obligations.push_back(reachability_obligation(reach.frame()-1, result.generalization, result.model));
+      reachability_obligations.push_back(reachability_obligation(reach.frame()-1, result.generalization));
     }
   }
 
@@ -211,21 +215,15 @@ void reachability::add_to_frame(size_t k, expr::term_ref f) {
   d_frame_content[k].insert(f);
 }
 
-const reachability::cex_type& reachability::get_cex() const {
-  return d_cex;
-}
-
 void reachability::init(const system::transition_system* transition_system, solvers* smt_solvers) {
   d_transition_system = transition_system;
   d_smt = smt_solvers;
-  d_cex.clear();
   d_frame_content.clear();
 }
 
 void reachability::clear() {
   d_transition_system = 0;
   d_smt = 0;
-  d_cex.clear();
   d_frame_content.clear();
 }
 

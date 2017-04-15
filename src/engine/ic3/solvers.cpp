@@ -29,7 +29,7 @@
 namespace sally {
 namespace ic3 {
 
-solvers::solvers(const system::context& ctx, const system::transition_system* transition_system, system::state_trace* trace)
+solvers::solvers(const system::context& ctx, const system::transition_system* transition_system, system::trace_helper* trace)
 : d_ctx(ctx)
 , d_tm(ctx.tm())
 , d_transition_system(transition_system)

@@ -19,7 +19,7 @@
 #pragma once
 
 #include "utils/exception.h"
-#include "parser/command.h"
+#include "command/command.h"
 
 namespace sally {
 
@@ -81,7 +81,7 @@ enum input_language {
 class internal_parser_interface {
 public:
  virtual ~internal_parser_interface() {};
- virtual command* parse_command() = 0;
+ virtual cmd::command* parse_command() = 0;
  virtual int get_current_parser_line() const = 0;
  virtual int get_current_parser_position() const = 0;
  virtual std::string get_filename() const = 0;
@@ -104,7 +104,7 @@ public:
   ~parser();
 
   /** Parse the next command from the input */
-  command* parse_command();
+  cmd::command* parse_command();
 
   /**
    * Returns the language based on the extension of the filename (e.g. given "btor" it

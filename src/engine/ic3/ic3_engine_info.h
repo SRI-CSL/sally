@@ -22,6 +22,8 @@
 
 #include <boost/program_options.hpp>
 
+#include <string>
+
 namespace sally {
 namespace ic3 {
 
@@ -37,6 +39,7 @@ struct ic3_engine_info {
         ("ic3-minimize-interpolants", "Try to minimize interpolants")
         ("ic3-minimize-generalizations", "Try to minimize generalizations")
         ("ic3-minimize-frames", "Try to minimize frames")
+        ("ic3-output-cex-graph", value<std::string>(), "Print the CEX graph into this file when done.")
         ;
   }
 

@@ -19,12 +19,11 @@
 #include "engine/kind/kind_engine.h"
 
 #include "smt/factory.h"
-#include "system/state_trace.h"
-
 #include "utils/trace.h"
 
 #include <sstream>
 #include <iostream>
+#include "../../system/trace_helper.h"
 #include <cassert>
 
 namespace sally {
@@ -43,7 +42,6 @@ kind_engine::kind_engine(const system::context& ctx)
 kind_engine::~kind_engine() {
   delete d_solver_1;
   delete d_solver_2;
-  delete d_trace;
 }
 
 engine::result kind_engine::query(const system::transition_system* ts, const system::state_formula* sf) {
@@ -72,8 +70,7 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
   scope2.push();
 
   // The trace we are building
-  if (d_trace) { delete d_trace; }
-  d_trace = new system::state_trace(ts->get_state_type());
+  d_trace = ts->get_trace_helper();
 
   // Initial states go to solver 1
   expr::term_ref initial_states = ts->get_initial_states();
@@ -122,7 +119,7 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
       // Get the model
       expr::model::ref m = d_solver_1->get_model();
       // Add model to trace
-      d_trace->set_model(m,k+1);
+      d_trace->set_model(m,0, k);
       return INVALID;
     }
     case smt::solver::UNKNOWN:
@@ -197,7 +194,7 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
   return UNKNOWN;
 }
 
-const system::state_trace* kind_engine::get_trace() {
+const system::trace_helper* kind_engine::get_trace() {
   return d_trace;
 }
 
