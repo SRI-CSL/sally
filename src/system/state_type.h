@@ -46,14 +46,16 @@ public:
     /** Input variables */
     STATE_INPUT,
     /** Next state */
-    STATE_NEXT
+    STATE_NEXT,
+    /** Parameters */
+    STATE_PARAM
   };
 
   /** String representation of the variable class */
   static std::string to_string(var_class vc);
 
   /** Create a new state type of the given type and name */
-  state_type(std::string id, expr::term_manager& tm, expr::term_ref state_type_var, expr::term_ref input_type_var);
+  state_type(std::string id, expr::term_manager& tm, expr::term_ref state_type_var, expr::term_ref input_type_var, expr::term_ref params_type_var);
 
   /** Print the state type to stream */
   void to_stream(std::ostream& out) const;
@@ -66,6 +68,11 @@ public:
   /** Get the actual type of the input */
   expr::term_ref get_input_type_var() const {
     return d_input_type_var;
+  }
+
+  /** Get the actual type of the parameters */
+  expr::term_ref get_param_type_var() const {
+    return d_param_type_var;
   }
 
   /** Get the state variables of the class */
@@ -115,6 +122,9 @@ private:
   /** The actual type describing the input */
   expr::term_ref_strong d_input_type_var;
 
+  /** The actual type describing the parameters */
+  expr::term_ref_strong d_param_type_var;
+
   /** The current vars struct */
   expr::term_ref_strong d_current_vars_struct;
 
@@ -124,6 +134,9 @@ private:
   /** The next vars struct */
   expr::term_ref_strong d_next_vars_struct;
 
+  /** The parameters vars struct */
+  expr::term_ref_strong d_param_vars_struct;
+
   /** State variables */
   std::vector<expr::term_ref> d_current_vars;
 
@@ -132,6 +145,9 @@ private:
 
   /** Next state variables */
   std::vector<expr::term_ref> d_next_vars;
+
+  /** Parameters variables */
+  std::vector<expr::term_ref> d_param_vars;
 
   /** Substitution map for CURRENT -> NEXT */
   expr::term_manager::substitution_map d_subst_current_next;

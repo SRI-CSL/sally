@@ -53,6 +53,8 @@ foreach(FILE ${regressions})
   separate_arguments(ALL_OPTIONS)
   # Add the test with the options and the file
   add_test(${FILE} sally ${ALL_OPTIONS} ${FILE})
+  # Set a timeout of 30s
+  set_tests_properties(${FILE} PROPERTIES TIMEOUT 30)
   
   # If there is a .gold file, compare the output
   if(EXISTS "${FILE}.gold")
@@ -60,6 +62,11 @@ foreach(FILE ${regressions})
     file(READ "${FILE}.gold" GOLD_OUTPUT)
     # Set the output
     set_tests_properties(${FILE} PROPERTIES PASS_REGULAR_EXPRESSION ${GOLD_OUTPUT})
+  endif()
+  
+  # If there is a .fil file, mark it as failing
+  if(EXISTS "${FILE}.fail")
+    set_tests_properties(${FILE} PROPERTIES WILL_FAIL TRUE)
   endif()
   
 endforeach(FILE)

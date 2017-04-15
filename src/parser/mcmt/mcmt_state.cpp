@@ -72,12 +72,14 @@ void mcmt_state::set_variable(std::string id, expr::term_ref t) {
 
 
 system::state_type* mcmt_state::mk_state_type(std::string id,
-    const std::vector<std::string>& state_vars, const std::vector<expr::term_ref>& state_types,
-    const std::vector<std::string>& input_vars, const std::vector<expr::term_ref>& input_types) const
+    const string_vec& state_vars, const term_ref_vec& state_types,
+    const string_vec& input_vars, const term_ref_vec& input_types,
+    const string_vec& param_vars, const term_ref_vec& param_types) const
 {
   expr::term_ref state_type = tm().mk_struct_type(state_vars, state_types);
   expr::term_ref input_type = tm().mk_struct_type(input_vars, input_types);
-  return new system::state_type(id, tm(), state_type, input_type);
+  expr::term_ref param_type = tm().mk_struct_type(param_vars, param_types);
+  return new system::state_type(id, tm(), state_type, input_type, param_type);
 }
 
 void mcmt_state::use_state_type(std::string id, system::state_type::var_class var_class, bool use_namespace) {

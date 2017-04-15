@@ -464,7 +464,7 @@ public:
   /** Get the base type of the term or type */
   term_ref base_type_of(const term& t);
 
-  /** Get th ebase type of the term or type if it has been computed */
+  /** Get the base type of the term or type if it has been computed */
   term_ref base_type_of_if_exists(const term& t) const;
 
   /** Get the base type of the term or type */
@@ -585,6 +585,9 @@ public:
 
   /** Get i-th abstraction variable */
   term_ref get_abstraction_variable(term_ref abstraction, size_t i) const;
+
+  /** Make an intersection type */
+  term_ref mk_intersection_type(term_ref t1, term_ref t2);
 
   /** Get all abstraction variables */
   template <typename collection>
@@ -789,8 +792,17 @@ term_ref term_manager_internal::mk_term(term_op op, iterator begin, iterator end
     SWITCH_TO_TERM(TERM_BV_NOR)
     SWITCH_TO_TERM(TERM_BV_XNOR)
     SWITCH_TO_TERM(TERM_BV_CONCAT)
-    SWITCH_TO_TERM(TERM_FUN_APP)
+    SWITCH_TO_TERM(TERM_ARRAY_READ)
+    SWITCH_TO_TERM(TERM_ARRAY_WRITE)
+    SWITCH_TO_TERM(TERM_ARRAY_LAMBDA)
     SWITCH_TO_TERM(TERM_TUPLE_CONSTRUCT)
+    SWITCH_TO_TERM(TERM_RECORD_CONSTRUCT)
+    SWITCH_TO_TERM(TERM_RECORD_READ)
+    SWITCH_TO_TERM(TERM_RECORD_WRITE)
+    SWITCH_TO_TERM(TERM_LAMBDA)
+    SWITCH_TO_TERM(TERM_EXISTS)
+    SWITCH_TO_TERM(TERM_FORALL)
+    SWITCH_TO_TERM(TERM_FUN_APP)
   default:
     assert(false);
   }

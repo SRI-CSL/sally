@@ -47,10 +47,14 @@ public:
   /** Returns the term manager for the parser */
   expr::term_manager& tm() const { return d_term_manager; }
 
+  typedef std::vector<std::string> string_vec;
+  typedef std::vector<expr::term_ref> term_ref_vec;
+
   /** Add a new state type with the given id (vars : types) */
   void add_state_type(std::string id,
-      const std::vector<std::string>& state_vars, const std::vector<expr::term_ref>& state_types,
-      const std::vector<std::string>& input_vars, const std::vector<expr::term_ref>& input_types);
+      const string_vec& state_vars, const term_ref_vec& state_types,
+      const string_vec& input_vars, const term_ref_vec& input_types,
+      const string_vec& param_vars, const term_ref_vec& param_types);
 
   /** Add a state type with the given id (to be managed by the context) */
   void add_state_type(std::string id, state_type* st);

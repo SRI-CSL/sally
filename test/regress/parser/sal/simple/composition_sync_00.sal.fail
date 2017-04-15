@@ -1,0 +1,1 @@
+Error: [Context: composition_sync_00, line(48), column(14)]: Invalid synchronous composition, modules cannot share the global variable "x_global".

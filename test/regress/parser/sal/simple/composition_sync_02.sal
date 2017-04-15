@@ -1,0 +1,34 @@
+composition_sync_02: CONTEXT = 
+BEGIN
+
+  TYPE1 : TYPE = [0..4];
+  TYPE2 : TYPE = [5..9];
+
+  m1: MODULE = 
+  BEGIN
+    INPUT x_in: TYPE1
+    OUTPUT x_out: INTEGER
+    LOCAL x_local: INTEGER
+    GLOBAL x_global: INTEGER
+  
+    INITIALIZATION x_out = 0; x_local = 0; x_global = 0;
+    TRANSITION x_out' = x_out + x_in; x_local' = x_local + 1;
+  END;
+
+  m2: MODULE = 
+  BEGIN
+    INPUT x_in: TYPE2
+    OUTPUT y_out: INTEGER
+    LOCAL x_local: INTEGER
+  
+    INITIALIZATION y_out = 0; x_local = 0;
+    TRANSITION y_out' = y_out + x_in; x_local' = x_local + 1;
+  END;
+ 
+  m: MODULE = m1 || m2;
+ 
+  prove_this: 
+  THEOREM m |- x_out = y_out;
+ 
+END
+

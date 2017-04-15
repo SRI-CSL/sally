@@ -1,0 +1,1 @@
+Error: [Context: composition_sync_01, line(45), column(14)]: Invalid module composition, the output variable "x_out" is an output/global variable in both modules.

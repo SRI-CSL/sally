@@ -77,10 +77,14 @@ private:
   /** Name of the symbol table for debugging */
   std::string d_name;
 
+  /** Do we allow push/pop */
+  bool d_allow_push_pop;
+
 public:
 
-  symbol_table(std::string name)
+  symbol_table(std::string name, bool allow_push_pop = true)
   : d_name(name)
+  , d_allow_push_pop(allow_push_pop)
   {}
 
   ~symbol_table() {
@@ -99,12 +103,14 @@ public:
 
   /** Start a new scope */
   void push_scope() {
+    assert(d_allow_push_pop);
     d_entries_added_size_per_push.push_back(d_entries_added.size());
     assert(d_entries_added.size() == d_values_added.size());
   }
 
   /** Remove top scope */
   void pop_scope() {
+    assert(d_allow_push_pop);
     size_t pop_to_size = d_entries_added_size_per_push.back();
     d_entries_added_size_per_push.pop_back();
     while (d_entries_added.size() > pop_to_size) {
@@ -128,8 +134,16 @@ public:
   /** Add an entry id -> value, and return the reference to the table entry */
   void add_entry(std::string id, const T& value) {
     d_table[id].push_front(value);
-    d_entries_added.push_back(id);
-    d_values_added.push_back(value);
+    if (d_allow_push_pop) {
+      d_entries_added.push_back(id);
+      d_values_added.push_back(value);
+    }
+  }
+
+  /** Completely remove an entry (can't be in push/pop mode) */
+  void erase_entry(std::string id) {
+    assert(!d_allow_push_pop);
+    d_table.erase(id);
   }
 
   /** Get the value associated to id -> value */
@@ -162,6 +176,19 @@ public:
       std::string id = it->first;
       const T& value = it->second.front();
       add_entry(id, value);
+    }
+  }
+
+  /** Load variables from another table (only the current ones, including the over-written ones) */
+  void load_full_from(const symbol_table& other) {
+    const_iterator it = other.begin(), end = other.end();
+    for (; it != end; ++ it) {
+      std::string id = it->first;
+      typename T_list::const_reverse_iterator l_it = it->second.rbegin();
+      for (; l_it != it->second.rend(); ++ l_it) {
+        const T& value = *l_it;
+        add_entry(id, value);
+      }
     }
   }
 

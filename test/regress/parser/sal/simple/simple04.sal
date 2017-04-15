@@ -1,0 +1,26 @@
+simple04: CONTEXT = 
+BEGIN
+
+  N : NATURAL = 3;
+  PID: TYPE = [1..N];
+  
+  m: MODULE = 
+  BEGIN
+  LOCAL 
+    a: ARRAY PID of INTEGER
+  INPUT 
+    x: INTEGER
+  TRANSITION
+  [
+    ([] (i:PID): 
+      %% How do we make rest of a stay the same
+      a[i] > 0 --> a'[i] in { x: INTEGER | x > 0 }
+    )
+  ]
+  END;
+ 
+  prove_this:
+  THEOREM m |- TRUE;
+
+END
+

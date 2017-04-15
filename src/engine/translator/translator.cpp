@@ -45,7 +45,10 @@ void translator::to_stream_mcmt(std::ostream& out) const {
   const system::state_type* state_type = d_ts->get_state_type();
   state_type->use_namespace();
   out << ";; State type" << std::endl;
-  out << "(define-state-type state_type " << state_type->get_state_type_var() << " " << state_type->get_input_type_var() << ")" << std::endl;
+  out << "(define-state-type state_type " <<
+      state_type->get_state_type_var() << " " <<
+      state_type->get_input_type_var() << " " <<
+      state_type->get_param_type_var() << ")" << std::endl;
   out << std::endl;
 
   // Output the initial state

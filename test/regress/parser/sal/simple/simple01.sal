@@ -22,11 +22,13 @@ BEGIN
     [
       main_PC = a 
         --> main_PC' = b
-      []
+    []
       ([] (i : NodeId):
         main_PC = b AND nodes_PC[i] = a
           --> nodes_PC'[i] = b;
       )
+    [] ELSE 
+        --> main_PC' = a         
     ]  
   END;
  

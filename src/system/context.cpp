@@ -44,12 +44,14 @@ void context::add_state_type(std::string id, state_type* st) {
 }
 
 void context::add_state_type(std::string id,
-    const std::vector<std::string>& state_vars, const std::vector<expr::term_ref>& state_types,
-    const std::vector<std::string>& input_vars, const std::vector<expr::term_ref>& input_types)
+    const string_vec& state_vars, const term_ref_vec& state_types,
+    const string_vec& input_vars, const term_ref_vec& input_types,
+    const string_vec& param_vars, const term_ref_vec& param_types)
 {
   expr::term_ref state_vars_struct = tm().mk_struct_type(state_vars, state_types);
   expr::term_ref input_vars_struct = tm().mk_struct_type(input_vars, input_types);
-  add_state_type(id, new state_type(id, tm(), state_vars_struct, input_vars_struct));
+  expr::term_ref param_vars_struct = tm().mk_struct_type(param_vars, param_types);
+  add_state_type(id, new state_type(id, tm(), state_vars_struct, input_vars_struct, param_vars_struct));
 }
 
 const state_type* context::get_state_type(std::string id) const {

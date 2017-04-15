@@ -42,12 +42,12 @@ options {
 
 /** SAL context returned as a sequence command. */
 command returns [cmd::command* cmd = 0]
-  : context
+  : context { cmd = STATE->finalize(); } 
   | EOF
   ; 
 
 /** SAL context, with parameters for parametrization. */
-context 
+context
 @declarations {
   std::string name;
   parser::var_declarations_ctx parameters;
@@ -115,10 +115,10 @@ assertion_form returns [parser::sal::assertion_form form = parser::sal::SAL_LEMM
 
 /** The actual assertion, does 'term' hold in the 'module' */
 assertion_term[std::string id, parser::sal::assertion_form form]
-  : m = module { STATE->push_scope(); STATE->load_module_variables(m); }
+  : m = module { STATE->push_scope(parser::SCOPE_ASSERTION); STATE->load_module_variables(m); }
     '|-' 
     t = term_or_g_term
-    { STATE->pop_scope(); }
+    { STATE->pop_scope(parser::SCOPE_ASSERTION); }
     { STATE->add_assertion(id, form, m, t); }
   ;
 
@@ -357,10 +357,10 @@ unary_nonboolean_term returns [expr::term_ref t]
  * Base term is a non-breakable unit with potential let declaration ahead of it.
  */
 base_term returns [expr::term_ref t]
-  : KW_LET { STATE->push_scope(); } 
+  : KW_LET { STATE->push_scope(parser::SCOPE_LET); } 
       let_declarations 
     KW_IN 
-      t_let = base_term { STATE->pop_scope(); t = t_let; }
+      t_let = base_term { STATE->pop_scope(parser::SCOPE_LET); t = t_let; }
   | t_prefix = base_term_prefix { t = t_prefix; }  
     (t_with_suffix = base_term_suffix[t_prefix] { t_prefix = t_with_suffix; } )* { t = t_prefix; }
   ;
@@ -501,12 +501,14 @@ term_access returns [expr::term_ref t]
   ;
 
 rhs_definition[expr::term_ref lhs] returns [expr::term_ref t] 
-  : OP_EQ rhs = term { t = STATE->mk_term(expr::TERM_EQ, lhs, rhs); }  
-  | KW_IN t1 = set_term[lhs] { t = t1; } 
+  : OP_EQ 
+      rhs = term { t = STATE->mk_assignment(lhs, rhs); }  
+  | KW_IN { STATE->ensure_variable(lhs, true); } 
+      t1 = set_term[lhs] { t = t1; } 
   ;
 
 simple_definition returns [expr::term_ref t] 
-  : t1 = lvalue { STATE->add_lvalue(t1); } 
+  : t1 = lvalue { STATE->lvalues_add(t1 ); } 
     t2 = rhs_definition[t1] { t = t2; }
   ;
 
@@ -551,14 +553,18 @@ definition returns [expr::term_ref t]
 
 /** Definitions return a conjunction of definitions (or a single definition) */
 definition_list returns [expr::term_ref t]
-  : t1 = definition { t = t1; } 
+  : { STATE->lvalues_clear(); }
+    t1 = definition { t = t1; } 
     (';' t2 = definition { STATE->mk_term(expr::TERM_AND, t, t2); })* 
     ';'?
+    { STATE->lvalues_clear(); }
   ;
 
-assignments[std::vector<expr::term_ref>& a] 
-  : t1 = simple_definition { a.push_back(t1); } 
+assignments[std::vector<expr::term_ref>& a]
+  : { STATE->lvalues_clear(); }
+    t1 = simple_definition { a.push_back(t1); } 
     (';' t2 = simple_definition { a.push_back(t2); })* ';'?
+    { STATE->lvalues_clear(); }
   ;
 
 /** 
@@ -572,8 +578,16 @@ guarded_command returns [expr::term_ref t]
 @declarations{
   std::vector<expr::term_ref> a;
 }
-  : guard = term '-->' assignments[a]? { t = STATE->mk_term_from_guarded(guard, a); STATE->check_term(t); }
-  | KW_ELSE '-->' assignments[a]?  { t = STATE->mk_term_from_guarded(expr::term_ref(), a); STATE->check_term(t); }
+  : guard = term { STATE->guards_add(guard); } 
+    '-->' assignments[a]? { t = STATE->mk_term_from_guarded(guard, a); STATE->check_term(t); }  
+  ;
+
+guarded_else_command returns [expr::term_ref t]
+@declarations{
+  std::vector<expr::term_ref> a;
+}
+  : KW_ELSE '-->' assignments[a]? 
+    { t = STATE->mk_term_from_guarded(expr::term_ref(), a); STATE->check_term(t); }
   ;
 
 /* The Module Language */
@@ -667,7 +681,7 @@ unary_module_modifier returns [parser::sal::module::ref m]
 
 /** The base of the module expressions */
 module_base returns [parser::sal::module::ref m]
-  : m_ref = module_name { m = STATE->start_module(); STATE->load_module_to_module(m_ref, m); STATE->finish_module(m); }
+  : m_ref = module_name { m = m_ref; }
   | m_base = base_module { m = m_base; }
   | ('(' m_bracket = module ')') { m = m_bracket; }
   ;
@@ -827,9 +841,13 @@ multi_command returns [expr::term_ref t]
 @declarations{
   parser::var_declarations_ctx arg_ctx;
 } 
-  : '(' OP_ASYNC 
-        '(' var_declaration_list[arg_ctx] ')' { STATE->start_quantifier(arg_ctx); }
-        ':' body = some_command { t = STATE->finish_quantifier(expr::TERM_FORALL, body); } 
+  : '(' OP_ASYNC
+        { STATE->start_multi_command(); } 
+        '(' var_declaration_list[arg_ctx] ')' 
+        { STATE->start_quantifier(arg_ctx); }
+        ':' body = some_command 
+        { STATE->end_multi_command(); } 
+        { t = STATE->finish_quantifier(expr::TERM_EXISTS, body); }
     ')' 
   ;
 
@@ -841,17 +859,22 @@ some_command returns [expr::term_ref t]
   | (identifier[id] ':') ? t_multi = multi_command { t = t_multi; STATE->check_term(t); } 
   ;
 
-some_commands[std::vector<expr::term_ref>& cmd_out]
-  : t1 = some_command { cmd_out.push_back(t1); STATE->check_term(t1); } 
-    (OP_ASYNC t2 = some_command { cmd_out.push_back(t2); STATE->check_term(t2); })*
+some_commands returns [expr::term_ref t]
+@declarations{
+  std::vector<expr::term_ref> cmds;
+  bool has_else = false;  
+}
+  : { STATE->guards_clear(); } 
+    t1 = some_command { cmds.push_back(t1); STATE->check_term(t1); } 
+    (OP_ASYNC t2 = some_command { cmds.push_back(t2); STATE->check_term(t2); })*
+    (OP_ASYNC te = guarded_else_command { cmds.push_back(te); STATE->check_term(te); has_else = true; } )?
+    { t = STATE->mk_term_from_commands(cmds, has_else); }
+    { STATE->guards_clear(); }
   ;
 
 definition_or_command returns [expr::term_ref t]
-@declarations{
-  std::vector<expr::term_ref> cmds;  
-}
   : t_def = definition { t = t_def; }
-  | ('[' some_commands[cmds] ']') { t = STATE->mk_term_from_commands(cmds); }
+  | ('[' t_cmds = some_commands ']') { t = t_cmds; } 
   ;
 
 /** Declare new variables in the given module */

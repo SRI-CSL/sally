@@ -260,6 +260,12 @@ term_ref term_manager_internal::substitute(term_ref t, substitution_map& subst) 
     t_new = mk_term<TERM_BV_SGN_EXTEND>(extend, children[0]);
     break;
   }
+  case TERM_TUPLE_READ: {
+    break;
+  }
+  case TERM_TUPLE_WRITE: {
+    break;
+  }
   default:
     t_new = mk_term(op, children.begin(), children.end());
   }
@@ -599,4 +605,76 @@ term_ref term_manager_internal::get_abstraction_variable(term_ref abstraction, s
 bool term_manager_internal::compatible(term_ref t1, term_ref t2) {
   if (t1 == t2) return true;
   return base_type_of(t1) == base_type_of(t2);
+}
+
+term_ref term_manager_internal::mk_intersection_type(term_ref t1, term_ref t2) {
+
+  assert(is_type(t1) && is_type(t2));
+
+  if (t1 == t2) {
+    // easy case
+    return t1;
+  }
+
+  if (!compatible(t1, t2)) {
+    throw exception("Can't intersect incompatible types");
+  }
+
+  if (is_primitive_type(t1) && is_primitive_type(t2)) {
+    if (is_integer_type(t1) || is_integer_type(t2)) {
+      return d_integerType;
+    }
+    // Should be no more cases for primitive types
+    assert(false);
+  }
+
+  // At least one is predicate subtype
+
+  const term& t1_term = term_of(t1);
+  const term& t2_term = term_of(t2);
+
+  bool t1_pred = t1_term.op() == TYPE_PREDICATE_SUBTYPE;
+  bool t2_pred = t2_term.op() == TYPE_PREDICATE_SUBTYPE;
+  assert(t1_pred || t2_pred);
+
+  term_ref t1_var, t2_var, t1_body, t2_body, t1_var_type, t2_var_type;
+  term_ref t_var, t_type, t_body;
+
+  if (t1_pred) {
+    t1_var = t1_term[0];
+    t1_body = t1_term[1];
+    t1_var_type = type_of(t1_var);
+  } else {
+    t1_var_type = t1;
+  }
+  if (t2_pred) {
+    t2_var = t2_term[0];
+    t2_body = t2_term[1];
+    t2_var_type = type_of(t2_var);
+  } else {
+    t1_var_type = t2;
+  }
+
+  // Intersect the base types
+  if (t1_pred && t2_pred) {
+    term_ref t_var_type = mk_intersection_type(t1_var_type, t2_var_type);
+    t_var = mk_term<VARIABLE>("x", t_var_type);
+    substitution_map subst_map;
+    subst_map[t1_var] = t_var;
+    t1_body = substitute(t1_body, subst_map);
+    subst_map[t2_var] = t_var;
+    t2_body = substitute(t2_body, subst_map);
+    t_body  = mk_term<TERM_AND>(t1_body, t2_body);
+  } else if (t1_pred) {
+    t_var = t1_var;
+    t_body = t1_body;
+  } else {
+    t_var = t2_var;
+    t_body = t2_body;
+  }
+
+  // Make the final predicate subtype
+  std::vector<term_ref> vars;
+  vars.push_back(t_var);
+  return mk_abstraction(TYPE_PREDICATE_SUBTYPE, vars, t_body);
 }

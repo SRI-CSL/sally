@@ -29,7 +29,7 @@ namespace parser {
 namespace sal {
 
 module::module(expr::term_manager& tm)
-: d_variables("variables")
+: d_variables("variables", false)
 , d_tm(tm)
 {
 }
@@ -46,7 +46,43 @@ void module::add_parameter(std::string id, expr::term_ref var) {
   d_vars_parameter.insert(var);
 }
 
-void module::add_variable(std::string id, expr::term_ref var, variable_class sal_var_class) {
+bool module::is_parameter(expr::term_ref var) const {
+  term_set::const_iterator find = d_vars_parameter.find(var);
+  return find != d_vars_parameter.end();
+}
+
+void module::remove_variable(expr::term_ref var, variable_class sal_var_class) {
+  switch (sal_var_class) {
+  case SAL_VARIABLE_INPUT:
+    assert(d_vars_input.count(var) > 0);
+    d_vars_input.erase(var);
+    break;
+  case SAL_VARIABLE_OUTPUT:
+    assert(d_vars_output.count(var) > 0);
+    d_vars_output.erase(var);
+    break;
+  case SAL_VARIABLE_LOCAL:
+    assert(d_vars_local.count(var) > 0);
+    d_vars_local.erase(var);
+    break;
+  case SAL_VARIABLE_GLOBAL:
+    assert(d_vars_global.count(var) > 0);
+    d_vars_global.erase(var);
+    break;
+  }
+
+  // Mark the variable's class
+  assert(d_variable_class.count(var) > 0);
+  d_variable_class.erase(var);
+
+  // If there is a next variable, remember it
+  term_to_term_map::const_iterator next_find = d_variable_next.find(var);
+  if (next_find != d_variable_next.end()) {
+    d_variable_next.erase(next_find);
+  }
+}
+
+void module::add_variable(std::string id, expr::term_ref var, variable_class sal_var_class, expr::term_ref var_next) {
 
   typedef std::pair<term_set::iterator, bool> insert_return;
 
@@ -88,6 +124,36 @@ void module::add_variable(std::string id, expr::term_ref var, variable_class sal
 
   // Mark the variable's class
   d_variable_class[var] = sal_var_class;
+
+  // If there is a next variable, remember it
+  if (!var_next.is_null()) {
+    d_variable_next[var] = var_next;
+  }
+}
+
+bool module::has_next_variable(expr::term_ref var) const {
+  term_to_term_map::const_iterator find = d_variable_next.find(var);
+  return (find != d_variable_next.end());
+}
+
+expr::term_ref module::get_next_variable(expr::term_ref var) const {
+  term_to_term_map::const_iterator find = d_variable_next.find(var);
+  if (find == d_variable_next.end()) {
+    throw parser_exception(d_tm) << "Variable " << var << " doesn't have a next!";
+  }
+  return find->second;
+}
+
+expr::term_ref module::get_idle() const {
+  term_set idle;
+  term_to_term_map::const_iterator it = d_variable_next.begin();
+  for (; it != d_variable_next.end(); ++ it) {
+    expr::term_ref x = it->first;
+    expr::term_ref x_next = it->second;
+    expr::term_ref eq = d_tm.mk_term(expr::TERM_EQ, x, x_next);
+    idle.insert(eq);
+  }
+  return d_tm.mk_and(idle);
 }
 
 bool module::has_variable(std::string id, variable_class sal_var_class) const {
@@ -126,38 +192,113 @@ const module::term_set& module::get_variables(variable_class sal_var_class) cons
 
 variable_class module::get_variable_class(expr::term_ref var) const {
   variable_class_map::const_iterator find = d_variable_class.find(var);
-  assert(find != d_variable_class.end());
+  if (find == d_variable_class.end()) {
+    throw parser_exception(d_tm) << "Expecting state variable, got " << var;
+  }
   return find->second;
 }
 
 void module::load_variables_into(symbol_table& table) const {
-  table.load_from(d_variables);
+  // We also copy any duplicates
+  table.load_full_from(d_variables);
 }
 
-#define insert_from_module(S, m) S.insert(m.S.begin(), m.S.end())
+void module::insert_with_substitution(term_set& to, const term_set& from, const expr::term_manager::substitution_map& subst) {
+  term_set::const_iterator it = from.begin();
+  for (; it != from.end(); ++ it) {
+    expr::term_ref t = d_tm.substitute(*it, subst);
+    to.insert(t);
+  }
+}
 
-void module::load(const module& m) {
+void module::insert_with_substitution(term_to_term_map& to, const term_to_term_map& from, const expr::term_manager::substitution_map& subst) {
+  term_to_term_map::const_iterator it = from.begin();
+  for (; it != from.end(); ++ it) {
+    expr::term_ref t1 = d_tm.substitute(it->first, subst);
+    expr::term_ref t2 = d_tm.substitute(it->second, subst);
+    to[t1] = t2;
+  }
+}
 
-  // Copy over the symbol table
+void module::insert_with_substitution(variable_class_map& to, const variable_class_map& from, const expr::term_manager::substitution_map& subst) {
+  variable_class_map::const_iterator it = from.begin();
+  for (; it != from.end(); ++ it) {
+    expr::term_ref t = d_tm.substitute(it->first, subst);
+    to[t] = it->second;
+  }
+}
+
+void module::insert_with_substitution(std::vector<expr::term_ref>& to, const std::vector<expr::term_ref>& from, const expr::term_manager::substitution_map& subst) {
+  for (size_t i = 0; i < from.size(); ++ i) {
+    to.push_back(d_tm.substitute(from[i], subst));
+  }
+}
+
+void module::load_symbols(const module& m) {
+
+  expr::term_manager::substitution_map subst;
+
+  // Copy over the symbol table (might add duplicates)
   m.load_variables_into(d_variables);
 
-  // Parameters
-  d_parameters.insert(d_parameters.end(), m.d_parameters.begin(), m.d_parameters.end());
-  insert_from_module(d_vars_parameter, m);
+  // Parameters (there can be duplicates here, no problem)
+  insert_with_substitution(d_parameters, m.d_parameters, subst);
+  insert_with_substitution(d_vars_parameter, m.d_vars_parameter, subst);
 
   // Variables sets
-  insert_from_module(d_vars_input, m);
-  insert_from_module(d_vars_output, m);
-  insert_from_module(d_vars_local, m);
-  insert_from_module(d_vars_global, m);
+  insert_with_substitution(d_vars_input, m.d_vars_input, subst);
+  insert_with_substitution(d_vars_output, m.d_vars_output, subst);
+  insert_with_substitution(d_vars_local, m.d_vars_local, subst);
+  insert_with_substitution(d_vars_global, m.d_vars_global, subst);
 
   // Variables classes
-  insert_from_module(d_variable_class, m);
+  insert_with_substitution(d_variable_class, m.d_variable_class, subst);
 
+  // Next variables
+  insert_with_substitution(d_variable_next, m.d_variable_next, subst);
+}
+
+void module::load_semantics(const module& m, const expr::term_manager::substitution_map& subst) {
+  // Just copy over everything
+  insert_with_substitution(d_definitions, m.d_definitions, subst);
+  insert_with_substitution(d_initializations, m.d_initializations, subst);
+  insert_with_substitution(d_transitions, m.d_transitions, subst);
+}
+
+void module::load_semantics(const module& m1, const module& m2, const expr::term_manager::substitution_map& subst_map) {
+
+  // Definitions are kept conjunctive
+  insert_with_substitution(d_definitions, m1.d_definitions, subst_map);
+  insert_with_substitution(d_definitions, m2.d_definitions, subst_map);
+
+  // Initializations are kept conjunctive
+  insert_with_substitution(d_initializations, m1.d_initializations, subst_map);
+  insert_with_substitution(d_initializations, m2.d_initializations, subst_map);
+
+  // Transitions are made disjunctive
+  // T = (T1 & T2_idle) || (T1_idle & T2)
+
+  expr::term_ref T1 = d_tm.mk_and(m1.d_transitions);
+  expr::term_ref T2 = d_tm.mk_and(m2.d_transitions);
+  expr::term_ref T1_idle = m1.get_idle();
+  expr::term_ref T2_idle = m2.get_idle();
+
+  T1 = d_tm.mk_and(T1, T2_idle);
+  T2 = d_tm.mk_and(T2, T1_idle);
+  expr::term_ref T = d_tm.mk_or(T1, T2);
+  T = d_tm.substitute(T, subst_map);
+
+  assert(d_transitions.size() == 0);
+  d_transitions.insert(T);
+}
+
+void module::load(const module& m) {
+  expr::term_manager::substitution_map subst;
+
+  // Load the symbols 
+  load_symbols(m); 
   // Semantics
-  insert_from_module(d_definitions, m);
-  insert_from_module(d_initializations, m);
-  insert_from_module(d_transitions, m);
+  load_semantics(m, subst);
 }
 
 module::ref module::instantiate(const std::vector<expr::term_ref>& actuals) const {
@@ -294,16 +435,202 @@ void module::compose(const module& m_from, composition_type type, const std::vec
   std::cerr << "TODO: composition" << std::endl;
 }
 
+struct variable_add_info {
+  std::string id;
+  expr::term_ref v, v_next;
+  variable_class v_class;
+  variable_add_info(std::string id, expr::term_ref v, expr::term_ref v_next, variable_class v_class)
+  : id(id), v(v), v_next(v_next), v_class(v_class) {}
+};
+
+void module::finish_symbol_composition(composition_type type, expr::term_manager::substitution_map& subst) {
+
+  // First check that there are not parameters, we can't compose parametrized modules
+  if (d_parameters.size() > 0) {
+    throw parser_exception("Modules must be instantiated before composition");
+  }
+  
+  /*
+
+    Cases where variables can't be merged
+    
+     * failure case (sync):
+
+      GLOBAL, GLOBAL:
+        Invalid synchronous composition, modules cannot share the global
+        variable "x".d
+
+     * failure cases (sync and async)
+
+      GLOBAL, LOCAL:
+      INPUT, LOCAL:
+      LOCAL, GLOBAL:
+      LOCAL, INPUT:
+      LOCAL, OUTPUT:
+      OUTPUT, LOCAL:
+        Invalid module composition, the set of local variables must be disjoint
+        from the sets of input, output and global variables in the resultant
+        module. The local variable "x" does not satisfy this rule.
+      GLOBAL, OUTPUT:
+      OUTPUT, GLOBAL:
+      OUTPUT, OUTPUT:
+        Invalid module composition, the output variable "x" is an output/global
+        variable in both modules.
+  */
+
+  /*
+
+    The resulting variable classes are
+
+      I = (I1 + I2) - (O + G)
+      O = (O1 + O2)
+      G = (G1 + G2)
+      L = (L1 + L2)
+
+  */
+
+  std::vector<std::string> to_remove_from_symbol_table;
+
+  std::vector<variable_add_info> to_add_list;
+
+  symbol_table::const_iterator it = d_variables.begin();
+  for (; it != d_variables.end(); ++ it) {
+    std::string var_id = it->first;
+    const symbol_table::T_list& vars = it->second;
+    assert(vars.size() <= 2);
+    if (vars.size() == 2) {
+      // We have a merge, check the cases (they are not parameters)
+      expr::term_ref v1 = vars.front();
+      expr::term_ref v2 = vars.back();
+      variable_class v1_class = get_variable_class(v1);
+      variable_class v2_class = get_variable_class(v2);
+
+      // Bad cases 
+      if (type == SAL_COMPOSE_SYNCHRONOUS && v1_class == SAL_VARIABLE_GLOBAL && v2_class == SAL_VARIABLE_GLOBAL) { 
+        throw parser_exception(d_tm) << 
+          "Invalid synchronous composition, modules cannot share the global variable" << var_id << ".";
+      }      
+      if ((v1_class == SAL_VARIABLE_GLOBAL && v2_class == SAL_VARIABLE_LOCAL) ||
+          (v1_class == SAL_VARIABLE_INPUT && v2_class == SAL_VARIABLE_LOCAL) ||
+          (v1_class == SAL_VARIABLE_LOCAL && v2_class == SAL_VARIABLE_GLOBAL) ||
+          (v1_class == SAL_VARIABLE_LOCAL && v2_class == SAL_VARIABLE_INPUT) ||
+          (v1_class == SAL_VARIABLE_LOCAL && v2_class == SAL_VARIABLE_OUTPUT) ||
+          (v1_class == SAL_VARIABLE_OUTPUT && v2_class == SAL_VARIABLE_LOCAL)) {
+        throw parser_exception(d_tm) <<
+          "Invalid module composition, the set of local variables must be disjoint "
+          "from the sets of input, output and global variables in the resultant "
+          "module. The local variable " << var_id << " does not satisfy this rule.";
+      }
+      if ((v1_class == SAL_VARIABLE_GLOBAL && v2_class == SAL_VARIABLE_OUTPUT) ||
+          (v1_class == SAL_VARIABLE_OUTPUT && v2_class == SAL_VARIABLE_GLOBAL) ||
+          (v1_class == SAL_VARIABLE_OUTPUT && v2_class == SAL_VARIABLE_OUTPUT)) {
+        throw parser_exception(d_tm) <<
+          "Invalid module composition, the output variable " << var_id << " is an "
+          "output/global variable in both modules.";
+      }
+
+      // Resulting type
+      variable_class v_class;
+
+      // Remove any global/output variables from the inputs
+      if (v1_class == SAL_VARIABLE_INPUT && v2_class == SAL_VARIABLE_OUTPUT) {
+        // becomes output
+        v_class = SAL_VARIABLE_OUTPUT;
+      } else if (v1_class == SAL_VARIABLE_INPUT && v2_class == SAL_VARIABLE_GLOBAL) {
+        // becomes global
+        v_class = SAL_VARIABLE_GLOBAL;
+      } else if (v2_class == SAL_VARIABLE_INPUT && v1_class == SAL_VARIABLE_OUTPUT) {
+        // becomes output
+        v_class = SAL_VARIABLE_OUTPUT;
+      } else if (v2_class == SAL_VARIABLE_INPUT && v1_class == SAL_VARIABLE_GLOBAL) {
+        // becomes global
+        v_class = SAL_VARIABLE_GLOBAL;
+      } else {
+        assert(v1_class == v2_class);
+        v_class = v1_class;
+      }
+
+      // Create a replacement variable and add to substitution map
+      expr::term_ref v1_type = d_tm.type_of(v1);
+      expr::term_ref v2_type = d_tm.type_of(v2);
+
+      expr::term_ref v_type = d_tm.mk_intersection_type(v1_type, v2_type);
+      expr::term_ref v = d_tm.mk_variable(var_id, v_type);
+
+      // Delete both v1 and v2, add v to v_class
+      assert(subst.find(v1) == subst.end());
+      assert(subst.find(v2) == subst.end());
+      subst[v1] = v;
+      subst[v2] = v;
+      expr::term_ref v_next;
+      bool has_next = (has_next_variable(v1) || has_next_variable(v2));
+      if (has_next) {
+        v_next = d_tm.mk_variable(var_id + "'", v_type);
+        if (has_next_variable(v1)) {
+          expr::term_ref v1_next = get_next_variable(v1);
+          subst[v1_next] = v_next;
+        }
+        if (has_next_variable(v2)) {
+          expr::term_ref v2_next = get_next_variable(v2);
+          subst[v2_next] = v_next;
+        }
+      }
+      remove_variable(v1, v1_class);
+      remove_variable(v2, v2_class);
+
+      to_remove_from_symbol_table.push_back(var_id);
+      to_add_list.push_back(variable_add_info(var_id, v, v_next, v_class));
+    }
+  }
+
+  // Remove from symbol table
+  for (size_t i = 0; i < to_remove_from_symbol_table.size(); ++ i) {
+    d_variables.erase_entry(to_remove_from_symbol_table[i]);
+  }
+
+  // Add the new variables
+  for (size_t i = 0; i < to_add_list.size(); ++ i) {
+    const variable_add_info& a = to_add_list[i];
+    add_variable(a.id, a.v, a.v_class, a.v_next);
+  }
+}
+
 module::ref module::compose(const module& other, composition_type type) {
 
-  TRACE("sal::module") << "compose: M1, M2" << std::endl;
+  TRACE("sal::module") << "compose: M1, M2 as " << type << std::endl;
   TRACE("sal::module") << "[M1 = " << *this << std::endl << "]" << std::endl;
   TRACE("sal::module") << "[M2 = " << other << std::endl << "]" << std::endl;
 
+  // Composition is simple:
+  // - create a new module m
+  // - load m1 into m
+  // - load m2 into m
+
   module::ref result = new module(d_tm);
-  result->load(*this);
-  result->load(other);
-  std::cerr << "TODO: composition" << std::endl;
+  
+  // First, load the symbols 
+  result->load_symbols(*this);
+  result->load_symbols(other);
+  expr::term_manager::substitution_map subst;
+  result->finish_symbol_composition(type, subst);
+
+  // Now, depending on the composition type, add the other stuff
+  switch (type) {
+  case SAL_COMPOSE_SYNCHRONOUS:
+    // We move at the same time, so just add the other stuff
+    result->load_semantics(*this, subst);
+    result->load_semantics(other, subst);
+    break;
+  case SAL_COMPOSE_ASYNCHRONOUS:
+    // Disjunctive semantics
+    result->load_semantics(*this, other, subst);
+    break;
+  default:
+    assert(false);
+  }
+
+  TRACE("sal::module") << "[M2 || M2 = " << *result << std::endl << "]" << std::endl;
+
   return result;
 }
 

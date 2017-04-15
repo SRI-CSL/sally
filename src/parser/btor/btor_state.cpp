@@ -204,6 +204,8 @@ cmd::command* btor_state::finalize() const {
   std::vector<term_ref> types;
   // No inputs, just empty struct
   term_ref input_type_ref = tm().mk_struct_type(names, types);
+  // No parameters, just empty struct
+  term_ref param_type_ref = tm().mk_struct_type(names, types);
   // Construct the state type
   for (size_t i = 0; i < d_variables.size(); ++ i) {
     term_ref var_ref = get_term(d_variables[i]);
@@ -212,7 +214,7 @@ cmd::command* btor_state::finalize() const {
     types.push_back(tm().type_of(var));
   }
   term_ref state_type_ref = tm().mk_struct_type(names, types);
-  system::state_type* state_type = new system::state_type("state_type", tm(), state_type_ref, input_type_ref);
+  system::state_type* state_type = new system::state_type("state_type", tm(), state_type_ref, input_type_ref, param_type_ref);
   cmd::command* state_type_declare = new cmd::declare_state_type("state_type", state_type);
 
   // Get the state variables

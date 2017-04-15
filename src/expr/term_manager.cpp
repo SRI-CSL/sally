@@ -784,11 +784,33 @@ term_ref term_manager::mk_and(const std::vector<term_ref>& conjuncts) {
   return d_tm->mk_term<TERM_AND>(lits.begin(), lits.end());
 }
 
+term_ref term_manager::mk_and(term_ref f1) {
+  std::vector<term_ref> conjuncts;
+  conjuncts.push_back(f1);
+  return mk_and(conjuncts);
+}
+
 term_ref term_manager::mk_and(term_ref f1, term_ref f2) {
   std::vector<term_ref> conjuncts;
   conjuncts.push_back(f1);
   conjuncts.push_back(f2);
   return mk_and(conjuncts);
+}
+
+term_ref term_manager::mk_and(term_ref f1, term_ref f2, term_ref f3) {
+  std::vector<term_ref> conjuncts;
+  conjuncts.push_back(f1);
+  conjuncts.push_back(f2);
+  conjuncts.push_back(f3);
+  return mk_and(conjuncts);
+}
+
+term_ref term_manager::mk_or(term_ref f1, term_ref f2, term_ref f3) {
+  std::vector<term_ref> disjuncts;
+  disjuncts.push_back(f1);
+  disjuncts.push_back(f2);
+  disjuncts.push_back(f3);
+  return mk_or(disjuncts);
 }
 
 term_ref term_manager::mk_or(term_ref f1, term_ref f2) {
@@ -830,6 +852,21 @@ term_ref term_manager::mk_or(const std::vector<term_ref>& disjuncts) {
   }
   if (lits.size() == 1) {
     return disjuncts[0];
+  }
+  return d_tm->mk_term<TERM_OR>(lits.begin(), lits.end());
+}
+
+term_ref term_manager::mk_or(const std::set<term_ref>& disjuncts) {
+  std::set<term_ref> lits;
+  std::set<term_ref>::const_iterator it;
+  for (it = disjuncts.begin(); it != disjuncts.end(); ++ it) {
+    get_disjuncts(*it, lits);
+  }
+  if (lits.size() == 0) {
+    return mk_boolean_constant(false);
+  }
+  if (lits.size() == 1) {
+    return *lits.begin();
   }
   return d_tm->mk_term<TERM_OR>(lits.begin(), lits.end());
 }
@@ -915,6 +952,10 @@ size_t term_manager::id() const {
 
 bool term_manager::compatible(term_ref t1, term_ref t2) {
   return d_tm->compatible(t1, t2);
+}
+
+term_ref term_manager::mk_intersection_type(term_ref t1, term_ref t2) {
+  return d_tm->mk_intersection_type(t1, t2);
 }
 
 }

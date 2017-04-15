@@ -194,13 +194,22 @@ public:
   term_ref mk_not(term_ref f1);
 
   /** Make a conjunction (simplifies a bit). */
+  term_ref mk_and(term_ref f1);
+
+  /** Make a conjunction (simplifies a bit). */
   term_ref mk_and(term_ref f1, term_ref f2);
+
+  /** Make a conjunction (simplifies a bit). */
+  term_ref mk_and(term_ref f1, term_ref f2, term_ref f3);
+
+  /** Name a disjunction (simplifies a bit). */
+  term_ref mk_or(term_ref f);
 
   /** Make a disjunction (simplifies a bit). */
   term_ref mk_or(term_ref f1, term_ref f2);
 
-  /** Name a disjunction (simplifies a bit). */
-  term_ref mk_or(term_ref f);
+  /** Make a disjunction (simplifies a bit). */
+  term_ref mk_or(term_ref f1, term_ref f2, term_ref f3);
 
   /** Make a conjunction. If no children => true. One child => child. */
   term_ref mk_and(const std::vector<term_ref>& conjuncts);
@@ -210,6 +219,9 @@ public:
 
   /** Make a disjunction. If no children => false. One child => child. */
   term_ref mk_or(const std::vector<term_ref>& disjuncts);
+
+  /** Make a disjunction. If no children => false. One child => child. */
+  term_ref mk_or(const std::set<term_ref>& disjuncts);
 
   /** Make a new rational constant */
   term_ref mk_rational_constant(const rational& value);
@@ -377,6 +389,9 @@ public:
 
   /** Get all fields of a struct variable */
   void get_struct_fields(const term& t, std::vector<term_ref>& out) const;
+
+  /** Make an intersection type. */
+  term_ref mk_intersection_type(term_ref t1, term_ref t2);
 
   /** Get a reference for the term */
   term_ref ref_of(const term& term) const;

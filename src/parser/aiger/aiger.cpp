@@ -159,9 +159,9 @@ aiger_parser::aiger_parser(const system::context& ctx, const char* filename)
   // * output are sally properties
 
   // Create the input and state variables
-  std::vector<std::string> input_names, state_names;
+  std::vector<std::string> input_names, state_names, param_names;
   std::vector<aiger_id_type> input_aiger_ids, state_aiger_ids;
-  std::vector<expr::term_ref> input_types, state_types;
+  std::vector<expr::term_ref> input_types, state_types, param_types;
   // Aiger doesn't really distinguish between state and input, properties can
   // include input variables, so we make everything state
   for (size_t i = 0; i < a->num_inputs; ++ i) {
@@ -191,7 +191,8 @@ aiger_parser::aiger_parser(const system::context& ctx, const char* filename)
   // Make the state type
   expr::term_ref input_type_ref = d_tm.mk_struct_type(input_names, input_types);
   expr::term_ref state_type_ref = d_tm.mk_struct_type(state_names, state_types);
-  system::state_type* state_type = new system::state_type("aig", d_tm, state_type_ref, input_type_ref);
+  expr::term_ref param_type_ref = d_tm.mk_struct_type(param_names, param_types);
+  system::state_type* state_type = new system::state_type("aig", d_tm, state_type_ref, input_type_ref, param_type_ref);
   cmd::command* state_type_declare = new cmd::declare_state_type("aig", state_type);
   all_commands->push_back(state_type_declare);
 

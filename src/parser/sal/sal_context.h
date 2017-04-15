@@ -22,6 +22,11 @@
 #include "expr/term_manager.h"
 #include "utils/symbol_table.h"
 #include "parser/sal/sal_module.h"
+#include "command/command.h"
+#include "command/sequence.h"
+#include "system/context.h"
+
+#include <iosfwd>
 
 namespace sally {
 namespace parser {
@@ -49,12 +54,6 @@ class context {
   /** Symbol table of modules */
   utils::symbol_table<module::ref> d_modules;
 
-  /** Symbol table of constants */
-  utils::symbol_table<expr::term_ref> d_constants;
-
-  /** Symbol table of types */
-  utils::symbol_table<expr::term_ref> d_types;
-
   struct assertion {
 
     std::string name;
@@ -69,18 +68,40 @@ class context {
   /** List of added assertions */
   std::vector<assertion> d_assertions;
 
+  /** Temp: substitution map */
+  typedef std::map<sal::module::ref, expr::term_manager::substitution_map> module_to_subst_map;
+  module_to_subst_map d_SAL_to_Sally_subst;
+
+  /** Temp: map from modules to their state types */
+  typedef std::map<sal::module::ref, const system::state_type*> module_to_state_type_map;
+  module_to_state_type_map d_state_type;
+
+  /** Process the given module and add commands to the sequence command */
+  void process_module(module::ref module, cmd::sequence* seq);
+
+  /** Process the given assertion and add to the sequence command */
+  void process_assertion(const system::context& sally_context, const assertion& a, cmd::sequence* seq);
+
 public:
 
   context(expr::term_manager& tm, std::string name);
   ~context();
 
+  /** Add a parameter to the context */
   void add_parameter(std::string name, expr::term_ref var);
 
+  /** Add a module to the context */
   void add_module(std::string name, sal::module::ref m);
 
+  /** Add a named assertion to the context */
   void add_assertion(std::string id, assertion_form form, sal::module::ref m, expr::term_ref a);
 
+  /** Adds definitions to the sally context and return a sequence command to discharge the assertions */
+  cmd::command* to_sally_commands(const system::context& sally_context);
+
 };
+
+std::ostream& operator << (std::ostream& out, assertion_form form);
 
 }
 }

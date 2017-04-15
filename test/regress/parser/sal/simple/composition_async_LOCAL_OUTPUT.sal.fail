@@ -1,0 +1,1 @@
+Error: [Context: composition_async_LOCAL_OUTPUT, line(14), column(14)]: Invalid module composition, the set of local variables must be disjoint from the sets of input, output and global variables in the resultant module. The local variable "x" does not satisfy this rule.

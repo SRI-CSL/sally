@@ -76,17 +76,26 @@ declare_state_type returns [cmd::command* cmd = 0]
   std::vector<expr::term_ref> state_types;
   std::vector<std::string> input_vars;  
   std::vector<expr::term_ref> input_types;
+  std::vector<std::string> param_vars;  
+  std::vector<expr::term_ref> param_types;
 }
   : '(' 'define-state-type' 
         // Name of the type
         symbol[id, parser::MCMT_STATE_TYPE, false]
         // State variables  
         variable_list[state_vars, state_types]
-        // Input variables
-        variable_list[input_vars, input_types]? 
+        (
+          // Input variables
+          variable_list[input_vars, input_types]
+          // Parameter variables
+          variable_list[param_vars, param_types]?
+        )? 
     ')' 
     {
-      $cmd = new cmd::declare_state_type(id, STATE->mk_state_type(id, state_vars, state_types, input_vars, input_types));
+      $cmd = new cmd::declare_state_type(id, STATE->mk_state_type(id, 
+                                                        state_vars, state_types, 
+                                                        input_vars, input_types,
+                                                        param_vars, param_types));
     }
   ; 
 

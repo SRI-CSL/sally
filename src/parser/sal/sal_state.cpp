@@ -58,7 +58,8 @@ sal_state::sal_state(const system::context& context)
 , d_variables("local vars")
 , d_types("types")
 , d_modules("modules")
-, d_lvalues_next(true)
+, d_in_transition(true)
+, d_multi_commands(0)
 {
   // Add the basic types
   term_manager& tm = context.tm();
@@ -84,12 +85,14 @@ term_ref sal_state::get_type(std::string id) const {
   return d_types.get_entry(id);
 }
 
-term_ref sal_state::new_variable(std::string name, term_ref type) {
+term_ref sal_state::new_variable(std::string name, term_ref type, bool has_next) {
   term_ref var = tm().mk_variable(name, type);
-  term_ref var_next = tm().mk_variable(name + "'", type);
-  assert(d_var_to_next_map.find(var) == d_var_to_next_map.end());
-  d_var_to_next_map[var] = var_next;
-  d_next_to_var_map[var_next] = var;
+  if (has_next) {
+    term_ref var_next = tm().mk_variable(name + "'", type);
+    assert(d_var_to_next_map.find(var) == d_var_to_next_map.end());
+    d_var_to_next_map[var] = var_next;
+    d_next_to_var_map[var_next] = var;
+  }
   return var;
 }
 
@@ -105,6 +108,30 @@ term_ref sal_state::get_variable(std::string id, bool next) const {
   }
   return var;
 }
+
+void sal_state::ensure_variable(term_ref x, bool next) const {
+  
+  term_ref x_next = x;
+
+  // Must be a variable
+  const term& x_term = tm().term_of(x);
+  if (x_term.op() != VARIABLE) {
+    throw parser_exception(tm()) << "Expecting a variable, got " << x << ".";
+  }
+
+  // Check the right version 
+  if (next) {
+    x = get_state_variable(x_next);
+  } else {
+    x_next = get_state_variable(x);
+  }
+
+  // Get the module and make sure variable is in state
+  assert(d_current_module.size() > 0);
+  sal::module::ref m = d_current_module.back();
+  m->get_variable_class(x);
+}
+
 
 term_ref sal_state::get_next_state_variable(term_ref var) const {
   term_to_term_map::const_iterator find = d_var_to_next_map.find(var);
@@ -133,14 +160,17 @@ sal::module::ref sal_state::get_module(std::string name, const std::vector<term_
   return m;
 }
 
-void sal_state::push_scope() {
+void sal_state::push_scope(scope_type type) {
   d_variables.push_scope();
   d_types.push_scope();
+  d_scope.push_back(type);
 }
 
-void sal_state::pop_scope() {
+void sal_state::pop_scope(scope_type type) {
   d_variables.pop_scope();
   d_types.pop_scope();
+  assert(d_scope.back() == type);
+  d_scope.pop_back();
 }
 
 void sal_state::gc_collect(const gc_relocator& gc_reloc) {
@@ -149,7 +179,7 @@ void sal_state::gc_collect(const gc_relocator& gc_reloc) {
 }
 
 cmd::command* sal_state::finalize() {
-  return 0;
+  return d_sal_context->to_sally_commands(d_context);
 }
 
 rational sal_state::mk_integer(pANTLR3_COMMON_TOKEN token) {
@@ -181,13 +211,17 @@ term_ref sal_state::mk_string(std::string s) {
   return tm().mk_string_constant(s);
 }
 
-sal::context* sal_state::new_context(std::string name) {
+void sal_state::new_context(std::string name) {
+  assert(d_sal_context == 0);
   d_sal_context = new sal::context(tm(), name);
+}
+
+sal::context* sal_state::get_context() const {
   return d_sal_context;
 }
 
 sal::module::ref sal_state::start_module() {
-  push_scope();
+  push_scope(SCOPE_MODULE);
   sal::module::ref m = new sal::module(tm());
   d_current_module.push_back(m);
   return m;
@@ -196,6 +230,7 @@ sal::module::ref sal_state::start_module() {
 void sal_state::finish_module(sal::module::ref m) {
   assert(d_current_module.back() == m);
   d_current_module.pop_back();
+  pop_scope(SCOPE_MODULE);
   TRACE("parser::sal") << "finish_module: " << *m << std::endl;
 }
 
@@ -204,7 +239,7 @@ void sal_state::add_context_parameters(const var_declarations_ctx& vars) {
   for (size_t i = 0; i < vars.var_names.size(); ++ i) {
     std::string name = vars.var_names[i];
     term_ref type = vars.var_types[i];
-    term_ref var = new_variable(name, type);
+    term_ref var = new_variable(name, type, false);
     d_variables.add_entry(name, var);
     d_sal_context->add_parameter(name, var);
   }
@@ -277,7 +312,7 @@ void sal_state::define_constant(std::string id, term_ref type, term_ref definiti
 
 void sal_state::declare_constant(std::string id, term_ref type) {
   TRACE("parser::sal") << "declare_constant(" << id << ", " << type << ")" << std::endl;
-  define_var_in_scope(id, type, new_variable(id, type));
+  define_var_in_scope(id, type, new_variable(id, type, false));
 }
 
 void sal_state::define_type(std::string id, term_ref type) {
@@ -331,11 +366,11 @@ term_ref sal_state::mk_record_type(const var_declarations_ctx& elements) {
 
 void sal_state::start_module_declaration(const var_declarations_ctx& args) {
   // Declare all the variables
-  push_scope();
+  push_scope(SCOPE_MODULE_DECLARATION);
   for (size_t i = 0; i < args.size(); ++ i) {
     std::string name = args.var_names[i];
     term_ref type = args.var_types[i];
-    term_ref var = new_variable(name, type);
+    term_ref var = new_variable(name, type, false);
     d_variables.add_entry(name, var);
   }
 }
@@ -349,7 +384,7 @@ void sal_state::finish_module_declaration(sal::module::ref m, const var_declarat
     m->add_parameter(name, var);
   }
   // Undeclare all the variables
-  pop_scope();
+  pop_scope(SCOPE_MODULE_DECLARATION);
 }
 
 void sal_state::define_module(std::string id, sal::module::ref m) {
@@ -362,36 +397,32 @@ void sal_state::define_module(std::string id, sal::module::ref m) {
 }
 
 void sal_state::start_predicate_subtype(std::string id, term_ref base_type) {
-  push_scope();
+  push_scope(SCOPE_PREDICATE_SUBTYPE);
   term_ref x = tm().mk_variable(id, base_type);
   define_var_in_scope(id, base_type, x);
-  push_scope();
 }
 
 term_ref sal_state::finish_predicate_subtype(term_ref predicate) {
-  pop_scope();
   std::vector<term_ref> x;
   d_variables.get_scope_values(x);
   assert(x.size() == 1);
   term_ref result = tm().mk_predicate_subtype(x.back(), predicate);
-  pop_scope();
+  pop_scope(SCOPE_PREDICATE_SUBTYPE);
   return result;
 }
 
 void sal_state::start_quantifier(const var_declarations_ctx& bindings) {
-  push_scope();
+  push_scope(SCOPE_QUANTIFIER);
   for (size_t i = 0; i < bindings.size(); ++ i) {
     std::string name = bindings.var_names[i];
     term_ref type = bindings.var_types[i];
     term_ref x = tm().mk_variable(name, type);
     define_var_in_scope(name, type, x);
   }
-  push_scope();
 }
 
-term_ref sal_state::finish_quantifier(term_op op, term_ref body) {
+term_ref sal_state::mk_quantifier(term_op op, term_ref body) {
   term_ref result;
-  pop_scope();
   std::vector<term_ref> x;
   d_variables.get_scope_values(x);
   switch (op) {
@@ -404,74 +435,72 @@ term_ref sal_state::finish_quantifier(term_op op, term_ref body) {
   default:
     assert(false);
   }
-  pop_scope();
+  return result;
+}
+
+term_ref sal_state::finish_quantifier(term_op op, term_ref body) {
+  term_ref result = mk_quantifier(op, body);
+  pop_scope(SCOPE_QUANTIFIER);
   return result;
 }
 
 void sal_state::start_indexed_composition(const var_declarations_ctx& bindings) {
-  push_scope();
+  push_scope(SCOPE_INDEXED_COMPOSITION);
   for (size_t i = 0; i < bindings.size(); ++ i) {
     std::string name = bindings.var_names[i];
     term_ref type = bindings.var_types[i];
     term_ref x = tm().mk_variable(name, type);
     define_var_in_scope(name, type, x);
   }
-  push_scope();
 }
 
 void sal_state::finish_indexed_composition(sal::module::ref m_from, sal::module::ref m_into, sal::composition_type comp_type) {
-  pop_scope();
   std::vector<term_ref> x;
   d_variables.get_scope_values(x);
   // Take m_in and, depending on the composition type, quantify accordingly
   m_into->compose(*m_from, comp_type, x);
-  pop_scope();
+  pop_scope(SCOPE_INDEXED_COMPOSITION);
 }
 
 
 void sal_state::start_indexed_array(const var_declarations_ctx& bindings) {
-  push_scope();
+  push_scope(SCOPE_INDEXED_ARRAY);
   assert(bindings.size() == 1);
   std::string name = bindings.var_names[0];
   term_ref type = bindings.var_types[0];
   term_ref x = tm().mk_variable(name, type);
   define_var_in_scope(name, type, x);
-  push_scope();
 }
 
 term_ref sal_state::finish_indexed_array(term_ref body) {
-  pop_scope();
   std::vector<term_ref> x;
   d_variables.get_scope_values(x);
   assert(x.size() == 1);
   term_ref result = tm().mk_array_lambda(x[0], body);
-  pop_scope();
+  pop_scope(SCOPE_INDEXED_ARRAY);
   return result;
 }
 
 void sal_state::start_lambda(const var_declarations_ctx& bindings) {
-  push_scope();
+  push_scope(SCOPE_LAMBDA);
   for (size_t i = 0; i < bindings.size(); ++ i) {
     std::string name = bindings.var_names[i];
     term_ref type = bindings.var_types[i];
     term_ref x = tm().mk_variable(name, type);
     define_var_in_scope(name, type, x);
   }
-  push_scope();
 }
 
 term_ref sal_state::finish_lambda(term_ref body) {
-  pop_scope();
   std::vector<term_ref> args;
   d_variables.get_scope_values(args);
   term_ref result = (args.size() == 0 || body.is_null()) ? body : tm().mk_lambda(args, body);
-  pop_scope();
+  pop_scope(SCOPE_LAMBDA);
   return result;
 }
 
 
 void sal_state::define_var_in_scope(std::string id, term_ref type, term_ref term) {
-  // TODO: check that the types match
   assert(!type.is_null());
   assert(!term.is_null());
   term_ref term_type = tm().type_of(term);
@@ -575,8 +604,15 @@ void sal_state::declare_variables(sal::module::ref m, sal::variable_class var_cl
   for (size_t i = 0; i < vars.size(); ++ i) {
     std::string name = vars.var_names[i];
     term_ref type = vars.var_types[i];
-    term_ref var = new_variable(name, type);
-    m->add_variable(name, var, var_class);
+    bool has_next = var_class != sal::SAL_VARIABLE_INPUT;
+    term_ref var = new_variable(name, type, has_next);
+    if (has_next) {
+      expr::term_ref var_next = d_var_to_next_map[var];
+      m->add_variable(name, var, var_class, var_next);
+    } else {
+      m->add_variable(name, var, var_class, expr::term_ref());
+    }
+
     define_var_in_scope(name, type, var);
   }
 }
@@ -585,7 +621,7 @@ void sal_state::declare_variables(const var_declarations_ctx& vars) {
   for (size_t i = 0; i < vars.size(); ++ i) {
     std::string name = vars.var_names[i];
     term_ref type = vars.var_types[i];
-    term_ref var = new_variable(name, type);
+    term_ref var = new_variable(name, type, false);
     define_var_in_scope(name, type, var);
   }
 }
@@ -609,7 +645,7 @@ void sal_state::change_module_variables_to(sal::module::ref m, const var_declara
 }
 
 void sal_state::start_definition() {
-  d_lvalues_next = false;
+  d_in_transition = false;
   d_lvalues.clear();
 }
 
@@ -623,13 +659,14 @@ void sal_state::end_definition() {
 }
 
 void sal_state::start_initialization() {
-  d_lvalues_next = false;
-  d_lvalues.clear(); 
+  d_in_transition = false;
+  d_lvalues.clear();
 }
 
 void sal_state::add_initialization(sal::module::ref m, term_ref initialization) {
   TRACE("parser::sal") << "add_initialization(" << initialization << ")" << std::endl;
   m->add_initialization(initialization);
+  // Don't clear lvalues, initializations are taken together
 }
 
 void sal_state::end_initialization() {
@@ -637,13 +674,14 @@ void sal_state::end_initialization() {
 }
 
 void sal_state::start_transition() {
-  d_lvalues_next = true;
+  d_in_transition = true;
   d_lvalues.clear();
 }
 
 void sal_state::add_transition(sal::module::ref m, term_ref transition) {
   TRACE("parser::sal") << "add_transition(" << transition << ")" << std::endl;
   m->add_transition(transition);
+  d_lvalues.clear();
 }
 
 void sal_state::end_transition() {
@@ -654,11 +692,24 @@ void sal_state::end_transition() {
  * Commands can be either part of init or transition. At this point we don't
  * care, they should be well constructed.
  *
- * TODO: Basically, just do a disjunction of the commands.
+ * Basically, just do a disjunction of the commands.
  */
-term_ref sal_state::mk_term_from_commands(const std::vector<term_ref>& cmds) {
-  // Combined commands are just a disjunction
-  term_ref result = tm().mk_or(cmds);
+term_ref sal_state::mk_term_from_commands(const std::vector<term_ref>& cmds, bool has_else) {
+  // Make a copy, to change the else command
+  std::vector<term_ref> cmds_with_else(cmds);
+
+  // If there is an else clause, we guard it with negation of other guards
+  if (has_else) {
+    if (d_guards.size() == 0) {
+      throw parser_exception("ELSE not allowed on it's own");
+    }
+    term_ref any_guard = tm().mk_or(d_guards);
+    term_ref else_guard = tm().mk_term(TERM_NOT, any_guard);
+    cmds_with_else.back() = tm().mk_term(TERM_AND, else_guard, cmds_with_else.back());
+  }
+
+  // In the end, it's just a disjunction, picking one command
+  term_ref result = tm().mk_or(cmds_with_else);
   return result;
 }
 
@@ -668,7 +719,6 @@ term_ref sal_state::mk_term_from_commands(const std::vector<term_ref>& cmds) {
  *    guard & assignment & rest' = rest
  */
 term_ref sal_state::mk_term_from_guarded(term_ref guard, const std::vector<term_ref>& assignments) {
-  // TODO: guard should be a state formula
   // TODO: assignments should be well-defined assignments (checked in assignment definition?)
 
   // Get the current module and all variables in it
@@ -762,12 +812,12 @@ void sal_state::check_index_type(term_ref t) const {
 }
 
 void sal_state::start_set_abstraction(term_ref lhs, std::string id, term_ref type) {
-  push_scope();
+  push_scope(SCOPE_SET_ABSTRACTION);
   define_var_in_scope(id, type, lhs);
 }
 
 void sal_state::sal_state::end_set_abstraction() {
-  pop_scope();
+  pop_scope(SCOPE_SET_ABSTRACTION);
 }
 
 term_ref sal_state::mk_set_enumeration(term_ref t, const std::vector<term_ref>& set_elements) {
@@ -779,7 +829,23 @@ term_ref sal_state::mk_set_enumeration(term_ref t, const std::vector<term_ref>& 
   return tm().mk_term(TERM_OR, equalities);
 }
 
-void sal_state::add_lvalue(term_ref t) {
+void sal_state::guards_add(term_ref t) {
+  if (d_multi_commands > 0) {
+    d_multi_guard = t;
+  } else {
+    d_guards.insert(t);
+  }
+}
+
+void sal_state::guards_clear() {
+  d_guards.clear();
+}
+
+void sal_state::lvalues_clear() {
+  d_lvalues.clear();
+}
+
+void sal_state::lvalues_add(term_ref t) {
 
   // Get the actual variable of the lvalue (extract arrays);
   bool done = false;
@@ -803,7 +869,7 @@ void sal_state::add_lvalue(term_ref t) {
   }
 
   // Get the current variable (will throw if t_next is not in next)
-  if (d_lvalues_next) {
+  if (d_in_transition) {
     t = get_state_variable(t);
   }
 
@@ -822,3 +888,57 @@ void sal_state::add_lvalue(term_ref t) {
   TRACE("parser::sal::lvalue") << "adding lvalue: " << t << std::endl; 
   d_lvalues.insert(t);
 }
+
+void sal_state::start_multi_command() {
+  d_multi_commands ++;
+}
+
+void sal_state::end_multi_command() {
+  assert(d_multi_commands > 0);
+  assert(!d_multi_guard.is_null());
+  d_multi_guard = mk_quantifier(TERM_EXISTS, d_multi_guard);
+  d_multi_commands --;
+  if (d_multi_commands == 0) {
+    d_guards.insert(d_multi_guard);
+    d_multi_guard = term_ref();
+  }
+}
+
+term_ref sal_state::mk_assignment(term_ref lvalue, term_ref rhs) {
+  if (tm().term_of(lvalue).op() == VARIABLE || !d_in_transition) {
+    return tm().mk_term(TERM_EQ, lvalue, rhs);
+  } else {
+
+    // Collect the accessors
+    std::vector<term_ref> accessors;
+    for (bool done = false; !done;) {
+      const term& t = tm().term_of(lvalue);
+      term_op op = t.op();
+      switch (op) {
+      case TERM_ARRAY_READ:
+        lvalue = t[0];
+        accessors.push_back(t[1]);
+        break;
+      case TERM_RECORD_READ:
+        lvalue = t[0];
+        accessors.push_back(t[1]);
+        break;
+      case VARIABLE:
+        done = true;
+        break;
+      default:
+        throw parser_exception(tm()) << "Unexpected lvalue: " << lvalue;
+        break;
+      }
+    }
+
+    // Get the state version of lvalue
+    term_ref lvalue_prev = get_state_variable(lvalue);
+
+    // Now, make a proper term update
+    term_ref new_rhs = mk_term_update(lvalue_prev, accessors, rhs);
+    term_ref result = tm().mk_term(TERM_EQ, lvalue, new_rhs);
+    return result;
+  }
+}
+

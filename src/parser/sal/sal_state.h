@@ -54,6 +54,19 @@ enum sal_object {
   SAL_OBJECT_LAST
 };
 
+enum scope_type {
+  SCOPE_MODULE,
+  SCOPE_MODULE_DECLARATION,
+  SCOPE_PREDICATE_SUBTYPE,
+  SCOPE_QUANTIFIER,
+  SCOPE_INDEXED_COMPOSITION,
+  SCOPE_INDEXED_ARRAY,
+  SCOPE_LAMBDA,
+  SCOPE_SET_ABSTRACTION,
+  SCOPE_ASSERTION,
+  SCOPE_LET
+};
+
 /** State attached to the parser */
 class sal_state {
 
@@ -96,13 +109,25 @@ class sal_state {
   term_to_term_map d_next_to_var_map;
 
   /** Create a new variable and it's next version */
-  expr::term_ref new_variable(std::string name, expr::term_ref type);
+  expr::term_ref new_variable(std::string name, expr::term_ref type, bool has_next);
 
   /** Tracking of lvalues for command blocks */
   std::set<expr::term_ref> d_lvalues;
   
   /** Are lvalues passed in as next variables? */
-  bool d_lvalues_next;
+  bool d_in_transition;
+
+  /** Tracking guards, so that we can make an ELSE case */
+  std::set<expr::term_ref> d_guards;
+
+  /** Scopes we work on */
+  std::vector<scope_type> d_scope;
+
+  /** Depth of multi-command */
+  size_t d_multi_commands;
+
+  /** Guard of the multi-command */
+  expr::term_ref d_multi_guard;
 
 public:
 
@@ -126,16 +151,19 @@ public:
   const system::context& ctx() const { return d_context; }
 
   /** Push a new scope in variable and type symbol tables */
-  void push_scope();
+  void push_scope(scope_type type);
 
   /** Pop a scope in variable and type symbol tables */
-  void pop_scope();
+  void pop_scope(scope_type type);
 
   /** Get a type (throw exception if not found) */
   expr::term_ref get_type(std::string id) const;
 
   /** Get a variable (throw exception if not found) */
   expr::term_ref get_variable(std::string name, bool next) const;
+
+  /** Ensure the term is a variable in the current module */
+  void ensure_variable(expr::term_ref x, bool next) const;
 
   /** Get the next state version of the variable */
   expr::term_ref get_next_state_variable(expr::term_ref var) const;
@@ -168,8 +196,11 @@ public:
   /** Collect terms */
   void gc_collect(const expr::gc_relocator& gc_reloc);
 
-  /** Return a new context */
-  sal::context* new_context(std::string name);
+  /** Create a new context */
+  void new_context(std::string name);
+
+  /** Return the current context */
+  sal::context* get_context() const;
 
   /** Return a new module and push scope */
   sal::module::ref start_module();
@@ -279,6 +310,9 @@ public:
   /** Start construction of a quantifier */
   void start_quantifier(const var_declarations_ctx& bindings);
 
+  /** Make a quantifier of a previously started quantifier (doesn't finish) */
+  expr::term_ref mk_quantifier(expr::term_op op, expr::term_ref body);
+
   /** Finish construction of a previously started quantifier */
   expr::term_ref finish_quantifier(expr::term_op op, expr::term_ref body);
 
@@ -359,13 +393,16 @@ public:
   void end_transition();
 
   /** Make a term from a list of commands (guarder and multi) */
-  expr::term_ref mk_term_from_commands(const std::vector<expr::term_ref>& cmds);
+  expr::term_ref mk_term_from_commands(const std::vector<expr::term_ref>& cmds, bool has_else);
 
   /**
    * Make a term from a guarded command (single guard, vector of assignments).
    * Guard can be null to cover the else case.
    */
   expr::term_ref mk_term_from_guarded(expr::term_ref guard, const std::vector<expr::term_ref>& assignments);
+
+  /** Make an assignment. If an assignmnet of a read term, convert to update term. */
+  expr::term_ref mk_assignment(expr::term_ref lvalue, expr::term_ref rhs);
 
   /** Check that the term is OK */
   void check_term(expr::term_ref t) const;
@@ -374,7 +411,22 @@ public:
   void check_index_type(expr::term_ref t) const;
 
   /** Add an lvalue to the set of lvalues and do some checking */
-  void add_lvalue(expr::term_ref t);
+  void lvalues_add(expr::term_ref t);
+
+  /** Clear lvalues */
+  void lvalues_clear();
+
+  /** Add a guard to the set of guards and do some checking */
+  void guards_add(expr::term_ref t);
+
+  /** Clear guards */
+  void guards_clear();
+
+  /** Start a multicommand (count quantifiers so that we can extract the quantified guard) */
+  void start_multi_command();
+
+  /** End a multicommand */
+  void end_multi_command();
 
 };
 

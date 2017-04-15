@@ -60,6 +60,7 @@ public:
 
   typedef std::set<expr::term_ref> term_set;
   typedef expr::term_ref_hash_map<variable_class> variable_class_map;
+  typedef expr::term_ref_hash_map<expr::term_ref> term_to_term_map;
   typedef utils::symbol_table<expr::term_ref> symbol_table;
 
 private:
@@ -91,12 +92,48 @@ private:
   /** Map from variables to the class they belong to */
   variable_class_map d_variable_class;
 
+  /** Map from variables to their next version (if any) */
+  term_to_term_map d_variable_next;
+
   /** Term manager we're using */
   expr::term_manager& d_tm;
 
   term_set d_definitions;
   term_set d_initializations;
   term_set d_transitions;
+
+  /** Insert to set with substitution */
+  void insert_with_substitution(term_set& to, const term_set& from, const expr::term_manager::substitution_map& subst);
+
+  /** Insert to map with substitution */
+  void insert_with_substitution(term_to_term_map& to, const term_to_term_map& from, const expr::term_manager::substitution_map& subst);
+
+  /** Insert to map with substitution */
+  void insert_with_substitution(variable_class_map& to, const variable_class_map& from, const expr::term_manager::substitution_map& subst);
+
+  /** Insert to vector with substitution */
+  void insert_with_substitution(std::vector<expr::term_ref>& to, const std::vector<expr::term_ref>& from, const expr::term_manager::substitution_map& subst);
+
+  /** Finish composition after loading all the ingredients */
+  void finish_symbol_composition(composition_type type, expr::term_manager::substitution_map& subst);
+
+  /** Load the symbols from another module */
+  void load_symbols(const module& m);
+
+  /** Load the semantics from another module */
+  void load_semantics(const module& m, const expr::term_manager::substitution_map& subst_map);
+
+  /** Load disjunctive semantics from another module */
+  void load_semantics(const module& m1, const module& m2, const expr::term_manager::substitution_map& subst_map);
+
+  /** Returns the idle transition (x' = x) of the module */
+  expr::term_ref get_idle() const;
+
+  /**
+   * Removes the variable from internal structures (not from symbol table).
+   * Returns true if variable had a next.
+   */
+  void remove_variable(expr::term_ref var, variable_class sal_var_class);
 
 public:
 
@@ -106,14 +143,20 @@ public:
   /** Set the name of the module */
   void set_name(std::string name) { d_name = name; }
 
+  /** Get the name of the module */
+  std::string get_name() const { return d_name; }
+
   /** Smart references to modules */
   typedef utils::smart_ptr<module> ref;
 
   /** Add a parameter to the module */
   void add_parameter(std::string id, expr::term_ref var);
 
+  /** Returns true if the term is a module parameter */
+  bool is_parameter(expr::term_ref var) const;
+
   /** Add a variable to the module */
-  void add_variable(std::string id, expr::term_ref var, variable_class sal_var_class);
+  void add_variable(std::string id, expr::term_ref var, variable_class sal_var_class, expr::term_ref var_next);
 
   /** Check if module has a variable named id and it is of the given class */
   bool has_variable(std::string id, variable_class sal_var_class) const;
@@ -124,11 +167,21 @@ public:
   /** Get the variable with the given id */
   expr::term_ref get_variable(std::string id) const;
 
-  /** Get the class of a variable */
+  /** Get next variable if there is one (throws if not) */
+  bool has_next_variable(expr::term_ref var) const;
+
+  /** Get next variable if there is one (throws if not) */
+  expr::term_ref get_next_variable(expr::term_ref var) const;
+
+  /** Get the class of a variable (throws if not a state variable) */
   variable_class get_variable_class(expr::term_ref var) const;
 
   /** Get all variables of a class */
   const term_set& get_variables(variable_class sal_var_class) const;
+
+  /** Get all variables of a class */
+  template <typename collection>
+  void get_variables(variable_class sal_var_class, collection& out) const;
 
   /** Get the symbol table */
   const symbol_table& get_symbol_table() const;
@@ -154,11 +207,20 @@ public:
   /** Add a definition */
   void add_definition(expr::term_ref definition);
 
+  /** Returns all definitions */
+  const term_set& get_definitions() { return d_definitions; }
+
   /** Add an initialization */
   void add_initialization(expr::term_ref initialization);
 
+  /** Returns all initializations */
+  const term_set& get_initializations() { return d_initializations; }
+
   /** Add a transition */
   void add_transition(expr::term_ref transition);
+
+  /** Return all transitions */
+  const term_set& get_transitions() { return d_transitions; }
 
   /** Perform composition over given index variables */
   void compose(const module& m_from, composition_type type, const std::vector<expr::term_ref>& index_vars);
@@ -169,6 +231,12 @@ public:
 };
 
 std::ostream& operator << (std::ostream& out, const module& m);
+
+template <typename collection>
+void module::get_variables(variable_class sal_var_class, collection& out) const {
+  const term_set& vars = get_variables(sal_var_class);
+  std::copy(vars.begin(), vars.end(), std::insert_iterator<collection>(out, out.end()));
+}
 
 }
 }

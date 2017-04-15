@@ -65,10 +65,14 @@ public:
   /** Returns the context for the parser */
   const system::context& ctx() const { return d_context; }
 
+  typedef std::vector<std::string> string_vec;
+  typedef std::vector<expr::term_ref> term_ref_vec;
+
   /** Create a new state type. */
   system::state_type* mk_state_type(std::string id,
-      const std::vector<std::string>& state_vars, const std::vector<expr::term_ref>& state_types,
-      const std::vector<std::string>& input_vars, const std::vector<expr::term_ref>& input_types) const;
+      const string_vec& state_vars, const term_ref_vec& state_types,
+      const string_vec& input_vars, const term_ref_vec& input_types,
+      const string_vec& param_vars, const term_ref_vec& param_types) const;
 
   /**
    * Use the state type, i.e. declare the variables var_class.x, var_class.y, ...

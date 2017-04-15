@@ -1,0 +1,20 @@
+composition_async_INPUT_LOCAL: CONTEXT = 
+BEGIN
+
+  m1: MODULE = 
+  BEGIN  
+    INPUT x: INTEGER
+  END;
+
+  m2: MODULE = 
+  BEGIN
+    LOCAL x: INTEGER    
+  END;
+ 
+  m: MODULE = m1 [] m2;
+ 
+  prove_this: 
+  THEOREM m |- TRUE;
+  
+END
+

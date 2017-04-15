@@ -1,0 +1,1 @@
+Error: [Context: composition_async_GLOBAL_OUTPUT, line(14), column(14)]: Invalid module composition, the output variable "x" is an output/global variable in both modules.
