@@ -359,8 +359,17 @@ public:
   /** Load the module variables into the state */
   void load_module_variables(sal::module::ref m);
 
-  /** Load the module m_from content to the module m_to */
-  void load_module_to_module(sal::module::ref m_from, sal::module::ref m_to);
+  /**
+   * Load the module m_from content to the module m_to. If allow_override is
+   * true, duplicate variables are allowed.
+   */
+  void load_module_to_module(sal::module::ref m_from, sal::module::ref m_to, bool allow_override);
+
+  /**
+   * Load the module m_from content to the module m_to while applying the given
+   * renaming. If allow_override is true, duplicate variables are allowed.
+   */
+  void load_module_to_module(sal::module::ref m_from, sal::module::ref m_to, const expr::term_manager::id_to_term_map& subst, bool allow_override);
 
   /** Change given module variables to the given class */
   void change_module_variables_to(sal::module::ref m, const var_declarations_ctx& vars, sal::variable_class var_class);

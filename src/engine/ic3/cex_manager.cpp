@@ -204,7 +204,7 @@ expr::term_ref cex_manager::get_full_cex(size_t property_id, edge_vector& edges)
     current = prev_find->second.node;
   }
 
-  // Revers the path and return the source
+  // Reverse the path and return the source
   std::reverse(edges.begin(), edges.end());
   return current;
 }

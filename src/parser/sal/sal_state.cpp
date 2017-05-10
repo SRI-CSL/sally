@@ -630,8 +630,12 @@ void sal_state::load_module_variables(sal::module::ref m) {
   m->load_variables_into(d_variables);
 }
 
-void sal_state::load_module_to_module(sal::module::ref m_from, sal::module::ref m_to) {
-  m_to->load(*m_from);
+void sal_state::load_module_to_module(sal::module::ref m_from, sal::module::ref m_to, bool allow_override) {
+  m_to->load(*m_from, allow_override);
+}
+
+void sal_state::load_module_to_module(sal::module::ref m_from, sal::module::ref m_to, const expr::term_manager::id_to_term_map& subst, bool allow_override) {
+  m_to->load(*m_from, subst, allow_override);
 }
 
 void sal_state::change_module_variables_to(sal::module::ref m, const var_declarations_ctx& vars, sal::variable_class var_class) {

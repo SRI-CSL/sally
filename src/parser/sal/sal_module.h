@@ -50,6 +50,8 @@ enum composition_type {
 
 std::ostream& operator << (std::ostream& out, variable_class var_class);
 
+std::ostream& operator << (std::ostream& out, composition_type comp_type);
+
 /**
  * Base module functionality so that we can pass around different kinds of
  * modules.
@@ -114,11 +116,14 @@ private:
   /** Insert to vector with substitution */
   void insert_with_substitution(std::vector<expr::term_ref>& to, const std::vector<expr::term_ref>& from, const expr::term_manager::substitution_map& subst);
 
+  /** Insert to vector with substitution */
+  void insert_with_substitution(symbol_table& to, const symbol_table& from, const expr::term_manager::substitution_map& subst, bool allow_override);
+
   /** Finish composition after loading all the ingredients */
   void finish_symbol_composition(composition_type type, expr::term_manager::substitution_map& subst);
 
   /** Load the symbols from another module */
-  void load_symbols(const module& m);
+  void load_symbols(const module& m, const expr::term_manager::substitution_map& subst_map, bool allow_override);
 
   /** Load the semantics from another module */
   void load_semantics(const module& m, const expr::term_manager::substitution_map& subst_map);
@@ -158,11 +163,15 @@ public:
   /** Add a variable to the module */
   void add_variable(std::string id, expr::term_ref var, variable_class sal_var_class, expr::term_ref var_next);
 
+  /** Is there a variable with the given id */
+  bool has_variable(std::string id) const;
+
   /** Check if module has a variable named id and it is of the given class */
   bool has_variable(std::string id, variable_class sal_var_class) const;
 
   /** Change a class of a variable */
   void change_variable_class(std::string id, variable_class sal_var_class);
+
 
   /** Get the variable with the given id */
   expr::term_ref get_variable(std::string id) const;
@@ -195,8 +204,19 @@ public:
   /** Load the current module variables into the symbol table */
   void load_variables_into(symbol_table& table) const;
 
-  /** Load another module into this module (i.e. add all tables, initialization, ...) */
-  void load(const module& m);
+  /**
+   * Load another module into this module (i.e. add all tables, initialization,
+   * ...). If allow_override is true, adding duplicate variables (of conflicting
+   * type is allowed.
+   */
+  void load(const module& m, bool allow_override);
+
+  /**
+   * Load another module into this module (i.e. add all tables, initialization,
+   * ...). If allow_override is true, adding duplicate variables (of conflicting
+   * type is allowed.
+   */
+  void load(const module& m, const expr::term_manager::id_to_term_map& subst, bool allow_override);
 
   /** Instantiate the module with the given parameters */
   module::ref instantiate(const std::vector<expr::term_ref>& actuals) const;

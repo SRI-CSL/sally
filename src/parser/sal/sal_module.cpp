@@ -156,6 +156,10 @@ expr::term_ref module::get_idle() const {
   return d_tm.mk_and(idle);
 }
 
+bool module::has_variable(std::string id) const {
+  return d_variables.has_entry(id);
+}
+
 bool module::has_variable(std::string id, variable_class sal_var_class) const {
   if (!d_variables.has_entry(id)) return false;
   expr::term_ref var = d_variables.get_entry(id);
@@ -234,12 +238,30 @@ void module::insert_with_substitution(std::vector<expr::term_ref>& to, const std
   }
 }
 
-void module::load_symbols(const module& m) {
+void module::insert_with_substitution(symbol_table& to, const symbol_table& from, const expr::term_manager::substitution_map& subst, bool allow_override) {
+  symbol_table::const_iterator it = from.begin();
+  for (; it != from.end(); ++ it) {
+    const symbol_table::T_list entries = it->second;
+    // We just take the first one
+    expr::term_ref new_entry = d_tm.substitute(entries.front(), subst);
+    std::string id = it->first;
+    if (!allow_override) {
+      // Check duplicates and that they are the same type and all
+      if (to.has_entry(id)) {
+        if (new_entry != to.get_entry(id)) {
+          throw parser_exception("redeclaring " + id + " not allowed");
+        }
+        continue;
+      }
+    }
+    to.add_entry(it->first, new_entry);
+  }
+}
 
-  expr::term_manager::substitution_map subst;
+void module::load_symbols(const module& m, const expr::term_manager::substitution_map& subst, bool allow_override) {
 
   // Copy over the symbol table (might add duplicates)
-  m.load_variables_into(d_variables);
+  insert_with_substitution(d_variables, m.d_variables, subst, allow_override);
 
   // Parameters (there can be duplicates here, no problem)
   insert_with_substitution(d_parameters, m.d_parameters, subst);
@@ -292,14 +314,42 @@ void module::load_semantics(const module& m1, const module& m2, const expr::term
   d_transitions.insert(T);
 }
 
-void module::load(const module& m) {
+void module::load(const module& m, bool allow_override) {
   expr::term_manager::substitution_map subst;
 
   // Load the symbols 
-  load_symbols(m); 
+  load_symbols(m, subst, allow_override);
   // Semantics
   load_semantics(m, subst);
 }
+
+void module::load(const module& m, const expr::term_manager::id_to_term_map& id_subst, bool allow_override) {
+  expr::term_manager::substitution_map term_subst;
+
+  TRACE("sal::module") << "loading with rename:" << std::endl;
+  TRACE("sal::module") << "[M = " << m << std::endl << "]" << std::endl;
+  TRACE("sal::module") << "[this = " << *this << std::endl << "]" << std::endl;
+
+  // Create the substitution map
+  expr::term_manager::id_to_term_map::const_iterator it = id_subst.begin();
+  for (; it != id_subst.end(); ++ it) {
+    std::string id = it->first;
+    expr::term_ref to = it->second;
+    if (!m.has_variable(id)) {
+      throw parser_exception(id + " undeclared in module");
+    }
+    expr::term_ref from = m.get_variable(id);
+    term_subst[from] = to;
+  }
+
+  // Load the symbols
+  load_symbols(m, term_subst, allow_override);
+  // Semantics
+  load_semantics(m, term_subst);
+
+  TRACE("sal::module") << "[after renaming *this = " << *this << std::endl << "]" << std::endl;
+}
+
 
 module::ref module::instantiate(const std::vector<expr::term_ref>& actuals) const {
   assert(actuals.size() > 0);
@@ -334,7 +384,20 @@ std::ostream& operator << (std::ostream& out, variable_class var_class) {
   default:
     assert(false);
   }
+  return out;
+}
 
+std::ostream& operator << (std::ostream& out, composition_type comp_type) {
+  switch (comp_type) {
+  case SAL_COMPOSE_SYNCHRONOUS:
+    out << "COMPOSE_SYNCHRONOUS";
+    break;
+  case SAL_COMPOSE_ASYNCHRONOUS:
+    out << "COMPOSE_ASYNCHRONOUS";
+    break;
+  default:
+    assert(false);
+  }
   return out;
 }
 
@@ -431,7 +494,7 @@ void module::add_transition(expr::term_ref transition) {
 }
 
 void module::compose(const module& m_from, composition_type type, const std::vector<expr::term_ref>& index_vars) {
-  load(m_from);
+  assert(false);
   std::cerr << "TODO: composition" << std::endl;
 }
 
@@ -601,6 +664,9 @@ module::ref module::compose(const module& other, composition_type type) {
   TRACE("sal::module") << "[M1 = " << *this << std::endl << "]" << std::endl;
   TRACE("sal::module") << "[M2 = " << other << std::endl << "]" << std::endl;
 
+  assert(d_variables.size() > 0);
+  assert(other.d_variables.size() > 0);
+
   // Composition is simple:
   // - create a new module m
   // - load m1 into m
@@ -609,9 +675,9 @@ module::ref module::compose(const module& other, composition_type type) {
   module::ref result = new module(d_tm);
   
   // First, load the symbols 
-  result->load_symbols(*this);
-  result->load_symbols(other);
   expr::term_manager::substitution_map subst;
+  result->load_symbols(*this, subst, false);
+  result->load_symbols(other, subst, true);
   result->finish_symbol_composition(type, subst);
 
   // Now, depending on the composition type, add the other stuff

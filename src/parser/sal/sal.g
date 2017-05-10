@@ -649,26 +649,27 @@ unary_module_modifier returns [parser::sal::module::ref m]
   | // Make listed variables *local* 
     { m = STATE->start_module(); }
     KW_LOCAL pidentifier_list[var_ctx] KW_IN m_local = unary_module_modifier
-    { STATE->load_module_to_module(m_local, m); }
+    { STATE->load_module_to_module(m_local, m, false); }
     { STATE->change_module_variables_to(m, var_ctx, parser::sal::SAL_VARIABLE_LOCAL); }
     { STATE->finish_module(m); }
       
   | // Make listed variables *output*
     { m = STATE->start_module(); }
-    KW_OUTPUT pidentifier_list[var_ctx] KW_IN unary_module_modifier
-    { STATE->load_module_to_module(m_local, m); }
+    KW_OUTPUT pidentifier_list[var_ctx] KW_IN m_output = unary_module_modifier
+    { STATE->load_module_to_module(m_output, m, false); }
     { STATE->change_module_variables_to(m, var_ctx, parser::sal::SAL_VARIABLE_OUTPUT); }
     { STATE->finish_module(m); }
       
   | // Make a module while renaming some variables 
     { m = STATE->start_module(); }
-    KW_RENAME rename_list[subst_map] KW_IN unary_module_modifier
+    KW_RENAME rename_list[subst_map] KW_IN m_rename = unary_module_modifier
+    { STATE->load_module_to_module(m_rename, m, subst_map, false); }
     { STATE->finish_module(m); }
     
   | // Module *with* some new variables
     { m = STATE->start_module(); } 
     KW_WITH new_var_declaration_list[m] m_with = unary_module_modifier
-    { STATE->load_module_to_module(m_with, m); }
+    { STATE->load_module_to_module(m_with, m, false); }
     { STATE->finish_module(m); }
     
   | // Make an obsurver module 
