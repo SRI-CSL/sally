@@ -304,11 +304,25 @@ void sal_state::add_to_map(term_manager::id_to_term_map& map, std::string id, te
   }
 }
 
-void sal_state::add_to_renaming_map(sal::module::id_to_term_map& map, std::string id, term_ref t) {
-  sal::module::id_to_term_map::const_iterator it = map.find(id);
+sal::variable_class sal_state::get_lvalue_class(expr::term_ref lvalue) {
+  // Go down the modules and see who can determine it
+  std::vector<sal::module::ref>::reverse_iterator it = d_current_module.rbegin();
+  for (; it != d_current_module.rend(); ++ it) {
+    sal::module::ref m = *it;
+    if (m->is_lvalue(lvalue)) {
+      return m->get_lvalue_class(lvalue);
+    }
+  }
+  // Didn't find it
+  throw parser_exception(tm()) << "Expecting an lvalue, got " << lvalue << ".";
+}
+
+void sal_state::add_to_renaming_map(sal::module::id_to_lvalue& map, std::string id, term_ref lvalue) {
+  sal::module::id_to_lvalue::const_iterator it = map.find(id);
   if (it == map.end()) {
-    expr::term_ref t_next = get_next_state_term(t);
-    map[id] = sal::module::term_with_next(t, t_next);
+    expr::term_ref lvalue_next = get_next_state_term(lvalue);
+    sal::variable_class lvalue_class = get_lvalue_class(lvalue);
+    map[id] = sal::module::lvalue_info(lvalue, lvalue_next, lvalue_class);
   } else {
     throw parser_exception(id + " redeclared");
   }
@@ -676,7 +690,7 @@ void sal_state::load_module_to_module(sal::module::ref m_from, sal::module::ref 
   m_to->load(*m_from, allow_override);
 }
 
-void sal_state::load_module_to_module(sal::module::ref m_from, sal::module::ref m_to, const sal::module::id_to_term_map& subst, symbol_override allow_override) {
+void sal_state::load_module_to_module(sal::module::ref m_from, sal::module::ref m_to, const sal::module::id_to_lvalue& subst, symbol_override allow_override) {
   m_to->load(*m_from, subst, allow_override);
 }
 
@@ -1002,7 +1016,7 @@ void sal_state::module_modify_output(sal::module::ref m, sal::module::ref m_outp
   change_module_variables_to(m, var_ctx, sal::SAL_VARIABLE_OUTPUT);
 }
 
-void sal_state::module_modify_rename(sal::module::ref m, sal::module::ref m_rename, const sal::module::id_to_term_map& subst_map) {
+void sal_state::module_modify_rename(sal::module::ref m, sal::module::ref m_rename, const sal::module::id_to_lvalue& subst_map) {
   TRACE("parser::sal") << "sal_state::module_modify_rename: m = " << *m << std::endl;
   load_module_to_module(m_rename, m, subst_map, sal::module::SYMBOL_OVERRIDE_YES_EQ);
 }

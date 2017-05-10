@@ -75,15 +75,15 @@ public:
   };
 
   /** Structure to carry term, with its next version */
-  struct term_with_next {
+  struct lvalue_info {
     expr::term_ref x, x_next;
-    term_with_next() {}
-    term_with_next(expr::term_ref x, expr::term_ref x_next)
-    : x(x), x_next(x_next) {}
-    bool has_next() const { return !x_next.is_null(); }
+    variable_class var_class;
+    lvalue_info(): var_class(SAL_VARIABLE_LOCAL) {}
+    lvalue_info(expr::term_ref x, expr::term_ref x_next, variable_class var_class)
+    : x(x), x_next(x_next), var_class(var_class) {}
   };
 
-  typedef std::map<std::string, term_with_next> id_to_term_map;
+  typedef std::map<std::string, lvalue_info> id_to_lvalue;
 
 private:
 
@@ -192,9 +192,11 @@ public:
   /** Change a class of a variable */
   void change_variable_class(std::string id, variable_class sal_var_class);
 
-
   /** Get the variable with the given id */
   expr::term_ref get_variable(std::string id) const;
+
+  /** Check if a variable is from this module */
+  bool has_variable(expr::term_ref var) const;
 
   /** Get next variable if there is one (throws if not) */
   bool has_next_variable(expr::term_ref var) const;
@@ -204,6 +206,12 @@ public:
 
   /** Get the class of a variable (throws if not a state variable) */
   variable_class get_variable_class(expr::term_ref var) const;
+
+  /**
+   * Check if the term is an lvalue in this module. A term is an lvalue
+   * if it's a variable in the module, or a read from an lvalue.
+   */
+  bool is_lvalue(expr::term_ref lvalue) const;
 
   /** Get the class of an lvalue (throws if not a state lvalue) */
   variable_class get_lvalue_class(expr::term_ref lvalue) const;
@@ -239,7 +247,7 @@ public:
    * ...). If allow_override is true, adding duplicate variables (of conflicting
    * type is allowed.
    */
-  void load(const module& m, const id_to_term_map& subst, symbol_override allow_override);
+  void load(const module& m, const id_to_lvalue& subst, symbol_override allow_override);
 
   /** Instantiate the module with the given parameters */
   module::ref instantiate(const std::vector<expr::term_ref>& actuals) const;

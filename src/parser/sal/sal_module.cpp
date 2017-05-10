@@ -131,6 +131,10 @@ void module::add_variable(std::string id, expr::term_ref var, variable_class sal
   }
 }
 
+bool module::has_variable(expr::term_ref var) const {
+  return d_variable_class.find(var) != d_variable_class.end();
+}
+
 bool module::has_next_variable(expr::term_ref var) const {
   term_to_term_map::const_iterator find = d_variable_next.find(var);
   return (find != d_variable_next.end());
@@ -200,6 +204,22 @@ variable_class module::get_variable_class(expr::term_ref var) const {
     throw parser_exception(d_tm) << "Expecting state variable, got " << var;
   }
   return find->second;
+}
+
+bool module::is_lvalue(expr::term_ref lvalue) const {
+  const expr::term_op op = d_tm.op_of(lvalue);
+  // Variable
+  switch (op) {
+  case expr::TERM_ARRAY_READ:
+  case expr::TERM_RECORD_READ:
+    return is_lvalue(d_tm.term_of(lvalue)[0]);
+    break;
+  case expr::VARIABLE:
+    return has_variable(lvalue);
+    break;
+  default:
+    throw parser_exception("not an lvalue");
+  }
 }
 
 variable_class module::get_lvalue_class(expr::term_ref lvalue) const {
@@ -389,7 +409,7 @@ void module::load(const module& m, symbol_override allow_override) {
   load_semantics(m, subst);
 }
 
-void module::load(const module& m, const id_to_term_map& id_subst, symbol_override allow_override) {
+void module::load(const module& m, const id_to_lvalue& id_subst, symbol_override allow_override) {
   expr::term_manager::substitution_map term_subst;
   std::set<std::string> to_skip;
 
@@ -400,13 +420,13 @@ void module::load(const module& m, const id_to_term_map& id_subst, symbol_overri
   // The substitution map is always from id -> (lvalue, lvalue')
 
   // Create the substitution map
-  id_to_term_map::const_iterator it = id_subst.begin();
+  id_to_lvalue::const_iterator it = id_subst.begin();
   for (; it != id_subst.end(); ++ it) {
     std::string id = it->first;
     // When loading the symbols, we're skipping the renamed one
     to_skip.insert(id);
     // Get the replacement
-    const term_with_next& to = it->second;
+    const lvalue_info& to = it->second;
     if (!m.has_variable(id)) {
       throw parser_exception(id + " undeclared in module");
     }
@@ -418,19 +438,16 @@ void module::load(const module& m, const id_to_term_map& id_subst, symbol_overri
         throw parser_exception("redeclaring " + id + " not allowed.");
       }
       break;
-    case SYMBOL_OVERRIDE_YES_EQ: {
+    case SYMBOL_OVERRIDE_YES_EQ:
       // Check that they are of the same type and class
       if (d_tm.type_of(from) != d_tm.type_of(to.x)) {
         throw parser_exception("redeclaring " + id + " of a different type is not allowed.");
       }
       // Get the classes
-      variable_class from_c = m.get_variable_class(from);
-      variable_class to_c = get_lvalue_class(to.x);
-      if (from_c != to_c) {
+      if (m.get_variable_class(from) != to.var_class) {
         throw parser_exception("redeclaring " + id + " of different classes is not allowed.");
       }
       break;
-    }
     case SYMBOL_OVERRIDE_YES:
       break;
     default:
