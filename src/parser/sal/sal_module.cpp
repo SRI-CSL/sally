@@ -202,6 +202,22 @@ variable_class module::get_variable_class(expr::term_ref var) const {
   return find->second;
 }
 
+variable_class module::get_lvalue_class(expr::term_ref lvalue) const {
+  const expr::term_op op = d_tm.op_of(lvalue);
+  // Variable
+  switch (op) {
+  case expr::TERM_ARRAY_READ:
+  case expr::TERM_RECORD_READ:
+    return get_lvalue_class(d_tm.term_of(lvalue)[0]);
+    break;
+  case expr::VARIABLE:
+    return get_variable_class(lvalue);
+    break;
+  default:
+    throw parser_exception("not an lvalue");
+  }
+}
+
 void module::load_variables_into(symbol_table& table) const {
   // We also copy any duplicates
   table.load_full_from(d_variables);
@@ -381,16 +397,46 @@ void module::load(const module& m, const id_to_term_map& id_subst, symbol_overri
   TRACE("sal::module") << "[M = " << m << std::endl << "]" << std::endl;
   TRACE("sal::module") << "[this = " << *this << std::endl << "]" << std::endl;
 
+  // The substitution map is always from id -> (lvalue, lvalue')
+
   // Create the substitution map
   id_to_term_map::const_iterator it = id_subst.begin();
   for (; it != id_subst.end(); ++ it) {
     std::string id = it->first;
+    // When loading the symbols, we're skipping the renamed one
     to_skip.insert(id);
+    // Get the replacement
     const term_with_next& to = it->second;
     if (!m.has_variable(id)) {
       throw parser_exception(id + " undeclared in module");
     }
     expr::term_ref from = m.get_variable(id);
+    // Depending on the override type we check for conflicts
+    switch (allow_override) {
+    case SYMBOL_OVERRIDE_NO:
+      if (has_variable(id)) {
+        throw parser_exception("redeclaring " + id + " not allowed.");
+      }
+      break;
+    case SYMBOL_OVERRIDE_YES_EQ: {
+      // Check that they are of the same type and class
+      if (d_tm.type_of(from) != d_tm.type_of(to.x)) {
+        throw parser_exception("redeclaring " + id + " of a different type is not allowed.");
+      }
+      // Get the classes
+      variable_class from_c = m.get_variable_class(from);
+      variable_class to_c = get_lvalue_class(to.x);
+      if (from_c != to_c) {
+        throw parser_exception("redeclaring " + id + " of different classes is not allowed.");
+      }
+      break;
+    }
+    case SYMBOL_OVERRIDE_YES:
+      break;
+    default:
+      assert(false);
+    }
+
     term_subst[from] = to.x;
     if (m.has_next_variable(from)) {
       // We need from' -> to'

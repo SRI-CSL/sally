@@ -205,6 +205,9 @@ public:
   /** Get the class of a variable (throws if not a state variable) */
   variable_class get_variable_class(expr::term_ref var) const;
 
+  /** Get the class of an lvalue (throws if not a state lvalue) */
+  variable_class get_lvalue_class(expr::term_ref lvalue) const;
+
   /** Get all variables of a class */
   const term_set& get_variables(variable_class sal_var_class) const;
 
