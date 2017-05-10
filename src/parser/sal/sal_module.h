@@ -65,6 +65,26 @@ public:
   typedef expr::term_ref_hash_map<expr::term_ref> term_to_term_map;
   typedef utils::symbol_table<expr::term_ref> symbol_table;
 
+  enum symbol_override {
+    /** Symbol overrride is not allowed (throws) */
+    SYMBOL_OVERRIDE_NO,
+    /** Symbol overrride is allowed unless they are equal in type and class */
+    SYMBOL_OVERRIDE_YES_EQ,
+    /** Symbol override is allowed */
+    SYMBOL_OVERRIDE_YES
+  };
+
+  /** Structure to carry term, with its next version */
+  struct term_with_next {
+    expr::term_ref x, x_next;
+    term_with_next() {}
+    term_with_next(expr::term_ref x, expr::term_ref x_next)
+    : x(x), x_next(x_next) {}
+    bool has_next() const { return !x_next.is_null(); }
+  };
+
+  typedef std::map<std::string, term_with_next> id_to_term_map;
+
 private:
 
   /** Name of the module */
@@ -116,14 +136,14 @@ private:
   /** Insert to vector with substitution */
   void insert_with_substitution(std::vector<expr::term_ref>& to, const std::vector<expr::term_ref>& from, const expr::term_manager::substitution_map& subst);
 
-  /** Insert to vector with substitution */
-  void insert_with_substitution(symbol_table& to, const symbol_table& from, const expr::term_manager::substitution_map& subst, bool allow_override);
+  /** Insert to symbol table with substitution. Also, skip given symbols. */
+  void insert_with_substitution(module& to, const module& from, const std::set<std::string>& to_skip, const expr::term_manager::substitution_map& subst, symbol_override allow_override);
 
   /** Finish composition after loading all the ingredients */
   void finish_symbol_composition(composition_type type, expr::term_manager::substitution_map& subst);
 
-  /** Load the symbols from another module */
-  void load_symbols(const module& m, const expr::term_manager::substitution_map& subst_map, bool allow_override);
+  /** Load the symbols from another module, skip given */
+  void load_symbols(const module& m, const std::set<std::string>& to_skip, const expr::term_manager::substitution_map& subst_map, symbol_override allow_override);
 
   /** Load the semantics from another module */
   void load_semantics(const module& m, const expr::term_manager::substitution_map& subst_map);
@@ -209,14 +229,14 @@ public:
    * ...). If allow_override is true, adding duplicate variables (of conflicting
    * type is allowed.
    */
-  void load(const module& m, bool allow_override);
+  void load(const module& m, symbol_override allow_override);
 
   /**
    * Load another module into this module (i.e. add all tables, initialization,
    * ...). If allow_override is true, adding duplicate variables (of conflicting
    * type is allowed.
    */
-  void load(const module& m, const expr::term_manager::id_to_term_map& subst, bool allow_override);
+  void load(const module& m, const id_to_term_map& subst, symbol_override allow_override);
 
   /** Instantiate the module with the given parameters */
   module::ref instantiate(const std::vector<expr::term_ref>& actuals) const;

@@ -628,6 +628,10 @@ const term& term_manager::term_of(term_ref ref) const {
   return d_tm->term_of(ref);
 }
 
+term_op term_manager::op_of(term_ref ref) const {
+  return term_of(ref).op();
+}
+
 size_t term_manager::term_size(const term& t) const {
   return d_tm->term_size(t);
 }

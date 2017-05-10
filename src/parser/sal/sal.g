@@ -630,7 +630,7 @@ asynchronous_module_composition returns [parser::sal::module::ref m]
 unary_module_modifier returns [parser::sal::module::ref m]
 @declarations{
   parser::var_declarations_ctx var_ctx;
-  expr::term_manager::id_to_term_map subst_map;
+  parser::sal::module::id_to_term_map subst_map;
 }
   : // Synchronous composition 
     { m = STATE->start_module(); }
@@ -642,41 +642,36 @@ unary_module_modifier returns [parser::sal::module::ref m]
     
   | // Asynchronous composition 
     { m = STATE->start_module(); }
-    OP_ASYNC '(' index_var_declaration[var_ctx] ')' ':' 
+    OP_ASYNC '(' index_var_declaration[var_ctx] ')' ':'
+    { STATE->start_indexed_composition(var_ctx); } 
     m_async = unary_module_modifier
+    { STATE->finish_indexed_composition(m_sync, m, parser::sal::SAL_COMPOSE_SYNCHRONOUS); }
     { STATE->finish_module(m); }
     
   | // Make listed variables *local* 
     { m = STATE->start_module(); }
     KW_LOCAL pidentifier_list[var_ctx] KW_IN m_local = unary_module_modifier
-    { STATE->load_module_to_module(m_local, m, false); }
-    { STATE->change_module_variables_to(m, var_ctx, parser::sal::SAL_VARIABLE_LOCAL); }
+    { STATE->module_modify_local(m, m_local, var_ctx); }
     { STATE->finish_module(m); }
       
   | // Make listed variables *output*
     { m = STATE->start_module(); }
     KW_OUTPUT pidentifier_list[var_ctx] KW_IN m_output = unary_module_modifier
-    { STATE->load_module_to_module(m_output, m, false); }
-    { STATE->change_module_variables_to(m, var_ctx, parser::sal::SAL_VARIABLE_OUTPUT); }
+    { STATE->module_modify_output(m, m_output, var_ctx); }
     { STATE->finish_module(m); }
       
   | // Make a module while renaming some variables 
     { m = STATE->start_module(); }
     KW_RENAME rename_list[subst_map] KW_IN m_rename = unary_module_modifier
-    { STATE->load_module_to_module(m_rename, m, subst_map, false); }
+    { STATE->module_modify_rename(m, m_rename, subst_map); }
     { STATE->finish_module(m); }
     
   | // Module *with* some new variables
     { m = STATE->start_module(); } 
     KW_WITH new_var_declaration_list[m] m_with = unary_module_modifier
-    { STATE->load_module_to_module(m_with, m, false); }
+    { STATE->module_modify_with(m, m_with); }
     { STATE->finish_module(m); }
-    
-  | // Make an obsurver module 
-    { m = STATE->start_module(); }
-    KW_OBSERVE module KW_WITH unary_module_modifier
-    { STATE->finish_module(m); }
-        
+            
   | m_base = module_base { m = m_base; }
   ;
 
@@ -720,15 +715,15 @@ base_declaration[parser::sal::module::ref m]
   | transition_declaration[m]
   ;
 
-rename_list[expr::term_manager::id_to_term_map& m] 
+rename_list[parser::sal::module::id_to_term_map& m] 
   : rename[m] (',' rename[m])*
   ;
 
-rename [expr::term_manager::id_to_term_map& m]
+rename [parser::sal::module::id_to_term_map& m]
 @declarations{
   std::string id;
 }
-  : identifier[id] KW_TO t2 = lvalue { STATE->add_to_map(m, id, t2); } 
+  : identifier[id] KW_TO t2 = lvalue { STATE->add_to_renaming_map(m, id, t2); } 
   ;
 
 module_name returns [parser::sal::module::ref m]

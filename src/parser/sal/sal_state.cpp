@@ -96,6 +96,19 @@ term_ref sal_state::new_variable(std::string name, term_ref type, bool has_next)
   return var;
 }
 
+bool sal_state::is_variable(std::string id, bool next) const {
+  if (!d_variables.has_entry(id)) {
+    return false;
+  }
+  if (next) {
+    // Check for next version
+    term_ref var = d_variables.get_entry(id);
+    return d_var_to_next_map.find(var) != d_var_to_next_map.end();
+  } else {
+    return true;
+  }
+}
+
 term_ref sal_state::get_variable(std::string id, bool next) const {
   if (!d_variables.has_entry(id)) {
     throw parser_exception(id + " undeclared");
@@ -132,6 +145,10 @@ void sal_state::ensure_variable(term_ref x, bool next) const {
   m->get_variable_class(x);
 }
 
+bool sal_state::has_next_state(expr::term_ref var) const {
+  return d_var_to_next_map.find(var) != d_var_to_next_map.end();
+}
+
 
 term_ref sal_state::get_next_state_variable(term_ref var) const {
   term_to_term_map::const_iterator find = d_var_to_next_map.find(var);
@@ -147,6 +164,21 @@ term_ref sal_state::get_state_variable(term_ref next_var) const {
     throw parser_exception(tm()) << "term " << next_var << " is not a next-state variable";
   }
   return find->second;
+}
+
+term_ref sal_state::get_next_state_term(expr::term_ref term) const {
+  // Get variables, and substitute with next versions if any
+  std::vector<term_ref> term_vars;
+  tm().get_variables(term, term_vars);
+  expr::term_manager::substitution_map subst;
+  for (size_t i = 0; i < term_vars.size(); ++ i) {
+    term_ref x = term_vars[i];
+    if (has_next_state(x)) {
+      term_ref x_next = get_next_state_variable(x);
+      subst[x] = x_next;
+    }
+  }
+  return tm().substitute(term, subst);
 }
 
 sal::module::ref sal_state::get_module(std::string name, const std::vector<term_ref>& actuals) {
@@ -267,6 +299,16 @@ void sal_state::add_to_map(term_manager::id_to_term_map& map, std::string id, te
   term_manager::id_to_term_map::const_iterator it = map.find(id);
   if (it == map.end()) {
     map[id] = t;
+  } else {
+    throw parser_exception(id + " redeclared");
+  }
+}
+
+void sal_state::add_to_renaming_map(sal::module::id_to_term_map& map, std::string id, term_ref t) {
+  sal::module::id_to_term_map::const_iterator it = map.find(id);
+  if (it == map.end()) {
+    expr::term_ref t_next = get_next_state_term(t);
+    map[id] = sal::module::term_with_next(t, t_next);
   } else {
     throw parser_exception(id + " redeclared");
   }
@@ -630,11 +672,11 @@ void sal_state::load_module_variables(sal::module::ref m) {
   m->load_variables_into(d_variables);
 }
 
-void sal_state::load_module_to_module(sal::module::ref m_from, sal::module::ref m_to, bool allow_override) {
+void sal_state::load_module_to_module(sal::module::ref m_from, sal::module::ref m_to, symbol_override allow_override) {
   m_to->load(*m_from, allow_override);
 }
 
-void sal_state::load_module_to_module(sal::module::ref m_from, sal::module::ref m_to, const expr::term_manager::id_to_term_map& subst, bool allow_override) {
+void sal_state::load_module_to_module(sal::module::ref m_from, sal::module::ref m_to, const sal::module::id_to_term_map& subst, symbol_override allow_override) {
   m_to->load(*m_from, subst, allow_override);
 }
 
@@ -946,3 +988,27 @@ term_ref sal_state::mk_assignment(term_ref lvalue, term_ref rhs) {
   }
 }
 
+void sal_state::module_modify_local(sal::module::ref m, sal::module::ref m_local, const var_declarations_ctx& var_ctx) {
+  TRACE("parser::sal") << "sal_state::module_modify_local: m = " << *m << std::endl;
+  TRACE("parser::sal") << "sal_state::module_modify_local: m_local = " << *m_local << std::endl;
+  load_module_to_module(m_local, m, sal::module::SYMBOL_OVERRIDE_NO);
+  change_module_variables_to(m, var_ctx, sal::SAL_VARIABLE_LOCAL);
+}
+
+void sal_state::module_modify_output(sal::module::ref m, sal::module::ref m_output, const var_declarations_ctx& var_ctx) {
+  TRACE("parser::sal") << "sal_state::module_modify_output: m = " << *m << std::endl;
+  TRACE("parser::sal") << "sal_state::module_modify_output: m_local = " << *m_output << std::endl;
+  load_module_to_module(m_output, m, sal::module::SYMBOL_OVERRIDE_NO);
+  change_module_variables_to(m, var_ctx, sal::SAL_VARIABLE_OUTPUT);
+}
+
+void sal_state::module_modify_rename(sal::module::ref m, sal::module::ref m_rename, const sal::module::id_to_term_map& subst_map) {
+  TRACE("parser::sal") << "sal_state::module_modify_rename: m = " << *m << std::endl;
+  load_module_to_module(m_rename, m, subst_map, sal::module::SYMBOL_OVERRIDE_YES_EQ);
+}
+
+void sal_state::module_modify_with(sal::module::ref m, sal::module::ref m_with) {
+  TRACE("parser::sal") << "sal_state::module_modify_with: m = " << *m << std::endl;
+  TRACE("parser::sal") << "sal_state::module_modify_with: m_width = " << *m << std::endl;
+  load_module_to_module(m_with, m, sal::module::SYMBOL_OVERRIDE_YES_EQ);
+}

@@ -399,6 +399,9 @@ public:
   /** Get a term of the reference */
   const term& term_of(term_ref ref) const;
 
+  /** Get the op of the term */
+  term_op op_of(term_ref ref) const;
+
   /** Get the number of children this term has. */
   size_t term_size(const term& t) const;
 

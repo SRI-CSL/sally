@@ -159,17 +159,26 @@ public:
   /** Get a type (throw exception if not found) */
   expr::term_ref get_type(std::string id) const;
 
+  /** Check if there is a variable of the given name */
+  bool is_variable(std::string name, bool next) const;
+
   /** Get a variable (throw exception if not found) */
   expr::term_ref get_variable(std::string name, bool next) const;
 
   /** Ensure the term is a variable in the current module */
   void ensure_variable(expr::term_ref x, bool next) const;
 
+  /** Check if a variable has a next state version */
+  bool has_next_state(expr::term_ref var) const;
+
   /** Get the next state version of the variable */
   expr::term_ref get_next_state_variable(expr::term_ref var) const;
 
   /** Get the state version from the next-state variable */
   expr::term_ref get_state_variable(expr::term_ref next_var) const;
+
+  /** Get the next state version of the term */
+  expr::term_ref get_next_state_term(expr::term_ref term) const;
 
   /** Get a module (throw exception if not found) */
   sal::module::ref get_module(std::string name, const std::vector<expr::term_ref>& actuals);
@@ -347,6 +356,9 @@ public:
   static
   void add_to_map(expr::term_manager::id_to_term_map& map, std::string id, expr::term_ref t);
 
+  /** Add to map and make sure check that the names are not clashing with each other */
+  void add_to_renaming_map(sal::module::id_to_term_map& map, std::string id, expr::term_ref t);
+
   /** Create a module that is a composition of m1 and m2 */
   sal::module::ref composition(sal::module::ref m1, sal::module::ref m2, sal::composition_type);
 
@@ -359,17 +371,19 @@ public:
   /** Load the module variables into the state */
   void load_module_variables(sal::module::ref m);
 
+  typedef sal::module::symbol_override symbol_override;
+
   /**
    * Load the module m_from content to the module m_to. If allow_override is
    * true, duplicate variables are allowed.
    */
-  void load_module_to_module(sal::module::ref m_from, sal::module::ref m_to, bool allow_override);
+  void load_module_to_module(sal::module::ref m_from, sal::module::ref m_to, symbol_override allow_override);
 
   /**
    * Load the module m_from content to the module m_to while applying the given
    * renaming. If allow_override is true, duplicate variables are allowed.
    */
-  void load_module_to_module(sal::module::ref m_from, sal::module::ref m_to, const expr::term_manager::id_to_term_map& subst, bool allow_override);
+  void load_module_to_module(sal::module::ref m_from, sal::module::ref m_to, const sal::module::id_to_term_map& subst, symbol_override allow_override);
 
   /** Change given module variables to the given class */
   void change_module_variables_to(sal::module::ref m, const var_declarations_ctx& vars, sal::variable_class var_class);
@@ -436,6 +450,18 @@ public:
 
   /** End a multicommand */
   void end_multi_command();
+
+  /** Modify m by adding m_local while making all variables in var_ctx local */
+  void module_modify_local(sal::module::ref m, sal::module::ref m_local, const var_declarations_ctx& var_ctx);
+
+  /** Modify m by adding m_output while making all variables in var_ctx output */
+  void module_modify_output(sal::module::ref m, sal::module::ref m_output, const var_declarations_ctx& var_ctx);
+
+  /** Modify m by adding m_rename while renaming all variables as in given substitution */
+  void module_modify_rename(sal::module::ref m, sal::module::ref m_rename, const sal::module::id_to_term_map& subst_map);
+
+  /** Modify m by adding m_with */
+  void module_modify_with(sal::module::ref m, sal::module::ref m_with);
 
 };
 

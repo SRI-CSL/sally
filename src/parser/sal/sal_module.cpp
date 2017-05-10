@@ -238,30 +238,79 @@ void module::insert_with_substitution(std::vector<expr::term_ref>& to, const std
   }
 }
 
-void module::insert_with_substitution(symbol_table& to, const symbol_table& from, const expr::term_manager::substitution_map& subst, bool allow_override) {
+void module::insert_with_substitution(module& to_m, const module& from_m, const std::set<std::string>& to_skip, const expr::term_manager::substitution_map& subst, symbol_override allow_override) {
+  const symbol_table& from = from_m.d_variables;
+  symbol_table& to = to_m.d_variables;
+
   symbol_table::const_iterator it = from.begin();
   for (; it != from.end(); ++ it) {
     const symbol_table::T_list entries = it->second;
-    // We just take the first one
-    expr::term_ref new_entry = d_tm.substitute(entries.front(), subst);
+
+    // Id of the entry
     std::string id = it->first;
-    if (!allow_override) {
-      // Check duplicates and that they are the same type and all
+    if (to_skip.count(id) > 0) {
+      continue;
+    }
+
+    // We just take the first one
+    expr::term_ref old_entry = entries.front();
+    expr::term_ref new_entry = d_tm.substitute(old_entry, subst);
+
+    // Check for duplicates depending on the case
+    switch (allow_override) {
+    case SYMBOL_OVERRIDE_NO:
+      // No duplicates at all
       if (to.has_entry(id)) {
         if (new_entry != to.get_entry(id)) {
           throw parser_exception("redeclaring " + id + " not allowed");
         }
         continue;
       }
+      break;
+    case SYMBOL_OVERRIDE_YES_EQ:
+      if (to.has_entry(id)) {
+        // Existing entry
+        expr::term_ref current_entry = to.get_entry(id);
+        // Check that they are the same
+        if (d_tm.type_of(new_entry) != d_tm.type_of(current_entry)) {
+          TRACE("sal::module") << "id = " << id << std::endl;
+          TRACE("sal::module") << "current = " << current_entry << ", " << d_tm.type_of(current_entry) << " (" << current_entry.index() << ")" << std::endl;
+          TRACE("sal::module") << "new = " << new_entry << ", " << d_tm.type_of(new_entry) << " (" << old_entry.index() << ")" << std::endl;
+          throw parser_exception("redeclaring " + id + " of a different type is not allowed");
+        }
+        // Check that they are both parameters or not
+        bool is_param1 = from_m.is_parameter(old_entry);
+        bool is_param2 = to_m.is_parameter(current_entry);
+        if (is_param1 != is_param2) {
+          throw parser_exception("redeclaring parameter " + id + " not allowed");
+        }
+        // Check that they are the same class
+        if (!is_param1) {
+          variable_class c1 = from_m.get_variable_class(old_entry);
+          variable_class c2 = to_m.get_variable_class(current_entry);
+          if (c1 != c2) {
+            throw parser_exception("redeclaring different class for " + id + " not allowed");
+          }
+        }
+        continue;
+      }
+      break;
+    case SYMBOL_OVERRIDE_YES:
+      // Nothing to do, just add to table
+      break;
+    default:
+      assert(false);
     }
+
+    // Done checking, all ok, just add it
     to.add_entry(it->first, new_entry);
   }
 }
 
-void module::load_symbols(const module& m, const expr::term_manager::substitution_map& subst, bool allow_override) {
+void module::load_symbols(const module& m, const std::set<std::string>& to_skip, const expr::term_manager::substitution_map& subst, symbol_override allow_override) {
 
   // Copy over the symbol table (might add duplicates)
-  insert_with_substitution(d_variables, m.d_variables, subst, allow_override);
+  insert_with_substitution(*this, m, to_skip, subst, allow_override);
 
   // Parameters (there can be duplicates here, no problem)
   insert_with_substitution(d_parameters, m.d_parameters, subst);
@@ -314,36 +363,44 @@ void module::load_semantics(const module& m1, const module& m2, const expr::term
   d_transitions.insert(T);
 }
 
-void module::load(const module& m, bool allow_override) {
+void module::load(const module& m, symbol_override allow_override) {
   expr::term_manager::substitution_map subst;
+  std::set<std::string> to_skip;
 
   // Load the symbols 
-  load_symbols(m, subst, allow_override);
+  load_symbols(m, to_skip, subst, allow_override);
   // Semantics
   load_semantics(m, subst);
 }
 
-void module::load(const module& m, const expr::term_manager::id_to_term_map& id_subst, bool allow_override) {
+void module::load(const module& m, const id_to_term_map& id_subst, symbol_override allow_override) {
   expr::term_manager::substitution_map term_subst;
+  std::set<std::string> to_skip;
 
   TRACE("sal::module") << "loading with rename:" << std::endl;
   TRACE("sal::module") << "[M = " << m << std::endl << "]" << std::endl;
   TRACE("sal::module") << "[this = " << *this << std::endl << "]" << std::endl;
 
   // Create the substitution map
-  expr::term_manager::id_to_term_map::const_iterator it = id_subst.begin();
+  id_to_term_map::const_iterator it = id_subst.begin();
   for (; it != id_subst.end(); ++ it) {
     std::string id = it->first;
-    expr::term_ref to = it->second;
+    to_skip.insert(id);
+    const term_with_next& to = it->second;
     if (!m.has_variable(id)) {
       throw parser_exception(id + " undeclared in module");
     }
     expr::term_ref from = m.get_variable(id);
-    term_subst[from] = to;
+    term_subst[from] = to.x;
+    if (m.has_next_variable(from)) {
+      // We need from' -> to'
+      expr::term_ref from_next = m.get_next_variable(from);
+      term_subst[from_next] = to.x_next;
+    }
   }
 
   // Load the symbols
-  load_symbols(m, term_subst, allow_override);
+  load_symbols(m, to_skip, term_subst, allow_override);
   // Semantics
   load_semantics(m, term_subst);
 
@@ -414,7 +471,7 @@ void module::to_stream(std::ostream& out) const {
   if (d_parameters.size() > 0) {
     out << "parameters";
     for (size_t i = 0; i < d_parameters.size(); ++ i) {
-      out << " " << d_parameters[i];
+      out << " " << d_parameters[i] << " (" << d_parameters[i].index() << ")";
     }
     out << std::endl;
   }
@@ -424,7 +481,7 @@ void module::to_stream(std::ostream& out) const {
     symbol_table::const_iterator it = d_variables.begin(), end = d_variables.end();
     for (; it != end; ++ it) {
       expr::term_ref var = it->second.back();
-      out << " " << var;
+      out << " " << var << " (" << var.index() << ")";
       variable_class_map::const_iterator find = d_variable_class.find(var);
       if (find != d_variable_class.end()) {
         out << " " << find->second;
@@ -676,8 +733,10 @@ module::ref module::compose(const module& other, composition_type type) {
   
   // First, load the symbols 
   expr::term_manager::substitution_map subst;
-  result->load_symbols(*this, subst, false);
-  result->load_symbols(other, subst, true);
+  std::set<std::string> to_skip;
+  result->load_symbols(*this, to_skip, subst, SYMBOL_OVERRIDE_NO);
+  result->load_symbols(other, to_skip, subst, SYMBOL_OVERRIDE_YES);
+  // Allow duplicates above, settle the duplicates
   result->finish_symbol_composition(type, subst);
 
   // Now, depending on the composition type, add the other stuff
