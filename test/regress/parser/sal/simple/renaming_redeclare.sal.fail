@@ -1,0 +1,1 @@
+Error: [Context: renaming_redeclare, line(20), column(2)]: A `with' module cannot hide state variables, that is, it cannot redeclare state variables. The `i' was redeclared.

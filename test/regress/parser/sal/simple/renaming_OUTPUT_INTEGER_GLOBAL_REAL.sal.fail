@@ -1,0 +1,1 @@
+Parse error: ../test/regress/parser/sal/simple/renaming_OUTPUT_INTEGER_GLOBAL_REAL.sal:27:8: redeclaring x of a different type is not allowed.

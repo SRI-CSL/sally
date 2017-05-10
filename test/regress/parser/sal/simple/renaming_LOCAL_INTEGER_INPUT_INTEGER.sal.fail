@@ -1,0 +1,1 @@
+Parse error: ../test/regress/parser/sal/simple/renaming_LOCAL_INTEGER_INPUT_INTEGER.sal:27:8: redeclaring x of different classes is not allowed.
