@@ -1,0 +1,30 @@
+%% The renaming should be consistent so that the input 
+%% variables can be renamed only by input variables, 
+%% output variables only by output variables, and global 
+%% variables only by output or global variables. The 
+%% types of the renamed and the renaming variable should 
+%% also match.
+
+renaming_LOCAL_REAL_OUTPUT_REAL: CONTEXT = 
+BEGIN
+
+  m: MODULE = 
+  BEGIN
+    LOCAL     
+      x: REAL
+    INPUT 
+      i: INTEGER
+  END;
+
+  m_renamed: MODULE = 
+  WITH
+    INPUT 
+      x: BOOLEAN;   
+    OUTPUT 
+      y: REAL 
+    RENAME 
+     x TO y
+    IN m; 
+       
+END
+
