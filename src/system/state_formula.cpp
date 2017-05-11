@@ -40,13 +40,7 @@ state_formula::state_formula(expr::term_manager& tm, const state_type* st, expr:
 , d_state_type(st)
 , d_state_formula(tm, formula)
 {
-#ifndef NDEBUG
-  if (!st->is_state_formula(formula)) {
-    std::cerr << "state type = " << *st << std::endl;
-    std::cerr << "formula = " << formula << std::endl;
-    assert(0);
-  }
-#endif
+  assert(st->is_state_formula(formula, true));
 }
 
 state_formula::~state_formula() {

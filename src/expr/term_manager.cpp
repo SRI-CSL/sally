@@ -438,6 +438,12 @@ term_ref term_manager::function_type(const std::vector<term_ref>& args) {
   return d_tm->function_type(args);
 }
 
+term_ref term_manager::function_type(const std::vector<term_ref>& args, term_ref co_domain) {
+  std::vector<term_ref> real_args(args);
+  real_args.push_back(co_domain);
+  return d_tm->function_type(real_args);
+}
+
 term_ref term_manager::get_function_type_domain(term_ref fun_type, size_t i) const {
   return d_tm->get_function_type_domain(fun_type, i);
 }

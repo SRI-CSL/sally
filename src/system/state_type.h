@@ -93,8 +93,14 @@ public:
   /** Check whether the given formula is a state formula for this type */
   bool is_state_formula(expr::term_ref f) const;
 
+  /** Check whether the given formula is a state formula for this type */
+  bool is_state_formula(expr::term_ref f, bool print_info_on_false) const;
+
   /** Check whether the given formula is a transition formula for this type */
   bool is_transition_formula(expr::term_ref f) const;
+
+  /** Check whether the given formula is a transition formula for this type */
+  bool is_transition_formula(expr::term_ref f, bool print_info_on_false) const;
 
   /** Get the term manager for this type */
   expr::term_manager& tm() const { return d_tm; }

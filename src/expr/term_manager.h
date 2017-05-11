@@ -89,6 +89,9 @@ public:
   /** Make a function type (t1, t2, ..., tn), with ti being types, tn being co-domain */
   term_ref function_type(const std::vector<term_ref>& args);
 
+  /** Make a function type (t1, t2, ..., tn, co_domain) */
+  term_ref function_type(const std::vector<term_ref>& args, term_ref co_domain);
+
   /** Get the domain type of a function type */
   term_ref get_function_type_domain(term_ref fun_type, size_t i) const;
 

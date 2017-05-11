@@ -68,6 +68,38 @@ class context {
   /** List of added assertions */
   std::vector<assertion> d_assertions;
 
+  struct constant {
+    std::string name;
+    expr::term_ref var;
+    expr::term_ref type;
+    constant(std::string name, expr::term_ref var, expr::term_ref type)
+    : name(name), var(var), type(type) {}
+  };
+
+  /** List of added constants */
+  std::vector<constant> d_constants;
+
+  struct type {
+    std::string name;
+    expr::term_ref t;
+    type(std::string name, expr::term_ref t)
+    : name(name), t(t) {}
+  };
+
+  /** List of added types */
+  std::vector<type> d_types;
+
+  struct function {
+    std::string name;
+    expr::term_ref f;
+    expr::term_ref f_def;
+    function(std::string name, expr::term_ref f, expr::term_ref f_def)
+    : name(name), f(f), f_def(f_def) {}
+  };
+
+  /** List of defined functions */
+  std::vector<function> d_functions;
+
   /** Temp: substitution map */
   typedef std::map<sal::module::ref, expr::term_manager::substitution_map> module_to_subst_map;
   module_to_subst_map d_SAL_to_Sally_subst;
@@ -95,6 +127,15 @@ public:
 
   /** Add a named assertion to the context */
   void add_assertion(std::string id, assertion_form form, sal::module::ref m, expr::term_ref a);
+
+  /** Add a new named constant (variable that stays constant) */
+  void add_constant(std::string id, expr::term_ref var, expr::term_ref type);
+
+  /** Add a new named type */
+  void add_type(std::string id, expr::term_ref type);
+
+  /** Add a new defined function */
+  void add_function(std::string id, expr::term_ref f, expr::term_ref f_def);
 
   /** Adds definitions to the sally context and return a sequence command to discharge the assertions */
   cmd::command* to_sally_commands(const system::context& sally_context);

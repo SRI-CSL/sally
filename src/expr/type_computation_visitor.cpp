@@ -95,6 +95,8 @@ void type_computation_visitor::visit(term_ref t_ref) {
   term_ref t_base_type;
 
   std::stringstream error_message;
+  expr::term_manager* tm = output::get_term_manager(std::cerr);
+  output::set_term_manager(error_message, tm);
 
   TRACE("types") << "compute_type::visit(" << t_ref << ")" << std::endl;
 
@@ -188,10 +190,10 @@ void type_computation_visitor::visit(term_ref t_ref) {
           term_ref type = t[i+1];
           if (d_tm.term_of(id).op() != CONST_STRING) {
             d_ok = false;
-            error_message << "even children must be field names (string), child " << i << " is not";
+            error_message << "even children must be field names (string), child " << i << " is not: " << id;
           } else if (!d_tm.is_type(type)) {
             d_ok = false;
-            error_message << "odd children must be types, child " << i+1 << " is not";
+            error_message << "odd children must be types, child " << i+1 << " is not: " << type;
           } else {
             if (base_type_of(type) != type) { base_eq = false; }
           }
@@ -265,13 +267,14 @@ void type_computation_visitor::visit(term_ref t_ref) {
     } else {
       const term_ref* it = t.begin();
       bool base_eq = true;
-      for (bool even = true; d_ok && it != t.end(); even = !even, ++ it) {
+      size_t i = 0;
+      for (bool even = true; d_ok && it != t.end(); even = !even, ++ it, ++ i) {
         if (even) {
           d_ok = term_of(*it).op() == CONST_STRING;
-          if (!d_ok) error_message << "even elements must be strings";
+          if (!d_ok) error_message << "even elements must be strings, element " << i << " is not: " << *it;
         } else {
           d_ok = d_tm.is_type(*it);
-          if (!d_ok) error_message << "odd elements must be types";
+          if (!d_ok) error_message << "odd elements must be types, element " << i << " is not: " << *it;
           if (base_type_of(*it) != *it) {
             base_eq = false;
           }
@@ -983,7 +986,7 @@ void type_computation_visitor::visit(term_ref t_ref) {
   TRACE("types") << "compute_type::visit(" << t_ref << ") => " << t_type << std::endl;
 
   assert(!d_ok || !t_type.is_null());
-  assert(!d_tm.is_type(t) || d_tm.is_primitive_type(t) || !t_base_type.is_null());
+  assert(!d_ok || !d_tm.is_type(t) || d_tm.is_primitive_type(t) || !t_base_type.is_null());
 
   if (!d_ok) {
     error(t_ref, error_message.str());

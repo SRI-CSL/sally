@@ -124,6 +124,12 @@ void context::process_module(module::ref m, cmd::sequence* seq) {
     param_var_types.push_back(var_type);
     param_vars.push_back(var);
   }
+  // All the constants as parameters
+  for (size_t i = 0; i < d_constants.size(); ++ i) {
+    param_var_names.push_back(d_constants[i].name);
+    param_var_types.push_back(d_constants[i].type);
+    param_vars.push_back(d_constants[i].var);
+  }
 
   // Create the state part variables
   expr::term_ref state = d_tm.mk_struct_type(state_var_names, state_var_types);
@@ -281,6 +287,18 @@ cmd::command* context::to_sally_commands(const system::context& sally_context) {
   d_state_type.clear();
 
   return seq;
+}
+
+void context::add_constant(std::string id, expr::term_ref var, expr::term_ref type) {
+  d_constants.push_back(constant(id, var, type));
+}
+
+void context::add_type(std::string id, expr::term_ref t) {
+  d_types.push_back(type(id, t));
+}
+
+void context::add_function(std::string id, expr::term_ref f, expr::term_ref f_def) {
+  d_functions.push_back(function(id, f, f_def));
 }
 
 std::ostream& operator << (std::ostream& out, assertion_form form) {

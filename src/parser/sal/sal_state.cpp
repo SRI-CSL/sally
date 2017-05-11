@@ -365,16 +365,21 @@ void sal_state::define_constant(std::string id, term_ref type, term_ref definiti
   } else {
     define_var_in_scope(id, type, definition);
   }
+  // We don't add to context, since they are going to be inlined anyhow
+//  d_sal_context->add_constant(id, type, definition);
 }
 
 void sal_state::declare_constant(std::string id, term_ref type) {
   TRACE("parser::sal") << "declare_constant(" << id << ", " << type << ")" << std::endl;
-  define_var_in_scope(id, type, new_variable(id, type, false));
+  term_ref var = new_variable(id, type, false);
+  define_var_in_scope(id, type, var);
+  d_sal_context->add_constant(id, var, type);
 }
 
 void sal_state::define_type(std::string id, term_ref type) {
   TRACE("parser::sal") << "define_type(" << id << ", " << type << ")" << std::endl;
   define_type_in_scope(id, type);
+  d_sal_context->add_type(id, type);
 }
 
 void sal_state::add_assertion(std::string id, sal::assertion_form form, sal::module::ref m, term_ref assertion) {
@@ -849,8 +854,13 @@ void sal_state::finish_constant_declaration(std::string id, const var_declaratio
     definition = finish_lambda(definition);
     if (!definition.is_null()) {
       term_ref fun = get_variable(id, false);
-      assert(d_fun_to_definition_map.find(fun) == d_fun_to_definition_map.end());
+      if (d_fun_to_definition_map.find(fun) != d_fun_to_definition_map.end()) {
+        throw parser_exception(id + " already defined.");
+      }
       d_fun_to_definition_map[fun] = definition;
+      d_sal_context->add_function(id, fun, definition);
+    } else {
+      throw exception("All functions must be defined at declaration.");
     }
   } else {
     if (!definition.is_null()) {

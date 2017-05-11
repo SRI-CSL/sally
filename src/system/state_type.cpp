@@ -117,7 +117,17 @@ const std::vector<expr::term_ref>& state_type::get_variables(var_class vc) const
   }
 }
 
-bool state_type::is_state_formula(expr::term_ref f) const {
+std::ostream& operator << (std::ostream& out, const std::set<expr::term_ref>& term_set) {
+  out << "{";
+  std::set<expr::term_ref>::const_iterator it = term_set.begin();
+  for (; it != term_set.end(); ++ it) {
+    out << " " << *it;
+  }
+  out << "}";
+  return out;
+}
+
+bool state_type::is_state_formula(expr::term_ref f, bool print_if_false) const {
   // State variables
   std::set<expr::term_ref> state_variables;
   state_variables.insert(d_current_vars.begin(), d_current_vars.end());
@@ -126,10 +136,19 @@ bool state_type::is_state_formula(expr::term_ref f) const {
   std::set<expr::term_ref> f_variables;
   d_tm.get_variables(f, f_variables);
   // State formula if only over state variables
-  return std::includes(state_variables.begin(), state_variables.end(), f_variables.begin(), f_variables.end());
+  bool ok = std::includes(state_variables.begin(), state_variables.end(), f_variables.begin(), f_variables.end());
+  if (!ok && print_if_false) {
+    std::cerr << "state_variables: " << state_variables << std::endl;
+    std::cerr << "f_variables: " << f_variables << std::endl;
+  }
+  return ok;
 }
 
-bool state_type::is_transition_formula(expr::term_ref f) const {
+bool state_type::is_state_formula(expr::term_ref f) const {
+  return is_state_formula(f, false);
+}
+
+bool state_type::is_transition_formula(expr::term_ref f, bool print_if_false) const {
   // State and next variables
   std::set<expr::term_ref> all_variables;
   all_variables.insert(d_current_vars.begin(), d_current_vars.end());
@@ -140,7 +159,16 @@ bool state_type::is_transition_formula(expr::term_ref f) const {
   std::set<expr::term_ref> f_variables;
   d_tm.get_variables(f, f_variables);
   // State formula if only over state variables
-  return std::includes(all_variables.begin(), all_variables.end(), f_variables.begin(), f_variables.end());
+  bool ok = std::includes(all_variables.begin(), all_variables.end(), f_variables.begin(), f_variables.end());
+  if (!ok && print_if_false) {
+    std::cerr << "all_variables: " << all_variables << std::endl;
+    std::cerr << "f_variables:   " << f_variables << std::endl;
+  }
+  return ok;
+}
+
+bool state_type::is_transition_formula(expr::term_ref f) const {
+  return is_transition_formula(f, false);
 }
 
 expr::term_ref state_type::change_formula_vars(var_class from, var_class to, expr::term_ref f) const {

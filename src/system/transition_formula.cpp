@@ -40,7 +40,7 @@ transition_formula::transition_formula(expr::term_manager& tm, const state_type*
 , d_state_type(st)
 , d_transition_formula(tm, tf)
 {
-  assert(st->is_transition_formula(tf));
+  assert(st->is_transition_formula(tf, true));
 }
 
 void transition_formula::gc_collect(const expr::gc_relocator& gc_reloc) {
