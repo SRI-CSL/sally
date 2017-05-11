@@ -281,12 +281,15 @@ xor_term returns [expr::term_ref t]
   ;
 
 unary_bool_term returns [expr::term_ref t]
-  : NOT t_not = unary_bool_term { t = STATE->mk_term(expr::TERM_NOT, t_not); } 
-  | KW_TRUE { t = STATE->mk_boolean_constant(true); }
-  | KW_FALSE { t = STATE->mk_boolean_constant(false); }
+  : NOT t_not = unary_bool_term { t = STATE->mk_term(expr::TERM_NOT, t_not); }
   | t_eq = eq_term { t = t_eq; }
   ;
 
+boolean_constant_term returns [expr::term_ref t]
+  : KW_TRUE { t = STATE->mk_boolean_constant(true); }
+  | KW_FALSE { t = STATE->mk_boolean_constant(false); }
+  ;
+  
 eq_term returns [expr::term_ref t]
 @declarations{
   bool negated = false;
@@ -337,19 +340,19 @@ multiplicative_term returns [expr::term_ref t]
 @declarations{
   expr::term_op op;
 }
-  : t1 = unary_nonboolean_term { t = t1; } 
+  : t1 = unary_nonformula_term { t = t1; } 
     (
       ( OP_MUL { op = expr::TERM_MUL; } 
       | OP_DIV { op = expr::TERM_DIV; }
       | KW_MOD { op = expr::TERM_MOD; }
       | KW_DIV { op = expr::TERM_DIV; }
       ) 
-      t2 = unary_nonboolean_term { t = STATE->mk_term(op, t, t2); } 
+      t2 = unary_nonformula_term { t = STATE->mk_term(op, t, t2); } 
     )*
   ;
 
-unary_nonboolean_term returns [expr::term_ref t]
-  : OP_SUB t_sub = unary_nonboolean_term { t = STATE->mk_term(expr::TERM_SUB, t_sub); } 
+unary_nonformula_term returns [expr::term_ref t]
+  : OP_SUB t_sub = unary_nonformula_term { t = STATE->mk_term(expr::TERM_SUB, t_sub); } 
   | t_base = base_term { t = t_base; }
   ;
 
@@ -375,6 +378,7 @@ base_term_prefix returns [expr::term_ref t]
 } 
   : identifier[id] ('\'' { next = true; })? { t = STATE->get_variable(id, next); }
   | r = rational_constant { t = STATE->mk_rational_constant(r); }
+  | b = boolean_constant_term { t = b; } 
   | '[' '[' index_var_declaration[var_ctx] ']' { STATE->start_indexed_array(var_ctx); }
         t_array = term 
     ']' { t = STATE->finish_indexed_array(t_array); }
@@ -503,7 +507,7 @@ term_access returns [expr::term_ref t]
 rhs_definition[expr::term_ref lhs] returns [expr::term_ref t] 
   : OP_EQ 
       rhs = term { t = STATE->mk_assignment(lhs, rhs); }  
-  | KW_IN { STATE->ensure_variable(lhs, true); } 
+  | KW_IN { STATE->ensure_variable(lhs, STATE->in_transition()); } 
       t1 = set_term[lhs] { t = t1; } 
   ;
 
@@ -598,39 +602,14 @@ guarded_else_command returns [expr::term_ref t]
  * synchronously or asynchronously.
  */
 module returns [parser::sal::module::ref m]
-  : m1 = synchronous_module_composition { m = m1; } 
-  ;  
-
-/**
- * The semantics of synchronous composition is that the module M1 || M2 
- * consists of:
- * - The initializations are the combination of initializations.
- * - The transitions are the combination of the individual transitions.
- * - The definitions are the union of the definition.
- * - The initializations are the pairwise combination of the initializations. 
- * - Two guarded initializations are combined by conjoining the guards and by 
- *   taking the union of the assignments. 
- */
-synchronous_module_composition returns [parser::sal::module::ref m]
-  : m1 = asynchronous_module_composition { m = m1; }
-    (OP_SYNC m2 = asynchronous_module_composition { m = STATE->composition(m, m2, parser::sal::SAL_COMPOSE_SYNCHRONOUS); } )*
-  ;  
-
-/**
- * The semantics of asynchronous composition of two modules is given by the 
- * conjunction of the initializations, and the interleaving of the transitions 
- * of the two modules.
- */
-asynchronous_module_composition returns [parser::sal::module::ref m]
   : m1 = unary_module_modifier { m = m1; } 
-    (OP_ASYNC m2 = unary_module_modifier { m = STATE->composition(m, m2, parser::sal::SAL_COMPOSE_ASYNCHRONOUS); } )*
-  ; 
-  
+  ;  
+ 
 /** Prefix module operations */
 unary_module_modifier returns [parser::sal::module::ref m]
 @declarations{
   parser::var_declarations_ctx var_ctx;
-  parser::sal::module::id_to_term_map subst_map;
+  parser::sal::module::id_to_lvalue subst_map;
 }
   : // Synchronous composition 
     { m = STATE->start_module(); }
@@ -672,8 +651,34 @@ unary_module_modifier returns [parser::sal::module::ref m]
     { STATE->module_modify_with(m, m_with); }
     { STATE->finish_module(m); }
             
-  | m_base = module_base { m = m_base; }
+  | m_base = synchronous_module_composition { m = m_base; }
   ;
+
+/**
+ * The semantics of synchronous composition is that the module M1 || M2 
+ * consists of:
+ * - The initializations are the combination of initializations.
+ * - The transitions are the combination of the individual transitions.
+ * - The definitions are the union of the definition.
+ * - The initializations are the pairwise combination of the initializations. 
+ * - Two guarded initializations are combined by conjoining the guards and by 
+ *   taking the union of the assignments. 
+ */
+synchronous_module_composition returns [parser::sal::module::ref m]
+  : m1 = asynchronous_module_composition { m = m1; }
+    (OP_SYNC m2 = asynchronous_module_composition { m = STATE->composition(m, m2, parser::sal::SAL_COMPOSE_SYNCHRONOUS); } )*
+  ;  
+
+/**
+ * The semantics of asynchronous composition of two modules is given by the 
+ * conjunction of the initializations, and the interleaving of the transitions 
+ * of the two modules.
+ */
+asynchronous_module_composition returns [parser::sal::module::ref m]
+  : m1 = module_base { m = m1; } 
+    (OP_ASYNC m2 = module_base { m = STATE->composition(m, m2, parser::sal::SAL_COMPOSE_ASYNCHRONOUS); } )*
+  ; 
+
 
 /** The base of the module expressions */
 module_base returns [parser::sal::module::ref m]
@@ -715,11 +720,11 @@ base_declaration[parser::sal::module::ref m]
   | transition_declaration[m]
   ;
 
-rename_list[parser::sal::module::id_to_term_map& m] 
+rename_list[parser::sal::module::id_to_lvalue& m] 
   : rename[m] (',' rename[m])*
   ;
 
-rename [parser::sal::module::id_to_term_map& m]
+rename [parser::sal::module::id_to_lvalue& m]
 @declarations{
   std::string id;
 }

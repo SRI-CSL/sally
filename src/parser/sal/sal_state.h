@@ -409,6 +409,9 @@ public:
   /** Start a transition block */
   void start_transition();
 
+  /** Are we parsing transition */
+  bool in_transition() const;
+
   /** Add a new transition to m (lvalues are all lvalues in this definition) */
   void add_transition(sal::module::ref m, expr::term_ref transition);
 

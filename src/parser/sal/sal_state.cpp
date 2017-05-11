@@ -58,7 +58,7 @@ sal_state::sal_state(const system::context& context)
 , d_variables("local vars")
 , d_types("types")
 , d_modules("modules")
-, d_in_transition(true)
+, d_in_transition(false)
 , d_multi_commands(0)
 {
   // Add the basic types
@@ -136,7 +136,7 @@ void sal_state::ensure_variable(term_ref x, bool next) const {
   if (next) {
     x = get_state_variable(x_next);
   } else {
-    x_next = get_state_variable(x);
+    x_next = get_next_state_variable(x);
   }
 
   // Get the module and make sure variable is in state
@@ -705,7 +705,7 @@ void sal_state::change_module_variables_to(sal::module::ref m, const var_declara
 }
 
 void sal_state::start_definition() {
-  d_in_transition = false;
+  assert(!d_in_transition);
   d_lvalues.clear();
 }
 
@@ -719,7 +719,7 @@ void sal_state::end_definition() {
 }
 
 void sal_state::start_initialization() {
-  d_in_transition = false;
+  assert(!false);
   d_lvalues.clear();
 }
 
@@ -738,6 +738,10 @@ void sal_state::start_transition() {
   d_lvalues.clear();
 }
 
+bool sal_state::in_transition() const {
+  return d_in_transition;
+}
+
 void sal_state::add_transition(sal::module::ref m, term_ref transition) {
   TRACE("parser::sal") << "add_transition(" << transition << ")" << std::endl;
   m->add_transition(transition);
@@ -745,6 +749,7 @@ void sal_state::add_transition(sal::module::ref m, term_ref transition) {
 }
 
 void sal_state::end_transition() {
+  d_in_transition = false;
   d_lvalues.clear();
 }
 
