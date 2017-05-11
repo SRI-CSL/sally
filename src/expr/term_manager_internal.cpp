@@ -31,6 +31,16 @@
 using namespace sally;
 using namespace expr;
 
+std::string term_manager_internal::to_string(term_ref t) const {
+  std::stringstream ss;
+  term_manager* tm = output::get_term_manager(std::cerr);
+  if (tm->get_internal() == this) {
+    output::set_term_manager(ss, tm);
+  }
+  ss << t;
+  return ss.str();
+}
+
 term_manager_internal::term_manager_internal(utils::statistics& stats)
 : d_name_transformer(0)
 , d_stat_terms(0)
@@ -617,7 +627,7 @@ term_ref term_manager_internal::mk_intersection_type(term_ref t1, term_ref t2) {
   }
 
   if (!compatible(t1, t2)) {
-    throw exception("Can't intersect incompatible types");
+    throw exception("Can't intersect incompatible types: " + to_string(t1) + " and " + to_string(t2));
   }
 
   if (is_primitive_type(t1) && is_primitive_type(t2)) {

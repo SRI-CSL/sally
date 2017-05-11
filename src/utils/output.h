@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include <iosfwd>
+#include <iostream>
 
 namespace sally {
 

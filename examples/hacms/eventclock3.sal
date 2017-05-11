@@ -189,7 +189,7 @@ top : MODULE =
 
 %%% properties
 % t1: timer1 registers the event select=ON, timer2 registers the event value>0.
-t1 : THEOREM top |- G (timer1>=0 => F (timer2 >= 0 AND timer2 < timer1 + 100));
+% t1 : THEOREM top |- G (timer1>=0 => F (timer2 >= 0 AND timer2 < timer1 + 100));
 % t2: safety part of t1.
 t2: THEOREM top |- G (timer2 < timer1 + 100);
 

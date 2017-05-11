@@ -263,6 +263,7 @@ void sal_state::finish_module(sal::module::ref m) {
   assert(d_current_module.back() == m);
   d_current_module.pop_back();
   pop_scope(SCOPE_MODULE);
+  m->check_invariants();
   TRACE("parser::sal") << "finish_module: " << *m << std::endl;
 }
 

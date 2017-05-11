@@ -253,6 +253,9 @@ public:
   /** Print the term manager information and all the terms to out */
   void to_stream(std::ostream& out) const;
 
+  /** Get the string representation of the term */
+  std::string to_string(term_ref t) const;
+
   /** Type-check the term */
   void typecheck(term_ref t);
 

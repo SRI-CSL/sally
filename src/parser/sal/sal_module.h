@@ -279,6 +279,8 @@ public:
   /** Return a module that is a composition of this module and another module */
   module::ref compose(const module& other, composition_type type);
 
+  /** Check module invariants (debugging) */
+  void check_invariants() const;
 };
 
 std::ostream& operator << (std::ostream& out, const module& m);

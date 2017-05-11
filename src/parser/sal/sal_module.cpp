@@ -37,6 +37,28 @@ module::module(expr::term_manager& tm)
 module::~module()
 {}
 
+void module::check_invariants() const {
+
+  // 1. Only LOCAL variables can appear twice in the symbol table
+  symbol_table::const_iterator it = d_variables.begin();
+  for (; it != d_variables.end(); ++ it) {
+    const symbol_table::T_list& entries = it->second;
+    if (entries.size() > 1) {
+      std::string var_id = it->first;
+      symbol_table::T_list::const_iterator e_it = entries.begin();
+      for (; e_it != entries.end(); ++ e_it) {
+        expr::term_ref var = *e_it;
+        if (get_variable_class(var) != SAL_VARIABLE_LOCAL) {
+          throw parser_exception("multiple non-local " + var_id + " variables");
+        }
+      }
+    }
+  }
+
+}
+
+
+
 void module::add_parameter(std::string id, expr::term_ref var) {
   if (d_variables.has_entry(id)) {
     throw parser_exception(id + " already declared");
@@ -438,16 +460,20 @@ void module::load(const module& m, const id_to_lvalue& id_subst, symbol_override
         throw parser_exception("redeclaring " + id + " not allowed.");
       }
       break;
-    case SYMBOL_OVERRIDE_YES_EQ:
+    case SYMBOL_OVERRIDE_YES_EQ: {
       // Check that they are of the same type and class
       if (d_tm.type_of(from) != d_tm.type_of(to.x)) {
         throw parser_exception("redeclaring " + id + " of a different type is not allowed.");
       }
       // Get the classes
-      if (m.get_variable_class(from) != to.var_class) {
-        throw parser_exception("redeclaring " + id + " of different classes is not allowed.");
+      variable_class from_class = m.get_variable_class(from);
+      if (from_class != to.var_class) {
+        throw parser_exception(d_tm)
+            << "redeclaring " + id + " of different classes is not allowed: "
+            << from_class + " vs " + to.var_class;
       }
       break;
+    }
     case SYMBOL_OVERRIDE_YES:
       break;
     default:
@@ -680,7 +706,25 @@ void module::finish_symbol_composition(composition_type type, expr::term_manager
   for (; it != d_variables.end(); ++ it) {
     std::string var_id = it->first;
     const symbol_table::T_list& vars = it->second;
-    assert(vars.size() <= 2);
+    if (vars.size() > 1) {
+      // If there are many LOCAL variables, we just keep them
+      symbol_table::T_list::const_iterator e_it = vars.begin();
+      bool all_local = true;
+      for (; e_it != vars.end(); ++ e_it) {
+        expr::term_ref var = *e_it;
+        if (get_variable_class(var) != SAL_VARIABLE_LOCAL) {
+          all_local = false;
+          break;
+        }
+      }
+      if (!all_local && vars.size() > 2) {
+        throw parser_exception("Ambiguous merging: more than 2 variables of the same name '" + var_id + "'");
+      }
+      if (all_local) {
+        // We keep copies of the local variables
+        continue;
+      }
+    }
     if (vars.size() == 2) {
       // We have a merge, check the cases (they are not parameters)
       expr::term_ref v1 = vars.front();
@@ -737,7 +781,14 @@ void module::finish_symbol_composition(composition_type type, expr::term_manager
       expr::term_ref v1_type = d_tm.type_of(v1);
       expr::term_ref v2_type = d_tm.type_of(v2);
 
-      expr::term_ref v_type = d_tm.mk_intersection_type(v1_type, v2_type);
+      expr::term_ref v_type;
+      try {
+        v_type = d_tm.mk_intersection_type(v1_type, v2_type);
+      } catch (exception& e) {
+        // Can't merge variables
+        throw parser_exception("Error merging instances of '" + var_id + "': " + e.get_message());
+      }
+
       expr::term_ref v = d_tm.mk_variable(var_id, v_type);
 
       // Delete both v1 and v2, add v to v_class
