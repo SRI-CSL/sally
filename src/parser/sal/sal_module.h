@@ -151,6 +151,9 @@ private:
   /** Load disjunctive semantics from another module */
   void load_semantics(const module& m1, const module& m2, const expr::term_manager::substitution_map& subst_map);
 
+  /** Load semantics by quantifying the given module */
+  void load_semantics(const module& m, composition_type type, const std::vector<expr::term_ref>& index_vars);
+
   /** Returns the idle transition (x' = x) of the module */
   expr::term_ref get_idle() const;
 
@@ -167,6 +170,9 @@ public:
 
   module(expr::term_manager& tm);
   ~module();
+
+  /** Is this module empty (fresh) */
+  bool empty() const;
 
   /** Set the name of the module */
   void set_name(std::string name) { d_name = name; }

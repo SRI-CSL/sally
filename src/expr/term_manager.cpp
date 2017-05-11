@@ -541,6 +541,20 @@ term_ref term_manager::mk_forall(const std::vector<term_ref>& vars, term_ref bod
   return d_tm->mk_abstraction(TERM_FORALL, vars, body);
 }
 
+term_ref term_manager::mk_quantifier(term_op kind, const std::vector<term_ref>& vars, term_ref body) {
+  switch (kind) {
+  case TERM_FORALL:
+    return mk_forall(vars, body);
+    break;
+  case TERM_EXISTS:
+    return mk_exists(vars, body);
+    break;
+  default:
+    assert(false);
+  }
+  return term_ref();
+}
+
 term_ref term_manager::mk_predicate_subtype(term_ref x, term_ref body) {
   std::vector<term_ref> vars;
   vars.push_back(x);

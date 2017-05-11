@@ -367,6 +367,7 @@ public:
   term_ref mk_lambda(const std::vector<term_ref>&, term_ref body);
   term_ref mk_exists(const std::vector<term_ref>& vars, term_ref body);
   term_ref mk_forall(const std::vector<term_ref>& vars, term_ref body);
+  term_ref mk_quantifier(term_op kind, const std::vector<term_ref>& vars, term_ref body);
   term_ref mk_predicate_subtype(term_ref x, term_ref body);
 
   /** Get the arity of the abstraction */

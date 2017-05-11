@@ -435,6 +435,41 @@ void module::load_symbols(const module& m, const std::set<std::string>& to_skip,
   insert_with_substitution(d_variable_next, m.d_variable_next, subst);
 }
 
+void module::load_semantics(const module& m, composition_type type, const std::vector<expr::term_ref>& index_vars) {
+
+  expr::term_op quantifier;
+  switch (type) {
+  case SAL_COMPOSE_ASYNCHRONOUS:
+    quantifier = expr::TERM_EXISTS;
+    break;
+  case SAL_COMPOSE_SYNCHRONOUS:
+    quantifier = expr::TERM_FORALL;
+    break;
+  default:
+    assert(false);
+    quantifier = expr::TERM_FORALL;
+  }
+
+  if (m.d_definitions.size() > 0) {
+    expr::term_ref definitions = d_tm.mk_and(m.d_definitions);
+    definitions = d_tm.mk_quantifier(quantifier, index_vars, definitions);
+    d_definitions.insert(definitions);
+  }
+
+  if (m.d_initializations.size() > 0) {
+    expr::term_ref initializations = d_tm.mk_and(m.d_initializations);
+    initializations = d_tm.mk_quantifier(quantifier, index_vars, initializations);
+    d_initializations.insert(initializations);
+  }
+
+  if (m.d_transitions.size() > 0) {
+    expr::term_ref transitions = d_tm.mk_and(m.d_transitions);
+    transitions = d_tm.mk_quantifier(quantifier, index_vars, transitions);
+    d_transitions.insert(transitions);
+  }
+
+}
+
 void module::load_semantics(const module& m, const expr::term_manager::substitution_map& subst) {
   // Just copy over everything
   insert_with_substitution(d_definitions, m.d_definitions, subst);
@@ -687,9 +722,32 @@ void module::add_transition(expr::term_ref transition) {
   }
 }
 
+bool module::empty() const {
+  return d_variables.size() == 0;
+}
+
 void module::compose(const module& m_from, composition_type type, const std::vector<expr::term_ref>& index_vars) {
-  assert(false);
-  std::cerr << "TODO: composition" << std::endl;
+
+  TRACE("sal::module") << "compose: M as " << type << std::endl;
+  TRACE("sal::module") << "[M = " << m_from << std::endl << "]" << std::endl;
+  TRACE("sal::module") << "[this = " << *this << std::endl << "]" << std::endl;
+
+  assert(empty());
+
+  // Composition is simple:
+  // - add all symbols
+  // - quantify the semantics depending on composisiton type
+
+  // First, load the symbols
+  expr::term_manager::substitution_map subst;
+  std::set<std::string> to_skip;
+  load_symbols(m_from, to_skip, subst, SYMBOL_OVERRIDE_NO);
+  assert(subst.size() == 0);
+
+  // Add the semantics
+  load_semantics(m_from, type, index_vars);
+
+  TRACE("sal::module") << "[|| M = " << *this << std::endl << "]" << std::endl;
 }
 
 struct variable_add_info {
