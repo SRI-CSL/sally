@@ -160,6 +160,9 @@ private:
    */
   void remove_variable(expr::term_ref var, variable_class sal_var_class);
 
+  /** Change a class of a variable */
+  void change_variable_class(expr::term_ref var, variable_class sal_var_class);
+
 public:
 
   module(expr::term_manager& tm);

@@ -73,6 +73,47 @@ bool module::is_parameter(expr::term_ref var) const {
   return find != d_vars_parameter.end();
 }
 
+void module::change_variable_class(expr::term_ref var, variable_class to_class) {
+  variable_class from_class = get_variable_class(var);
+
+  // Output and global variables can be made local by the LOCAL construct.
+  if ((from_class == SAL_VARIABLE_OUTPUT || from_class == SAL_VARIABLE_GLOBAL) && to_class != SAL_VARIABLE_LOCAL) {
+    throw parser_exception("OUTPUT and GLOBAL variables can only be made LOCAL.");
+  }
+  // Global variables can be made output by the OUTPUT construct
+  if (from_class == SAL_VARIABLE_GLOBAL && to_class != SAL_VARIABLE_OUTPUT) {
+    throw parser_exception("GLOBAL variables can only be made OUTPUT.");
+  }
+
+  term_set* to_erase = 0;
+  term_set* to_insert = 0;
+
+  if (to_class == SAL_VARIABLE_LOCAL) {
+    if (from_class != SAL_VARIABLE_OUTPUT && from_class != SAL_VARIABLE_GLOBAL) {
+      throw parser_exception("Only OUTPUT and GLOBAL variables can be made LOCAL.");
+    }
+    if (from_class == SAL_VARIABLE_OUTPUT) { to_erase = &d_vars_output; }
+    if (from_class == SAL_VARIABLE_GLOBAL) { to_erase = &d_vars_global; }
+    to_insert = &d_vars_local;
+  }
+  if (to_class == SAL_VARIABLE_OUTPUT) {
+    if (from_class != SAL_VARIABLE_GLOBAL) {
+      throw parser_exception("Only GLOBAL variables can be made OUTPUT.");
+    }
+    to_insert = &d_vars_output;
+    to_erase = &d_vars_global;
+  }
+
+  assert(to_insert && to_erase);
+
+  size_t erased = to_erase->erase(var);
+  std::pair<term_set::iterator, bool> inserted = to_insert->insert(var);
+  (void)erased;
+  (void)inserted;
+  assert(erased == 1);
+  assert(inserted.second);
+}
+
 void module::remove_variable(expr::term_ref var, variable_class sal_var_class) {
   switch (sal_var_class) {
   case SAL_VARIABLE_INPUT:
@@ -196,6 +237,13 @@ bool module::has_variable(std::string id, variable_class sal_var_class) const {
 
 void module::change_variable_class(std::string id, variable_class sal_var_class) {
   assert(has_variable(id, sal_var_class));
+  // Go throgh the variables and change the class
+  const symbol_table::T_list& vars = d_variables.get_entries(id);
+  symbol_table::T_list::const_iterator it = vars.begin();
+  for (; it != vars.end(); ++ it) {
+    expr::term_ref var = *it;
+    change_variable_class(var, sal_var_class);
+  }
 }
 
 
@@ -469,8 +517,8 @@ void module::load(const module& m, const id_to_lvalue& id_subst, symbol_override
       variable_class from_class = m.get_variable_class(from);
       if (from_class != to.var_class) {
         throw parser_exception(d_tm)
-            << "redeclaring " + id + " of different classes is not allowed: "
-            << from_class + " vs " + to.var_class;
+            << "redeclaring " << id << " of different classes is not allowed: "
+            << from_class << " vs " <<  to.var_class;
       }
       break;
     }

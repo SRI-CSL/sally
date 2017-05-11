@@ -1008,6 +1008,7 @@ term_ref sal_state::mk_assignment(term_ref lvalue, term_ref rhs) {
   }
 }
 
+// Output and global variables can be made local by the LOCAL construct.
 void sal_state::module_modify_local(sal::module::ref m, sal::module::ref m_local, const var_declarations_ctx& var_ctx) {
   TRACE("parser::sal") << "sal_state::module_modify_local: m = " << *m << std::endl;
   TRACE("parser::sal") << "sal_state::module_modify_local: m_local = " << *m_local << std::endl;
@@ -1015,6 +1016,7 @@ void sal_state::module_modify_local(sal::module::ref m, sal::module::ref m_local
   change_module_variables_to(m, var_ctx, sal::SAL_VARIABLE_LOCAL);
 }
 
+// Global variables can be made output by the OUTPUT construct
 void sal_state::module_modify_output(sal::module::ref m, sal::module::ref m_output, const var_declarations_ctx& var_ctx) {
   TRACE("parser::sal") << "sal_state::module_modify_output: m = " << *m << std::endl;
   TRACE("parser::sal") << "sal_state::module_modify_output: m_local = " << *m_output << std::endl;

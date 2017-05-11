@@ -83,23 +83,34 @@ void context::process_module(module::ref m, cmd::sequence* seq) {
   const module::symbol_table& m_symbols = m->get_symbol_table();
   module::symbol_table::const_iterator m_symbols_it = m_symbols.begin();
   for (; m_symbols_it != m_symbols.end(); ++ m_symbols_it) {
-    std::string var_name = m_symbols_it->first;
-    expr::term_ref var = m_symbols_it->second.front();
-    expr::term_ref var_type = d_tm.type_of(var);
-    variable_class var_class = m->get_variable_class(var);
-    switch (var_class) {
-    case SAL_VARIABLE_GLOBAL:
-    case SAL_VARIABLE_LOCAL:
-    case SAL_VARIABLE_OUTPUT:
-      state_var_names.push_back(var_name);
-      state_var_types.push_back(var_type);
-      state_vars.push_back(var);
-      break;
-    case SAL_VARIABLE_INPUT:
-      input_var_names.push_back(var_name);
-      input_var_types.push_back(var_type);
-      input_vars.push_back(var);
-      break;
+    std::string id = m_symbols_it->first;
+    const module::symbol_table::T_list& vars = m_symbols_it->second;
+    module::symbol_table::T_list::const_iterator it_vars = vars.begin();
+    for (size_t i = 0; it_vars != vars.end(); ++ it_vars, ++ i) {
+      expr::term_ref var = *it_vars;
+      expr::term_ref var_type = d_tm.type_of(var);
+      std::string var_name = id;
+      if (vars.size() > 1) {
+        // In case of duplicates (say for local variables), index them
+        std::stringstream ss;
+        ss << id << "!" << i;
+        var_name = ss.str();
+      }
+      variable_class var_class = m->get_variable_class(var);
+      switch (var_class) {
+        case SAL_VARIABLE_GLOBAL:
+        case SAL_VARIABLE_LOCAL:
+        case SAL_VARIABLE_OUTPUT:
+        state_var_names.push_back(var_name);
+        state_var_types.push_back(var_type);
+        state_vars.push_back(var);
+        break;
+        case SAL_VARIABLE_INPUT:
+        input_var_names.push_back(var_name);
+        input_var_types.push_back(var_type);
+        input_vars.push_back(var);
+        break;
+      }
     }
   }
 

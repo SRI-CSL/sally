@@ -155,6 +155,13 @@ public:
     return list.front();
   }
 
+  /** Get all the entries associated to id */
+  const T_list& get_entries(std::string id) const {
+    const_iterator find = d_table.find(id);
+    assert(find != d_table.end());
+    return find->second;
+  }
+
   /** Does the id have an entry */
   bool has_entry(std::string id) const {
     const_iterator find = d_table.find(id);
