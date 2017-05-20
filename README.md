@@ -249,10 +249,10 @@ invalid
 valid
 ```
     
-* Checking the properties with the ic3 engine using the combination of yices2
+* Checking the properties with the pdkind engine using the combination of yices2
   and MathSAT5 as the reasoning engine
 ```bash
-> sally --engine ic3 --solver y2m5 examples/example.mcmt 
+> sally --engine pdkind --solver y2m5 examples/example.mcmt 
 valid
 valid
 valid
