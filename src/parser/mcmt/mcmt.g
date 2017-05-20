@@ -258,7 +258,7 @@ term returns [expr::term_ref t = expr::term_ref()]
      expr::bitvector_extract extract(hi_value.get_unsigned(), lo_value.get_unsigned());
      t = STATE->tm().mk_bitvector_extract(s, extract);
     }
-  | '(' 'cond' { STATE->lsal_extensions() }?
+  | '(' 'cond' 
        ( '(' term_list[children] ')' )+
        '(' 'else' else_term = term ')'
        { 
