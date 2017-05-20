@@ -16,8 +16,8 @@
  * along with sally.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "engine/ic3/ic3_engine.h"
-#include "engine/ic3/solvers.h"
+#include "engine/pdkind/pdkind_engine.h"
+#include "engine/pdkind/solvers.h"
 #include "engine/factory.h"
 
 #include "smt/factory.h"
@@ -36,9 +36,9 @@
 #define unused_var(x) { (void)x; }
 
 namespace sally {
-namespace ic3 {
+namespace pdkind {
 
-ic3_engine::ic3_engine(const system::context& ctx)
+pdkind_engine::pdkind_engine(const system::context& ctx)
 : engine(ctx)
 , d_transition_system(0)
 , d_property(0)
@@ -53,12 +53,12 @@ ic3_engine::ic3_engine(const system::context& ctx)
 , d_property_invalid(false)
 , d_learning_type(LEARN_UNDEFINED)
 {
-  d_stats.frame_index = new utils::stat_int("ic3::frame_index", 0);
-  d_stats.induction_depth = new utils::stat_int("ic3::induction_depth", 0);
-  d_stats.frame_size = new utils::stat_int("ic3::frame_size", 0);
-  d_stats.frame_pushed = new utils::stat_int("ic3::frame_pushed", 0);
-  d_stats.queue_size = new utils::stat_int("ic3::queue_size", 0);
-  d_stats.max_cex_depth = new utils::stat_int("ic3::max_cex_depth", 0);
+  d_stats.frame_index = new utils::stat_int("pdkind::frame_index", 0);
+  d_stats.induction_depth = new utils::stat_int("pdkind::induction_depth", 0);
+  d_stats.frame_size = new utils::stat_int("pdkind::frame_size", 0);
+  d_stats.frame_pushed = new utils::stat_int("pdkind::frame_pushed", 0);
+  d_stats.queue_size = new utils::stat_int("pdkind::queue_size", 0);
+  d_stats.max_cex_depth = new utils::stat_int("pdkind::max_cex_depth", 0);
   ctx.get_statistics().add(new utils::stat_delimiter());
   ctx.get_statistics().add(d_stats.frame_index);
   ctx.get_statistics().add(d_stats.induction_depth);
@@ -68,11 +68,11 @@ ic3_engine::ic3_engine(const system::context& ctx)
   ctx.get_statistics().add(d_stats.max_cex_depth);
 }
 
-ic3_engine::~ic3_engine() {
+pdkind_engine::~pdkind_engine() {
   delete d_smt;
 }
 
-void ic3_engine::reset() {
+void pdkind_engine::reset() {
   d_transition_system = 0;
   d_property = 0;
   d_trace = 0;
@@ -91,7 +91,7 @@ void ic3_engine::reset() {
   d_reachability.clear();
 }
 
-induction_obligation ic3_engine::pop_induction_obligation() {
+induction_obligation pdkind_engine::pop_induction_obligation() {
   assert(d_induction_obligations.size() > 0);
   induction_obligation ind = d_induction_obligations.top();
   d_induction_obligations.pop();
@@ -100,16 +100,16 @@ induction_obligation ic3_engine::pop_induction_obligation() {
   return ind;
 }
 
-void ic3_engine::enqueue_induction_obligation(const induction_obligation& ind) {
+void pdkind_engine::enqueue_induction_obligation(const induction_obligation& ind) {
   assert(d_induction_frame.find(ind) != d_induction_frame.end());
   induction_obligation_queue::handle_type h = d_induction_obligations.push(ind);
   d_induction_obligations_handles[ind] = h;
   d_stats.queue_size->get_value() = d_induction_obligations.size();
 }
 
-ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& ind) {
+pdkind_engine::induction_result pdkind_engine::push_obligation(induction_obligation& ind) {
 
-  TRACE("ic3") << "ic3: Trying F_fwd at " << d_induction_frame_index << ": " << ind.F_fwd << std::endl;
+  TRACE("pdkind") << "pdkind: Trying F_fwd at " << d_induction_frame_index << ": " << ind.F_fwd << std::endl;
 
   // Check if F_cex is inductive. If not then, if it can be reached, we can find a counter-example.
   solvers::query_result fwd_result = d_smt->check_inductive(ind.F_fwd);
@@ -118,7 +118,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
   if (fwd_result.result == smt::solver::UNSAT) {
     // It's pushed so add it to induction assumptions
     assert(d_induction_frame.find(ind) != d_induction_frame.end());
-    TRACE("ic3") << "ic3: pushed " << ind.F_fwd << std::endl;
+    TRACE("pdkind") << "pdkind: pushed " << ind.F_fwd << std::endl;
     // Add it to set of pushed facts
     d_induction_obligations_next.push_back(ind);
     d_stats.frame_pushed->get_value() = d_induction_obligations_next.size();
@@ -143,7 +143,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
   if (cex_result.result == smt::solver::SAT) {
     // We can actually reach the counterexample of induction from G, so we check if
     // it's reachable.
-    TRACE("ic3") << "ic3: F_cex generalization " << cex_result.generalization << std::endl;
+    TRACE("pdkind") << "pdkind: F_cex generalization " << cex_result.generalization << std::endl;
 
     // Check if G is reachable. We know that F_cex is not reachable up to induction frame index.
     // This means that G can be reached at index i, then F_cex is reachable at i + induction_depth.
@@ -161,12 +161,12 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
 
     // G is not reachable, so !G holds up to current frame index
     expr::term_ref F_cex = cex_result.generalization;
-    TRACE("ic3") << "ic3: new F_cex: " << F_cex << std::endl;
+    TRACE("pdkind") << "pdkind: new F_cex: " << F_cex << std::endl;
 
     // Learn something forward that refutes G
     // We know that G_not is not satisfiable
     expr::term_ref F_fwd = d_smt->learn_forward(d_induction_frame_index, F_cex);
-    TRACE("ic3") << "ic3: new F_fwd: " << F_fwd << std::endl;
+    TRACE("pdkind") << "pdkind: new F_fwd: " << F_fwd << std::endl;
 
     // Add to counter-example to induction frame
     induction_obligation new_ind(tm(), F_fwd, F_cex, d_induction_frame_depth + ind.d, 1);
@@ -237,7 +237,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
   d_smt->add_to_induction_solver(F_fwd, solvers::INDUCTION_INTERMEDIATE);
 
   F_fwd = tm().mk_and(ind.F_fwd, F_fwd);
-  TRACE("ic3") << "ic3: new F_fwd: " << F_fwd << std::endl;
+  TRACE("pdkind") << "pdkind: new F_fwd: " << F_fwd << std::endl;
 
   // We know what F_fwd removes the CTI, and F_fwd => !CEX, so we can add it
   d_induction_frame.erase(ind);
@@ -248,7 +248,7 @@ ic3_engine::induction_result ic3_engine::push_obligation(induction_obligation& i
   return INDUCTION_RETRY;
 }
 
-void ic3_engine::push_current_frame() {
+void pdkind_engine::push_current_frame() {
 
   // Search while we have something to do
   while (!d_induction_obligations.empty() && !d_property_invalid) {
@@ -276,7 +276,7 @@ void ic3_engine::push_current_frame() {
   }
 }
 
-engine::result ic3_engine::search() {
+engine::result pdkind_engine::search() {
 
   // Push frame by frame */
   for(;;) {
@@ -287,7 +287,7 @@ engine::result ic3_engine::search() {
     // d_induction_frame_next_index = d_induction_frame_index + 1;
     d_induction_frame_next_index = d_induction_frame_index + d_induction_frame_depth;
 
-    MSG(1) << "ic3: working on induction frame " << d_induction_frame_index << " (" << d_induction_frame.size() << ") with induction depth " << d_induction_frame_depth << std::endl;
+    MSG(1) << "pdkind: working on induction frame " << d_induction_frame_index << " (" << d_induction_frame.size() << ") with induction depth " << d_induction_frame_depth << std::endl;
 
     // Push the current induction frame forward
     push_current_frame();
@@ -297,7 +297,7 @@ engine::result ic3_engine::search() {
       return engine::INVALID;
     }
 
-    MSG(1) << "ic3: pushed " << d_induction_obligations_next.size() << " of " << d_induction_frame.size() << std::endl;
+    MSG(1) << "pdkind: pushed " << d_induction_obligations_next.size() << " of " << d_induction_frame.size() << std::endl;
 
     // If we pushed everything, we're done
     if (d_induction_frame.size() == d_induction_obligations_next.size()) {
@@ -317,19 +317,19 @@ engine::result ic3_engine::search() {
     d_stats.frame_size->get_value() = 0;
 
     // If exceeded number of frames
-    if (ctx().get_options().get_unsigned("ic3-max") > 0 && d_induction_frame_index >= ctx().get_options().get_unsigned("ic3-max")) {
+    if (ctx().get_options().get_unsigned("pdkind-max") > 0 && d_induction_frame_index >= ctx().get_options().get_unsigned("pdkind-max")) {
       return engine::INTERRUPTED;
     }
 
     // Next frame position
     d_induction_frame_index = d_induction_frame_next_index;
 
-    if (ctx().get_options().get_unsigned("ic3-induction-max") != 0 && d_induction_frame_depth > ctx().get_options().get_unsigned("ic3-induction-max")) {
-      d_induction_frame_depth = ctx().get_options().get_unsigned("ic3-induction-max");
+    if (ctx().get_options().get_unsigned("pdkind-induction-max") != 0 && d_induction_frame_depth > ctx().get_options().get_unsigned("pdkind-induction-max")) {
+      d_induction_frame_depth = ctx().get_options().get_unsigned("pdkind-induction-max");
     }
     d_smt->reset_induction_solver(d_induction_frame_depth);
 
-    if (ctx().get_options().get_bool("ic3-minimize-frames")) {
+    if (ctx().get_options().get_bool("pdkind-minimize-frames")) {
       d_smt->minimize_frame(d_induction_obligations_next);
     }
 
@@ -364,7 +364,7 @@ engine::result ic3_engine::search() {
   return engine::UNKNOWN;
 }
 
-engine::result ic3_engine::query(const system::transition_system* ts, const system::state_formula* sf) {
+engine::result pdkind_engine::query(const system::transition_system* ts, const system::state_formula* sf) {
 
   // Initialize
   result r = UNKNOWN;
@@ -403,17 +403,17 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
 
   while (r == UNKNOWN) {
 
-    MSG(1) << "ic3: starting search" << std::endl;
+    MSG(1) << "pdkind: starting search" << std::endl;
 
     // Search
     r = search();
   }
 
-  MSG(1) << "ic3: search done: " << r << std::endl;
+  MSG(1) << "pdkind: search done: " << r << std::endl;
 
   // Print cex graph if asked
-  if (ctx().get_options().has_option("ic3-output-cex-graph")) {
-    std::string filename = ctx().get_options().get_string("ic3-output-cex-graph");
+  if (ctx().get_options().has_option("pdkind-output-cex-graph")) {
+    std::string filename = ctx().get_options().get_string("pdkind-output-cex-graph");
     std::ofstream cex_out(filename.c_str());
     cex_out << expr::set_tm(tm()) << d_cex_manager;
   }
@@ -426,7 +426,7 @@ engine::result ic3_engine::query(const system::transition_system* ts, const syst
   return r;
 }
 
-bool ic3_engine::add_property(expr::term_ref P) {
+bool pdkind_engine::add_property(expr::term_ref P) {
   // Add to cex manager
   expr::term_ref P_cex = tm().mk_not(P);
   d_cex_manager.add_edge(P_cex, P_cex, 0, 0);
@@ -451,9 +451,9 @@ bool ic3_engine::add_property(expr::term_ref P) {
   }
 }
 
-const system::trace_helper* ic3_engine::get_trace() {
+const system::trace_helper* pdkind_engine::get_trace() {
 
-  MSG(1) << "ic3: constructing counter-example" << std::endl;
+  MSG(1) << "pdkind: constructing counter-example" << std::endl;
 
   size_t property_id = 0;
 
@@ -491,7 +491,7 @@ const system::trace_helper* ic3_engine::get_trace() {
   I = trace_helper->get_state_formula(I, 0);
   solver->add(I, smt::solver::CLASS_A);
   cex_start = trace_helper->get_state_formula(cex_start, 0);
-  TRACE("ic3::cex") << "Starting from " << cex_start << std::endl;
+  TRACE("pdkind::cex") << "Starting from " << cex_start << std::endl;
   solver->add(cex_start, smt::solver::CLASS_A);
   smt::solver::result res = solver->check();
   (void)res;
@@ -509,7 +509,7 @@ const system::trace_helper* ic3_engine::get_trace() {
     size_t cex_step = cex_edges[i].edge_length;
     assert(cex_step > 0);
 
-    TRACE("ic3::cex") << "at " << current_depth << ", step = " << cex_step << std::endl;
+    TRACE("pdkind::cex") << "at " << current_depth << ", step = " << cex_step << std::endl;
 
     // Push the solver scope
     scope.push();
@@ -525,9 +525,9 @@ const system::trace_helper* ic3_engine::get_trace() {
     }
 
     // Add the goal to reach 
-    TRACE("ic3::cex") << "cex_next = " << cex_next << std::endl;
+    TRACE("pdkind::cex") << "cex_next = " << cex_next << std::endl;
     cex_next = trace_helper->get_state_formula(cex_next, current_depth + cex_step);
-    TRACE("ic3::cex") << "cex_next at " << current_depth + cex_step << " = " << cex_next << std::endl;
+    TRACE("pdkind::cex") << "cex_next at " << current_depth + cex_step << " = " << cex_next << std::endl;
     solver->add(cex_next, smt::solver::CLASS_A);
 
     // Check for satisfiability (it must be SAT)
@@ -549,13 +549,13 @@ const system::trace_helper* ic3_engine::get_trace() {
   return trace_helper;
 }
 
-void ic3_engine::gc_collect(const expr::gc_relocator& gc_reloc) {
+void pdkind_engine::gc_collect(const expr::gc_relocator& gc_reloc) {
   assert(d_induction_obligations_next.size() == 0);
   d_smt->gc_collect(gc_reloc);
   d_reachability.gc_collect(gc_reloc);
 }
 
-engine::invariant ic3_engine::get_invariant() {
+engine::invariant pdkind_engine::get_invariant() {
   return d_invariant;
 }
 

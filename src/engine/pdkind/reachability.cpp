@@ -7,7 +7,7 @@
 #include <iostream>
 
 namespace sally {
-namespace ic3 {
+namespace pdkind {
 
 reachability::reachability(const system::context& ctx, cex_manager& cm)
 : expr::gc_participant(ctx.tm())
@@ -17,9 +17,9 @@ reachability::reachability(const system::context& ctx, cex_manager& cm)
 , d_smt(0)
 , d_cex_manager(cm)
 {
-  d_stats.reachable = new utils::stat_int("sally::ic3::reachable", 0);
-  d_stats.unreachable = new utils::stat_int("sally::ic3::unreachable", 0);
-  d_stats.queries = new utils::stat_int("sally::ic3::reachability_queries", 0);
+  d_stats.reachable = new utils::stat_int("sally::pdkind::reachable", 0);
+  d_stats.unreachable = new utils::stat_int("sally::pdkind::unreachable", 0);
+  d_stats.queries = new utils::stat_int("sally::pdkind::reachability_queries", 0);
   ctx.get_statistics().add(new utils::stat_delimiter());
   ctx.get_statistics().add(d_stats.reachable);
   ctx.get_statistics().add(d_stats.unreachable);
@@ -85,7 +85,7 @@ reachability::status reachability::check_reachable(size_t start, size_t end, exp
 
 reachability::result reachability::check_reachable(size_t k, expr::term_ref f, size_t property_id) {
 
-  TRACE("ic3") << "ic3: checking reachability at " << k << std::endl;
+  TRACE("pdkind") << "pdkind: checking reachability at " << k << std::endl;
 
   ensure_frame(k);
 
@@ -94,10 +94,10 @@ reachability::result reachability::check_reachable(size_t k, expr::term_ref f, s
     smt::solver::result result = d_smt->query_at_init(f);
     switch (result) {
     case smt::solver::UNSAT:
-      TRACE("ic3") << "ic3: checking reachability at " << k << ": unreachable" << std::endl;
+      TRACE("pdkind") << "pdkind: checking reachability at " << k << ": unreachable" << std::endl;
       return UNREACHABLE;
     case smt::solver::SAT:
-      TRACE("ic3") << "ic3: checking reachability at " << k << ": reachable" << std::endl;
+      TRACE("pdkind") << "pdkind: checking reachability at " << k << ": reachable" << std::endl;
       if (property_id != d_cex_manager.null_property_id) {
         d_cex_manager.mark_root(f, property_id);
       }
@@ -146,7 +146,7 @@ reachability::result reachability::check_reachable(size_t k, expr::term_ref f, s
       expr::term_ref learnt = d_smt->learn_forward(reach.frame(), reach.formula());
       // Add any unreachability learnts
       if (!frame_contains(reach.frame(), learnt)) {
-        if (d_ctx.get_options().get_bool("ic3-add-backward")) {
+        if (d_ctx.get_options().get_bool("pdkind-add-backward")) {
           add_valid_up_to(reach.frame(), learnt);
         } else {
           add_to_frame(reach.frame(), learnt);
@@ -161,15 +161,15 @@ reachability::result reachability::check_reachable(size_t k, expr::term_ref f, s
     }
   }
 
-  TRACE("ic3") << "ic3: " << (reachable ? "reachable" : "not reachable") << std::endl;
+  TRACE("pdkind") << "pdkind: " << (reachable ? "reachable" : "not reachable") << std::endl;
 
   // All discharged, so it's not reachable
   if (reachable) {
-    TRACE("ic3") << "ic3: checking reachability at " << k << ": reachable" << std::endl;
+    TRACE("pdkind") << "pdkind: checking reachability at " << k << ": reachable" << std::endl;
     d_stats.reachable->get_value() ++;
     return REACHABLE;
   } else {
-    TRACE("ic3") << "ic3: checking reachability at " << k << ": unreachable" << std::endl;
+    TRACE("pdkind") << "pdkind: checking reachability at " << k << ": unreachable" << std::endl;
     d_stats.unreachable->get_value() ++;
     return UNREACHABLE;
   }
@@ -190,7 +190,7 @@ bool reachability::frame_contains(size_t k, expr::term_ref F) const {
 }
 
 void reachability::add_valid_up_to(size_t k, expr::term_ref F) {
-  TRACE("ic3") << "ic3: adding at " << k << ": " << F << std::endl;
+  TRACE("pdkind") << "pdkind: adding at " << k << ": " << F << std::endl;
   ensure_frame(k);
   assert(k > 0);
 

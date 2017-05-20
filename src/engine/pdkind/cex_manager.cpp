@@ -26,7 +26,7 @@
 #include "utils/trace.h"
 
 namespace sally {
-namespace ic3 {
+namespace pdkind {
 
 void cex_manager::clear() {
   d_cex_graph.clear();
@@ -34,7 +34,7 @@ void cex_manager::clear() {
 
 void cex_manager::add_edge(expr::term_ref A, expr::term_ref B, size_t edge_length, size_t property_id) {
 
-  TRACE("ic3::cex") << "cex_manager: adding edge " << A << " -> " << B << " of length " << edge_length << std::endl;
+  TRACE("pdkind::cex") << "cex_manager: adding edge " << A << " -> " << B << " of length " << edge_length << std::endl;
 
   cex_edge new_edge(B, edge_length, property_id);
 
@@ -56,7 +56,7 @@ void cex_manager::add_edge(expr::term_ref A, expr::term_ref B, size_t edge_lengt
 }
 
 void cex_manager::mark_root(expr::term_ref A, size_t property_id) {
-  TRACE("ic3::cex") << "cex_manager: adding root " << A << std::endl;
+  TRACE("pdkind::cex") << "cex_manager: adding root " << A << std::endl;
   d_roots.push_back(cex_root(A, property_id));
 }
 
@@ -134,7 +134,7 @@ expr::term_ref cex_manager::get_full_cex(size_t property_id, edge_vector& edges)
     expr::term_ref A = Q.top();
     Q.pop();
 
-    TRACE("ic3::cex") << "cex_manger: dijkstra extending from " << A << "." << std::endl;
+    TRACE("pdkind::cex") << "cex_manger: dijkstra extending from " << A << "." << std::endl;
 
     // Distance from source to A (we only push distanced nodes to Q)
     expr::term_ref_hash_map<size_t>::iterator dist_it = dist.find(A);
@@ -153,13 +153,13 @@ expr::term_ref cex_manager::get_full_cex(size_t property_id, edge_vector& edges)
         if (edge->property_id == property_id) {
           // Neighbor 
           expr::term_ref B = edge->B;
-          TRACE("ic3::cex") << "cex_manger: trying edge to " << B << "." << std::endl;
+          TRACE("pdkind::cex") << "cex_manger: trying edge to " << B << "." << std::endl;
           // Neighbor distance
           dist_it = dist.find(B);
           size_t B_dist = dist_it == dist.end() ? infty : dist_it->second;
           // If distance is 0 then B is the property
           if (edge->edge_length == 0) {
-            TRACE("ic3::cex") << "cex_manger: path to " << B << " found." << std::endl;
+            TRACE("pdkind::cex") << "cex_manger: path to " << B << " found." << std::endl;
             property = B;
             break;
           }
@@ -192,10 +192,10 @@ expr::term_ref cex_manager::get_full_cex(size_t property_id, edge_vector& edges)
   }
 
   // Reconstruct the path
-  TRACE("ic3::cex") << "cex_manger: reconstructing path." << std::endl;
+  TRACE("pdkind::cex") << "cex_manger: reconstructing path." << std::endl;
   expr::term_ref current = property;
   for(;;) {
-    TRACE("ic3::cex") << "cex_manger: current = " << current << std::endl;
+    TRACE("pdkind::cex") << "cex_manger: current = " << current << std::endl;
     const expr::term_ref_hash_map<prev_info>::const_iterator prev_find = prev.find(current);
     if (prev_find == prev.end()) {
       break; // We found the path
@@ -213,7 +213,7 @@ void cex_manager::to_stream(std::ostream& out) const {
 
   cex_graph::const_iterator v_it; 
   
-  out << "digraph ic3 {" << std::endl;
+  out << "digraph pdkind {" << std::endl;
   out << "  rankdir=LR;" << std::endl;
   out << std::endl;
 

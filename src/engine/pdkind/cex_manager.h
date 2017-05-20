@@ -26,7 +26,7 @@
 #include <iosfwd>
 
 namespace sally {
-namespace ic3 {
+namespace pdkind {
 
 /**
  * Manager for counter-examples in IC3. It's a graph from counter-example to

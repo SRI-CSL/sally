@@ -16,7 +16,7 @@
  * along with sally.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "engine/ic3/solvers.h"
+#include "engine/pdkind/solvers.h"
 
 #include "smt/factory.h"
 #include "utils/trace.h"
@@ -27,7 +27,7 @@
 #define unused_var(x) { (void)x; }
 
 namespace sally {
-namespace ic3 {
+namespace pdkind {
 
 solvers::solvers(const system::context& ctx, const system::transition_system* transition_system, system::trace_helper* trace)
 : d_ctx(ctx)
@@ -58,9 +58,9 @@ solvers::~solvers() {
 
 void solvers::reset(const std::vector<solvers::formula_set>& frames) {
 
-  MSG(1) << "ic3: restarting solvers" << std::endl;
+  MSG(1) << "pdkind: restarting solvers" << std::endl;
 
-  if (d_ctx.get_options().get_bool("ic3-single-solver")) {
+  if (d_ctx.get_options().get_bool("pdkind-single-solver")) {
     // Restart the reachability solver
     delete d_reachability_solver;
     d_reachability_solver = 0;
@@ -103,7 +103,7 @@ void solvers::reset(const std::vector<solvers::formula_set>& frames) {
 
 void solvers::init_reachability_solver(size_t k) {
 
-  assert(!d_ctx.get_options().get_bool("ic3-single-solver"));
+  assert(!d_ctx.get_options().get_bool("pdkind-single-solver"));
   assert(k < d_size);
 
   if (d_reachability_solvers.size() <= k) {
@@ -143,7 +143,7 @@ smt::solver* solvers::get_initial_solver() {
 
 
 smt::solver* solvers::get_reachability_solver() {
-  assert(d_ctx.get_options().get_bool("ic3-single-solver"));
+  assert(d_ctx.get_options().get_bool("pdkind-single-solver"));
   if (d_reachability_solver == 0) {
     // The variables from the state types
     const std::vector<expr::term_ref>& x = d_transition_system->get_state_type()->get_variables(system::state_type::STATE_CURRENT);
@@ -160,7 +160,7 @@ smt::solver* solvers::get_reachability_solver() {
 }
 
 smt::solver* solvers::get_reachability_solver(size_t k) {
-  assert(!d_ctx.get_options().get_bool("ic3-single-solver"));
+  assert(!d_ctx.get_options().get_bool("pdkind-single-solver"));
   init_reachability_solver(k);
   return d_reachability_solvers[k];
 }
@@ -217,7 +217,7 @@ solvers::query_result solvers::query_with_transition_at(size_t k, expr::term_ref
   smt::solver* solver = 0;
   query_result result;
 
-  if (d_ctx.get_options().get_bool("ic3-single-solver")) {
+  if (d_ctx.get_options().get_bool("pdkind-single-solver")) {
     solver = get_reachability_solver();
   } else {
     solver = get_reachability_solver(k);
@@ -294,7 +294,7 @@ expr::term_ref solvers::generalize_sat(smt::solver* solver) {
   // Generalize
   std::vector<expr::term_ref> generalization_facts;
   solver->generalize(smt::solver::GENERALIZE_BACKWARD, generalization_facts);
-  if (d_ctx.get_options().get_bool("ic3-minimize-generalizations")) {
+  if (d_ctx.get_options().get_bool("pdkind-minimize-generalizations")) {
     // Add negation of generalization
     smt::solver* minimization_solver = get_minimization_solver();
     smt::solver_scope scope(minimization_solver);
@@ -308,7 +308,7 @@ expr::term_ref solvers::generalize_sat(smt::solver* solver) {
     std::vector<expr::term_ref> conjuncts_vec(conjuncts.begin(), conjuncts.end()), minimized_vec;
     // Minimize
     quickxplain_generalization(minimization_solver, conjuncts_vec, 0, conjuncts_vec.size(), minimized_vec);
-    TRACE("ic3::mingen") << "min: old_size = " << conjuncts_vec.size() << ", new_size = " << minimized_vec.size() << std::endl;
+    TRACE("pdkind::mingen") << "min: old_size = " << conjuncts_vec.size() << ", new_size = " << minimized_vec.size() << std::endl;
     generalization_facts.swap(minimized_vec);
   }
   expr::term_ref G = d_tm.mk_and(generalization_facts);
@@ -321,7 +321,7 @@ expr::term_ref solvers::generalize_sat(smt::solver* solver, expr::model::ref m) 
   // Generalize
   std::vector<expr::term_ref> generalization_facts;
   solver->generalize(smt::solver::GENERALIZE_BACKWARD, m, generalization_facts);
-  if (d_ctx.get_options().get_bool("ic3-minimize-generalizations")) {
+  if (d_ctx.get_options().get_bool("pdkind-minimize-generalizations")) {
     // Add negation of generalization
     smt::solver* minimization_solver = get_minimization_solver();
     smt::solver_scope scope(minimization_solver);
@@ -335,7 +335,7 @@ expr::term_ref solvers::generalize_sat(smt::solver* solver, expr::model::ref m) 
     // Minimize
     std::vector<expr::term_ref> conjuncts_vec(conjuncts.begin(), conjuncts.end()), minimized_vec;
     quickxplain_generalization(minimization_solver, conjuncts_vec, 0, conjuncts_vec.size(), minimized_vec);
-    TRACE("ic3::mingen") << "min: old_size = " << conjuncts_vec.size() << ", new_size = " << minimized_vec.size() << std::endl;
+    TRACE("pdkind::mingen") << "min: old_size = " << conjuncts_vec.size() << ", new_size = " << minimized_vec.size() << std::endl;
     generalization_facts.swap(minimized_vec);
   }
   expr::term_ref G = d_tm.mk_and(generalization_facts);
@@ -346,7 +346,7 @@ expr::term_ref solvers::generalize_sat(smt::solver* solver, expr::model::ref m) 
 
 void solvers::quickxplain_interpolant(bool negate, smt::solver* I_solver, smt::solver* T_solver, const std::vector<expr::term_ref>& formulas, size_t begin, size_t end, std::vector<expr::term_ref>& out) {
 
-  // TRACE("ic3::min") << "min: begin = " << begin << ", end = " << end << std::endl;
+  // TRACE("pdkind::min") << "min: begin = " << begin << ", end = " << end << std::endl;
 
   smt::solver_scope I_solver_scope(I_solver);
   smt::solver_scope T_solver_scope(T_solver);
@@ -419,7 +419,7 @@ void solvers::quickxplain_interpolant(bool negate, smt::solver* I_solver, smt::s
 
 void solvers::quickxplain_generalization(smt::solver* solver, const std::vector<expr::term_ref>& conjuncts, size_t begin, size_t end, std::vector<expr::term_ref>& out) {
 
-  // TRACE("ic3::min") << "min: begin = " << begin << ", end = " << end << std::endl;
+  // TRACE("pdkind::min") << "min: begin = " << begin << ", end = " << end << std::endl;
 
   smt::solver_scope solver_scope(solver);
   smt::solver::result solver_result = solver->check();
@@ -468,7 +468,7 @@ struct interpolant_cmp {
 
 expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
 
-  TRACE("ic3") << "learning forward to refute: " << G << std::endl;
+  TRACE("pdkind") << "learning forward to refute: " << G << std::endl;
 
   expr::term_ref I_I; // Interpolant from initial states
   expr::term_ref T_I; // Interpolant from precious states
@@ -482,7 +482,7 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
   }
 
   // Minimize G
-  if (d_ctx.get_options().get_bool("ic3-minimize-interpolants")) {
+  if (d_ctx.get_options().get_bool("pdkind-minimize-interpolants")) {
     std::vector<expr::term_ref> G_conjuncts, G_conjuncts_min;
     d_tm.get_conjuncts(G, G_conjuncts);
     interpolant_cmp cmp(d_tm);
@@ -499,7 +499,7 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
   I_I = I_solver->interpolate();
   I_solver->pop();
 
-  TRACE("ic3") << "I_I: " << I_I << std::endl;
+  TRACE("pdkind") << "I_I: " << I_I << std::endl;
 
   if (k > 0) {
     // Get the interpolant T_I for: (R_{k-1} and T => T_I, T_I and G unsat
@@ -513,12 +513,12 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
     T_I = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_NEXT, system::state_type::STATE_CURRENT, T_I);
     T_solver->pop();
 
-    TRACE("ic3") << "T_I: " << T_I << std::endl;
+    TRACE("pdkind") << "T_I: " << T_I << std::endl;
   }
 
   expr::term_ref learnt;
 
-  if (d_ctx.get_options().get_bool("ic3-minimize-interpolants")) {
+  if (d_ctx.get_options().get_bool("pdkind-minimize-interpolants")) {
     // Get all the disjuncts
     std::set<expr::term_ref> disjuncts;
     if (I_solver) d_tm.get_disjuncts(I_I, disjuncts);
@@ -527,7 +527,7 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
     interpolant_cmp cmp(d_tm);
     std::sort(disjuncts_vec.begin(), disjuncts_vec.end(), cmp);
     quickxplain_interpolant(true, I_solver, T_solver, disjuncts_vec, 0, disjuncts_vec.size(), minimized_vec);
-    TRACE("ic3::min") << "min: old_size = " << disjuncts_vec.size() << ", new_size = " << minimized_vec.size() << std::endl;
+    TRACE("pdkind::min") << "min: old_size = " << disjuncts_vec.size() << ", new_size = " << minimized_vec.size() << std::endl;
     learnt = d_tm.mk_or(minimized_vec);
   } else {
     // Result is the disjunction of the two
@@ -538,7 +538,7 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
     }
   }
 
-  TRACE("ic3") << "learned: " << learnt << std::endl;
+  TRACE("pdkind") << "learned: " << learnt << std::endl;
 
   return learnt;
 }
@@ -554,11 +554,11 @@ void solvers::add_to_reachability_solver(size_t k, expr::term_ref f)  {
 
   smt::solver* solver = get_reachability_solver(k);
   solver->add(f, smt::solver::CLASS_A);
-  if (d_ctx.get_options().get_bool("ic3-check-deadlock")) {
+  if (d_ctx.get_options().get_bool("pdkind-check-deadlock")) {
     smt::solver::result result = solver->check();
     if (result != smt::solver::SAT) {
       std::stringstream ss;
-      ss << "ic3: deadlock detected at reachability frame " << k << ".";
+      ss << "pdkind: deadlock detected at reachability frame " << k << ".";
       throw exception(ss.str());
     }
   }
@@ -632,11 +632,11 @@ void solvers::add_to_induction_solver(expr::term_ref f, induction_assertion_type
     assert(false);
   }
 
-  if (d_ctx.get_options().get_bool("ic3-check-deadlock")) {
+  if (d_ctx.get_options().get_bool("pdkind-check-deadlock")) {
     smt::solver::result result = d_induction_solver->check();
     if (result != smt::solver::SAT) {
       std::stringstream ss;
-      ss << "ic3: deadlock detected when checking induction of depth " << d_induction_solver_depth << ".";
+      ss << "pdkind: deadlock detected when checking induction of depth " << d_induction_solver_depth << ".";
       throw exception(ss.str());
     }
   }
@@ -727,7 +727,7 @@ void solvers::output_efsmt(expr::term_ref f, expr::term_ref g) const {
   //  G(x) and \forall y not (T(x, x') and f') is unsat
 
   std::stringstream ss;
-  ss << "ic3_gen_check_" << i++ << ".smt2";
+  ss << "pdkind_gen_check_" << i++ << ".smt2";
   std::ofstream out(ss.str().c_str());
 
   out << expr::set_tm(d_tm);
