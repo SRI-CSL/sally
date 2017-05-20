@@ -22,6 +22,7 @@
 
 #include <sstream>
 #include <cassert>
+#include <iostream>
 
 namespace sally {
 namespace system {
@@ -166,7 +167,7 @@ void trace_helper::set_model(expr::model::ref m, size_t start, size_t end) {
     // Input variables
     const std::vector<expr::term_ref>& input_variables = get_input_variables(k);
     for (size_t i =  0; i < input_variables.size(); ++ i) {
-      expr::term_ref x = state_variables[i];
+      expr::term_ref x = input_variables[i];
       d_model->set_variable_value(x, m->get_variable_value(x));
     }
   }

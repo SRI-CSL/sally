@@ -476,6 +476,10 @@ const system::trace_helper* ic3_engine::get_trace() {
   for (size_t k = 0; k <= cex_length; ++ k) {
     const std::vector<expr::term_ref>& x = trace_helper->get_state_variables(k);
     solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
+    if (k < cex_length) {
+      const std::vector<expr::term_ref>& i = trace_helper->get_input_variables(k);
+      solver->add_variables(i.begin(), i.end(), smt::solver::CLASS_A);  
+    }
   }
 
   // Scope for push/pop on the solver
