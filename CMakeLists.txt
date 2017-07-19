@@ -35,7 +35,7 @@ endif (CMAKE_SIZEOF_VOID_P EQUAL 8)
 
 # Find the GMP number library
 if (SALLY_STATIC_BUILD)
-	find_library(GMP_LIBRARY libgmp.a gmp)
+  find_library(GMP_LIBRARY libgmp.a gmp)
 else()
   find_library(GMP_LIBRARY gmp)
 endif()
@@ -51,6 +51,14 @@ find_package(Yices2 2.3.0)
 if (YICES2_FOUND)
   add_definitions(-DWITH_YICES2)
   include_directories(${YICES2_INCLUDE_DIR}) 
+endif()
+
+# Find LibPoly
+SET(LIBPOLY_HOME CACHE STRING "LibPoly installation directory")
+find_package(LibPoly 0.1.1)
+if (LIBPOLY_FOUND)
+  add_definitions(-DWITH_LIBPOLY)
+  include_directories(${LIBPOLY_INCLUDE_DIR})
 endif()
 
 # Find MathSAT5

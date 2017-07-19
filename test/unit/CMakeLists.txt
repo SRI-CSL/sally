@@ -26,6 +26,9 @@ endforeach(DIR)
 
 # Link the thing
 target_link_libraries(sally_test ${sally_test_LIBS} ${Boost_LIBRARIES})
+if (LIBPOLY_FOUND)
+  target_link_libraries(sally_test ${LIBPOLY_LIBRARY})
+endif()
 if (YICES2_FOUND)
   target_link_libraries(sally_test ${YICES2_LIBRARY})
 endif()

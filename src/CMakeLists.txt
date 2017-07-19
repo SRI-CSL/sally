@@ -24,6 +24,9 @@ endforeach(DIR)
 
 # Link in all the other libraries
 target_link_libraries(sally ${sally_LIBS})
+if (LIBPOLY_FOUND)
+  target_link_libraries(sally ${LIBPOLY_LIBRARY})
+endif()
 if (YICES2_FOUND)
   target_link_libraries(sally ${YICES2_LIBRARY})
 endif()
