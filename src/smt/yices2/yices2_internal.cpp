@@ -37,6 +37,15 @@ type_t yices2_internal::s_bool_type = NULL_TYPE;
 type_t yices2_internal::s_int_type = NULL_TYPE;
 type_t yices2_internal::s_real_type = NULL_TYPE;
 
+void yices2_internal::check_error(int ret, const char* error_msg) const {
+  if (ret < 0) {
+    std::stringstream ss;
+    char* error = yices_error_string();
+    ss << error_msg << ": " << error;
+    throw exception(ss.str());
+  }
+}
+
 yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
 : d_tm(tm)
 , d_conversion_cache(0)
@@ -64,15 +73,18 @@ yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
   d_bv1 = expr::term_ref_strong(d_tm, d_tm.mk_bitvector_constant(expr::bitvector(1, 1)));
 
   // The context
+  int32_t ret = 0; 
   if (opts.has_option("solver-logic")) {
     d_config = yices_new_config();
-    int32_t ret = yices_default_config_for_logic(d_config, opts.get_string("solver-logic").c_str());
-    if (ret < 0) {
-      std::stringstream ss;
-      char* error = yices_error_string();
-      ss << "Yices error (configuration creation): " << error;
-      throw exception(ss.str());
+    ret = yices_default_config_for_logic(d_config, opts.get_string("solver-logic").c_str());
+    check_error(ret, "Yices error (default configuration creation)");
+  }
+  if (opts.has_option("yices2-mcsat")) {
+    if (d_config == NULL) {
+      d_config = yices_new_config();
     }
+    ret = yices_set_config(d_config, "solver-type", "mcsat");
+    check_error(ret, "Yices error (mcsat option): ");
   }
   d_ctx = yices_new_context(d_config);
   if (d_ctx == 0) {
