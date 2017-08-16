@@ -9,6 +9,7 @@ add_library(smt
   yices2/yices2_term_cache.cpp 
   mathsat5/mathsat5.cpp
   mathsat5/mathsat5_term_cache.cpp
+  mathsat5/external_interpolator.cpp
   y2m5/y2m5.cpp
   generic/generic_solver.cpp
   z3/z3.cpp

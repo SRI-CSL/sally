@@ -34,6 +34,7 @@
 #include "expr/rational.h"
 #include "smt/mathsat5/mathsat5.h"
 #include "smt/mathsat5/mathsat5_term_cache.h"
+#include "external_interpolator.h"
 #include "utils/trace.h"
 
 #define unused_var(x) { (void)x; }
@@ -105,6 +106,9 @@ class mathsat5_internal {
 
   /** ITP group B */
   int d_itp_B;
+
+  /** Conflict resolution interpolator */
+  external_interpolator* d_cr_interpolator;
 
 public:
 
@@ -183,6 +187,12 @@ public:
 
 int mathsat5_internal::s_instances = 0;
 
+/** Function to be called from MathSAT on proof nodes */
+msat_term run_external_interpolator(msat_term *a, msat_term *b, msat_proof p, void *data) {
+  external_interpolator* itp = static_cast<external_interpolator*>(data);
+  return itp->compute(a, b, p);
+}
+
 mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts)
 : d_tm(tm)
 , d_opts(opts)
@@ -191,6 +201,7 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
 , d_term_cache(mathsat5_term_cache::get_cache(tm))
 , d_itp_A(0)
 , d_itp_B(0)
+, d_cr_interpolator(0)
 {
 
   s_instances ++;
@@ -240,6 +251,17 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
     throw exception("Error in MathSAT5 initialization");
   }
 
+  if (opts.get_bool("mathsat5-cr")) {
+    // Split equalities
+    msat_set_option(d_cfg, "theory.la.split_rat_eq", "true");
+    // Make the inerpolator
+    d_cr_interpolator = new external_interpolator(instance(), d_env);
+    msat_set_external_theory_interpolator(d_env, run_external_interpolator, d_cr_interpolator);
+  } else {
+    // No interpolator needed
+    d_cr_interpolator = 0;
+  }
+
   d_itp_A = msat_create_itp_group(d_env);
   d_itp_B = msat_create_itp_group(d_env);
 }
@@ -247,7 +269,7 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
 mathsat5_internal::~mathsat5_internal() {
   msat_destroy_env(d_env);
   msat_destroy_config(d_cfg);
-
+  delete d_cr_interpolator;
   s_instances--;
 }
 
@@ -994,21 +1016,23 @@ expr::model::ref mathsat5_internal::get_model() {
   return m;
 }
 
-void mathsat5_internal::interpolate(std::vector<expr::term_ref>& projection_out) {
+void mathsat5_internal::interpolate(std::vector<expr::term_ref>& interpolant_out) {
+
+  if (output::trace_tag_is_enabled("mathsat5::interpolation")) {
+    std::cerr << "interpolating:" << std::endl;
+    for (size_t i = 0; i < d_assertions.size(); ++ i) {
+      std::cerr << "[" << i << "]: " << d_assertion_classes[i] << " " << d_assertions[i] << std::endl;
+    }
+  }
+
   int itp_classes[1] = { d_itp_A };
   msat_term I = msat_get_interpolant(d_env, itp_classes, 1);
   if (MSAT_ERROR_TERM(I)) {
-    if (output::trace_tag_is_enabled("mathsat5::interpolation")) {
-      std::cerr << "Error while interpolating:" << std::endl;
-      for (size_t i = 0; i < d_assertions.size(); ++ i) {
-        std::cerr << "[" << i << "]: " << d_assertion_classes[i] << " " << d_assertions[i] << std::endl;
-      }
-    }
     std::stringstream ss;
     ss << "MathSAT interpolation error: " << msat_last_error_message(d_env);
     throw exception(std::string(ss.str()));
   }
-  projection_out.push_back(to_term(I));
+  interpolant_out.push_back(to_term(I));
 }
 
 struct msat_term_cmp {

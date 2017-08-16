@@ -23,25 +23,15 @@
 #include <map>
 #include <vector>
 #include <mathsat.h>
-#include "expr/term_map.h"
 
+#include "expr/term_map.h"
 #include "expr/term_manager.h"
 #include "expr/gc_participant.h"
 
+#include "mathsat5_utils.h"
+
 namespace sally {
 namespace smt {
-
-/** Yices term hash. */
-struct mathsat5_hasher {
-  size_t operator()(msat_term value) const { return msat_term_id(value); }
-};
-
-/** Equality checks */
-struct mathsat5_eq {
-  bool operator() (const msat_term& t1, const msat_term& t2) const {
-    return msat_term_id(t1) == msat_term_id(t2);
-  }
-};
 
 class mathsat5_term_cache : public expr::gc_participant {
 
