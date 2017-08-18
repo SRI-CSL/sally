@@ -223,7 +223,8 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
   // msat_set_option(d_cfg, "dpll.interpolation_mode", "2");
   // msat_set_option(d_cfg, "dpll.proof_simplification", "true");
   // msat_set_option(d_cfg, "theory.la.interpolation_mode", "0");
-  msat_set_option(d_cfg, "theory.la.split_rat_eq", "false");
+  // Keep split_rat_eq=true to have consistency between regular and new interpolation
+  msat_set_option(d_cfg, "theory.la.split_rat_eq", "true");
   msat_set_option(d_cfg, "theory.bv.eager", "false");
   msat_set_option(d_cfg, "theory.bv.div_by_zero_mode", "0");
   msat_set_option(d_cfg, "theory.euf.enabled", "false");
@@ -252,8 +253,6 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
   }
 
   if (opts.get_bool("mathsat5-cr")) {
-    // Split equalities
-    msat_set_option(d_cfg, "theory.la.split_rat_eq", "true");
     // Make the inerpolator
     d_cr_interpolator = new external_interpolator(instance(), d_env);
     msat_set_external_theory_interpolator(d_env, run_external_interpolator, d_cr_interpolator);

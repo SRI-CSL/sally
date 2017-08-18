@@ -10,6 +10,7 @@ add_library(smt
   mathsat5/mathsat5.cpp
   mathsat5/mathsat5_term_cache.cpp
   mathsat5/external_interpolator.cpp
+  mathsat5/conflict_resolution.cpp
   y2m5/y2m5.cpp
   generic/generic_solver.cpp
   z3/z3.cpp
