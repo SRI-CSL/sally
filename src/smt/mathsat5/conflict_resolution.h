@@ -42,6 +42,12 @@ class conflict_resolution {
   /** Null variable */
   static const size_t variable_null = -1;
 
+  /** Ids of constraints */
+  typedef size_t constraint_id;
+
+  /** Null constraint */
+  static const size_t constraint_null = -1;
+
   /** Map from terms to their ids */
   typedef boost::unordered_map<msat_term, variable_id, mathsat5_hasher, mathsat5_eq> term_to_variable_id_map;
 
@@ -51,13 +57,25 @@ class conflict_resolution {
   /** Bound */
   class bound_info {
     /** The value of the bound */
-    expr::rational d_v;
+    expr::rational d_bound;
     /** Is it a strict bound */
     bool d_is_strict;
     /** Is it infinity */
     bool d_is_infinity;
+    /** Constraint responsible for the bound */
+    constraint_id d_constraint;
   public:
     bound_info();
+    bool is_infinity() const;
+    bool is_strict() const;
+    const expr::rational get_bound() const;
+
+    /** Set the values */
+    void set(const expr::rational& bound, bool is_strict, constraint_id C_id);
+
+    /** Check if the two bounds are consistent */
+    static
+    bool consistent(const bound_info& lb, const bound_info& ub);
   };
 
   /** Where does the variable occur (assigned to ease sorting) */
@@ -76,12 +94,35 @@ class conflict_resolution {
     bound_info d_lb;
     /** The current upper bound */
     bound_info d_ub;
+    /** Current value of the variable */
+    expr::rational d_v;
   public:
+
     variable_info();
     variable_info(msat_term x, variable_source source);
+
     void set_source(variable_source source);
     variable_source get_source() const;
     msat_term get_msat_term() const;
+    const expr::rational get_value() const;
+
+    /**
+     * Set lower bound x > bound if is_strict = true, or x >= bound if
+     * is_strict = false. Returns true if no conflict.
+     * */
+    bool set_lower_bound(const expr::rational& bound, bool is_strict, constraint_id C_id);
+
+    /**
+     * Set upper bound x < bound if is_strict = true, or x <= bound if
+     * is_strict = false. Returns true if no conflict.
+     */
+    bool set_upper_bound(const expr::rational& bound, bool is_strict, constraint_id C_id);
+
+    /**
+     * Pick a value for this between it's bounds. Return true if successful,
+     * and false no value between the bounds.
+     */
+    bool pick_value();
   };
 
   /** Info on variables */
@@ -96,12 +137,6 @@ class conflict_resolution {
 
   /** Add a variable and return it's id */
   variable_id add_variable(msat_term t, variable_source source);
-
-  /** Ids of constraints */
-  typedef size_t constraint_id;
-
-  /** Null constraint */
-  static const size_t constraint_null = -1;
 
   /** Map from terms to their ids */
   typedef boost::unordered_map<msat_term, constraint_id, mathsat5_hasher, mathsat5_eq> term_to_constraint_id_map;
@@ -141,6 +176,8 @@ class conflict_resolution {
 
     constraint();
 
+    void negate();
+
     void to_stream(std::ostream& out) const;
   };
 
@@ -150,11 +187,25 @@ class conflict_resolution {
   /** The constraint */
   std::vector<constraint> d_constraints;
 
+  typedef std::vector<constraint_id> constraint_list;
+
+  /** Map from top variables to constraints */
+  std::vector<constraint_list> d_top_var_to_constraint;
+
   /** Add a constraint */
   constraint_id add_constraint(msat_term t, constraint_source source);
 
   /** Add a*t to the constraint C */
   void add_to_constraint(constraint& C, const expr::rational& a, msat_term t, constraint_source source);
+
+  /** Propagate constraint C, returns true if no conflict. */
+  bool propagate(constraint_id C_id);
+
+  /** Return the conjunction of constraints */
+  msat_term construct_msat_term(const constraint& C);
+
+  /** Return the conjunction of constraints */
+  msat_term construct_msat_term(const constraint_list& list);
 
 public:
 

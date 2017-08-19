@@ -19,6 +19,7 @@
 #ifdef WITH_MATHSAT5
 
 #include <iostream>
+#include <algorithm>
 
 #include "conflict_resolution.h"
 #include "utils/trace.h"
@@ -47,7 +48,41 @@ conflict_resolution::conflict_resolution(msat_env env)
 conflict_resolution::bound_info::bound_info()
 : d_is_strict(true)
 , d_is_infinity(true)
+, d_constraint(constraint_null)
 {}
+
+bool conflict_resolution::bound_info::is_infinity() const {
+  return d_is_infinity;
+}
+
+bool conflict_resolution::bound_info::is_strict() const {
+  return d_is_strict;
+}
+
+const expr::rational conflict_resolution::bound_info::get_bound() const {
+  return d_bound;
+}
+
+void conflict_resolution::bound_info::set(const expr::rational& bound, bool is_strict, constraint_id C_id) {
+  d_bound = bound;
+  d_is_infinity = false;
+  d_is_strict = is_strict;
+  d_constraint = C_id;
+}
+
+bool conflict_resolution::bound_info::consistent(const bound_info& lb, const bound_info& ub) {
+  // Any infinity is consistent
+  if (lb.is_infinity() || ub.is_infinity()) {
+    return true;
+  }
+  // We have both bounds, check if they are consistent
+  if (lb.is_strict() || ub.is_strict()) {
+    return (lb.get_bound() < ub.get_bound());
+  } else {
+    // Both are leq
+    return (lb.get_bound() <= ub.get_bound());
+  }
+}
 
 conflict_resolution::variable_info::variable_info()
 : d_source(VARIABLE_A)
@@ -75,9 +110,97 @@ msat_term conflict_resolution::variable_info::get_msat_term() const {
   return d_x;
 }
 
+const expr::rational conflict_resolution::variable_info::get_value() const {
+  return d_v;
+}
+
+bool conflict_resolution::variable_info::set_lower_bound(const expr::rational& bound, bool is_strict, constraint_id C_id) {
+
+  if (d_lb.is_infinity()) {
+    // We always improve on infinity
+    d_lb.set(bound, is_strict, C_id);
+  } else {
+    int cmp = bound.cmp(d_lb.get_bound());
+    if (cmp == 0) {
+      // Only improve if old was not strict and new one is
+      if (!d_lb.is_strict() && is_strict) {
+        d_lb.set(bound, is_strict, C_id);
+      }
+    } else if (cmp < 0) {
+      // New bound is smaller, nothing to do
+    } else if (cmp > 0) {
+      // New bound is larger, definitely improve
+      d_lb.set(bound, is_strict, C_id);
+    }
+  }
+
+  return bound_info::consistent(d_lb, d_ub);
+}
+
+bool conflict_resolution::variable_info::set_upper_bound(const expr::rational& bound, bool is_strict, constraint_id C_id) {
+
+  if (d_ub.is_infinity()) {
+    // We always improve on infinity
+    d_ub.set(bound, is_strict, C_id);
+  } else {
+    int cmp = bound.cmp(d_ub.get_bound());
+    if (cmp == 0) {
+      // Only improve if old was not strict and new one is
+      if (!d_ub.is_strict() && is_strict) {
+        d_ub.set(bound, is_strict, C_id);
+      }
+    } else if (cmp < 0) {
+      // New bound is smaller, definitely improve
+      d_ub.set(bound, is_strict, C_id);
+    } else {
+      // New bound is larger, nothing to do
+    }
+  }
+
+  return bound_info::consistent(d_lb, d_ub);
+}
+
+bool conflict_resolution::variable_info::pick_value() {
+
+  if (!bound_info::consistent(d_lb, d_ub)) {
+    return false;
+  }
+
+  // (-inf, +inf)
+  if (d_lb.is_infinity() && d_ub.is_infinity()) {
+    d_v = expr::rational(0, 1); // x -> 0
+  }
+
+  // (-inf, ub)
+  if (d_lb.is_infinity()) {
+    d_v = d_ub.get_bound() - 1; // x -> ub - 1
+  }
+
+  // (lb, +inf)
+  if (d_ub.is_infinity()) {
+    d_v = d_lb.get_bound() + 1; // x -> lb + 1
+  }
+
+  // All ok, pick the mid-point
+  d_v = (d_lb.get_bound() + d_ub.get_bound()) / 2;
+
+  return true;
+}
+
 conflict_resolution::constraint::constraint()
-: type(CONSTRAINT_LE)
+: type(CONSTRAINT_EQ)
 {
+}
+
+void conflict_resolution::constraint::negate() {
+  // !(t < 0) = (t >= 0) = (-t <= 0)
+  // !(t <= 0) = (t > 0) = (-t < 0)
+  // We don't negate equalities
+  assert(type != CONSTRAINT_EQ);
+  for (size_t i = 0; i < a.size(); ++ i) {
+    a[i] = a[i].negate();
+  }
+  b = b.negate();
 }
 
 void conflict_resolution::constraint::to_stream(std::ostream& out) const {
@@ -120,6 +243,8 @@ conflict_resolution::variable_id conflict_resolution::add_variable(msat_term t, 
   variable_id t_id = d_variable_info.size();
   d_variable_info.push_back(variable_info(t, source));
   d_term_to_variable_id_map[t] = t_id;
+  d_top_var_to_constraint.push_back(constraint_list());
+  assert(d_variable_info.size() == d_top_var_to_constraint.size());
 
   return t_id;
 }
@@ -153,7 +278,23 @@ conflict_resolution::constraint_id conflict_resolution::add_constraint(msat_term
   add_to_constraint(C, expr::rational(1, 1), lhs, source);
   add_to_constraint(C, expr::rational(-1, 1), rhs, source);
 
+  // Negate if necessary
+  if (negated) {
+    C.negate();
+  }
+
   TRACE("mathsat5::cr") << "CR: added constraint: " << C << std::endl;
+
+  // Put top variable to be the first variable of the constraint
+  variable_cmp cmp(*this);
+  assert(C.x.size() > 0);
+  std::vector<variable_id>::const_iterator max_it = std::max_element(C.x.begin(), C.x.end(), cmp);
+  size_t max_i = max_it - C.x.begin();
+  std::swap(C.x[0], C.x[max_i]);
+  std::swap(C.a[0], C.a[max_i]);
+
+  // Add the constraint to the top variable list
+  d_top_var_to_constraint[C.x[0]].push_back(t_id);
 
   return t_id;
 }
@@ -239,7 +380,117 @@ msat_term conflict_resolution::interpolate(msat_term* a, msat_term b) {
   variable_cmp cmp(*this);
   std::sort(all_vars.begin(), all_vars.end(), cmp);
 
+  // Solve and compute the interpolant
+  constraint_list interpolants;
+  // Assign all the variables
+  for (size_t k = 0; k < all_vars.size(); ++ k) {
+    bool ok = true;
+
+    // Variable we're assigning
+    variable_id x = all_vars[k];
+
+    // All the constraints where x is the top variable
+    const constraint_list& x_constraints = d_top_var_to_constraint[x];
+    constraint_list::const_iterator it = x_constraints.begin();
+    for (; ok && it != x_constraints.end(); ++ it) {
+      constraint_id C_id = *it;
+      assert(d_constraints[C_id].x[0] == x);
+      ok = propagate(C_id);
+    }
+
+  }
+
   return b;
+}
+
+bool conflict_resolution::propagate(constraint_id C_id) {
+
+  bool ok = true; // No conflicts yet
+
+  constraint& C = d_constraints[C_id];
+
+  // C = a*x + R ? 0
+  variable_id x = C.x[0];
+  const expr::rational& a = C.a[0];
+
+  // Calculate the sum of the rest of the constraint
+  expr::rational R;
+  for (size_t i = 1; i < C.a.size(); ++ i) {
+    variable_id x = C.x[i];
+    R += C.a[i] * d_variable_info[x].get_value();
+  }
+  R += C.b;
+
+  // The value of the bound
+  expr::rational bound = R / a;
+
+  // The variable info
+  variable_info& var_info = d_variable_info[x];
+
+  switch (C.type) {
+  case CONSTRAINT_LE:
+    // a*x + r <= 0
+    if (a.sgn() > 0) {
+      // x <= bound
+      ok = ok && var_info.set_upper_bound(bound, false, C_id);
+    } else {
+      // x >= bound
+      ok = ok && var_info.set_lower_bound(bound, false, C_id);
+    }
+    break;
+  case CONSTRAINT_LT:
+    // a*x + r < 0
+    if (a.sgn() > 0) {
+      // x < bound
+      ok = ok && var_info.set_upper_bound(bound, true, C_id);
+    } else {
+      // x > bound
+      ok = ok && var_info.set_lower_bound(bound, true, C_id);
+    }
+    break;
+  case CONSTRAINT_EQ:
+    // a*x + r = 0 => x = bound
+    ok = ok && var_info.set_lower_bound(bound, false, C_id);
+    ok = ok && var_info.set_upper_bound(bound, false, C_id);
+    break;
+  }
+
+  return true;
+}
+
+msat_term conflict_resolution::construct_msat_term(const constraint& C) {
+
+  msat_term zero = msat_make_number(d_env, "0");
+  msat_term result = zero;
+
+  switch (C.type) {
+  case CONSTRAINT_EQ:
+    result = msat_make_equal(d_env, result, zero);
+    break;
+  case CONSTRAINT_LT:
+    result = msat_make_leq(d_env, zero, result);
+    result = msat_make_not(d_env, result);
+    break;
+  case CONSTRAINT_LE:
+    result = msat_make_leq(d_env, result, zero);
+    break;
+  default:
+    assert(false);
+  }
+
+  return result;
+}
+
+msat_term conflict_resolution::construct_msat_term(const constraint_list& list) {
+  if (list.size() == 0) {
+    return msat_make_true(d_env);
+  }
+  msat_term result = construct_msat_term(d_constraints[list[0]]);
+  for (size_t i = 1; i < list.size(); ++ i) {
+    msat_term current = construct_msat_term(d_constraints[list[i]]);
+    result = msat_make_and(d_env, result, current);
+  }
+  return result;
 }
 
 }
