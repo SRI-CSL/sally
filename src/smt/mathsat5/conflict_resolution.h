@@ -60,11 +60,10 @@ class conflict_resolution {
     bound_info();
   };
 
-  /** Where does the variable occur */
+  /** Where does the variable occur (assigned to ease sorting) */
   enum variable_source {
-    VARIABLE_A, // A variable
-    VARIABLE_B, // B variable
-    VARIABLE_AB // AB-mixed variable
+    VARIABLE_B = 0,  // B variable
+    VARIABLE_A = 1   // A variable
   };
 
   /** All information about a variable */
@@ -81,10 +80,19 @@ class conflict_resolution {
     variable_info();
     variable_info(msat_term x, variable_source source);
     void set_source(variable_source source);
+    variable_source get_source() const;
+    msat_term get_msat_term() const;
   };
 
   /** Info on variables */
   std::vector<variable_info> d_variable_info;
+
+  /** Comparison of variables so that B < A, otherwise by mathsat id */
+  struct variable_cmp {
+    const conflict_resolution& cr;
+    bool operator () (variable_id x, variable_id y) const;
+    variable_cmp(const conflict_resolution& cr): cr(cr) {}
+  };
 
   /** Add a variable and return it's id */
   variable_id add_variable(msat_term t, variable_source source);
@@ -103,8 +111,9 @@ class conflict_resolution {
 
   /** Types of constraints */
   enum constraint_type {
-    CONSTRAINT_INEQUALITY, // t <= 0
-    CONSTRAINT_EQUALITY    // t == 0
+    CONSTRAINT_LE, // t <= 0
+    CONSTRAINT_LT, // t < 0
+    CONSTRAINT_EQ  // t == 0
   };
 
   /** Constraint class */
@@ -132,13 +141,20 @@ class conflict_resolution {
 
     constraint();
 
+    void to_stream(std::ostream& out) const;
   };
+
+  friend
+  std::ostream& operator << (std::ostream& out, const constraint& C);
 
   /** The constraint */
   std::vector<constraint> d_constraints;
 
   /** Add a constraint */
   constraint_id add_constraint(msat_term t, constraint_source source);
+
+  /** Add a*t to the constraint C */
+  void add_to_constraint(constraint& C, const expr::rational& a, msat_term t, constraint_source source);
 
 public:
 
