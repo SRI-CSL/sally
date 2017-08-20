@@ -244,33 +244,13 @@ conflict_resolution::linear_term::linear_term(const constraint& C)
   }
 }
 
-conflict_resolution::linear_term::linear_term(const linear_term& t1, const linear_term& t2, variable_id x) {
-
-  var_to_rational_map::const_iterator t1_find = t1.d_ax.find(x);
-  assert(t1_find != t1.d_ax.end());
-  var_to_rational_map::const_iterator t2_find = t2.d_ax.find(x);
-  assert(t2_find != t2.d_ax.end());
-
-  expr::rational t1_c = t1_find->second.abs();
-  expr::rational t2_c = t2_find->second.abs();
-  if (t1_find->second.sgn()*t2_find->second.sgn() > 0) {
-    // Can happen with equalities
-    t2_c = t2_c.negate();
+void conflict_resolution::linear_term::add(const expr::rational& a, const linear_term& t) {
+  assert(this != &t);
+  d_b += a*t.d_b;
+  var_to_rational_map::const_iterator t_it = t.d_ax.begin();
+  for(; t_it != t.d_ax.end(); ++ t_it) {
+    d_ax[t_it->first] = a*t_it->second;
   }
-
-  // The constant
-  d_b = t1.d_b*t2_c + t2.d_b*t1_c;
-
-  // The coefficients
-  var_to_rational_map::const_iterator t1_it = t1.d_ax.begin();
-  for(; t1_it != t1.d_ax.end(); ++ t1_it) {
-    d_ax[t1_it->first] += t2_c*t1_it->second;
-  }
-  var_to_rational_map::const_iterator t2_it = t2.d_ax.begin();
-  for(; t2_it != t2.d_ax.end(); ++ t2_it) {
-    d_ax[t2_it->first] += t1_c*t2_it->second;
-  }
-
 }
 
 void conflict_resolution::linear_term::add(const expr::rational& a, variable_id x) {
@@ -281,7 +261,6 @@ void conflict_resolution::linear_term::add(const expr::rational& a) {
   d_b += a;
 }
 
-
 const conflict_resolution::var_to_rational_map& conflict_resolution::linear_term::get_monomials() const {
   return d_ax;
 }
@@ -289,7 +268,6 @@ const conflict_resolution::var_to_rational_map& conflict_resolution::linear_term
 const expr::rational& conflict_resolution::linear_term::get_constant() const {
   return d_b;
 }
-
 
 void conflict_resolution::constraint::negate() {
   // !(t < 0) = (t >= 0) = (-t <= 0)
@@ -325,6 +303,11 @@ size_t conflict_resolution::constraint::size() const {
 conflict_resolution::variable_id conflict_resolution::constraint::get_top_variable() const {
   assert(d_ax.size() > 0);
   return d_ax[0].x;
+}
+
+const expr::rational& conflict_resolution::constraint::get_top_coefficient() const {
+  assert(d_ax.size() > 0);
+  return d_ax[0].a;
 }
 
 const conflict_resolution::monomial_list& conflict_resolution::constraint::get_monomials() const {
@@ -595,6 +578,7 @@ msat_term conflict_resolution::interpolate(msat_term* a, msat_term b) {
       if (R.size() == 0) {
         return construct_msat_term(interpolants);
       } else {
+
         // Check if to add to the interpolant
         variable_id x_new = R.get_top_variable();
         variable_id x_new_source = d_variable_info[x_new].get_source();
@@ -614,11 +598,14 @@ msat_term conflict_resolution::interpolate(msat_term* a, msat_term b) {
         }
 
         // Backtrack to the new top variable
-        x = R.get_top_variable();
+        x = x_new;
         while (all_vars[k] != x) {
           d_variable_info[all_vars[k]].clear_bounds();
           k --;
         }
+
+        // Add the constraint to list of x
+        d_top_var_to_constraint[x].push_back(R_id);
       }
 
       // Propagate the new constraint
@@ -750,11 +737,23 @@ msat_term conflict_resolution::construct_msat_term(const constraint_set& set) {
 void conflict_resolution::resolve(const constraint& C1, const constraint& C2, constraint& R) const {
 
   assert(C1.get_top_variable() == C2.get_top_variable());
-  variable_id x = C1.get_top_variable();
+  const expr::rational& C1_a = C1.get_top_coefficient();
+  const expr::rational& C2_a = C2.get_top_coefficient();
   linear_term C1_term(C1);
   linear_term C2_term(C2);
-  linear_term R_term(C1, C2, x);
 
+  // If the coefficients of x are opposite signs, we use their absolute values
+  // to cancel x. If they are not, we must negate second of the multipliers to cancel.
+  bool C1_C2_opposite = C1_a.sgn()*C2_a.sgn() > 0;
+  assert(C1_C2_opposite || (C1.get_op() == CONSTRAINT_EQ && C2.get_op() == CONSTRAINT_EQ));
+  expr::rational t1_c = C1_C2_opposite ? C1_a.abs() : C1_a;
+  expr::rational t2_c = C1_C2_opposite ? C2_a.abs() : C2_a.negate();
+  // We now compute t2_c * t1 + t1_c * t2
+  linear_term R_term;
+  R_term.add(t2_c, C1_term);
+  R_term.add(t1_c, C2_term);
+
+  // Finally compute the type of constraint
   constraint_op R_type = C1.get_op();
   constraint_op C2_type = C2.get_op();
   switch(C2_type) {
@@ -777,13 +776,14 @@ void conflict_resolution::resolve(const constraint& C1, const constraint& C2, co
     assert(false);
   }
 
+  // Construct and swap in the final constraint
   monomial_cmp cmp(*this);
   constraint tmp(R_term, R_type, cmp);
   R.swap(tmp);
 }
 
 bool conflict_resolution::evaluate(const constraint& C) const {
-  // Calculate the sum of the rest of the constraint
+  // Calculate the term value
   expr::rational R;
   const monomial_list& monomials = C.get_monomials();
   for (size_t i = 0; i < monomials.size(); ++ i) {
@@ -791,7 +791,7 @@ bool conflict_resolution::evaluate(const constraint& C) const {
     R += m.a * d_variable_info[m.x].get_value();
   }
   R += C.get_constant();
-
+  // Check if the value satiefies the relation
   switch (C.get_op()) {
   case CONSTRAINT_LE:
     return R.sgn() <= 0;

@@ -234,6 +234,9 @@ class conflict_resolution {
     /** Get the top variable (x[0]) */
     variable_id get_top_variable() const;
 
+    /** Get the coeffficient along the top variable */
+    const expr::rational& get_top_coefficient() const;
+
     /** Get all monomials (ax) */
     const monomial_list& get_monomials() const;
 
@@ -273,13 +276,13 @@ class conflict_resolution {
     linear_term() {}
     /** Get the linear term from C */
     linear_term(const constraint& C);
-    /** Add and multiply t1 and t2 to eliminate x (only use negative multipliers if needed) */
-    linear_term(const linear_term& t1, const linear_term& t2, variable_id x);
 
     /** Add a*x to the linear term */
     void add(const expr::rational& a, variable_id x);
     /** Add a to the linear term */
     void add(const expr::rational& a);
+    /** Add a*t to this term */
+    void add(const expr::rational& a, const linear_term& t);
 
     /** Get the monomials from a*x as a map */
     const var_to_rational_map& get_monomials() const;
