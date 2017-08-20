@@ -51,6 +51,13 @@ conflict_resolution::bound_info::bound_info()
 , d_constraint(constraint_null)
 {}
 
+void conflict_resolution::bound_info::clear() {
+  d_bound = expr::rational();
+  d_is_strict = true;
+  d_is_infinity = true;
+  d_constraint = constraint_null;
+}
+
 bool conflict_resolution::bound_info::is_infinity() const {
   return d_is_infinity;
 }
@@ -60,7 +67,13 @@ bool conflict_resolution::bound_info::is_strict() const {
 }
 
 const expr::rational conflict_resolution::bound_info::get_bound() const {
+  assert(!d_is_infinity);
   return d_bound;
+}
+
+conflict_resolution::constraint_id conflict_resolution::bound_info::get_constraint() const {
+  assert(!d_is_infinity);
+  return d_constraint;
 }
 
 void conflict_resolution::bound_info::set(const expr::rational& bound, bool is_strict, constraint_id C_id) {
@@ -87,16 +100,21 @@ bool conflict_resolution::bound_info::consistent(const bound_info& lb, const bou
 conflict_resolution::variable_info::variable_info()
 : d_source(VARIABLE_A)
 {
-  MSAT_MAKE_ERROR_TERM(d_x);
+  MSAT_MAKE_ERROR_TERM(d_msat_term);
 }
 
 conflict_resolution::variable_info::variable_info(msat_term x, variable_source source)
 : d_source(source)
-, d_x(x)
+, d_msat_term(x)
 {
 }
 
-void conflict_resolution::variable_info::set_source(variable_source source) {
+void conflict_resolution::variable_info::clear_bounds() {
+  d_lb.clear();
+  d_ub.clear();
+}
+
+void conflict_resolution::variable_info::add_source(variable_source source) {
   if (source != d_source) {
     d_source = VARIABLE_B;
   }
@@ -107,11 +125,19 @@ conflict_resolution::variable_source conflict_resolution::variable_info::get_sou
 }
 
 msat_term conflict_resolution::variable_info::get_msat_term() const {
-  return d_x;
+  return d_msat_term;
 }
 
 const expr::rational conflict_resolution::variable_info::get_value() const {
-  return d_v;
+  return d_value;
+}
+
+conflict_resolution::constraint_id conflict_resolution::variable_info::get_lb_constraint() const {
+  return d_lb.get_constraint();
+}
+
+conflict_resolution::constraint_id conflict_resolution::variable_info::get_ub_constraint() const {
+  return d_ub.get_constraint();
 }
 
 bool conflict_resolution::variable_info::set_lower_bound(const expr::rational& bound, bool is_strict, constraint_id C_id) {
@@ -168,51 +194,167 @@ bool conflict_resolution::variable_info::pick_value() {
 
   // (-inf, +inf)
   if (d_lb.is_infinity() && d_ub.is_infinity()) {
-    d_v = expr::rational(0, 1); // x -> 0
+    d_value = expr::rational(0, 1); // x -> 0
   }
 
   // (-inf, ub)
   if (d_lb.is_infinity()) {
-    d_v = d_ub.get_bound() - 1; // x -> ub - 1
+    d_value = d_ub.get_bound() - 1; // x -> ub - 1
   }
 
   // (lb, +inf)
   if (d_ub.is_infinity()) {
-    d_v = d_lb.get_bound() + 1; // x -> lb + 1
+    d_value = d_lb.get_bound() + 1; // x -> lb + 1
   }
 
   // All ok, pick the mid-point
-  d_v = (d_lb.get_bound() + d_ub.get_bound()) / 2;
+  d_value = (d_lb.get_bound() + d_ub.get_bound()) / 2;
 
   return true;
 }
 
 conflict_resolution::constraint::constraint()
-: type(CONSTRAINT_EQ)
+: d_op(CONSTRAINT_EQ)
 {
 }
+
+conflict_resolution::constraint::constraint(const linear_term& t, constraint_op type, const monomial_cmp& cmp)
+: d_op(type)
+, d_b(t.get_constant())
+{
+  // Copy over the linear term
+  const var_to_rational_map& ax = t.get_monomials();
+  for (var_to_rational_map::const_iterator it = ax.begin(); it != ax.end(); ++ it) {
+    d_ax.push_back(monomial(it->second, it->first));
+  }
+  if (d_ax.size() > 0) {
+    std::vector<monomial>::iterator max_it = std::max_element(d_ax.begin(), d_ax.end(), cmp);
+    std::iter_swap(d_ax.begin(), max_it);
+  }
+}
+
+conflict_resolution::linear_term::linear_term(const constraint& C)
+: d_b(C.get_constant())
+{
+  const monomial_list monomials = C.get_monomials();
+  monomial_list::const_iterator it = monomials.begin();
+  for (; it != monomials.end(); ++ it) {
+    const monomial& m = *it;
+    d_ax[m.x] += m.a;
+  }
+}
+
+conflict_resolution::linear_term::linear_term(const linear_term& t1, const linear_term& t2, variable_id x) {
+
+  var_to_rational_map::const_iterator t1_find = t1.d_ax.find(x);
+  assert(t1_find != t1.d_ax.end());
+  var_to_rational_map::const_iterator t2_find = t2.d_ax.find(x);
+  assert(t2_find != t2.d_ax.end());
+
+  expr::rational t1_c = t1_find->second.abs();
+  expr::rational t2_c = t2_find->second.abs();
+  if (t1_find->second.sgn()*t2_find->second.sgn() > 0) {
+    // Can happen with equalities
+    t2_c = t2_c.negate();
+  }
+
+  // The constant
+  d_b = t1.d_b*t2_c + t2.d_b*t1_c;
+
+  // The coefficients
+  var_to_rational_map::const_iterator t1_it = t1.d_ax.begin();
+  for(; t1_it != t1.d_ax.end(); ++ t1_it) {
+    d_ax[t1_it->first] += t2_c*t1_it->second;
+  }
+  var_to_rational_map::const_iterator t2_it = t2.d_ax.begin();
+  for(; t2_it != t2.d_ax.end(); ++ t2_it) {
+    d_ax[t2_it->first] += t1_c*t2_it->second;
+  }
+
+}
+
+void conflict_resolution::linear_term::add(const expr::rational& a, variable_id x) {
+  d_ax[x] += a;
+}
+
+void conflict_resolution::linear_term::add(const expr::rational& a) {
+  d_b += a;
+}
+
+
+const conflict_resolution::var_to_rational_map& conflict_resolution::linear_term::get_monomials() const {
+  return d_ax;
+}
+
+const expr::rational& conflict_resolution::linear_term::get_constant() const {
+  return d_b;
+}
+
 
 void conflict_resolution::constraint::negate() {
   // !(t < 0) = (t >= 0) = (-t <= 0)
   // !(t <= 0) = (t > 0) = (-t < 0)
   // We don't negate equalities
-  assert(type != CONSTRAINT_EQ);
-  for (size_t i = 0; i < a.size(); ++ i) {
-    a[i] = a[i].negate();
+
+  // Negate coefficients
+  for (size_t i = 0; i < d_ax.size(); ++ i) {
+    d_ax[i].a = d_ax[i].a.negate();
   }
-  b = b.negate();
+  d_b = d_b.negate();
+
+  // Negate the type
+  switch (d_op) {
+  case CONSTRAINT_EQ:
+    assert(false);
+    break;
+  case CONSTRAINT_LT:
+    d_op = CONSTRAINT_LE;
+    break;
+  case CONSTRAINT_LE:
+    d_op = CONSTRAINT_LT;
+    break;
+  default:
+    assert(false);
+  }
+}
+
+size_t conflict_resolution::constraint::size() const {
+  return d_ax.size();
+}
+
+conflict_resolution::variable_id conflict_resolution::constraint::get_top_variable() const {
+  assert(d_ax.size() > 0);
+  return d_ax[0].x;
+}
+
+const conflict_resolution::monomial_list& conflict_resolution::constraint::get_monomials() const {
+  return d_ax;
+}
+
+const expr::rational& conflict_resolution::constraint::get_constant() const {
+  return d_b;
+}
+
+void conflict_resolution::constraint::swap(constraint& C) {
+  std::swap(d_op, C.d_op);
+  std::swap(d_b, C.d_b);
+  d_ax.swap(C.d_ax);
+}
+
+conflict_resolution::constraint_op conflict_resolution::constraint::get_op() const {
+  return d_op;
 }
 
 void conflict_resolution::constraint::to_stream(std::ostream& out) const {
   out << "(";
-  for (size_t i = 0; i < a.size(); ++ i) {
+  for (size_t i = 0; i < d_ax.size(); ++ i) {
     if (i) out << " ";
-    out << a[i] << "*" << "x" << x[i];
+    out << d_ax[i].a << "*" << "x" << d_ax[i].x;
   }
-  if (b.sgn()) {
-    out << " " << b;
+  if (d_b.sgn()) {
+    out << " " << d_b;
   }
-  switch (type) {
+  switch (d_op) {
   case CONSTRAINT_LE:
     out << " <= 0";
     break;
@@ -235,7 +377,7 @@ conflict_resolution::variable_id conflict_resolution::add_variable(msat_term t, 
   if (find != d_term_to_variable_id_map.end()) {
     // Change the class if different
     variable_id t_id = find->second;
-    d_variable_info[t_id].set_source(source);
+    d_variable_info[t_id].add_source(source);
     return t_id;
   }
 
@@ -259,24 +401,26 @@ conflict_resolution::constraint_id conflict_resolution::add_constraint(msat_term
     return find->second;
   }
 
-  // Create the new constraints
-  constraint_id t_id = d_constraints.size();
-  d_constraints.push_back(constraint());
-  constraint C = d_constraints.back();
-
   // Is the constraint negated
   bool negated = msat_term_is_not(d_env, t);
   if (negated) { t = msat_term_get_arg(t, 0); }
 
   // Setup the constraint
   assert(msat_term_is_equal(d_env, t) || msat_term_is_leq(d_env, t));
-  C.type = msat_term_is_equal(d_env, t) ? CONSTRAINT_EQ : CONSTRAINT_LE;
+  constraint_op type = msat_term_is_equal(d_env, t) ? CONSTRAINT_EQ : CONSTRAINT_LE;
 
-  // Add the term
+  // Add the terms
+  linear_term constraint_term;
   msat_term lhs = msat_term_get_arg(t, 0);
   msat_term rhs = msat_term_get_arg(t, 1);
-  add_to_constraint(C, expr::rational(1, 1), lhs, source);
-  add_to_constraint(C, expr::rational(-1, 1), rhs, source);
+  add_to_linear_term(constraint_term, expr::rational(1, 1), lhs, source);
+  add_to_linear_term(constraint_term, expr::rational(-1, 1), rhs, source);
+
+  // Create the constraint
+  monomial_cmp cmp(*this);
+  constraint_id t_id = d_constraints.size();
+  d_constraints.push_back(constraint(constraint_term, type, cmp));
+  constraint& C = d_constraints.back();
 
   // Negate if necessary
   if (negated) {
@@ -285,21 +429,13 @@ conflict_resolution::constraint_id conflict_resolution::add_constraint(msat_term
 
   TRACE("mathsat5::cr") << "CR: added constraint: " << C << std::endl;
 
-  // Put top variable to be the first variable of the constraint
-  variable_cmp cmp(*this);
-  assert(C.x.size() > 0);
-  std::vector<variable_id>::const_iterator max_it = std::max_element(C.x.begin(), C.x.end(), cmp);
-  size_t max_i = max_it - C.x.begin();
-  std::swap(C.x[0], C.x[max_i]);
-  std::swap(C.a[0], C.a[max_i]);
-
   // Add the constraint to the top variable list
-  d_top_var_to_constraint[C.x[0]].push_back(t_id);
+  d_top_var_to_constraint[C.get_top_variable()].push_back(t_id);
 
   return t_id;
 }
 
-void conflict_resolution::add_to_constraint(constraint& C, const expr::rational& a, msat_term t, conflict_resolution::constraint_source source) {
+void conflict_resolution::add_to_linear_term(linear_term& term, const expr::rational& a, msat_term t, conflict_resolution::constraint_source source) {
 
   if (msat_term_is_constant(d_env, t)) {
     // Variables
@@ -314,23 +450,35 @@ void conflict_resolution::add_to_constraint(constraint& C, const expr::rational&
     default:
       assert(false);
     }
-    C.a.push_back(a);
-    C.x.push_back(x);
+    term.add(a, x);
   } else if (msat_term_is_plus(d_env, t)) {
     size_t size = msat_term_arity(t);
     for(size_t i = 0; i < size; ++ i) {
       msat_term child = msat_term_get_arg(t, i);
-      add_to_constraint(C, a, child, source);
+      add_to_linear_term(term, a, child, source);
     }
   } else if (msat_term_is_times(d_env, t)) {
     assert(msat_term_arity(t) == 2);
-    assert(false);
+    msat_term child0 = msat_term_get_arg(t, 0);
+    msat_term child1 = msat_term_get_arg(t, 1);
+    if (!msat_term_is_constant(d_env, child0)) {
+      assert(msat_term_is_constant(d_env, child1));
+      std::swap(child0, child1);
+    }
+    // Get the constant
+    mpq_t constant;
+    mpq_init(constant);
+    msat_term_to_number(d_env, child0, constant);
+    expr::rational new_a = a*expr::rational(constant);
+    mpq_clear(constant);
+    // Add second child to the constraint
+    add_to_linear_term(term, new_a, child1, source);
   } else if (msat_term_is_number(d_env, t)) {
     // Constants
     mpq_t constant;
     mpq_init(constant);
     msat_term_to_number(d_env, t, constant);
-    C.b += expr::rational(constant);
+    term.add(expr::rational(constant));
     mpq_clear(constant);
   } else {
     assert(false);
@@ -353,10 +501,36 @@ bool conflict_resolution::variable_cmp::operator () (variable_id x, variable_id 
   return msat_term_id(x_term) < msat_term_id(y_term);
 }
 
+bool conflict_resolution::monomial_cmp::operator () (const monomial& ax, const monomial& by) const {
+  // Sort the variables so that B < A, otherwise by mathsat id
+  variable_source x_source = cr.d_variable_info[ax.x].get_source();
+  variable_source y_source = cr.d_variable_info[by.x].get_source();
+
+  // If different sources, then sort as B < A (as in enum)
+  if (x_source != y_source) {
+    return x_source < y_source;
+  }
+
+  // Same source, sort by mathsat id
+  msat_term x_term = cr.d_variable_info[ax.x].get_msat_term();
+  msat_term y_term = cr.d_variable_info[ax.x].get_msat_term();
+  size_t x_term_id = msat_term_id(x_term);
+  size_t y_term_id = msat_term_id(y_term);
+  if (x_term_id != y_term_id) {
+    return  x_term_id < y_term_id;
+  }
+
+  // Otherwise compare the constants (shouldn't really happen)
+  return ax.a < by.a;
+}
+
 /** Interpolate between the constraints in a and the constraint b */
 msat_term conflict_resolution::interpolate(msat_term* a, msat_term b) {
 
   TRACE("mathsat5::cr") << "CR: computing interpolant." << std::endl;
+
+  // All A constraints
+  constraint_set A_constraints;
 
   // A: Add all the constraints
   for (size_t i = 0; !MSAT_ERROR_TERM(a[i]); ++ i) {
@@ -364,7 +538,8 @@ msat_term conflict_resolution::interpolate(msat_term* a, msat_term b) {
     if (!msat_term_is_equal(d_env, a[i]) && !msat_term_is_leq(d_env, a[i])) {
       return b;
     }
-    add_constraint(a[i], CONSTRAINT_A);
+    constraint_id c_id = add_constraint(a[i], CONSTRAINT_A);
+    A_constraints.insert(c_id);
   }
   TRACE("mathsat5::cr") << "CR: b:" << b << std::endl;
   if (!msat_term_is_equal(d_env, b) && !msat_term_is_leq(d_env, b)) {
@@ -380,26 +555,82 @@ msat_term conflict_resolution::interpolate(msat_term* a, msat_term b) {
   variable_cmp cmp(*this);
   std::sort(all_vars.begin(), all_vars.end(), cmp);
 
-  // Solve and compute the interpolant
-  constraint_list interpolants;
-  // Assign all the variables
+  // Set of interpolants we will collect
+  constraint_set interpolants;
+
+  // Conflict resolution: try to assign all the variables
+  bool ok = true;
   for (size_t k = 0; k < all_vars.size(); ++ k) {
-    bool ok = true;
 
     // Variable we're assigning
     variable_id x = all_vars[k];
+    variable_source x_source = d_variable_info[x].get_source();
 
     // All the constraints where x is the top variable
     const constraint_list& x_constraints = d_top_var_to_constraint[x];
     constraint_list::const_iterator it = x_constraints.begin();
     for (; ok && it != x_constraints.end(); ++ it) {
+      // Propagate new bound if implied by this constraint  
       constraint_id C_id = *it;
-      assert(d_constraints[C_id].x[0] == x);
+      assert(d_constraints[C_id].get_top_variable() == x);
       ok = propagate(C_id);
     }
 
+    while (!ok) {
+
+      // Resolve the two bound constraints
+      constraint_id lb_C_id = d_variable_info[x].get_lb_constraint();
+      constraint_id ub_C_id = d_variable_info[x].get_ub_constraint();
+      const constraint& lb_C = d_constraints[lb_C_id];
+      const constraint& ub_C = d_constraints[ub_C_id];
+      
+      // Create the resolvent constraint
+      constraint_id R_id = d_constraints.size();
+      d_constraints.push_back(constraint());
+      constraint& R = d_constraints.back();
+      resolve(lb_C, ub_C, R);
+      assert(!evaluate(R));
+
+      // If resolvent is empty, we're done
+      if (R.size() == 0) {
+        return construct_msat_term(interpolants);
+      } else {
+        // Check if to add to the interpolant
+        variable_id x_new = R.get_top_variable();
+        variable_id x_new_source = d_variable_info[x_new].get_source();
+
+        if (x_source != x_new_source) {
+          // Learning into B for the first time -> add to interpolant
+          assert(x_source == VARIABLE_A && x_new_source == VARIABLE_B);
+          interpolants.insert(R_id);
+        } else if (x_source == VARIABLE_B) {
+          // We add any premises from A
+          if (A_constraints.count(ub_C_id) > 0) {
+            interpolants.insert(ub_C_id);
+          }
+          if (A_constraints.count(lb_C_id) > 0) {
+            interpolants.insert(lb_C_id);
+          }
+        }
+
+        // Backtrack to the new top variable
+        x = R.get_top_variable();
+        while (all_vars[k] != x) {
+          d_variable_info[all_vars[k]].clear_bounds();
+          k --;
+        }
+      }
+
+      // Propagate the new constraint
+      ok = propagate(R_id);
+    }
+
+    // We're done resolving, we can now pick a value
+    ok = d_variable_info[x].pick_value();
+    assert(ok);
   }
 
+  assert(false);
   return b;
 }
 
@@ -408,18 +639,19 @@ bool conflict_resolution::propagate(constraint_id C_id) {
   bool ok = true; // No conflicts yet
 
   constraint& C = d_constraints[C_id];
+  const monomial_list monomials = C.get_monomials();
 
   // C = a*x + R ? 0
-  variable_id x = C.x[0];
-  const expr::rational& a = C.a[0];
+  variable_id x = monomials[0].x;
+  const expr::rational& a = monomials[0].a;
 
   // Calculate the sum of the rest of the constraint
   expr::rational R;
-  for (size_t i = 1; i < C.a.size(); ++ i) {
-    variable_id x = C.x[i];
-    R += C.a[i] * d_variable_info[x].get_value();
+  for (size_t i = 1; i < monomials.size(); ++ i) {
+    const monomial& m = monomials[i];
+    R += m.a * d_variable_info[m.x].get_value();
   }
-  R += C.b;
+  R += C.get_constant();
 
   // The value of the bound
   expr::rational bound = R / a;
@@ -427,7 +659,7 @@ bool conflict_resolution::propagate(constraint_id C_id) {
   // The variable info
   variable_info& var_info = d_variable_info[x];
 
-  switch (C.type) {
+  switch (C.get_op()) {
   case CONSTRAINT_LE:
     // a*x + r <= 0
     if (a.sgn() > 0) {
@@ -461,9 +693,18 @@ bool conflict_resolution::propagate(constraint_id C_id) {
 msat_term conflict_resolution::construct_msat_term(const constraint& C) {
 
   msat_term zero = msat_make_number(d_env, "0");
-  msat_term result = zero;
 
-  switch (C.type) {
+  msat_term result = msat_make_number(d_env, C.get_constant().mpq().get_str().c_str());
+  const monomial_list& monomials = C.get_monomials();
+  for (size_t i = 0; i < monomials.size(); ++ i) {
+    const monomial& m = monomials[i];
+    msat_term a = msat_make_number(d_env, m.a.mpq().get_str().c_str());
+    msat_term x = d_variable_info[m.x].get_msat_term();
+    msat_term ax = msat_make_times(d_env, a, x);
+    result = msat_make_plus(d_env, result, ax);
+  }
+
+  switch (C.get_op()) {
   case CONSTRAINT_EQ:
     result = msat_make_equal(d_env, result, zero);
     break;
@@ -491,6 +732,80 @@ msat_term conflict_resolution::construct_msat_term(const constraint_list& list) 
     result = msat_make_and(d_env, result, current);
   }
   return result;
+}
+
+msat_term conflict_resolution::construct_msat_term(const constraint_set& set) {
+  if (set.size() == 0) {
+    return msat_make_true(d_env);
+  }
+  constraint_set::const_iterator it = set.begin();
+  msat_term result = construct_msat_term(d_constraints[*it]);
+  for (++ it; it != set.end(); ++ it) {
+    msat_term current = construct_msat_term(d_constraints[*it]);
+    result = msat_make_and(d_env, result, current);
+  }
+  return result;
+}
+
+void conflict_resolution::resolve(const constraint& C1, const constraint& C2, constraint& R) const {
+
+  assert(C1.get_top_variable() == C2.get_top_variable());
+  variable_id x = C1.get_top_variable();
+  linear_term C1_term(C1);
+  linear_term C2_term(C2);
+  linear_term R_term(C1, C2, x);
+
+  constraint_op R_type = C1.get_op();
+  constraint_op C2_type = C2.get_op();
+  switch(C2_type) {
+  case CONSTRAINT_EQ:
+    if (R_type != CONSTRAINT_EQ) {
+      R_type = C2_type;
+    }
+    break;
+  case CONSTRAINT_LT:
+    R_type = CONSTRAINT_LT;
+    break;
+  case CONSTRAINT_LE:
+    if (R_type == CONSTRAINT_LT) {
+      R_type = CONSTRAINT_LT;
+    } else {
+      R_type = CONSTRAINT_LE;
+    }
+    break;
+  default:
+    assert(false);
+  }
+
+  monomial_cmp cmp(*this);
+  constraint tmp(R_term, R_type, cmp);
+  R.swap(tmp);
+}
+
+bool conflict_resolution::evaluate(const constraint& C) const {
+  // Calculate the sum of the rest of the constraint
+  expr::rational R;
+  const monomial_list& monomials = C.get_monomials();
+  for (size_t i = 0; i < monomials.size(); ++ i) {
+    const monomial& m = monomials[i];
+    R += m.a * d_variable_info[m.x].get_value();
+  }
+  R += C.get_constant();
+
+  switch (C.get_op()) {
+  case CONSTRAINT_LE:
+    return R.sgn() <= 0;
+    break;
+  case CONSTRAINT_LT:
+    return R.sgn() < 0;
+    break;
+  case CONSTRAINT_EQ:
+    return R.sgn() == 0;
+    break;
+  default:
+    assert(false);
+    return true;
+  }
 }
 
 }

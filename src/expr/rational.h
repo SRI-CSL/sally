@@ -119,6 +119,9 @@ public:
   /** Negate, i.e. -Q */
   rational negate() const;
 
+  /** Get the absolute value */
+  rational abs() const;
+
   /** Get a simple value in (a, b) */
   static
   rational value_between(const rational& a, const rational& b);

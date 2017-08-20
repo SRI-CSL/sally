@@ -104,6 +104,11 @@ rational rational::negate() const {
   return rational(-d_gmp_rat);
 }
 
+rational rational::abs() const {
+  if (sgn() >= 0) return *this;
+  else return rational(-d_gmp_rat);
+}
+
 int rational::sgn() const {
   return mpq_sgn(d_gmp_rat.get_mpq_t());
 }

@@ -65,10 +65,24 @@ class conflict_resolution {
     /** Constraint responsible for the bound */
     constraint_id d_constraint;
   public:
+
+    /** Construct empty bound info (strict infinity with null constraint) */
     bound_info();
+
+    /** Reset to empty bound info (strict infinity with null constraint) */
+    void clear();
+
+    /** Is this an infinity bound? */
     bool is_infinity() const;
+
+    /** Is this a strict bound (i.e. doesn't include the bound) */
     bool is_strict() const;
+
+    /** Get the actual bound */
     const expr::rational get_bound() const;
+
+    /** Get the responsible constraint */
+    constraint_id get_constraint() const;
 
     /** Set the values */
     void set(const expr::rational& bound, bool is_strict, constraint_id C_id);
@@ -80,8 +94,8 @@ class conflict_resolution {
 
   /** Where does the variable occur (assigned to ease sorting) */
   enum variable_source {
-    VARIABLE_B = 0,  // B variable
-    VARIABLE_A = 1   // A variable
+    VARIABLE_B = 0,  // B variable (can occur in B and A)
+    VARIABLE_A = 1   // A variable (occurs only in A)
   };
 
   /** All information about a variable */
@@ -89,22 +103,37 @@ class conflict_resolution {
     /** Source of the variable */
     variable_source d_source;
     /** The mathsat term of this variable */
-    msat_term d_x;
+    msat_term d_msat_term;
     /** The current lower bound */
     bound_info d_lb;
     /** The current upper bound */
     bound_info d_ub;
     /** Current value of the variable */
-    expr::rational d_v;
+    expr::rational d_value;
   public:
 
     variable_info();
     variable_info(msat_term x, variable_source source);
 
-    void set_source(variable_source source);
+    /** Clear the bounds to -inf, +inf */
+    void clear_bounds();
+
+    /** Add another source of this variable variable */
+    void add_source(variable_source source);
+
+    /** Get the source of the variable */
     variable_source get_source() const;
+
+    /** Get the mathsat term of this variable */
     msat_term get_msat_term() const;
+
+    /** Get the assigned value of the variable */
     const expr::rational get_value() const;
+
+    /** Get the lower bound constraint */
+    constraint_id get_lb_constraint() const;
+    /** Get the upper bound constraint */
+    constraint_id get_ub_constraint() const;
 
     /**
      * Set lower bound x > bound if is_strict = true, or x >= bound if
@@ -145,7 +174,7 @@ class conflict_resolution {
   term_to_constraint_id_map d_term_to_constraint_id_map;
 
   /** Types of constraints */
-  enum constraint_type {
+  enum constraint_op {
     CONSTRAINT_LE, // t <= 0
     CONSTRAINT_LT, // t < 0
     CONSTRAINT_EQ  // t == 0
@@ -153,9 +182,25 @@ class conflict_resolution {
 
   /** Constraint class */
   enum constraint_source {
-    CONSTRAINT_A, // Came from A, or resolution on A constraints
-    CONSTRAINT_B, // Came from B
-    CONSTRAINT_AB // Came from resolution of A and B constraints
+    CONSTRAINT_A, // Came from A assertions
+    CONSTRAINT_B, // Came from B assertions
+  };
+
+  struct linear_term;
+
+  struct monomial {
+    expr::rational a;
+    variable_id x;
+    monomial(const expr::rational a, variable_id x): a(a), x(x) {}
+  };
+
+  typedef std::vector<monomial> monomial_list;
+
+  /** Comparison of monomials so that B < A, otherwise by mathsat id */
+  struct monomial_cmp {
+    const conflict_resolution& cr;
+    bool operator () (const monomial& x, const monomial& y) const;
+    monomial_cmp(const conflict_resolution& cr): cr(cr) {}
   };
 
   /**
@@ -163,21 +208,45 @@ class conflict_resolution {
    *
    * Variables are arranged so that x[0] is the top variable.
    */
-  struct constraint {
+  class constraint {
 
     /** The type of constraint */
-    constraint_type type;
+    constraint_op d_op;
     /** The coefficients */
-    std::vector<expr::rational> a;
-    /** The variables */
-    std::vector<variable_id> x;
+    monomial_list d_ax;
     /** The constant */
-    expr::rational b;
+    expr::rational d_b;
 
+  public:
+
+    /** Empty constraint (0 = 0) */
     constraint();
 
+    /** Constraint from pre-constraint */
+    constraint(const linear_term& C, constraint_op type, const monomial_cmp& cmp);
+
+    /** Negate the constraint in place */
     void negate();
 
+    /** Returns the number of variables */
+    size_t size() const;
+
+    /** Get the top variable (x[0]) */
+    variable_id get_top_variable() const;
+
+    /** Get all monomials (ax) */
+    const monomial_list& get_monomials() const;
+
+    /** Get the constant (b) */
+    const expr::rational& get_constant() const;
+
+    /** Get the type of the variable */
+    constraint_op get_op() const;
+
+    /** Swap two constraint */
+    void swap(constraint& C);
+
+    /** Print the constraint to stream */
     void to_stream(std::ostream& out) const;
   };
 
@@ -188,15 +257,41 @@ class conflict_resolution {
   std::vector<constraint> d_constraints;
 
   typedef std::vector<constraint_id> constraint_list;
+  typedef std::set<constraint_id> constraint_set;
 
   /** Map from top variables to constraints */
   std::vector<constraint_list> d_top_var_to_constraint;
 
+  typedef boost::unordered_map<variable_id, expr::rational> var_to_rational_map;
+
+  /** ax + b */
+  class linear_term {
+    var_to_rational_map d_ax;
+    expr::rational d_b;
+  public:
+    /** 0 linear term */
+    linear_term() {}
+    /** Get the linear term from C */
+    linear_term(const constraint& C);
+    /** Add and multiply t1 and t2 to eliminate x (only use negative multipliers if needed) */
+    linear_term(const linear_term& t1, const linear_term& t2, variable_id x);
+
+    /** Add a*x to the linear term */
+    void add(const expr::rational& a, variable_id x);
+    /** Add a to the linear term */
+    void add(const expr::rational& a);
+
+    /** Get the monomials from a*x as a map */
+    const var_to_rational_map& get_monomials() const;
+    /** Get the constant b */
+    const expr::rational& get_constant() const;
+  };
+
   /** Add a constraint */
   constraint_id add_constraint(msat_term t, constraint_source source);
 
-  /** Add a*t to the constraint C */
-  void add_to_constraint(constraint& C, const expr::rational& a, msat_term t, constraint_source source);
+  /** Add a*t to the constraint linear term. Also add any variables. */
+  void add_to_linear_term(linear_term& term, const expr::rational& a, msat_term t, constraint_source source);
 
   /** Propagate constraint C, returns true if no conflict. */
   bool propagate(constraint_id C_id);
@@ -206,6 +301,15 @@ class conflict_resolution {
 
   /** Return the conjunction of constraints */
   msat_term construct_msat_term(const constraint_list& list);
+
+  /** Return the conjunction of constraints */
+  msat_term construct_msat_term(const constraint_set& set);
+
+  /** Resolve the constraints C1 and C2 into R */
+  void resolve(const constraint& C1, const constraint& C2, constraint& R) const;
+
+  /** Evaluate a constraint */
+  bool evaluate(const constraint& C) const;
 
 public:
 
