@@ -228,8 +228,14 @@ class conflict_resolution {
     /** Empty constraint (0 = 0) */
     constraint();
 
+    /** Constraint from pre-constraint (not ordered properly) */
+    constraint(const linear_term& C, constraint_op type);
+
     /** Constraint from pre-constraint */
     constraint(const linear_term& C, constraint_op type, const monomial_cmp& cmp);
+
+    /** Order an orderered constraint */
+    void setup_top_variable(const monomial_cmp& cmp);
 
     /** Negate the constraint in place */
     void negate();

@@ -37,6 +37,8 @@
 #include "external_interpolator.h"
 #include "utils/trace.h"
 
+#include "smt/factory.h"
+
 #define unused_var(x) { (void)x; }
 
 namespace sally {
@@ -1031,7 +1033,38 @@ void mathsat5_internal::interpolate(std::vector<expr::term_ref>& interpolant_out
     ss << "MathSAT interpolation error: " << msat_last_error_message(d_env);
     throw exception(std::string(ss.str()));
   }
-  interpolant_out.push_back(to_term(I));
+
+  expr::term_ref I_term = to_term(I);
+
+  // Check interpolant
+  if (output::trace_tag_is_enabled("mathsat5::interpolation_check")) {
+    {
+      utils::statistics s;
+      smt::solver* solver = smt::factory::mk_solver("yices2", d_tm, d_opts, s);
+      for (size_t i = 0; i < d_assertions.size(); ++ i) {
+        if (d_assertion_classes[i] != smt::solver::CLASS_B) {
+          solver->add(d_assertions[i], solver::CLASS_A);
+        }
+      }
+      solver->add(d_tm.mk_not(I_term), solver::CLASS_A);
+      solver::result result = solver->check();
+      assert(result == solver::UNSAT);
+    }
+    {
+      utils::statistics s;
+      smt::solver* solver = smt::factory::mk_solver("yices2", d_tm, d_opts, s);
+      for (size_t i = 0; i < d_assertions.size(); ++ i) {
+        if (d_assertion_classes[i] == smt::solver::CLASS_B) {
+          solver->add(d_assertions[i], smt::solver::CLASS_A);
+        }
+      }
+      solver->add(I_term, smt::solver::CLASS_A);
+      solver::result result = solver->check();
+      assert(result == solver::UNSAT);
+    }
+  }
+
+  interpolant_out.push_back(I_term);
 }
 
 struct msat_term_cmp {
