@@ -368,11 +368,13 @@ conflict_resolution::constraint_op conflict_resolution::constraint::get_op() con
 void conflict_resolution::constraint::to_stream(std::ostream& out) const {
   out << "(";
   for (size_t i = 0; i < d_ax.size(); ++ i) {
-    if (i) out << " ";
+    if (i) out << " + ";
     out << d_ax[i].a << "*" << "x" << d_ax[i].x;
   }
-  if (d_b.sgn()) {
-    out << " " << d_b;
+  if (d_ax.size() == 0) {
+    out << d_b;
+  } else if (d_b.sgn()) {
+    out << " + " << d_b;
   }
   switch (d_op) {
   case CONSTRAINT_LE:
@@ -573,14 +575,14 @@ msat_term conflict_resolution::interpolate(msat_term* a, msat_term b) {
   for (size_t i = 0; !MSAT_ERROR_TERM(a[i]); ++ i) {
     TRACE("mathsat5::cr") << "CR: a[" << i << "]:" << a[i] << std::endl;
     if (!can_interpolate(a[i])) {
-      return b;
+      return msat_make_not(d_env, b);
     }
     constraint_id c_id = add_constraint(a[i], CONSTRAINT_A);
     A_constraints.insert(c_id);
   }
   TRACE("mathsat5::cr") << "CR: b:" << b << std::endl;
   if (!can_interpolate(b)) {
-    return b;
+    return msat_make_not(d_env, b);
   }
   add_constraint(b, CONSTRAINT_B);
 
