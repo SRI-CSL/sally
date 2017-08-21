@@ -90,6 +90,7 @@ class conflict_resolution {
     /** Check if the two bounds are consistent */
     static
     bool consistent(const bound_info& lb, const bound_info& ub);
+
   };
 
   /** Where does the variable occur (assigned to ease sorting) */
@@ -100,6 +101,7 @@ class conflict_resolution {
 
   /** All information about a variable */
   class variable_info {
+
     /** Source of the variable */
     variable_source d_source;
     /** The mathsat term of this variable */
@@ -110,6 +112,7 @@ class conflict_resolution {
     bound_info d_ub;
     /** Current value of the variable */
     expr::rational d_value;
+
   public:
 
     variable_info();
@@ -152,6 +155,9 @@ class conflict_resolution {
      * and false no value between the bounds.
      */
     bool pick_value();
+
+    /** Print to stream */
+    void to_stream(std::ostream& out) const;
   };
 
   /** Info on variables */
@@ -253,9 +259,6 @@ class conflict_resolution {
     void to_stream(std::ostream& out) const;
   };
 
-  friend
-  std::ostream& operator << (std::ostream& out, const constraint& C);
-
   /** The constraint */
   std::vector<constraint> d_constraints;
 
@@ -288,9 +291,12 @@ class conflict_resolution {
     const var_to_rational_map& get_monomials() const;
     /** Get the constant b */
     const expr::rational& get_constant() const;
+
+    /** Print to stream */
+    void to_stream(std::ostream& out) const;
   };
 
-  /** Add a constraint */
+  /** Add a constraint. If negated = true, add negated. */
   constraint_id add_constraint(msat_term t, constraint_source source);
 
   /** Add a*t to the constraint linear term. Also add any variables. */
@@ -314,12 +320,27 @@ class conflict_resolution {
   /** Evaluate a constraint */
   bool evaluate(const constraint& C) const;
 
+  /**
+   * Can we handle this constraint (only inequalities, negations of
+   * inequalities and equalities.
+   */
+  bool can_interpolate(msat_term t) const;
+
+  friend
+  std::ostream& operator << (std::ostream& out, const constraint& C);
+
+  friend
+  std::ostream& operator << (std::ostream& out, const variable_info& info);
+
+  friend
+  std::ostream& operator << (std::ostream& out, const linear_term& info);
+
 public:
 
   /** Construct the conflict resolver */
   conflict_resolution(msat_env env);
 
-  /** Interpolate between the constraints in a and the constraint b */
+  /** Interpolate between the constraints in a and the constraint b. */
   msat_term interpolate(msat_term* a, msat_term b);
 
 };

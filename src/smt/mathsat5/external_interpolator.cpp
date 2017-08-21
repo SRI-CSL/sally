@@ -90,7 +90,7 @@ msat_term external_interpolator::compute(msat_term *a, msat_term *b, msat_proof 
 
   // TODO: massage the interpolant
   conflict_resolution cr(d_env);
-  msat_term final_interpolant = cr.interpolate(a, standard_interpolant);
+  msat_term final_interpolant = cr.interpolate(a, msat_make_not(d_env, standard_interpolant));
 
   if (output::trace_tag_is_enabled("mathsat5::extitp")) {
     char* str = msat_term_repr(final_interpolant);
