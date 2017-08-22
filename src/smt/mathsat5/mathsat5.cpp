@@ -1048,6 +1048,7 @@ void mathsat5_internal::interpolate(std::vector<expr::term_ref>& interpolant_out
       }
       solver->add(d_tm.mk_not(I_term), solver::CLASS_A);
       solver::result result = solver->check();
+      (void)result;
       assert(result == solver::UNSAT);
     }
     {
@@ -1060,6 +1061,7 @@ void mathsat5_internal::interpolate(std::vector<expr::term_ref>& interpolant_out
       }
       solver->add(I_term, smt::solver::CLASS_A);
       solver::result result = solver->check();
+      (void)result;
       assert(result == solver::UNSAT);
     }
   }
