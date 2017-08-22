@@ -27,14 +27,6 @@
 namespace sally {
 namespace smt {
 
-std::ostream& operator << (std::ostream& out, msat_term t) {
-  msat_term l = t;
-  char* str = msat_term_repr(l);
-  out << str;
-  msat_free(str);
-  return out;
-}
-
 std::ostream& operator << (std::ostream& out, const conflict_resolution::constraint& C) {
   C.to_stream(out);
   return out;

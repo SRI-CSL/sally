@@ -144,6 +144,8 @@ msat_term external_interpolator::process_la_comb(msat_proof p) {
   msat_term l2_term = process(msat_proof_get_child(p, 3));
   if (MSAT_ERROR_TERM(l2_term)) { return l2_term; }
 
+  TRACE("mathsat5::extitp") << "mathsat5[" << d_instance << "]: la_comb: [" << a << ", " << l1_term << ", " << b << ", " << l2_term << std::endl;
+
   // Multiply
   msat_term a_l1_term = msat_make_times(d_env, a, l1_term);
   msat_term b_l2_term = msat_make_times(d_env, b, l2_term);
@@ -162,6 +164,7 @@ msat_term external_interpolator::process_la_hyp(msat_proof hyp) {
   // => Just keep if A part (remember if it's strict)
 
   msat_term l = msat_proof_get_term(msat_proof_get_child(hyp, 0));
+  TRACE("mathsat5::extitp") << "mathsat5[" << d_instance << "]: la_hyp: [" << l << "]" << std::endl;
   bool l_is_negated = false;
   if (msat_term_is_not(d_env, l)) {
     l = msat_term_get_arg(l, 0);
@@ -210,6 +213,8 @@ msat_term external_interpolator::process_la_hyp_eq(msat_proof p) {
   // the equality needs to be considered
   msat_term side = msat_proof_get_term(msat_proof_get_child(p, 0));
   bool neg = false;
+
+  TRACE("mathsat5::extitp") << "mathsat5[" << d_instance << "]: la_hyp_eq: [" << side << ", " << l << "]" << std::endl;
 
   if (msat_term_id(side) == msat_term_id(d_one)) {
     neg = true;
