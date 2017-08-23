@@ -586,8 +586,20 @@ msat_term conflict_resolution::interpolate(msat_term* a, msat_term b) {
     if (!can_interpolate(a[i])) {
       return msat_make_not(d_env, b);
     }
-    constraint_id c_id = add_constraint(a[i], CONSTRAINT_A);
-    A_constraints.insert(c_id);
+    // If an A equality, just add two inequalities
+    if (msat_term_is_equal(d_env, a[i])) {
+      msat_term lhs = msat_term_get_arg(a[i], 0);
+      msat_term rhs = msat_term_get_arg(a[i], 1);
+      msat_term ineq1 = msat_make_leq(d_env, lhs, rhs);
+      msat_term ineq2 = msat_make_leq(d_env, rhs, lhs);
+      constraint_id ineq1_id = add_constraint(ineq1, CONSTRAINT_A);
+      constraint_id ineq2_id = add_constraint(ineq2, CONSTRAINT_A);
+      A_constraints.insert(ineq1_id);
+      A_constraints.insert(ineq2_id);
+    } else {
+      constraint_id c_id = add_constraint(a[i], CONSTRAINT_A);
+      A_constraints.insert(c_id);
+    }
   }
   TRACE("mathsat5::cr") << "CR: b:" << b << std::endl;
   if (!can_interpolate(b)) {
