@@ -20,6 +20,7 @@
 
 #ifdef WITH_MATHSAT5
 
+#include <list>
 #include <vector>
 #include <boost/unordered_map.hpp>
 
@@ -40,7 +41,7 @@ class conflict_resolution {
   typedef size_t variable_id;
 
   /** Null variable */
-  static const size_t variable_null = -1;
+  static const variable_id variable_null = -1;
 
   /** Ids of constraints */
   typedef size_t constraint_id;
@@ -94,7 +95,7 @@ class conflict_resolution {
   };
 
   /** Where does the variable occur (assigned to ease sorting) */
-  enum variable_source {
+  enum variable_class {
     VARIABLE_B = 0,  // B variable (can occur in B and A)
     VARIABLE_A = 1   // A variable (occurs only in A)
   };
@@ -102,8 +103,8 @@ class conflict_resolution {
   /** All information about a variable */
   class variable_info {
 
-    /** Source of the variable */
-    variable_source d_source;
+    /** Class of the variable */
+    variable_class d_class;
     /** The mathsat term of this variable */
     msat_term d_msat_term;
     /** The current lower bound */
@@ -116,16 +117,16 @@ class conflict_resolution {
   public:
 
     variable_info();
-    variable_info(msat_term x, variable_source source);
+    variable_info(msat_term x, variable_class var_class);
 
     /** Clear the bounds to -inf, +inf */
     void clear_bounds();
 
-    /** Add another source of this variable variable */
-    void add_source(variable_source source);
+    /** Add another class of this variable variable */
+    void add_class(variable_class var_class);
 
-    /** Get the source of the variable */
-    variable_source get_source() const;
+    /** Get the class of the variable */
+    variable_class get_class() const;
 
     /** Get the mathsat term of this variable */
     msat_term get_msat_term() const;
@@ -171,7 +172,7 @@ class conflict_resolution {
   };
 
   /** Add a variable and return it's id */
-  variable_id add_variable(msat_term t, variable_source source);
+  variable_id add_variable(msat_term t, variable_class var_class);
 
   /** Map from terms to their ids */
   typedef boost::unordered_map<msat_term, constraint_id, mathsat5_hasher, mathsat5_eq> term_to_constraint_id_map;
@@ -216,6 +217,8 @@ class conflict_resolution {
    */
   class constraint {
 
+    /** Where does the derivation of this constraint come from */
+    constraint_source d_source;
     /** The type of constraint */
     constraint_op d_op;
     /** The coefficients */
@@ -229,10 +232,10 @@ class conflict_resolution {
     constraint();
 
     /** Constraint from pre-constraint (not ordered properly) */
-    constraint(const linear_term& C, constraint_op type);
+    constraint(const linear_term& C, constraint_op type, constraint_source source);
 
     /** Constraint from pre-constraint */
-    constraint(const linear_term& C, constraint_op type, const monomial_cmp& cmp);
+    constraint(const linear_term& C, constraint_op type, constraint_source source, const monomial_cmp& cmp);
 
     /** Order an orderered constraint */
     void setup_top_variable(const monomial_cmp& cmp);
@@ -242,6 +245,9 @@ class conflict_resolution {
 
     /** Returns the number of variables */
     size_t size() const;
+
+    /** Get the source of the constraint derivation */
+    constraint_source get_source() const;
 
     /** Get the top variable (x[0]) */
     variable_id get_top_variable() const;
@@ -268,11 +274,18 @@ class conflict_resolution {
   /** The constraint */
   std::vector<constraint> d_constraints;
 
-  typedef std::vector<constraint_id> constraint_list;
+  typedef std::vector<constraint_id> constraint_vector;
+  typedef std::list<constraint_id> constraint_list;
   typedef std::set<constraint_id> constraint_set;
 
   /** Map from top variables to constraints */
   std::vector<constraint_list> d_top_var_to_constraint;
+
+  /** Add the constraint to watchlist */
+  void add_to_watchlist(constraint_id C_id);
+
+  /** Get the watchlist of variable */
+  const constraint_list& get_watchlist(variable_id x) const;
 
   typedef boost::unordered_map<variable_id, expr::rational> var_to_rational_map;
 
@@ -315,7 +328,7 @@ class conflict_resolution {
   msat_term construct_msat_term(const constraint& C);
 
   /** Return the conjunction of constraints */
-  msat_term construct_msat_term(const constraint_list& list);
+  msat_term construct_msat_term(const constraint_vector& list);
 
   /** Return the conjunction of constraints */
   msat_term construct_msat_term(const constraint_set& set);
@@ -348,6 +361,9 @@ public:
 
   /** Interpolate between the constraints in a and the constraint b. */
   msat_term interpolate(msat_term* a, msat_term b);
+
+  /** Interpolate between the constraints in a and the constraint b. */
+  msat_term interpolate(msat_term* a, msat_term* b);
 
 };
 

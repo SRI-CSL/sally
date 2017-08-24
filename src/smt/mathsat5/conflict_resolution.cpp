@@ -100,13 +100,13 @@ bool conflict_resolution::bound_info::consistent(const bound_info& lb, const bou
 }
 
 conflict_resolution::variable_info::variable_info()
-: d_source(VARIABLE_A)
+: d_class(VARIABLE_A)
 {
   MSAT_MAKE_ERROR_TERM(d_msat_term);
 }
 
-conflict_resolution::variable_info::variable_info(msat_term x, variable_source source)
-: d_source(source)
+conflict_resolution::variable_info::variable_info(msat_term x, variable_class var_class)
+: d_class(var_class)
 , d_msat_term(x)
 {
 }
@@ -116,14 +116,14 @@ void conflict_resolution::variable_info::clear_bounds() {
   d_ub.clear();
 }
 
-void conflict_resolution::variable_info::add_source(variable_source source) {
-  if (source != d_source) {
-    d_source = VARIABLE_B;
+void conflict_resolution::variable_info::add_class(variable_class var_class) {
+  if (var_class != d_class) {
+    d_class = VARIABLE_B;
   }
 }
 
-conflict_resolution::variable_source conflict_resolution::variable_info::get_source() const {
-  return d_source;
+conflict_resolution::variable_class conflict_resolution::variable_info::get_class() const {
+  return d_class;
 }
 
 msat_term conflict_resolution::variable_info::get_msat_term() const {
@@ -232,12 +232,14 @@ void conflict_resolution::variable_info::to_stream(std::ostream& out) const {
 }
 
 conflict_resolution::constraint::constraint()
-: d_op(CONSTRAINT_EQ)
+: d_source(CONSTRAINT_A)
+, d_op(CONSTRAINT_EQ)
 {
 }
 
-conflict_resolution::constraint::constraint(const linear_term& t, constraint_op type)
-: d_op(type)
+conflict_resolution::constraint::constraint(const linear_term& t, constraint_op type, constraint_source source)
+: d_source(source)
+, d_op(type)
 , d_b(t.get_constant())
 {
   // Copy over the linear term
@@ -249,8 +251,9 @@ conflict_resolution::constraint::constraint(const linear_term& t, constraint_op 
   }
 }
 
-conflict_resolution::constraint::constraint(const linear_term& t, constraint_op type, const monomial_cmp& cmp)
-: d_op(type)
+conflict_resolution::constraint::constraint(const linear_term& t, constraint_op type, constraint_source source, const monomial_cmp& cmp)
+: d_source(source)
+, d_op(type)
 , d_b(t.get_constant())
 {
   // Copy over the linear term
@@ -348,6 +351,10 @@ size_t conflict_resolution::constraint::size() const {
   return d_ax.size();
 }
 
+conflict_resolution::constraint_source conflict_resolution::constraint::get_source() const {
+  return d_source;
+}
+
 conflict_resolution::variable_id conflict_resolution::constraint::get_top_variable() const {
   assert(d_ax.size() > 0);
   return d_ax[0].x;
@@ -367,6 +374,7 @@ const expr::rational& conflict_resolution::constraint::get_constant() const {
 }
 
 void conflict_resolution::constraint::swap(constraint& C) {
+  std::swap(d_source, C.d_source);
   std::swap(d_op, C.d_op);
   std::swap(d_b, C.d_b);
   d_ax.swap(C.d_ax);
@@ -400,28 +408,51 @@ void conflict_resolution::constraint::to_stream(std::ostream& out) const {
   default:
     assert(false);
   }
+
+  switch (d_source) {
+  case CONSTRAINT_A:
+    out << " A";
+    break;
+  case CONSTRAINT_B:
+    out << " B";
+    break;
+  }
+
   out << ")";
 }
 
-conflict_resolution::variable_id conflict_resolution::add_variable(msat_term t, variable_source source) {
+conflict_resolution::variable_id conflict_resolution::add_variable(msat_term t, variable_class var_class) {
 
   // Check if the variable is already there
   term_to_variable_id_map::const_iterator find = d_term_to_variable_id_map.find(t);
   if (find != d_term_to_variable_id_map.end()) {
     // Change the class if different
     variable_id t_id = find->second;
-    d_variable_info[t_id].add_source(source);
+    d_variable_info[t_id].add_class(var_class);
     return t_id;
   }
 
   // New variable, add it
   variable_id t_id = d_variable_info.size();
-  d_variable_info.push_back(variable_info(t, source));
+  d_variable_info.push_back(variable_info(t, var_class));
   d_term_to_variable_id_map[t] = t_id;
   d_top_var_to_constraint.push_back(constraint_list());
   assert(d_variable_info.size() == d_top_var_to_constraint.size());
 
   return t_id;
+}
+
+void conflict_resolution::add_to_watchlist(constraint_id C_id) {
+  const constraint& C = d_constraints[C_id];
+  if (C.get_source() == CONSTRAINT_A) {
+    d_top_var_to_constraint[C.get_top_variable()].push_front(C_id);
+  } else {
+    d_top_var_to_constraint[C.get_top_variable()].push_back(C_id);
+  }
+}
+
+const conflict_resolution::constraint_list& conflict_resolution::get_watchlist(variable_id x) const {
+  return d_top_var_to_constraint[x];
 }
 
 conflict_resolution::constraint_id conflict_resolution::add_constraint(msat_term t, constraint_source source) {
@@ -454,7 +485,7 @@ conflict_resolution::constraint_id conflict_resolution::add_constraint(msat_term
 
   // Create the constraint
   constraint_id t_id = d_constraints.size();
-  d_constraints.push_back(constraint(constraint_term, type));
+  d_constraints.push_back(constraint(constraint_term, type, source));
   constraint& C = d_constraints.back();
 
   // Negate if necessary
@@ -518,38 +549,40 @@ void conflict_resolution::add_to_linear_term(linear_term& term, const expr::rati
 }
 
 bool conflict_resolution::variable_cmp::operator () (variable_id x, variable_id y) const {
-  // Sort the variables so that B < A, otherwise by mathsat id
-  variable_source x_source = cr.d_variable_info[x].get_source();
-  variable_source y_source = cr.d_variable_info[y].get_source();
 
-  // If different sources, then sort as B < A (as in enum)
-  if (x_source != y_source) {
-    return x_source < y_source;
+  // Sort the variables so that B < A, otherwise by mathsat id
+  variable_class x_class = cr.d_variable_info[x].get_class();
+  variable_class y_class = cr.d_variable_info[y].get_class();
+
+  // If different classes, then sort as B < A (as in enum)
+  if (x_class != y_class) {
+    return x_class < y_class;
   }
 
-  // Same source, sort by mathsat id
+  // Same class, sort by mathsat id
   msat_term x_term = cr.d_variable_info[x].get_msat_term();
   msat_term y_term = cr.d_variable_info[y].get_msat_term();
   return msat_term_id(x_term) < msat_term_id(y_term);
 }
 
 bool conflict_resolution::monomial_cmp::operator () (const monomial& ax, const monomial& by) const {
-  // Sort the variables so that B < A, otherwise by mathsat id
-  variable_source x_source = cr.d_variable_info[ax.x].get_source();
-  variable_source y_source = cr.d_variable_info[by.x].get_source();
 
-  // If different sources, then sort as B < A (as in enum)
-  if (x_source != y_source) {
-    return x_source < y_source;
+  // Sort the variables so that B < A, otherwise by mathsat id
+  variable_class x_class = cr.d_variable_info[ax.x].get_class();
+  variable_class y_class = cr.d_variable_info[by.x].get_class();
+
+  // If different classes, then sort as B < A (as in enum)
+  if (x_class != y_class) {
+    return x_class < y_class;
   }
 
-  // Same source, sort by mathsat id
+  // Same class, sort by mathsat id
   msat_term x_term = cr.d_variable_info[ax.x].get_msat_term();
   msat_term y_term = cr.d_variable_info[by.x].get_msat_term();
   size_t x_term_id = msat_term_id(x_term);
   size_t y_term_id = msat_term_id(y_term);
   if (x_term_id != y_term_id) {
-    return  x_term_id < y_term_id;
+    return x_term_id < y_term_id;
   }
 
   // Otherwise compare the constants (shouldn't really happen)
@@ -572,40 +605,49 @@ bool conflict_resolution::can_interpolate(msat_term t) const {
 }
 
 msat_term conflict_resolution::interpolate(msat_term* a, msat_term b) {
+  msat_term new_b[2];
+  new_b[0] = b;
+  MSAT_MAKE_ERROR_TERM(new_b[1]);
+  return interpolate(a, new_b);
+}
+
+msat_term conflict_resolution::interpolate(msat_term* a, msat_term* b) {
 
   TRACE("mathsat5::cr") << "CR: computing interpolant." << std::endl;
 
-  // All A constraints
+  msat_term error;
+  MSAT_MAKE_ERROR_TERM(error);
+
+  // All A constraints, to remember what to keep in the interpolant
   constraint_set A_constraints;
-  // The b constraint
-  constraint_id b_id;
 
   // A: Add all the constraints
   for (size_t i = 0; !MSAT_ERROR_TERM(a[i]); ++ i) {
     TRACE("mathsat5::cr") << "CR: a[" << i << "]:" << a[i] << std::endl;
     if (!can_interpolate(a[i])) {
-      return msat_make_not(d_env, b);
+      return error;
     }
-    // If an A equality, just add two inequalities
-    if (msat_term_is_equal(d_env, a[i])) {
-      msat_term lhs = msat_term_get_arg(a[i], 0);
-      msat_term rhs = msat_term_get_arg(a[i], 1);
-      msat_term ineq1 = msat_make_leq(d_env, lhs, rhs);
-      msat_term ineq2 = msat_make_leq(d_env, rhs, lhs);
-      constraint_id ineq1_id = add_constraint(ineq1, CONSTRAINT_A);
-      constraint_id ineq2_id = add_constraint(ineq2, CONSTRAINT_A);
-      A_constraints.insert(ineq1_id);
-      A_constraints.insert(ineq2_id);
-    } else {
-      constraint_id c_id = add_constraint(a[i], CONSTRAINT_A);
-      A_constraints.insert(c_id);
+    constraint_id c_id = add_constraint(a[i], CONSTRAINT_A);
+    A_constraints.insert(c_id);
+  }
+  for (size_t i = 0; !MSAT_ERROR_TERM(b[i]); ++ i) {
+    TRACE("mathsat5::cr") << "CR: b:" << b[i] << std::endl;
+    if (!can_interpolate(b[i])) {
+      msat_term error;
+      MSAT_MAKE_ERROR_TERM(error);
+      return error;
     }
+    add_constraint(b[i], CONSTRAINT_B);
   }
-  TRACE("mathsat5::cr") << "CR: b:" << b << std::endl;
-  if (!can_interpolate(b)) {
-    return msat_make_not(d_env, b);
+
+  // if |A| = 0 => interpolant = T
+  if (A_constraints.size() == 0) {
+    return msat_make_true(d_env);
   }
-  b_id = add_constraint(b, CONSTRAINT_B);
+  if (A_constraints.size() == d_constraints.size()) {
+    return msat_make_false(d_env);
+  }
+
 
   // B: Order the variables B -> AB -> A
   variable_cmp var_cmp(*this);
@@ -617,25 +659,21 @@ msat_term conflict_resolution::interpolate(msat_term* a, msat_term b) {
 
   // Setup the constraints: setup_top_variable variables
   monomial_cmp mon_cmp(*this);
-  constraint_set::const_iterator it = A_constraints.begin();
-  for (; it != A_constraints.end(); ++ it) {
-    constraint_id C_id = *it;
+  for (size_t C_id = 0; C_id < d_constraints.size(); ++ C_id) {
     constraint& C = d_constraints[C_id];
     C.setup_top_variable(mon_cmp);
-    d_top_var_to_constraint[C.get_top_variable()].push_back(C_id);
+    add_to_watchlist(C_id);
   }
-  constraint& C_b = d_constraints[b_id];
-  C_b.setup_top_variable(mon_cmp);
-  d_top_var_to_constraint[C_b.get_top_variable()].push_back(b_id);
 
   if (output::trace_tag_is_enabled("mathsat5::cr")) {
     TRACE("mathsat5::cr") << "CR: variable_order:" << std::endl;
     for (size_t i = 0; i < all_vars.size(); ++ i) {
       TRACE("mathsat5::cr") << "- x" << all_vars[i];
-      TRACE("mathsat5::cr") << " (" << (d_variable_info[all_vars[i]].get_source() == VARIABLE_A ? "A" : "B") << "):";
-      const constraint_list& x_cstrs = d_top_var_to_constraint[all_vars[i]];
-      for (size_t j = 0; j < x_cstrs.size(); ++ j) {
-        TRACE("mathsat5::cr") << " " << d_constraints[x_cstrs[j]];
+      TRACE("mathsat5::cr") << " (" << (d_variable_info[all_vars[i]].get_class() == VARIABLE_A ? "A" : "B") << "):";
+      const constraint_list& x_cstrs = get_watchlist(all_vars[i]);
+      constraint_list::const_iterator it = x_cstrs.begin();
+      for (; it != x_cstrs.end(); ++ it) {
+        TRACE("mathsat5::cr") << " " << d_constraints[*it];
       }
       TRACE("mathsat5::cr") << std::endl;
     }
@@ -657,17 +695,16 @@ msat_term conflict_resolution::interpolate(msat_term* a, msat_term b) {
 
     // Variable we're assigning
     variable_id x = all_vars[k];
-    variable_source x_source = d_variable_info[x].get_source();
     TRACE("mathsat5::cr") << "CR: propagating on x" << x << ": " << d_variable_info[x] << std::endl;
 
     // All the constraints where x is the top variable
-    const constraint_list& x_constraints = d_top_var_to_constraint[x];
+    const constraint_list& x_constraints = get_watchlist(x);
     constraint_list::const_iterator it = x_constraints.begin();
-    for (; ok && it != x_constraints.end(); ++ it) {
+    for (; it != x_constraints.end(); ++ it) {
       // Propagate new bound if implied by this constraint  
       constraint_id C_id = *it;
       assert(d_constraints[C_id].get_top_variable() == x);
-      ok = propagate(C_id);
+      ok = ok && propagate(C_id);
       TRACE("mathsat5::cr") << "CR: propagation: " << d_variable_info[x] << std::endl;
     }
 
@@ -684,19 +721,6 @@ msat_term conflict_resolution::interpolate(msat_term* a, msat_term b) {
       const constraint& lb_C = d_constraints[lb_C_id];
       const constraint& ub_C = d_constraints[ub_C_id];
 
-      // Any A premises in B variables are added to interpolant (needed for deduction)
-      if (x_source == VARIABLE_B) {
-        // We add any premises from A
-        if (A_constraints.count(ub_C_id) > 0) {
-          TRACE("mathsat5::cr") << "CR: adding to interpolant: " << ub_C << std::endl;
-          interpolants.insert(ub_C_id);
-        }
-        if (A_constraints.count(lb_C_id) > 0) {
-          TRACE("mathsat5::cr") << "CR: adding to interpolant: " << lb_C << std::endl;
-          interpolants.insert(lb_C_id);
-        }
-      }
-
       TRACE("mathsat5::cr") << "CR: resolving:" << "C_lb: " << lb_C << std::endl;
       TRACE("mathsat5::cr") << "CR: resolving:" << "C_ub: " << ub_C << std::endl;
 
@@ -705,32 +729,43 @@ msat_term conflict_resolution::interpolate(msat_term* a, msat_term b) {
       assert(!evaluate(R));
       TRACE("mathsat5::cr") << "CR: resolvent:" << "R: " << R << std::endl;
 
+      // We keep in the interpolant:
+      // - any A-derived constraints that are resolved with constraints from B
+      if (ub_C.get_source() == CONSTRAINT_A && lb_C.get_source() == CONSTRAINT_B) {
+        TRACE("mathsat5::cr") << "CR: adding to interpolant: " << ub_C << std::endl;
+        interpolants.insert(ub_C_id);
+      }
+      if (ub_C.get_source() == CONSTRAINT_B && lb_C.get_source() == CONSTRAINT_A) {
+        TRACE("mathsat5::cr") << "CR: adding to interpolant: " << lb_C << std::endl;
+        interpolants.insert(lb_C_id);
+      }
+
       // If resolvent is empty, we're done
       if (R.size() == 0) {
+        if (output::trace_tag_is_enabled("mathsat5::cr")) {
+          constraint_set::const_iterator it = interpolants.begin();
+          for (bool first = true; it != interpolants.end(); ++ it) {
+            if (!first) TRACE("mathsat5::cr") << ", ";
+            TRACE("mathsat5::cr") << d_constraints[*it];
+            first = false;
+          }
+          TRACE("mathsat5::cr") << std::endl;
+        }
         return construct_msat_term(interpolants);
       } else {
 
         // Check if to add to the interpolant
         variable_id x_new = R.get_top_variable();
-        variable_id x_new_source = d_variable_info[x_new].get_source();
-
-        if (x_source != x_new_source) {
-          // Learning into B for the first time -> add to interpolant
-          assert(x_source == VARIABLE_A && x_new_source == VARIABLE_B);
-          TRACE("mathsat5::cr") << "CR: adding to interpolant: " << R << std::endl;
-          interpolants.insert(R_id);
-        }
 
         // Backtrack to the new top variable
         x = x_new;
-        x_source = d_variable_info[x].get_source();
         while (all_vars[k] != x) {
           d_variable_info[all_vars[k]].clear_bounds();
           k --;
         }
 
         // Add the constraint to list of x
-        d_top_var_to_constraint[x].push_back(R_id);
+        add_to_watchlist(R_id);
       }
 
       // Propagate the new constraint
@@ -744,7 +779,7 @@ msat_term conflict_resolution::interpolate(msat_term* a, msat_term b) {
   }
 
   assert(false);
-  return b;
+  return error;
 }
 
 bool conflict_resolution::propagate(constraint_id C_id) {
@@ -839,7 +874,7 @@ msat_term conflict_resolution::construct_msat_term(const constraint& C) {
   return result;
 }
 
-msat_term conflict_resolution::construct_msat_term(const constraint_list& list) {
+msat_term conflict_resolution::construct_msat_term(const constraint_vector& list) {
   if (list.size() == 0) {
     return msat_make_true(d_env);
   }
@@ -910,9 +945,15 @@ void conflict_resolution::resolve(const constraint& C1, const constraint& C2, co
     assert(false);
   }
 
+  // The source of the final constraint
+  constraint_source source = CONSTRAINT_A;
+  if (C1.get_source() == CONSTRAINT_B || C2.get_source() == CONSTRAINT_B) {
+    source = CONSTRAINT_B;
+  }
+
   // Construct and swap in the final constraint
   monomial_cmp cmp(*this);
-  constraint tmp(R_term, R_type, cmp);
+  constraint tmp(R_term, R_type, source, cmp);
   R.swap(tmp);
 }
 

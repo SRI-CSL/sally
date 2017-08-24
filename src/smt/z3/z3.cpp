@@ -81,6 +81,10 @@ void z3::pop() {
   d_internal->pop();
 }
 
+int z3::get_scope() const {
+  return d_internal->get_scope();
+}
+
 void z3::interpolate(std::vector<expr::term_ref>& out) {
   TRACE("z3") << "z3[" << d_internal->instance() << "]: interpolating" << std::endl;
   d_internal->interpolate(out);

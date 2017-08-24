@@ -40,6 +40,7 @@ z3_internal::z3_internal(expr::term_manager& tm, const options& opts)
 , d_conversion_cache(0)
 , d_last_check_status(Z3_L_UNDEF)
 , d_instance(s_instances)
+, d_scope(0)
 {
   // Initialize
   if (s_instances == 0) {
@@ -998,6 +999,7 @@ expr::model::ref z3_internal::get_model(const std::set<expr::term_ref>& x_variab
 }
 
 void z3_internal::push() {
+  d_scope ++;
   Z3_solver_push(d_ctx, d_solver);
   Z3_error_code error = Z3_get_error_code(d_ctx);
   if (error != Z3_OK) {
@@ -1010,6 +1012,7 @@ void z3_internal::push() {
 }
 
 void z3_internal::pop() {
+  d_scope --;
   Z3_solver_pop(d_ctx, d_solver, 1);
   Z3_error_code error = Z3_get_error_code(d_ctx);
   if (error != Z3_OK) {
@@ -1024,6 +1027,10 @@ void z3_internal::pop() {
     d_assertions.pop_back();
     d_assertion_classes.pop_back();
   }
+}
+
+int z3_internal::get_scope() const {
+  return d_scope;
 }
 
 void z3_internal::gc() {

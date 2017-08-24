@@ -112,6 +112,9 @@ class mathsat5_internal {
   /** Conflict resolution interpolator */
   external_interpolator* d_cr_interpolator;
 
+  /** The scope */
+  int d_scope;
+
 public:
 
   /** Construct an instance of mathsat5 with the given temr manager and options */
@@ -152,6 +155,9 @@ public:
 
   /** Pop the context */
   void pop();
+
+  /** Get the scope */
+  int get_scope() const;
 
   /** Return the generalization */
   void generalize(solver::generalization_type type, const std::set<expr::term_ref>& vars_to_keep, const std::set<expr::term_ref>& vars_to_elim, std::vector<expr::term_ref>& out);
@@ -204,6 +210,7 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
 , d_itp_A(0)
 , d_itp_B(0)
 , d_cr_interpolator(0)
+, d_scope(0)
 {
 
   s_instances ++;
@@ -256,7 +263,7 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
 
   if (opts.get_bool("mathsat5-cr")) {
     // Make the inerpolator
-    d_cr_interpolator = new external_interpolator(instance(), d_env);
+    d_cr_interpolator = new external_interpolator(instance(), d_env, false);
     msat_set_external_theory_interpolator(d_env, run_external_interpolator, d_cr_interpolator);
   } else {
     // No interpolator needed
@@ -1165,6 +1172,7 @@ void mathsat5_internal::generalize(solver::generalization_type type, const std::
 }
 
 void mathsat5_internal::push() {
+  d_scope ++;
   int ret = msat_push_backtrack_point(d_env);
   if (ret) {
     throw exception("MathSAT error (push).");
@@ -1173,6 +1181,7 @@ void mathsat5_internal::push() {
 }
 
 void mathsat5_internal::pop() {
+  d_scope --;
   int ret = msat_pop_backtrack_point(d_env);
   if (ret) {
     throw exception("MathSAT error (pop).");
@@ -1186,6 +1195,10 @@ void mathsat5_internal::pop() {
     d_assertion_classes.pop_back();
   }
   d_last_check_status = MSAT_UNKNOWN;
+}
+
+int mathsat5_internal::get_scope() const {
+  return d_scope;
 }
 
 void mathsat5_internal::gc() {
@@ -1237,6 +1250,10 @@ void mathsat5::push() {
 void mathsat5::pop() {
   TRACE("mathsat5") << "mathsat5[" << d_internal->instance() << "]: pop()" << std::endl;
   d_internal->pop();
+}
+
+int mathsat5::get_scope() const {
+  return d_internal->get_scope();
 }
 
 /** Interpolate the last sat result (trivial) */

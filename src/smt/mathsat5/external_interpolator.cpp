@@ -30,8 +30,9 @@
 namespace sally {
 namespace smt {
 
-external_interpolator::external_interpolator(size_t instance, msat_env env)
-: d_instance(instance)
+external_interpolator::external_interpolator(size_t instance, msat_env env, bool use_standard_interpolant)
+: d_use_standard_interpolant(use_standard_interpolant)
+, d_instance(instance)
 , d_env(env)
 , d_result_is_strict_inquality(false)
 {
@@ -45,6 +46,9 @@ msat_term external_interpolator::compute(msat_term *a, msat_term *b, msat_proof 
   TRACE("mathsat5::extitp") << "mathsat5[" << d_instance << "]: computing interpolant." << std::endl;
 
   size_t i;
+
+  msat_term standard_interpolant;
+  MSAT_MAKE_ERROR_TERM(standard_interpolant);
 
   if (output::trace_tag_is_enabled("mathsat5::extitp")) {
     for (i = 0; !MSAT_ERROR_TERM(a[i]); ++ i) {
@@ -61,36 +65,42 @@ msat_term external_interpolator::compute(msat_term *a, msat_term *b, msat_proof 
     }
   }
 
-  // Remember the A part
-  d_A_atoms.clear();
-  for (i = 0; !MSAT_ERROR_TERM(a[i]); ++ i) {
-    msat_term l = a[i];
-    if (msat_term_is_not(d_env, l)) { l = msat_term_get_arg(l, 0); }
-    d_A_atoms.insert(l);
+  if (d_use_standard_interpolant) {
+    // Remember the A part
+    d_A_atoms.clear();
+    for (i = 0; !MSAT_ERROR_TERM(a[i]); ++ i) {
+      msat_term l = a[i];
+      if (msat_term_is_not(d_env, l)) {l = msat_term_get_arg(l, 0);}
+      d_A_atoms.insert(l);
+    }
+
+    // Compute the standard interpolant
+    d_result_is_strict_inquality = false;
+    msat_term interpolant_term = process(p);
+    if (MSAT_ERROR_TERM(interpolant_term)) {
+      return interpolant_term;
+    }
+    if (d_result_is_strict_inquality) {
+      standard_interpolant = msat_make_not(d_env, msat_make_leq(d_env, d_zero, interpolant_term));
+    } else {
+      standard_interpolant = msat_make_leq(d_env, interpolant_term, d_zero);
+    }
+
+    if (output::trace_tag_is_enabled("mathsat5::extitp")) {
+      char* str = msat_term_repr(standard_interpolant);
+      TRACE("mathsat5::extitp") << "mathsat5[" << d_instance << "]: standard interpolant: " << str << std::endl;
+      msat_free(str);
+    }
   }
 
-  // Compute the standard interpolant
-  d_result_is_strict_inquality = false;
-  msat_term interpolant_term = process(p);
-  if (MSAT_ERROR_TERM(interpolant_term)) {
-    return interpolant_term;
-  }
-  msat_term standard_interpolant;
-  if (d_result_is_strict_inquality) {
-    standard_interpolant = msat_make_not(d_env, msat_make_leq(d_env, d_zero, interpolant_term));
-  } else {
-    standard_interpolant = msat_make_leq(d_env, interpolant_term, d_zero);
-  }
-
-  if (output::trace_tag_is_enabled("mathsat5::extitp")) {
-    char* str = msat_term_repr(standard_interpolant);
-    TRACE("mathsat5::extitp") << "mathsat5[" << d_instance << "]: standard interpolant: " << str << std::endl;
-    msat_free(str);
-  }
-
-  // TODO: massage the interpolant
+  // Do conflict resolution
   conflict_resolution cr(d_env);
-  msat_term final_interpolant = cr.interpolate(a, msat_make_not(d_env, standard_interpolant));
+  msat_term final_interpolant = d_use_standard_interpolant ?
+      cr.interpolate(a, msat_make_not(d_env, standard_interpolant)) :
+      cr.interpolate(a, b);
+  if (MSAT_ERROR_TERM(final_interpolant)) {
+    final_interpolant = standard_interpolant;
+  }
 
   if (output::trace_tag_is_enabled("mathsat5::extitp")) {
     char* str = msat_term_repr(final_interpolant);

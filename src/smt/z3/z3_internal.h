@@ -88,6 +88,9 @@ class z3_internal {
   /** The instance */
   size_t d_instance;
 
+  /** The scope */
+  int d_scope;
+
 public:
 
   /** Construct an instance of yices with the given temr manager and options */
@@ -132,6 +135,9 @@ public:
 
   /** Pop the context */
   void pop();
+
+  /** Get the scope */
+  int get_scope() const;
 
   /** Return the interpolant */
   void interpolate(std::vector<expr::term_ref>& out);

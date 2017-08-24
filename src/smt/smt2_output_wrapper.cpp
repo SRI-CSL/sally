@@ -26,6 +26,7 @@ namespace smt {
 smt2_output_wrapper::smt2_output_wrapper(expr::term_manager& tm, const options& opts, utils::statistics& stats, solver* solver, std::string filename)
 : smt::solver("smt2_wrapper[" + filename + "]", tm, opts, stats)
 , d_solver(solver)
+, d_output_filename(filename)
 , d_output(filename.c_str())
 , d_total_assertions_count(0)
 , d_vars_added(false)
@@ -136,6 +137,10 @@ void smt2_output_wrapper::pop() {
   while (d_assertions.size() > size) {
     d_assertions.pop_back();
   }
+}
+
+int smt2_output_wrapper::get_scope() const {
+  return d_solver->get_scope();
 }
 
 void smt2_output_wrapper::generalize(generalization_type type, std::vector<expr::term_ref>& projection_out) {

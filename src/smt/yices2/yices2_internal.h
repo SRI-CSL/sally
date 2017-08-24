@@ -96,6 +96,9 @@ class yices2_internal {
   /** The instance */
   size_t d_instance;
 
+  /** The scope */
+  int d_scope;
+
   /** Print the EFSMT to output */
   void efsmt_to_stream(std::ostream& out, const term_vector_t* G_y, const term_t* assertions, size_t assertions_size,
       const std::vector<expr::term_ref>& exists_vars,
@@ -151,6 +154,9 @@ public:
 
   /** Pop the context */
   void pop();
+
+  /** Get the scope */
+  int get_scope() const;
 
   /** Return the generalization */
   void generalize(smt::solver::generalization_type type, std::vector<expr::term_ref>& projection_out);

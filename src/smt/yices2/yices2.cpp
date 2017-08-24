@@ -81,6 +81,9 @@ void yices2::pop() {
   d_internal->pop();
 }
 
+int yices2::get_scope() const {
+  return d_internal->get_scope();
+}
 
 void yices2::generalize(generalization_type type, std::vector<expr::term_ref>& projection_out) {
   TRACE("yices2") << "yices2[" << d_internal->instance() << "]: generalizing" << std::endl;

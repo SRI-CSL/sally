@@ -55,6 +55,9 @@ public:
   /** Pop the solving context */
   void pop();
 
+  /** Get the scope */
+  int get_scope() const;
+
   /** Collect terms */
   void gc_collect(const expr::gc_relocator& gc_reloc);
 

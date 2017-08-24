@@ -18,6 +18,8 @@
 
 #include "smt/delayed_wrapper.h"
 
+#include <cassert>
+
 namespace sally {
 namespace smt {
 
@@ -44,13 +46,21 @@ void delayed_wrapper::add(expr::term_ref f, formula_class f_class) {
 solver::result delayed_wrapper::check() {
 
   for (; d_index < d_assertions.size(); ++ d_index) {
-    if (d_scope < d_assertions_size.size() && d_index == d_assertions_size[d_scope]) {
+    // While vs IF because empty pushes can happen
+    while (d_scope < d_assertions_size.size() && d_index == d_assertions_size[d_scope]) {
       d_scope ++;
       d_solver->push();
     }
     d_solver->add(d_assertions[d_index].f, d_assertions[d_index].f_class);
   }
 
+  // While vs IF because empty pushes can happen
+  while (d_scope < d_assertions_size.size() && d_index == d_assertions_size[d_scope]) {
+    d_scope ++;
+    d_solver->push();
+  }
+
+  assert(d_assertions_size.size() == d_scope);
   return d_solver->check();
 }
 
@@ -66,6 +76,10 @@ void delayed_wrapper::push() {
   d_assertions_size.push_back(d_assertions.size());
 }
 
+int delayed_wrapper::get_scope() const {
+  return d_assertions_size.size();
+}
+
 void delayed_wrapper::pop() {
   // Pop the assertions stack
   size_t size = d_assertions_size.back();
@@ -78,8 +92,8 @@ void delayed_wrapper::pop() {
     d_index = d_assertions.size();
   }
   // If scope went below currently processed, also update
-  if (d_assertions_size.size() < d_scope) {
-    d_scope = d_assertions_size.size();
+  while (d_assertions_size.size() < d_scope) {
+    d_scope --;
     d_solver->pop();
   }
 }

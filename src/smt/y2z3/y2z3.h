@@ -72,6 +72,9 @@ public:
   /** Pop the solving context */
   void pop();
 
+  /** Get the scope */
+  int get_scope() const;
+
   /** Generalize the last call to check assuming the result was SAT. */
   void generalize(generalization_type type, std::vector<expr::term_ref>& out);
 

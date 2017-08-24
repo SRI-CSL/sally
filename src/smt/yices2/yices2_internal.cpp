@@ -43,6 +43,7 @@ yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
 , d_last_check_status(STATUS_UNKNOWN)
 , d_config(NULL)
 , d_instance(s_instances)
+, d_scope(0)
 {
   // Initialize
   if (s_instances == 0) {
@@ -1201,6 +1202,7 @@ expr::model::ref yices2_internal::get_model() {
 }
 
 void yices2_internal::push() {
+  d_scope ++;
   int ret = yices_push(d_ctx);
   if (ret < 0) {
     std::stringstream ss;
@@ -1213,6 +1215,7 @@ void yices2_internal::push() {
 }
 
 void yices2_internal::pop() {
+  d_scope --;
   int ret = yices_pop(d_ctx);
   if (ret < 0) {
     std::stringstream ss;
@@ -1226,6 +1229,10 @@ void yices2_internal::pop() {
     d_assertions.pop_back();
     d_assertion_classes.pop_back();
   }
+}
+
+int yices2_internal::get_scope() const {
+  return d_scope;
 }
 
 void yices2_internal::generalize(smt::solver::generalization_type type, std::vector<expr::term_ref>& projection_out) {

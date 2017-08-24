@@ -106,6 +106,9 @@ void y2z3::pop() {
   d_last_yices2_result = UNKNOWN;
 }
 
+int y2z3::get_scope() const {
+  return d_yices2->get_scope();
+}
 
 void y2z3::generalize(generalization_type type, std::vector<expr::term_ref>& out) {
   TRACE("y2z3") << "y2z3[" << s_instance << "]: generalizing" << std::endl;

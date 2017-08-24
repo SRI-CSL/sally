@@ -180,6 +180,9 @@ public:
     throw exception("pop() not supported by solver " + d_name);
   }
 
+  /** Get context scope #push-#pop */
+  virtual int get_scope() const = 0;
+
   enum generalization_type {
     GENERALIZE_FORWARD,
     GENERALIZE_BACKWARD

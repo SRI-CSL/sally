@@ -33,6 +33,9 @@ namespace smt {
  */
 class external_interpolator {
 
+  /** Whether to use the standard interplant */
+  bool d_use_standard_interpolant;
+
   /** Instance of the internal mathsat */
   size_t d_instance;
 
@@ -68,8 +71,11 @@ class external_interpolator {
 
 public:
 
-  /** Construct */
-  external_interpolator(size_t instance, msat_env env);
+  /**
+   * Construct. If use_standard_interpolant = true, it will interpolate against
+   * the standard interpolant, otherwise against all of B.
+   */
+  external_interpolator(size_t instance, msat_env env, bool use_standard_interpolant);
 
   /** Compute the interpolant */
   msat_term compute(msat_term *a, msat_term *b, msat_proof p);

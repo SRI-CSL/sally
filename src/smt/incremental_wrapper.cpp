@@ -78,6 +78,10 @@ void incremental_wrapper::pop() {
   }
 }
 
+int incremental_wrapper::get_scope() const {
+  return d_assertions_size.size();
+}
+
 void incremental_wrapper::generalize(generalization_type type, std::vector<expr::term_ref>& out) {
   d_solver->generalize(type, out);
 }

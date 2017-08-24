@@ -71,6 +71,9 @@ public:
   /** Pop the solving context */
   void pop();
 
+  /** Get the scope */
+  int get_scope() const;
+
   /** Interpolate the last UNSAT result */
   void interpolate(std::vector<expr::term_ref>& out);
 

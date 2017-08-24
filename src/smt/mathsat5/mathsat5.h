@@ -64,6 +64,9 @@ public:
   /** Pop the solving context */
   void pop();
 
+  /** Get the scope */
+  int get_scope() const;
+
   /** Generalize the last sat result using quantifier elimination. */
   void generalize(generalization_type type, std::vector<expr::term_ref>& out);
 

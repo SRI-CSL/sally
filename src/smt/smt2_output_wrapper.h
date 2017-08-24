@@ -33,6 +33,9 @@ class smt2_output_wrapper : public solver {
   /** Solver actually used */
   solver* d_solver;
 
+  /** Output file */
+  std::string d_output_filename;
+
   /** Output */
   std::ofstream d_output;
 
@@ -68,6 +71,7 @@ public:
   expr::model::ref get_model() const;
   void push();
   void pop();
+  int get_scope() const;
   void generalize(generalization_type type, std::vector<expr::term_ref>& projection_out);
   void generalize(generalization_type type, expr::model::ref m, std::vector<expr::term_ref>& projection_out);
   void interpolate(std::vector<expr::term_ref>& out);

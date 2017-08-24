@@ -81,6 +81,8 @@ solver::result y2m5::check() {
   TRACE("y2m5") << "y2m5[" << s_instance << "]: check()" << std::endl;
   d_last_yices2_result = d_yices2->check();
   d_last_mathsat5_result = UNKNOWN;
+  assert(d_yices2->get_scope() == d_mathsat5->get_scope());
+  // assert(d_last_yices2_result == d_last_mathsat5_result);
   return d_last_yices2_result;
 }
 
@@ -94,6 +96,7 @@ void y2m5::push() {
   TRACE("y2m5") << "y2m5[" << s_instance << "]: push()" << std::endl;
   d_yices2->push();
   d_mathsat5->push();
+  assert(d_yices2->get_scope() == d_mathsat5->get_scope());
   d_last_mathsat5_result = UNKNOWN;
   d_last_yices2_result = UNKNOWN;
 }
@@ -102,10 +105,15 @@ void y2m5::pop() {
   TRACE("y2m5") << "y2m5[" << s_instance << "]: pop()" << std::endl;
   d_yices2->pop();
   d_mathsat5->pop();
+  assert(d_yices2->get_scope() == d_mathsat5->get_scope());
   d_last_mathsat5_result = UNKNOWN;
   d_last_yices2_result = UNKNOWN;
 }
 
+int y2m5::get_scope() const {
+  assert(d_yices2->get_scope() == d_mathsat5->get_scope());
+  return d_yices2->get_scope();
+}
 
 void y2m5::generalize(generalization_type type, std::vector<expr::term_ref>& out) {
   TRACE("y2m5") << "y2m5[" << s_instance << "]: generalizing" << std::endl;

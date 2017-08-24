@@ -96,6 +96,9 @@ class generic_solver_internal {
   /** The options */
   const options& d_options;
 
+  /** The scope */
+  int d_scope;
+
 public:
 
   /**
@@ -110,6 +113,7 @@ public:
   , d_copy_out(0)
   , d_solver_input(0)
   , d_options(opts)
+  , d_scope(0)
   {
     // The solver to run
     if (!d_options.has_option("generic-solver-script")) {
@@ -246,6 +250,7 @@ public:
   }
 
   void push() {
+    d_scope ++;
     // Push the solver
     *d_solver_input << "(push 1)" << std::endl;
     // Remember the declared variables
@@ -253,6 +258,7 @@ public:
   }
 
   void pop() {
+    d_scope --;
     // Pop the solver
     *d_solver_input << "(pop 1)" << std::endl;
     // Forget all the variables declared since last push
@@ -266,6 +272,10 @@ public:
       d_vars_list.pop_back();
       d_vars_set.erase(var);
     }
+  }
+
+  int get_scope() const {
+    return d_scope;
   }
 
   void gc_collect(const expr::gc_relocator& gc_reloc) {
@@ -301,6 +311,10 @@ void generic_solver::push() {
 
 void generic_solver::pop() {
   d_internal->pop();
+}
+
+int generic_solver::get_scope() const {
+  return d_internal->get_scope();
 }
 
 void generic_solver::gc_collect(const expr::gc_relocator& gc_reloc) {
