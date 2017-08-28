@@ -33,8 +33,13 @@ namespace smt {
  */
 class external_interpolator {
 
+  enum interpolation_type {
+    INT_STANDARD,
+    INT_CONFLICT_RESOLUTION
+  };
+
   /** Whether to use the standard interplant */
-  bool d_use_standard_interpolant;
+  interpolation_type d_interpolation_type;
 
   /** Instance of the internal mathsat */
   size_t d_instance;
@@ -69,13 +74,20 @@ class external_interpolator {
   /** Hypothesis equality */
   msat_term process_la_hyp_eq(msat_proof p);
 
+  /** Print the proof (debug) */
+  void print(std::ostream& out, msat_proof p, std::string indent) const;
+
+  /** Which proof rules we can handle */
+  static
+  bool can_handle(msat_proof p);
+
 public:
 
   /**
    * Construct. If use_standard_interpolant = true, it will interpolate against
    * the standard interpolant, otherwise against all of B.
    */
-  external_interpolator(size_t instance, msat_env env, bool use_standard_interpolant);
+  external_interpolator(size_t instance, msat_env env, std::string interpolation_type);
 
   /** Compute the interpolant */
   msat_term compute(msat_term *a, msat_term *b, msat_proof p);

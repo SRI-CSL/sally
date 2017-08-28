@@ -22,6 +22,7 @@
 #include "conflict_resolution.h"
 
 #include "utils/trace.h"
+#include "utils/exception.h"
 
 #include <cassert>
 #include <string>
@@ -30,8 +31,8 @@
 namespace sally {
 namespace smt {
 
-external_interpolator::external_interpolator(size_t instance, msat_env env, bool use_standard_interpolant)
-: d_use_standard_interpolant(use_standard_interpolant)
+external_interpolator::external_interpolator(size_t instance, msat_env env, std::string interpolation_type)
+: d_interpolation_type(INT_STANDARD)
 , d_instance(instance)
 , d_env(env)
 , d_result_is_strict_inquality(false)
@@ -39,6 +40,32 @@ external_interpolator::external_interpolator(size_t instance, msat_env env, bool
   d_zero = msat_make_number(env, "0");
   d_one = msat_make_number(env, "1");
   d_none = msat_make_number(env, "-1");
+
+  if (interpolation_type == "standard") {
+    d_interpolation_type = INT_STANDARD;
+  } else if (interpolation_type == "conflict-resolution") {
+    d_interpolation_type = INT_CONFLICT_RESOLUTION;
+  } else {
+    throw exception("Unknown intepolation type");
+  }
+}
+
+void external_interpolator::print(std::ostream& out, msat_proof p, std::string indent) const {
+  out << indent;
+  if (msat_proof_is_term(p)) {
+    out << msat_proof_get_term(p);
+  } else {
+    out << "(" << msat_proof_get_name(p) << std::endl;
+    for (size_t i = 0; i < msat_proof_get_arity(p); ++i) {
+      print(out, msat_proof_get_child(p, i), indent + "  ");
+      out << std::endl;
+    }
+    out << indent;
+    out << ")";
+  }
+  if (indent == "") {
+    out << std::endl;
+  }
 }
 
 msat_term external_interpolator::compute(msat_term *a, msat_term *b, msat_proof p) {
@@ -47,25 +74,28 @@ msat_term external_interpolator::compute(msat_term *a, msat_term *b, msat_proof 
 
   size_t i;
 
-  msat_term standard_interpolant;
-  MSAT_MAKE_ERROR_TERM(standard_interpolant);
+  msat_term result;
+  MSAT_MAKE_ERROR_TERM(result);
 
   if (output::trace_tag_is_enabled("mathsat5::extitp")) {
+    std::ostream& trace = output::get_trace_stream();
     for (i = 0; !MSAT_ERROR_TERM(a[i]); ++ i) {
       msat_term l = a[i];
       char* str = msat_term_repr(l);
-      TRACE("mathsat5::extitp") << "mathsat5[" << d_instance << "]: a[" << i << "]:" << str << std::endl;
+      trace << "mathsat5[" << d_instance << "]: a[" << i << "]:" << str << std::endl;
       msat_free(str);
     }
     for (i = 0; !MSAT_ERROR_TERM(b[i]); ++ i) {
       msat_term l = b[i];
       char* str = msat_term_repr(l);
-      TRACE("mathsat5::extitp") << "mathsat5[" << d_instance << "]: b[" << i << "]:" << str << std::endl;
+      trace << "mathsat5[" << d_instance << "]: b[" << i << "]:" << str << std::endl;
       msat_free(str);
     }
+    print(trace, p, "");
   }
 
-  if (d_use_standard_interpolant) {
+  switch (d_interpolation_type) {
+  case INT_STANDARD: {
     // Remember the A part
     d_A_atoms.clear();
     for (i = 0; !MSAT_ERROR_TERM(a[i]); ++ i) {
@@ -73,7 +103,6 @@ msat_term external_interpolator::compute(msat_term *a, msat_term *b, msat_proof 
       if (msat_term_is_not(d_env, l)) {l = msat_term_get_arg(l, 0);}
       d_A_atoms.insert(l);
     }
-
     // Compute the standard interpolant
     d_result_is_strict_inquality = false;
     msat_term interpolant_term = process(p);
@@ -81,34 +110,54 @@ msat_term external_interpolator::compute(msat_term *a, msat_term *b, msat_proof 
       return interpolant_term;
     }
     if (d_result_is_strict_inquality) {
-      standard_interpolant = msat_make_not(d_env, msat_make_leq(d_env, d_zero, interpolant_term));
+      result = msat_make_not(d_env, msat_make_leq(d_env, d_zero, interpolant_term));
     } else {
-      standard_interpolant = msat_make_leq(d_env, interpolant_term, d_zero);
+      result = msat_make_leq(d_env, interpolant_term, d_zero);
     }
 
     if (output::trace_tag_is_enabled("mathsat5::extitp")) {
-      char* str = msat_term_repr(standard_interpolant);
+      char* str = msat_term_repr(result);
       TRACE("mathsat5::extitp") << "mathsat5[" << d_instance << "]: standard interpolant: " << str << std::endl;
       msat_free(str);
     }
+    break;
   }
-
-  // Do conflict resolution
-  conflict_resolution cr(d_env);
-  msat_term final_interpolant = d_use_standard_interpolant ?
-      cr.interpolate(a, msat_make_not(d_env, standard_interpolant)) :
-      cr.interpolate(a, b);
-  if (MSAT_ERROR_TERM(final_interpolant)) {
-    final_interpolant = standard_interpolant;
+  case INT_CONFLICT_RESOLUTION: {
+    // Do conflict resolution
+    if (can_handle(p)) {
+      conflict_resolution cr(d_env);
+      result = cr.interpolate(a, b);
+    }
+    break;
+  }
+  default:
+    assert(false);
   }
 
   if (output::trace_tag_is_enabled("mathsat5::extitp")) {
-    char* str = msat_term_repr(final_interpolant);
-    TRACE("mathsat5::extitp") << "mathsat5[" << d_instance << "]: final interpolant: " << str << std::endl;
-    msat_free(str);
+    if (!MSAT_ERROR_TERM(result)) {
+      char* str = msat_term_repr(result);
+      TRACE("mathsat5::extitp") << "mathsat5[" << d_instance << "]: final interpolant: " << str << std::endl;
+      msat_free(str);
+    } else {
+      TRACE("mathsat5::extitp") << "mathsat5[" << d_instance << "]: can't handle" << std::endl;
+    }
   }
 
-  return final_interpolant;
+  return result;
+}
+
+bool external_interpolator::can_handle(msat_proof p) {
+  std::string name = msat_proof_get_name(p);
+  if (name == "la-comb") {
+     return true;
+   } else if (name == "la-hyp") {
+     return true;
+   } else if (name == "la-hyp-eq") {
+     return true;
+   } else {
+     return false;
+   }
 }
 
 msat_term external_interpolator::process(msat_proof p) {

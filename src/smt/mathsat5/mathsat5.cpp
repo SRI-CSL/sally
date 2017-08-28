@@ -261,9 +261,11 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
     throw exception("Error in MathSAT5 initialization");
   }
 
-  if (opts.get_bool("mathsat5-cr")) {
+  std::string interpolation_type = opts.get_string("mathsat5-interpolation");
+
+  if (interpolation_type != "standard") {
     // Make the inerpolator
-    d_cr_interpolator = new external_interpolator(instance(), d_env, false);
+    d_cr_interpolator = new external_interpolator(instance(), d_env, interpolation_type);
     msat_set_external_theory_interpolator(d_env, run_external_interpolator, d_cr_interpolator);
   } else {
     // No interpolator needed
