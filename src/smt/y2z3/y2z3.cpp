@@ -166,6 +166,10 @@ void y2z3::gc_collect(const expr::gc_relocator& gc_reloc) {
   solver::gc_collect(gc_reloc);
 }
 
+void y2z3::get_assertions(std::vector<expr::term_ref>& out) const {
+  d_yices2->get_assertions(out);
+}
+
 }
 }
 

@@ -45,6 +45,8 @@ external_interpolator::external_interpolator(size_t instance, msat_env env, std:
     d_interpolation_type = INT_STANDARD;
   } else if (interpolation_type == "conflict-resolution") {
     d_interpolation_type = INT_CONFLICT_RESOLUTION;
+  } else if (interpolation_type == "conflict-resolution-ai") {
+    d_interpolation_type = INT_CONFLICT_RESOLUTION_AI;
   } else {
     throw exception("Unknown intepolation type");
   }
@@ -122,11 +124,20 @@ msat_term external_interpolator::compute(msat_term *a, msat_term *b, msat_proof 
     }
     break;
   }
+  case INT_CONFLICT_RESOLUTION_AI:
   case INT_CONFLICT_RESOLUTION: {
     // Do conflict resolution
     if (can_handle(p)) {
       conflict_resolution cr(d_env);
+      if (d_interpolation_type == INT_CONFLICT_RESOLUTION_AI) {
+        cr.set_var_to_var_map(&d_variables_AB);
+      }
       result = cr.interpolate(a, b);
+    } else {
+      if (output::trace_tag_is_enabled("mathsat5::extitp::unhandled")) {
+        std::ostream& trace = output::get_trace_stream();
+        print(trace, p, "");
+      }
     }
     break;
   }
@@ -293,6 +304,11 @@ msat_term external_interpolator::process_la_hyp_eq(msat_proof p) {
   }
 
   return result;
+}
+
+void external_interpolator::add_var_pair(msat_term x, msat_term x_next) {
+  assert(d_variables_AB.find(x) == d_variables_AB.end());
+  d_variables_AB[x] = x_next;
 }
 
 }

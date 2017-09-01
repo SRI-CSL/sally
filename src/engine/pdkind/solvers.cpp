@@ -117,8 +117,7 @@ void solvers::init_reachability_solver(size_t k) {
     while (d_reachability_solvers.size() <= k) {
       smt::solver* solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options(), d_ctx.get_statistics());
       d_reachability_solvers.push_back(solver);
-      solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
-      solver->add_variables(x_next.begin(), x_next.end(), smt::solver::CLASS_B);
+      solver->add_variables(x, x_next);
       solver->add_variables(input.begin(), input.end(), smt::solver::CLASS_T);
       // Add transition relation
       solver->add(d_transition_system->get_transition_relation(), smt::solver::CLASS_T);
@@ -192,6 +191,9 @@ void solvers::gc() {
   }
   if (d_reachability_solver) {
     d_reachability_solver->gc();
+  }
+  if (d_minimization_solver) {
+    d_minimization_solver->gc();
   }
 }
 
@@ -470,6 +472,11 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
 
   TRACE("pdkind") << "learning forward to refute: " << G << std::endl;
 
+  static int count = 0;
+  count ++;
+
+  bool print_smt2 = false;
+
   expr::term_ref I_I; // Interpolant from initial states
   expr::term_ref T_I; // Interpolant from precious states
 
@@ -479,6 +486,21 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
   // Get the interpolant I2 for I => I2, I2 and G unsat
   if (!I_solver->supports(smt::solver::INTERPOLATION)) {
     return d_tm.mk_term(expr::TERM_NOT, G);
+  }
+
+  if (print_smt2 && I_solver) {
+    std::stringstream ss;
+    ss << "interpolant_" << count << ".I_G.smt2";
+    std::ofstream out(ss.str().c_str());
+    // I && !G should be unsat
+    I_solver->to_smt2(out, G, false, "QF_LRA");
+  }
+  if (print_smt2 && T_solver) {
+    std::stringstream ss;
+    ss << "interpolant_" << count << ".T_G.smt2";
+    std::ofstream out(ss.str().c_str());
+    // T && !G should be unsat
+    T_solver->to_smt2(out, G, false, "QF_LRA");
   }
 
   // Minimize G
@@ -499,9 +521,17 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
   I_I = I_solver->interpolate();
   I_solver->pop();
 
+  if (print_smt2 && I_solver) {
+    std::stringstream ss;
+    ss << "interpolant_" << count << ".I_I_I.smt2";
+    std::ofstream out(ss.str().c_str());
+    // I && !I_I should be unsat
+    I_solver->to_smt2(out, I_I, true, "QF_LRA");
+  }
+
   TRACE("pdkind") << "I_I: " << I_I << std::endl;
 
-  if (k > 0) {
+  if (T_solver) {
     // Get the interpolant T_I for: (R_{k-1} and T => T_I, T_I and G unsat
     T_solver->push();
     expr::term_ref G_next = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, G);
@@ -512,6 +542,14 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
     T_I = T_solver->interpolate();
     T_I = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_NEXT, system::state_type::STATE_CURRENT, T_I);
     T_solver->pop();
+
+    if (print_smt2 && T_solver) {
+      std::stringstream ss;
+      ss << "interpolant_" << count << ".T_T_I.smt2";
+      std::ofstream out(ss.str().c_str());
+      // T && !T_I should be unsat
+      T_solver->to_smt2(out, T_I, true, "QF_LRA");
+    }
 
     TRACE("pdkind") << "T_I: " << T_I << std::endl;
   }
@@ -539,6 +577,23 @@ expr::term_ref solvers::learn_forward(size_t k, expr::term_ref G) {
   }
 
   TRACE("pdkind") << "learned: " << learnt << std::endl;
+
+  if (print_smt2 && I_solver) {
+    std::stringstream ss;
+    ss << "interpolant_" << count << ".I_learnt.smt2";
+    std::ofstream out(ss.str().c_str());
+    std::vector<expr::term_ref> assertions;
+    // I && !result should be unsat
+    I_solver->to_smt2(out, learnt, true, "QF_LRA");
+  }
+  if (print_smt2 && T_solver) {
+    std::stringstream ss;
+    ss << "interpolant_" << count << ".T_learnt.smt2";
+    std::ofstream out(ss.str().c_str());
+    // T && !result' should be unsat
+    expr::term_ref learnt_next = d_transition_system->get_state_type()->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, learnt);
+    T_solver->to_smt2(out, learnt_next, true, "QF_LRA");
+  }
 
   return learnt;
 }

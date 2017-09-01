@@ -274,6 +274,10 @@ public:
     }
   }
 
+  void get_assertions(std::vector<expr::term_ref>& out) const {
+
+  }
+
   int get_scope() const {
     return d_scope;
   }

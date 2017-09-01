@@ -71,6 +71,8 @@ public:
   void interpolate(std::vector<expr::term_ref>& out);
   void get_unsat_core(std::vector<expr::term_ref>& out);
   void add_variable(expr::term_ref var, variable_class f_class);
+  void add_variable(expr::term_ref var_A, expr::term_ref var_B);
+  void get_assertions(std::vector<expr::term_ref>& out) const;
   void gc_collect(const expr::gc_relocator& gc_reloc);
 };
 

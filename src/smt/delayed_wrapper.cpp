@@ -114,10 +114,19 @@ void delayed_wrapper::add_variable(expr::term_ref var, variable_class f_class) {
   d_solver->add_variable(var, f_class);
 }
 
+void delayed_wrapper::add_variable(expr::term_ref var_A, expr::term_ref var_B) {
+  d_solver->add_variable(var_A, var_B);
+}
+
 void delayed_wrapper::gc_collect(const expr::gc_relocator& gc_reloc) {
   solver::gc_collect(gc_reloc);
 }
 
+void delayed_wrapper::get_assertions(std::vector<expr::term_ref>& out) const {
+  for (size_t i = 0; i < d_assertions.size(); ++ i) {
+    out.push_back(d_assertions[i].f);
+  }
+}
 
 }
 }

@@ -24,10 +24,17 @@
 #include "conflict_resolution.h"
 #include "utils/trace.h"
 
+#include <ap_global0.h>
+#include <ap_global1.h>
+#include <pk.h>
+#include <pkeq.h>
+
+#include <gmp.h>
+
 namespace sally {
 namespace smt {
 
-std::ostream& operator << (std::ostream& out, const conflict_resolution::constraint& C) {
+std::ostream& operator << (std::ostream& out, const constraint& C) {
   C.to_stream(out);
   return out;
 }
@@ -37,13 +44,14 @@ std::ostream& operator << (std::ostream& out, const conflict_resolution::variabl
   return out;
 }
 
-std::ostream& operator << (std::ostream& out, const conflict_resolution::linear_term& info) {
+std::ostream& operator << (std::ostream& out, const linear_term& info) {
   info.to_stream(out);
   return out;
 }
 
 conflict_resolution::conflict_resolution(msat_env env)
 : d_env(env)
+, d_variable_AB_map(0)
 {
 }
 
@@ -60,6 +68,14 @@ void conflict_resolution::bound_info::clear() {
   d_constraint = constraint_null;
 }
 
+variable_class conflict_resolution::get_variable_class(variable_id x) const {
+  return d_variable_info[x].get_class();
+}
+
+msat_term conflict_resolution::get_msat_term(variable_id x) const {
+  return d_variable_info[x].get_msat_term();
+}
+
 bool conflict_resolution::bound_info::is_infinity() const {
   return d_is_infinity;
 }
@@ -73,7 +89,7 @@ const expr::rational conflict_resolution::bound_info::get_bound() const {
   return d_bound;
 }
 
-conflict_resolution::constraint_id conflict_resolution::bound_info::get_constraint() const {
+constraint_id conflict_resolution::bound_info::get_constraint() const {
   assert(!d_is_infinity);
   return d_constraint;
 }
@@ -122,7 +138,7 @@ void conflict_resolution::variable_info::add_class(variable_class var_class) {
   }
 }
 
-conflict_resolution::variable_class conflict_resolution::variable_info::get_class() const {
+variable_class conflict_resolution::variable_info::get_class() const {
   return d_class;
 }
 
@@ -134,11 +150,11 @@ const expr::rational conflict_resolution::variable_info::get_value() const {
   return d_value;
 }
 
-conflict_resolution::constraint_id conflict_resolution::variable_info::get_lb_constraint() const {
+constraint_id conflict_resolution::variable_info::get_lb_constraint() const {
   return d_lb.get_constraint();
 }
 
-conflict_resolution::constraint_id conflict_resolution::variable_info::get_ub_constraint() const {
+constraint_id conflict_resolution::variable_info::get_ub_constraint() const {
   return d_ub.get_constraint();
 }
 
@@ -231,13 +247,13 @@ void conflict_resolution::variable_info::to_stream(std::ostream& out) const {
   out << "]";
 }
 
-conflict_resolution::constraint::constraint()
+constraint::constraint()
 : d_source(CONSTRAINT_A)
 , d_op(CONSTRAINT_EQ)
 {
 }
 
-conflict_resolution::constraint::constraint(const linear_term& t, constraint_op type, constraint_source source)
+constraint::constraint(const linear_term& t, constraint_op type, constraint_source source)
 : d_source(source)
 , d_op(type)
 , d_b(t.get_constant())
@@ -251,7 +267,7 @@ conflict_resolution::constraint::constraint(const linear_term& t, constraint_op 
   }
 }
 
-conflict_resolution::constraint::constraint(const linear_term& t, constraint_op type, constraint_source source, const monomial_cmp& cmp)
+constraint::constraint(const linear_term& t, constraint_op type, constraint_source source, const monomial_cmp& cmp)
 : d_source(source)
 , d_op(type)
 , d_b(t.get_constant())
@@ -269,14 +285,14 @@ conflict_resolution::constraint::constraint(const linear_term& t, constraint_op 
   }
 }
 
-void conflict_resolution::constraint::setup_top_variable(const monomial_cmp& cmp) {
+void constraint::setup_top_variable(const monomial_cmp& cmp) {
   if (d_ax.size() > 0) {
     std::vector<monomial>::iterator max_it = std::max_element(d_ax.begin(), d_ax.end(), cmp);
     std::iter_swap(d_ax.begin(), max_it);
   }
 }
 
-conflict_resolution::linear_term::linear_term(const constraint& C)
+linear_term::linear_term(const constraint& C)
 : d_b(C.get_constant())
 {
   const monomial_list monomials = C.get_monomials();
@@ -287,7 +303,7 @@ conflict_resolution::linear_term::linear_term(const constraint& C)
   }
 }
 
-void conflict_resolution::linear_term::add(const expr::rational& a, const linear_term& t) {
+void linear_term::add(const expr::rational& a, const linear_term& t) {
   assert(this != &t);
   d_b += a*t.d_b;
   var_to_rational_map::const_iterator t_it = t.d_ax.begin();
@@ -296,23 +312,23 @@ void conflict_resolution::linear_term::add(const expr::rational& a, const linear
   }
 }
 
-void conflict_resolution::linear_term::add(const expr::rational& a, variable_id x) {
+void linear_term::add(const expr::rational& a, variable_id x) {
   d_ax[x] += a;
 }
 
-void conflict_resolution::linear_term::add(const expr::rational& a) {
+void linear_term::add(const expr::rational& a) {
   d_b += a;
 }
 
-const conflict_resolution::var_to_rational_map& conflict_resolution::linear_term::get_monomials() const {
+const var_to_rational_map& linear_term::get_monomials() const {
   return d_ax;
 }
 
-const expr::rational& conflict_resolution::linear_term::get_constant() const {
+const expr::rational& linear_term::get_constant() const {
   return d_b;
 }
 
-void conflict_resolution::linear_term::to_stream(std::ostream& out) const {
+void linear_term::to_stream(std::ostream& out) const {
   var_to_rational_map::const_iterator it = d_ax.begin();
   for (; it != d_ax.end(); ++ it) {
     out << it->second << "*" << "x" << it->first << " + ";
@@ -320,7 +336,7 @@ void conflict_resolution::linear_term::to_stream(std::ostream& out) const {
   out << d_b;
 }
 
-void conflict_resolution::constraint::negate() {
+void constraint::negate() {
   // !(t < 0) = (t >= 0) = (-t <= 0)
   // !(t <= 0) = (t > 0) = (-t < 0)
   // We don't negate equalities
@@ -347,44 +363,44 @@ void conflict_resolution::constraint::negate() {
   }
 }
 
-size_t conflict_resolution::constraint::size() const {
+size_t constraint::size() const {
   return d_ax.size();
 }
 
-conflict_resolution::constraint_source conflict_resolution::constraint::get_source() const {
+constraint_source constraint::get_source() const {
   return d_source;
 }
 
-conflict_resolution::variable_id conflict_resolution::constraint::get_top_variable() const {
+variable_id constraint::get_top_variable() const {
   assert(d_ax.size() > 0);
   return d_ax[0].x;
 }
 
-const expr::rational& conflict_resolution::constraint::get_top_coefficient() const {
+const expr::rational& constraint::get_top_coefficient() const {
   assert(d_ax.size() > 0);
   return d_ax[0].a;
 }
 
-const conflict_resolution::monomial_list& conflict_resolution::constraint::get_monomials() const {
+const monomial_list& constraint::get_monomials() const {
   return d_ax;
 }
 
-const expr::rational& conflict_resolution::constraint::get_constant() const {
+const expr::rational& constraint::get_constant() const {
   return d_b;
 }
 
-void conflict_resolution::constraint::swap(constraint& C) {
+void constraint::swap(constraint& C) {
   std::swap(d_source, C.d_source);
   std::swap(d_op, C.d_op);
   std::swap(d_b, C.d_b);
   d_ax.swap(C.d_ax);
 }
 
-conflict_resolution::constraint_op conflict_resolution::constraint::get_op() const {
+constraint_op constraint::get_op() const {
   return d_op;
 }
 
-void conflict_resolution::constraint::to_stream(std::ostream& out) const {
+void constraint::to_stream(std::ostream& out) const {
   out << "(";
   for (size_t i = 0; i < d_ax.size(); ++ i) {
     if (i) out << " + ";
@@ -421,7 +437,7 @@ void conflict_resolution::constraint::to_stream(std::ostream& out) const {
   out << ")";
 }
 
-conflict_resolution::variable_id conflict_resolution::add_variable(msat_term t, variable_class var_class) {
+variable_id conflict_resolution::add_variable(msat_term t, variable_class var_class) {
 
   // Check if the variable is already there
   term_to_variable_id_map::const_iterator find = d_term_to_variable_id_map.find(t);
@@ -442,9 +458,18 @@ conflict_resolution::variable_id conflict_resolution::add_variable(msat_term t, 
   return t_id;
 }
 
+variable_id conflict_resolution::get_variable(msat_term t) const {
+  term_to_variable_id_map::const_iterator find = d_term_to_variable_id_map.find(t);
+  if (find != d_term_to_variable_id_map.end()) {
+    return find->second;
+  } else {
+    return variable_null;
+  }
+}
+
 void conflict_resolution::add_to_watchlist(constraint_id C_id) {
   const constraint& C = d_constraints[C_id];
-  if (C.get_source() == CONSTRAINT_A) {
+  if (C.get_source() == CONSTRAINT_B) {
     d_top_var_to_constraint[C.get_top_variable()].push_front(C_id);
   } else {
     d_top_var_to_constraint[C.get_top_variable()].push_back(C_id);
@@ -455,7 +480,7 @@ const conflict_resolution::constraint_list& conflict_resolution::get_watchlist(v
   return d_top_var_to_constraint[x];
 }
 
-conflict_resolution::constraint_id conflict_resolution::add_constraint(msat_term t, constraint_source source) {
+constraint_id conflict_resolution::add_constraint(msat_term t, constraint_source source) {
 
   // Check if the constraint is already there
   term_to_constraint_id_map::const_iterator find = d_term_to_constraint_id_map.find(t);
@@ -498,7 +523,7 @@ conflict_resolution::constraint_id conflict_resolution::add_constraint(msat_term
   return t_id;
 }
 
-void conflict_resolution::add_to_linear_term(linear_term& term, const expr::rational& a, msat_term t, conflict_resolution::constraint_source source) {
+void conflict_resolution::add_to_linear_term(linear_term& term, const expr::rational& a, msat_term t, constraint_source source) {
 
   if (msat_term_is_constant(d_env, t) || msat_term_is_term_ite(d_env, t)) {
     // Variables
@@ -548,11 +573,11 @@ void conflict_resolution::add_to_linear_term(linear_term& term, const expr::rati
   }
 }
 
-bool conflict_resolution::variable_cmp::operator () (variable_id x, variable_id y) const {
+bool variable_cmp::operator () (variable_id x, variable_id y) const {
 
   // Sort the variables so that B < A, otherwise by mathsat id
-  variable_class x_class = cr.d_variable_info[x].get_class();
-  variable_class y_class = cr.d_variable_info[y].get_class();
+  variable_class x_class = cr.get_variable_class(x);
+  variable_class y_class = cr.get_variable_class(y);
 
   // If different classes, then sort as B < A (as in enum)
   if (x_class != y_class) {
@@ -560,16 +585,16 @@ bool conflict_resolution::variable_cmp::operator () (variable_id x, variable_id 
   }
 
   // Same class, sort by mathsat id
-  msat_term x_term = cr.d_variable_info[x].get_msat_term();
-  msat_term y_term = cr.d_variable_info[y].get_msat_term();
+  msat_term x_term = cr.get_msat_term(x);
+  msat_term y_term = cr.get_msat_term(y);
   return msat_term_id(x_term) < msat_term_id(y_term);
 }
 
-bool conflict_resolution::monomial_cmp::operator () (const monomial& ax, const monomial& by) const {
+bool monomial_cmp::operator () (const monomial& ax, const monomial& by) const {
 
   // Sort the variables so that B < A, otherwise by mathsat id
-  variable_class x_class = cr.d_variable_info[ax.x].get_class();
-  variable_class y_class = cr.d_variable_info[by.x].get_class();
+  variable_class x_class = cr.get_variable_class(ax.x);
+  variable_class y_class = cr.get_variable_class(by.x);
 
   // If different classes, then sort as B < A (as in enum)
   if (x_class != y_class) {
@@ -577,8 +602,8 @@ bool conflict_resolution::monomial_cmp::operator () (const monomial& ax, const m
   }
 
   // Same class, sort by mathsat id
-  msat_term x_term = cr.d_variable_info[ax.x].get_msat_term();
-  msat_term y_term = cr.d_variable_info[by.x].get_msat_term();
+  msat_term x_term = cr.get_msat_term(ax.x);
+  msat_term y_term = cr.get_msat_term(by.x);
   size_t x_term_id = msat_term_id(x_term);
   size_t y_term_id = msat_term_id(y_term);
   if (x_term_id != y_term_id) {
@@ -648,6 +673,14 @@ msat_term conflict_resolution::interpolate(msat_term* a, msat_term* b) {
     return msat_make_false(d_env);
   }
 
+  // If we have some releationship between variables, run apron
+  if (d_variable_AB_map && d_variable_AB_map->size()) {
+    size_t old_size = d_constraints.size();
+    learn_with_apron();
+    for (constraint_id c_id = old_size; c_id < d_constraints.size(); ++ c_id) {
+      A_constraints.insert(c_id);
+    }
+  }
 
   // B: Order the variables B -> AB -> A
   variable_cmp var_cmp(*this);
@@ -700,7 +733,7 @@ msat_term conflict_resolution::interpolate(msat_term* a, msat_term* b) {
     // All the constraints where x is the top variable
     const constraint_list& x_constraints = get_watchlist(x);
     constraint_list::const_iterator it = x_constraints.begin();
-    for (; it != x_constraints.end(); ++ it) {
+    for (; ok && it != x_constraints.end(); ++ it) {
       // Propagate new bound if implied by this constraint  
       constraint_id C_id = *it;
       assert(d_constraints[C_id].get_top_variable() == x);
@@ -981,6 +1014,308 @@ bool conflict_resolution::evaluate(const constraint& C) const {
     assert(false);
     return true;
   }
+}
+
+void conflict_resolution::set_var_to_var_map(const term_to_term_map* x_to_x_next) {
+  d_variable_AB_map = x_to_x_next;
+}
+
+class apron_helper {
+
+  ap_manager_t* d_man;
+  
+  ap_coeff_t d_coeff_tmp;
+  mpq_t d_mpq_coeff_tmp;
+
+  std::vector<char*> d_var_names;
+
+  ap_environment_t* d_env;
+
+  // Get the Apron version of the constraint type */
+  static
+  ap_constyp_t op_to_constyp(constraint_op op);
+
+  // Get the constraint op from Apron constraint type */
+  static
+  constraint_op constyp_to_op(ap_constyp_t type);
+  
+public:
+
+  apron_helper(size_t n_variables);
+  ~apron_helper();
+    
+  // Get the manager
+  ap_manager_t* man() { return d_man; }
+
+  // Construct Apron linear constraint from given constraint 
+  ap_lincons1_t make(const constraint& C);
+
+  // Construct an Apron abstraction from vector of constraints 
+  ap_abstract1_t make(std::vector<ap_lincons1_t>& constraints);
+
+  // Project out all variables except given 
+  ap_abstract1_t eliminate_except(ap_abstract1_t constraints, const std::vector<size_t>& keep_variables);
+  
+  // Rename from given variables to the 
+  ap_abstract1_t rename(ap_abstract1_t constraints,
+    const std::vector<size_t>& from, 
+    const std::vector<size_t>& to);
+
+  // Join
+  ap_abstract1_t join(ap_abstract1_t c1, ap_abstract1_t c2);
+
+  // Add to constraints
+  void to_constraints(ap_abstract1_t a, std::vector<constraint>& out);
+};
+
+apron_helper::apron_helper(size_t n_variables)
+: d_man(0) 
+{
+  d_man = pk_manager_alloc(true);
+  ap_coeff_init(&d_coeff_tmp, AP_COEFF_SCALAR);
+  mpq_init(d_mpq_coeff_tmp); 
+  for (size_t i = 0; i < n_variables; ++ i) {
+    std::stringstream ss;
+    ss << "x" << i;
+    d_var_names.push_back(strdup(ss.str().c_str()));
+  }
+  d_env = ap_environment_alloc(0, 0, (ap_var_t*) &d_var_names[0], n_variables);
+}
+
+apron_helper::~apron_helper() {
+  for (size_t i = 0; i < d_var_names.size(); ++ i) {
+    free(d_var_names[i]);
+  }
+  ap_environment_free(d_env);
+  mpq_clear(d_mpq_coeff_tmp);
+  ap_coeff_clear(&d_coeff_tmp);
+  ap_manager_free(d_man);
+}
+
+ap_constyp_t apron_helper::op_to_constyp(constraint_op op)
+{
+  switch (op) {
+  case CONSTRAINT_LE:
+    return AP_CONS_SUPEQ;
+  case CONSTRAINT_LT:
+    return AP_CONS_SUP;
+  case CONSTRAINT_EQ:
+    return AP_CONS_EQ;
+  default:
+    assert(false);
+  }
+  return AP_CONS_EQ;
+}
+
+constraint_op apron_helper::constyp_to_op(ap_constyp_t type)
+{
+  switch (type) {
+  case AP_CONS_SUPEQ:
+    return CONSTRAINT_LE;
+  case AP_CONS_SUP:
+    return CONSTRAINT_LT;
+  case AP_CONS_EQ:
+    return CONSTRAINT_EQ;
+  default:
+    assert(false);
+  }
+  return CONSTRAINT_EQ;
+}
+
+
+ap_lincons1_t apron_helper::make(const constraint& C)
+{
+  ap_linexpr1_t expr = ap_linexpr1_make(d_env, AP_LINEXPR_SPARSE, C.size());
+  ap_constyp_t C_type = op_to_constyp(C.get_op());
+  ap_lincons1_t cstr = ap_lincons1_make(C_type, &expr, NULL);
+  const monomial_list& monomials = C.get_monomials();
+  for (monomial_list::const_iterator it = monomials.begin(); it != monomials.end(); ++ it) {
+    variable_id x = it->x;
+    mpq_set(d_mpq_coeff_tmp, it->a.mpq().get_mpq_t());
+    mpq_neg(d_mpq_coeff_tmp, d_mpq_coeff_tmp); // Negate, our OPs are opposite of Aprons
+    ap_coeff_set_scalar_mpq(&d_coeff_tmp, d_mpq_coeff_tmp);
+    ap_lincons1_set_coeff(&cstr, (ap_var_t) d_var_names[x], &d_coeff_tmp);
+  }
+  mpq_set(d_mpq_coeff_tmp, C.get_constant().mpq().get_mpq_t());
+  mpq_neg(d_mpq_coeff_tmp, d_mpq_coeff_tmp); // Negate, our OPs are opposite of Aprons
+  ap_coeff_set_scalar_mpq(&d_coeff_tmp, d_mpq_coeff_tmp);
+  ap_lincons1_set_cst(&cstr, &d_coeff_tmp);
+  if (output::trace_tag_is_enabled("mathsat5::apron")) {
+    fprintf(stderr, "C:"); ap_lincons1_fprint(stderr, &cstr); fprintf(stderr, "\n");
+  }
+  return cstr;
+}
+
+ap_abstract1_t apron_helper::make(std::vector<ap_lincons1_t>& constraints) 
+{
+  ap_lincons1_array_t array = ap_lincons1_array_make(d_env, constraints.size());
+  for (size_t i = 0; i < constraints.size(); ++ i) {
+    ap_lincons1_array_set(&array, i, &constraints[i]);
+  }
+  ap_abstract1_t result = ap_abstract1_of_lincons_array(d_man, d_env, &array);
+  if (output::trace_tag_is_enabled("mathsat5::apron")) {
+    fprintf(stderr, "Abs:\n");
+    ap_abstract1_fprint(stderr, d_man, &result);
+  }
+  ap_lincons1_array_clear(&array);
+
+  return result;
+}
+
+void apron_helper::to_constraints(ap_abstract1_t a, std::vector<constraint>& out) {
+  ap_lincons1_array_t c_array = ap_abstract1_to_lincons_array(d_man, &a);
+  size_t c_array_size = ap_lincons1_array_size(&c_array);  
+  for (size_t i = 0; i < c_array_size; ++ i) {
+    // Get the apron expressions
+    ap_lincons1_t c = ap_lincons1_array_get(&c_array, i);
+    ap_constyp_t* c_type = ap_lincons1_constypref(&c);
+
+    ap_linexpr1_t c_expr = ap_lincons1_linexpr1ref(&c);
+    // Allocate the new constraint
+    linear_term C_term;
+    // Get the constant 
+    ap_linexpr1_get_cst(&d_coeff_tmp, &c_expr);
+    ap_mpq_set_scalar(d_mpq_coeff_tmp, d_coeff_tmp.val.scalar, MPFR_RNDD); // There should be no rounding 
+    mpq_neg(d_mpq_coeff_tmp, d_mpq_coeff_tmp); // Negate, our OPs are opposite of Aprons
+    C_term.add(expr::rational(d_mpq_coeff_tmp));
+    // Add other terms 
+    {
+      ap_coeff_t* c_expr_pcoeff;
+      ap_var_t c_expr_var;
+      size_t i;
+      ap_linexpr1_ForeachLinterm1(&c_expr, i, c_expr_var, c_expr_pcoeff) {
+        ap_mpq_set_scalar(d_mpq_coeff_tmp, c_expr_pcoeff->val.scalar, MPFR_RNDD); // There should be no rounding
+        mpq_neg(d_mpq_coeff_tmp, d_mpq_coeff_tmp); // Negate, our OPs are opposite of Aprons
+        expr::rational a(d_mpq_coeff_tmp); 
+        variable_id x; // Variable we read from the string such as "x1"
+        sscanf(((char*)c_expr_var) + 1, "%zu", &x);
+        C_term.add(a, x);
+      }
+    }
+    // The constraint type 
+    constraint_op C_op = constyp_to_op(*c_type);
+    // Add the constraint
+    out.push_back(constraint(C_term, C_op, CONSTRAINT_A));
+  }
+  ap_lincons1_array_clear(&c_array);
+}
+
+ap_abstract1_t apron_helper::eliminate_except(ap_abstract1_t constraints, const std::vector<size_t>& keep)
+{
+  // Variables for Apron
+  std::vector<char*> keep_names;
+  for (size_t i = 0; i < keep.size(); ++ i) {
+    keep_names.push_back(d_var_names[keep[i]]);
+  }
+  // Make the environment
+  ap_environment_t* env = ap_environment_alloc(0, 0, (ap_var_t*) &keep_names[0], keep_names.size());
+  // Eliminate 
+  ap_abstract1_t result = ap_abstract1_change_environment(d_man, false, &constraints, env, false);
+
+  if (output::trace_tag_is_enabled("mathsat5::apron")) {
+    fprintf(stderr, "Elimination Abs:\n");
+    ap_abstract1_fprint(stderr, d_man, &result);
+  }
+
+  // Get rid of the environment
+  ap_environment_free(env);
+
+  return result;
+}
+
+ap_abstract1_t apron_helper::rename(ap_abstract1_t constraints,
+  const std::vector<size_t>& from, 
+  const std::vector<size_t>& to)
+{
+  assert(from.size() == to.size());
+  size_t n_vars = from.size();
+
+  // Variables for Apron
+  std::vector<char*> from_names, to_names;
+  for (size_t i = 0; i < n_vars; ++ i) {
+    from_names.push_back(d_var_names[from[i]]);
+  }
+  for (size_t i = 0; i < n_vars; ++ i) {
+    to_names.push_back(d_var_names[to[i]]);
+  }
+    
+  // Rename
+  ap_abstract1_t result = ap_abstract1_rename_array(d_man, false, &constraints, (ap_var_t*) &from_names[0], (ap_var_t*) &to_names[0], n_vars);
+  if (output::trace_tag_is_enabled("mathsat5::apron")) {
+    fprintf(stderr, "Renamed Abs:\n");
+    ap_abstract1_fprint(stderr, d_man, &result);
+  }
+
+  return result;
+}
+
+ap_abstract1_t apron_helper::join(ap_abstract1_t c1, ap_abstract1_t c2) {
+  ap_abstract1_t result = ap_abstract1_join(d_man, false, &c1, &c2);
+  if (output::trace_tag_is_enabled("mathsat5::apron")) {
+    fprintf(stderr, "Join Abs:\n");
+    ap_abstract1_fprint(stderr, d_man, &result);
+  }
+  return result;
+}
+
+void conflict_resolution::learn_with_apron() {
+
+  TRACE("mathsat5::apron") << "Learning with Apron." << std::endl;
+
+  assert(d_variable_AB_map);
+
+  // Separate the variables
+  // - A variables that we can rename -> state
+  // - A variables renamed -> next
+  // - Other variables -> to_remove 
+  std::vector<variable_id> state_variables, next_variables;
+  for (variable_id x = 0; x < d_variable_info.size(); ++ x) {
+    if (d_variable_info[x].get_class() == VARIABLE_A) {
+      msat_term x_term = d_variable_info[x].get_msat_term();
+      term_to_term_map::const_iterator x_find = d_variable_AB_map->find(x_term);
+      if (x_find != d_variable_AB_map->end()) {
+        state_variables.push_back(x);
+        variable_id x_next = add_variable(x_find->second, VARIABLE_B);
+        next_variables.push_back(x_next);
+      }
+    } 
+  }
+
+  size_t n_vars = d_variable_info.size();
+  apron_helper apron(n_vars);
+
+  // Apronize all A constraints
+  std::vector<ap_lincons1_t> A_constraints;
+  for (constraint_id C_id = 0; C_id < d_constraints.size(); ++ C_id) {
+    const constraint& C = d_constraints[C_id];
+    if (C.get_source() == CONSTRAINT_A) {
+      ap_lincons1_t cstr = apron.make(C);
+      A_constraints.push_back(cstr);
+    }
+  }
+
+  // All A constraints into an abstract domain element
+  ap_abstract1_t constraints = apron.make(A_constraints);
+
+  // Separate the constraints into state and next
+  ap_abstract1_t state = apron.eliminate_except(constraints, state_variables);
+  ap_abstract1_t next = apron.eliminate_except(constraints, next_variables);
+  
+  // Rename variables
+  ap_abstract1_t state_next = apron.rename(state, state_variables, next_variables);
+
+  // Join for the final result
+  ap_abstract1_t inv = apron.join(state_next, next);
+
+  // Add the constraints
+  apron.to_constraints(inv, d_constraints);
+
+  // Clear the abstract values
+  ap_abstract1_clear(apron.man(), &constraints);
+  ap_abstract1_clear(apron.man(), &state);
+  ap_abstract1_clear(apron.man(), &next);
+  ap_abstract1_clear(apron.man(), &state_next);
+  ap_abstract1_clear(apron.man(), &inv);
 }
 
 }

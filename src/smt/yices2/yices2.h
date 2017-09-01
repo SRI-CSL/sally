@@ -84,6 +84,9 @@ public:
    */
   void generalize(generalization_type type, expr::model::ref m, std::vector<expr::term_ref>& projection_out);
 
+  /** Get the current assertions */
+  void get_assertions(std::vector<expr::term_ref>& out) const;
+
   /** Term collection */
   void gc_collect(const expr::gc_relocator& gc_reloc);
 

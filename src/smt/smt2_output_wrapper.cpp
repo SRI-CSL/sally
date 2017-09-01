@@ -177,5 +177,11 @@ void smt2_output_wrapper::gc_collect(const expr::gc_relocator& gc_reloc) {
   }
 }
 
+void smt2_output_wrapper::get_assertions(std::vector<expr::term_ref>& out) const {
+  for (size_t i = 0; i < d_assertions.size(); ++ i) {
+    out.push_back(d_assertions[i].f);
+  }
+}
+
 }
 }

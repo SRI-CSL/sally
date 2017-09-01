@@ -76,6 +76,9 @@ public:
   /** Unsat core of the last UNSAT result */
   void get_unsat_core(std::vector<expr::term_ref>& out);
 
+  /** Get the current assertions */
+  void get_assertions(std::vector<expr::term_ref>& out) const;
+
   /** Collect terms */
   void gc_collect(const expr::gc_relocator& gc_reloc);
 

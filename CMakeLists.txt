@@ -45,6 +45,18 @@ else()
   message(FATAL_ERROR "Could not the GMP number library (sudo apt-get install libgmp-dev)")
 endif()
 
+# Find the GMP number library
+if (SALLY_STATIC_BUILD)
+  find_library(MPFR_LIBRARY libmpfr.a mpfr)
+else()
+  find_library(MPFR_LIBRARY mpfr)
+endif()
+if (MPFR_LIBRARY)
+  message(STATUS "MPFR library: " ${MPFR_LIBRARY})
+else()
+  message(FATAL_ERROR "Could not the MPFR number library (sudo apt-get install libmpfr-dev)")
+endif()
+
 # Find Yices
 SET(YICES2_HOME CACHE STRING "Yices2 installation directory")
 find_package(Yices2 2.3.0)
@@ -84,15 +96,33 @@ ExternalProject_Add(
 ExternalProject_Get_Property(libantlr3c-3.4 INSTALL_DIR)
 set(ANTLR3C_INCLUDE_DIR "${INSTALL_DIR}/include")
 set(ANTLR3C_LIBRARY_DIR "${INSTALL_DIR}/lib")
-set(ANTLR3C_LIBRARY "antlr3c")
 add_library(libantlr3c STATIC IMPORTED)
 set_property(TARGET libantlr3c PROPERTY IMPORTED_LOCATION ${ANTLR3C_LIBRARY_DIR}/libantlr3c.a)
 
 # The antl3 binary
 set(ANTLR "${sally_SOURCE_DIR}/antlr/antlr3")
 
+# Install apron 
+ExternalProject_Add(
+  apron
+  SVN_REPOSITORY svn://scm.gforge.inria.fr/svnroot/apron/apron/trunk
+  UPDATE_COMMAND ""
+  CONFIGURE_COMMAND <SOURCE_DIR>/configure -prefix <INSTALL_DIR> -no-cxx -no-ocaml -no-ppl -no-java
+  BUILD_IN_SOURCE 1
+)
+ExternalProject_Get_Property(apron INSTALL_DIR)
+set(APRON_INCLUDE_DIR "${INSTALL_DIR}/include")
+set(APRON_LIBRARY_DIR "${INSTALL_DIR}/lib")
+add_library(libapron STATIC IMPORTED)
+add_library(libapron_polkaMPQ STATIC IMPORTED)
+add_library(libapron_itv STATIC IMPORTED)
+set_property(TARGET libapron PROPERTY IMPORTED_LOCATION ${APRON_LIBRARY_DIR}/libapron.a)
+set_property(TARGET libapron_polkaMPQ PROPERTY IMPORTED_LOCATION ${APRON_LIBRARY_DIR}/libpolkaMPQ.a)
+set_property(TARGET libapron_itv PROPERTY IMPORTED_LOCATION ${APRON_LIBRARY_DIR}/libitv.a)
+set(APRON_LIBRARIES libapron_polkaMPQ libapron_itv libapron)
+
 # Add includes 
-include_directories(${sally_SOURCE_DIR}/src ${ANTLR3C_INCLUDE_DIR})
+include_directories(${sally_SOURCE_DIR}/src ${ANTLR3C_INCLUDE_DIR} ${APRON_INCLUDE_DIR})
 
 # Configure the subdirectories
 add_subdirectory(src)

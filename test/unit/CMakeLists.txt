@@ -35,7 +35,8 @@ endif()
 if (Z3_FOUND)
   target_link_libraries(sally_test ${Z3_LIBRARY})
 endif()
-target_link_libraries(sally_test ${GMP_LIBRARY})
+target_link_libraries(sally_test ${APRON_LIBRARIES})
+target_link_libraries(sally_test ${MPFR_LIBRARY} ${GMP_LIBRARY})
 
 # Add the test
 add_test(unit_tests sally_test -i)

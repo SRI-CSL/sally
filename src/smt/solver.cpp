@@ -79,6 +79,21 @@ void solver::add_variable(expr::term_ref var, variable_class f_class) {
   }
 }
 
+void solver::add_variable(expr::term_ref var_A, expr::term_ref var_B) {
+  add_variable(var_A, CLASS_A);
+  add_variable(var_B, CLASS_B);
+  assert(d_var_A_to_B.find(var_A) == d_var_A_to_B.end());
+  d_var_A_to_B[var_A] = var_B;
+  d_AB_variables.push_back(term_pair(var_A, var_B));
+}
+
+void solver::add_variables(const std::vector<expr::term_ref>& vars_A, const std::vector<expr::term_ref>& vars_B) {
+  assert(vars_A.size() == vars_B.size());
+  for (size_t i = 0; i < vars_A.size(); ++ i) {
+    add_variable(vars_A[i], vars_B[i]);
+  }
+}
+
 void solver::gc_collect(const expr::gc_relocator& gc_reloc) {
   gc_reloc.reloc(d_A_variables);
   gc_reloc.reloc(d_B_variables);
@@ -94,6 +109,57 @@ std::ostream& operator << (std::ostream& out, solver::formula_class fc) {
     assert(false);
   }
   return out;
+}
+
+void solver::print_assertions(std::ostream& out) const {
+  std::vector<expr::term_ref> assertions;
+  get_assertions(assertions);
+  for (size_t i = 0; i < assertions.size(); ++ i) {
+    out << "[" << i << "]: " << assertions[i] << std::endl;
+  }
+}
+
+void solver::to_smt2(std::ostream& out, expr::term_ref F, bool negated, std::string logic) const {
+
+  // Setup the output
+  output::set_output_language(out, output::MCMT);
+  output::set_term_manager(out, &d_tm);
+  out << "(set-logic " << logic << ")" << std::endl;
+
+  // Get the assertions
+  std::vector<expr::term_ref> assertions;
+  get_assertions(assertions);
+
+  // Get the variables
+  std::set<expr::term_ref> variables;
+  for (size_t i = 0; i < assertions.size(); ++ i) {
+    d_tm.get_variables(assertions[i], variables);
+  }
+  if (!F.is_null()) {
+    d_tm.get_variables(F, variables);
+  }
+
+  // Print the variable declarations
+  for (std::set<expr::term_ref>::const_iterator it = variables.begin(); it != variables.end(); it ++) {
+    out << "(declare-fun " << *it << " () " << d_tm.type_of(*it) << ")" << std::endl;
+  }
+
+  // Print the assertions
+  for (size_t i = 0; i < assertions.size(); ++ i) {
+    out << "(assert " << assertions[i] << ")" << std::endl;
+  }
+
+  // Print the formula
+  if (!F.is_null()) {
+    out << "(assert ";
+    if (negated) out << "(not ";
+    out << F;
+    if (negated) out << ")";
+    out << ")" << std::endl;
+  }
+
+  // Do a checksat
+  out << "(check-sat)";
 }
 
 }

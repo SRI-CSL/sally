@@ -37,7 +37,8 @@ struct mathsat5_info {
         ("mathsat5-unsat-cores", "Enable generation of unsat cores")
         ("mathsat5-generalize-trivial", "Trivial generalization by substitution")
         ("mathsat5-generalize-qe", "Generalize through quantifier elimination")
-        ("mathsat5-interpolation", value<std::string>()->default_value("default"), "Interpolant method to use (default, standard, cronflict-resolution")
+        ("mathsat5-interpolation", value<std::string>()->default_value("default"),
+            "Interpolant method to use (default, standard, cronflict-resolution, conflict-resolution-ai)")
         ;
   }
 

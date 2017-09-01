@@ -21,10 +21,13 @@
 #include "expr/term.h"
 #include "expr/model.h"
 #include "expr/gc_participant.h"
+#include "expr/term_map.h"
 #include "utils/exception.h"
 #include "utils/options.h"
 #include "utils/name_transformer.h"
 #include "utils/statistics.h"
+
+#include <iosfwd>
 
 namespace sally {
 namespace smt {
@@ -74,6 +77,12 @@ protected:
   /** All T variables */
   std::set<expr::term_ref> d_T_variables;
 
+  /** Map from A variables to B variables */
+  expr::term_ref_map<expr::term_ref> d_var_A_to_B;
+
+  typedef std::pair<expr::term_ref, expr::term_ref> term_pair;
+  std::vector<term_pair> d_AB_variables;
+
 public:
 
   /** Result of the check */
@@ -117,6 +126,13 @@ public:
       add_variable(*begin, f_class);
     }
   }
+
+  /** Add state and next variable at the same time */
+  virtual
+  void add_variable(expr::term_ref var_A, expr::term_ref var_B);
+
+  void
+  add_variables(const std::vector<expr::term_ref>& vars_A, const std::vector<expr::term_ref>& vars_B);
 
   /** Construct with the given term manager */
   solver(std::string name, expr::term_manager& tm, const options& opts, utils::statistics& stats)
@@ -266,6 +282,19 @@ public:
 
   /** Collect base terms */
   void gc_collect(const expr::gc_relocator& gc_reloc);
+
+  /** Get the current assertions */
+  virtual
+  void get_assertions(std::vector<expr::term_ref>& out) const {
+    throw exception("get_assertions() not supported by solver " + d_name);
+  }
+
+  /** Print the current assertions to the stream. */
+  void print_assertions(std::ostream& out) const;
+
+  /** Output solver assertions to SMT2, with an extra (negated or not) assertion F . */
+  void to_smt2(std::ostream& out, expr::term_ref F, bool negated, std::string logic) const;
+
 };
 
 

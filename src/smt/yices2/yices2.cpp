@@ -111,6 +111,11 @@ void yices2::gc_collect(const expr::gc_relocator& gc_reloc) {
   d_internal->gc_collect(gc_reloc);
 }
 
+void yices2::get_assertions(std::vector<expr::term_ref>& out) const {
+  d_internal->get_assertions(out);
+
+}
+
 }
 }
 

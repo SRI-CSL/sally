@@ -124,6 +124,9 @@ public:
   /** Get the assertions into the set */
   void get_assertions(std::set<expr::term_ref>& out) const;
 
+  /** Get the assertions into the vector */
+  void get_assertions(std::vector<expr::term_ref>& out) const;
+
   /** Check satisfiability */
   solver::result check();
 

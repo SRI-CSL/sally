@@ -77,6 +77,9 @@ public:
   /** Interpolate the last UNSAT result */
   void interpolate(std::vector<expr::term_ref>& out);
 
+  /** Get the current assertions */
+  void get_assertions(std::vector<expr::term_ref>& out) const;
+
   /** Term collection */
   void gc_collect(const expr::gc_relocator& gc_reloc);
 

@@ -21,6 +21,7 @@
 #ifdef WITH_MATHSAT5
 
 #include <mathsat.h>
+#include <boost/unordered_map.hpp>
 
 namespace sally {
 namespace smt {
@@ -36,6 +37,12 @@ struct mathsat5_eq {
     return msat_term_id(t1) == msat_term_id(t2);
   }
 };
+
+/** Pair of mathsat5 terms */
+typedef std::pair<msat_term, msat_term> msat_term_pair;
+
+/** Map from term to term */
+typedef boost::unordered_map<msat_term, msat_term, mathsat5_hasher, mathsat5_eq> term_to_term_map;
 
 inline
 std::ostream& operator << (std::ostream& out, msat_term t) {

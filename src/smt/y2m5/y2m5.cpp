@@ -149,6 +149,11 @@ void y2m5::add_variable(expr::term_ref var, variable_class f_class) {
   d_mathsat5->add_variable(var, f_class);
 }
 
+void y2m5::add_variable(expr::term_ref var_A, expr::term_ref var_B) {
+  d_yices2->add_variable(var_A, var_B);
+  d_mathsat5->add_variable(var_A, var_B);
+}
+
 bool y2m5::supports(feature f) const {
   switch (f) {
   case GENERALIZATION:
@@ -169,6 +174,10 @@ void y2m5::gc() {
 
 void y2m5::gc_collect(const expr::gc_relocator& gc_reloc) {
   solver::gc_collect(gc_reloc);
+}
+
+void y2m5::get_assertions(std::vector<expr::term_ref>& out) const {
+  d_yices2->get_assertions(out);
 }
 
 }

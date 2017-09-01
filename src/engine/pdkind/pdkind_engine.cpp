@@ -210,10 +210,10 @@ pdkind_engine::induction_result pdkind_engine::push_obligation(induction_obligat
       reachable = d_reachability.check_reachable(start, end, F_fwd_not, cex_manager::null_property_id);
       if (reachable.r == reachability::REACHABLE) {
         // We have to adapt the next index
-        d_induction_frame_next_index = reachable.k;
+        d_induction_frame_next_index = reachable.k; // k < end <= d_induction_frame_next_index
       }
     } else {
-      d_induction_frame_next_index = end;
+      d_induction_frame_next_index = end; // end <= d_induction_frame_next_index
     }
 
     // We know that CEX is not reachable (FULL CHECK ABOVE), otherwise we wouldn't be here.
@@ -545,6 +545,9 @@ const system::trace_helper* pdkind_engine::get_trace() {
     // Moving to next depth 
     current_depth += cex_step;
   }
+
+  // Delete the solver
+  delete solver;
 
   return trace_helper;
 }

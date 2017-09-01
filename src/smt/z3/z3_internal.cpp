@@ -1043,6 +1043,12 @@ void z3_internal::get_assertions(std::set<expr::term_ref>& out) const {
   }
 }
 
+void z3_internal::get_assertions(std::vector<expr::term_ref>& out) const {
+  for (size_t i = 0; i < d_assertions.size(); ++ i) {
+    out.push_back(d_assertions[i]);
+  }
+}
+
 void z3_internal::add_variable(expr::term_ref var, smt::solver::variable_class f_class) {
 
   // Convert to z3 early

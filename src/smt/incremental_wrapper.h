@@ -73,6 +73,7 @@ public:
   void generalize(generalization_type type, std::vector<expr::term_ref>& projection_out);
   void interpolate(std::vector<expr::term_ref>& out);
   void get_unsat_core(std::vector<expr::term_ref>& out);
+  void get_assertions(std::vector<expr::term_ref>& out) const;
   void gc_collect(const expr::gc_relocator& gc_reloc);
 };
 

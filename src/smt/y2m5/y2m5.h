@@ -60,6 +60,9 @@ public:
   /** Add a variable */
   void add_variable(expr::term_ref var, variable_class f_class);
 
+  /** Add a variable */
+  void add_variable(expr::term_ref var_A, expr::term_ref var_B);
+
   /** Check the assertions for satisfiability */
   result check();
 
@@ -86,6 +89,9 @@ public:
 
   /** Unsat core of the last UNSAT result */
   void get_unsat_core(std::vector<expr::term_ref>& out);
+
+  /** Get the current assertions */
+  void get_assertions(std::vector<expr::term_ref>& out) const;
 
   /** Term collection (nothing to do) */
   void gc_collect(const expr::gc_relocator& gc_reloc);

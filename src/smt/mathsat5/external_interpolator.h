@@ -35,7 +35,8 @@ class external_interpolator {
 
   enum interpolation_type {
     INT_STANDARD,
-    INT_CONFLICT_RESOLUTION
+    INT_CONFLICT_RESOLUTION,
+    INT_CONFLICT_RESOLUTION_AI
   };
 
   /** Whether to use the standard interplant */
@@ -81,6 +82,9 @@ class external_interpolator {
   static
   bool can_handle(msat_proof p);
 
+  /** Map from x to x_next */
+  term_to_term_map d_variables_AB;
+
 public:
 
   /**
@@ -88,6 +92,9 @@ public:
    * the standard interpolant, otherwise against all of B.
    */
   external_interpolator(size_t instance, msat_env env, std::string interpolation_type);
+
+  /** Note a relationship between x and x' */
+  void add_var_pair(msat_term x, msat_term x_next);
 
   /** Compute the interpolant */
   msat_term compute(msat_term *a, msat_term *b, msat_proof p);

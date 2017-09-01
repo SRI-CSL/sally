@@ -44,6 +44,8 @@
 namespace sally {
 namespace smt {
 
+typedef std::pair<expr::term_ref, expr::term_ref> term_pair;
+
 std::ostream& operator << (std::ostream& out, const msat_term& t) {
   char* t_str = msat_term_repr(t);
   out << t_str;
@@ -115,6 +117,9 @@ class mathsat5_internal {
   /** The scope */
   int d_scope;
 
+  /** Remember pairs of (x, x_next) variables */
+  std::vector<msat_term_pair> d_AB_variables;
+
 public:
 
   /** Construct an instance of mathsat5 with the given temr manager and options */
@@ -163,7 +168,7 @@ public:
   void generalize(solver::generalization_type type, const std::set<expr::term_ref>& vars_to_keep, const std::set<expr::term_ref>& vars_to_elim, std::vector<expr::term_ref>& out);
 
   /** Return the interpolation */
-  void interpolate(std::vector<expr::term_ref>& out);
+  void interpolate(std::vector<expr::term_ref>& out, const std::vector<term_pair>& var_A_to_B);
 
   /** Return the unsat core */
   void get_unsat_core(std::vector<expr::term_ref>& out);
@@ -182,6 +187,12 @@ public:
       return d_opts.get_bool("mathsat5-generalize-trivial") || d_opts.get_bool("mathsat5-generalize-qe");
     default:
       return false;
+    }
+  }
+
+  void get_assertions(std::vector<expr::term_ref>& out) const {
+    for (size_t i = 0; i < d_assertions.size(); ++ i) {
+      out.push_back(d_assertions[i]);
     }
   }
 
@@ -263,7 +274,7 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
 
   std::string interpolation_type = opts.get_string("mathsat5-interpolation");
 
-  if (interpolation_type != "standard") {
+  if (interpolation_type != "default") {
     // Make the inerpolator
     d_cr_interpolator = new external_interpolator(instance(), d_env, interpolation_type);
     msat_set_external_theory_interpolator(d_env, run_external_interpolator, d_cr_interpolator);
@@ -1026,7 +1037,7 @@ expr::model::ref mathsat5_internal::get_model() {
   return m;
 }
 
-void mathsat5_internal::interpolate(std::vector<expr::term_ref>& interpolant_out) {
+void mathsat5_internal::interpolate(std::vector<expr::term_ref>& interpolant_out, const std::vector<term_pair>& AB_variables) {
 
   if (output::trace_tag_is_enabled("mathsat5::interpolation")) {
     std::cerr << "interpolating:" << std::endl;
@@ -1035,6 +1046,18 @@ void mathsat5_internal::interpolate(std::vector<expr::term_ref>& interpolant_out
     }
   }
 
+  // Update the variables if needed
+  if (d_cr_interpolator) {
+    while (d_AB_variables.size() < AB_variables.size()) {
+      const term_pair& var_pair = AB_variables[d_AB_variables.size()];
+      msat_term x = to_mathsat5_term(var_pair.first);
+      msat_term x_next = to_mathsat5_term(var_pair.second);
+      d_AB_variables.push_back(msat_term_pair(x, x_next));
+      d_cr_interpolator->add_var_pair(x, x_next);
+    }
+  }
+
+  // Do the interpolation
   int itp_classes[1] = { d_itp_A };
   msat_term I = msat_get_interpolant(d_env, itp_classes, 1);
   if (MSAT_ERROR_TERM(I)) {
@@ -1059,6 +1082,7 @@ void mathsat5_internal::interpolate(std::vector<expr::term_ref>& interpolant_out
       solver::result result = solver->check();
       (void)result;
       assert(result == solver::UNSAT);
+      delete solver;
     }
     {
       utils::statistics s;
@@ -1072,6 +1096,7 @@ void mathsat5_internal::interpolate(std::vector<expr::term_ref>& interpolant_out
       solver::result result = solver->check();
       (void)result;
       assert(result == solver::UNSAT);
+      delete solver;
     }
   }
 
@@ -1274,7 +1299,7 @@ void mathsat5::generalize(generalization_type type, std::vector<expr::term_ref>&
 
 void mathsat5::interpolate(std::vector<expr::term_ref>& out) {
   TRACE("mathsat5") << "mathsat5[" << d_internal->instance() << "]: interpolating" << std::endl;
-  d_internal->interpolate(out);
+  d_internal->interpolate(out, d_AB_variables);
 }
 
 void mathsat5::get_unsat_core(std::vector<expr::term_ref>& out) {
@@ -1293,6 +1318,10 @@ void mathsat5::gc() {
 void mathsat5::gc_collect(const expr::gc_relocator& gc_reloc) {
   solver::gc_collect(gc_reloc);
   d_internal->gc_collect(gc_reloc);
+}
+
+void mathsat5::get_assertions(std::vector<expr::term_ref>& out) const {
+  d_internal->get_assertions(out);
 }
 
 }
