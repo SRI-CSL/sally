@@ -352,6 +352,9 @@ private:
   /** Map from variable to it's next version */
   const term_to_term_map* d_variable_AB_map;
 
+  /** Map from next variable to it's state version */
+  term_to_term_map d_variable_BA_map;
+
   /** Compute an interpolant with Apron */
   void learn_with_apron();
 

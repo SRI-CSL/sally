@@ -733,7 +733,7 @@ msat_term conflict_resolution::interpolate(msat_term* a, msat_term* b) {
     // All the constraints where x is the top variable
     const constraint_list& x_constraints = get_watchlist(x);
     constraint_list::const_iterator it = x_constraints.begin();
-    for (; ok && it != x_constraints.end(); ++ it) {
+    for (; it != x_constraints.end(); ++ it) {
       // Propagate new bound if implied by this constraint  
       constraint_id C_id = *it;
       assert(d_constraints[C_id].get_top_variable() == x);
@@ -1018,6 +1018,14 @@ bool conflict_resolution::evaluate(const constraint& C) const {
 
 void conflict_resolution::set_var_to_var_map(const term_to_term_map* x_to_x_next) {
   d_variable_AB_map = x_to_x_next;
+  d_variable_BA_map.clear();
+  term_to_term_map::const_iterator it = x_to_x_next->begin();
+  for (; it != x_to_x_next->end(); ++ it) {
+    msat_term x = it->first;
+    msat_term x_next = it->second;
+    assert(d_variable_BA_map.find(x_next) == d_variable_BA_map.end());
+    d_variable_BA_map[x_next] = x;
+  }
 }
 
 class apron_helper {
@@ -1063,6 +1071,9 @@ public:
 
   // Join
   ap_abstract1_t join(ap_abstract1_t c1, ap_abstract1_t c2);
+
+  // Widen
+  ap_abstract1_t widen(ap_abstract1_t c1, ap_abstract1_t c2);
 
   // Add to constraints
   void to_constraints(ap_abstract1_t a, std::vector<constraint>& out);
@@ -1258,6 +1269,15 @@ ap_abstract1_t apron_helper::join(ap_abstract1_t c1, ap_abstract1_t c2) {
   return result;
 }
 
+ap_abstract1_t apron_helper::widen(ap_abstract1_t c1, ap_abstract1_t c2) {
+  ap_abstract1_t result = ap_abstract1_widening(d_man, &c1, &c2);
+  if (output::trace_tag_is_enabled("mathsat5::apron")) {
+    fprintf(stderr, "Widen Abs:\n");
+    ap_abstract1_fprint(stderr, d_man, &result);
+  }
+  return result;
+}
+
 void conflict_resolution::learn_with_apron() {
 
   TRACE("mathsat5::apron") << "Learning with Apron." << std::endl;
@@ -1269,16 +1289,33 @@ void conflict_resolution::learn_with_apron() {
   // - A variables renamed -> next
   // - Other variables -> to_remove 
   std::vector<variable_id> state_variables, next_variables;
+  std::set<variable_id> state_variables_set, next_variables_set;
   for (variable_id x = 0; x < d_variable_info.size(); ++ x) {
     if (d_variable_info[x].get_class() == VARIABLE_A) {
-      msat_term x_term = d_variable_info[x].get_msat_term();
-      term_to_term_map::const_iterator x_find = d_variable_AB_map->find(x_term);
-      if (x_find != d_variable_AB_map->end()) {
-        state_variables.push_back(x);
-        variable_id x_next = add_variable(x_find->second, VARIABLE_B);
-        next_variables.push_back(x_next);
+      if (state_variables_set.count(x) == 0) {
+        msat_term x_term = d_variable_info[x].get_msat_term();
+        term_to_term_map::const_iterator x_find = d_variable_AB_map->find(x_term);
+        if (x_find != d_variable_AB_map->end()) {
+          variable_id x_next = add_variable(x_find->second, VARIABLE_B);
+          state_variables.push_back(x);
+          state_variables_set.insert(x);
+          next_variables.push_back(x_next);
+          next_variables_set.insert(x_next);
+        }
       }
-    } 
+    } else {
+      if (next_variables_set.count(x) == 0) {
+        msat_term x_term = d_variable_info[x].get_msat_term();
+        term_to_term_map::const_iterator x_find = d_variable_BA_map.find(x_term);
+        if (x_find != d_variable_BA_map.end()) {
+          variable_id x_prev = add_variable(x_find->second, VARIABLE_B);
+          next_variables.push_back(x);
+          next_variables_set.insert(x);
+          state_variables.push_back(x_prev);
+          state_variables_set.insert(x_prev);
+        }
+      }
+    }
   }
 
   size_t n_vars = d_variable_info.size();
@@ -1305,17 +1342,17 @@ void conflict_resolution::learn_with_apron() {
   ap_abstract1_t state_next = apron.rename(state, state_variables, next_variables);
 
   // Join for the final result
-  ap_abstract1_t inv = apron.join(state_next, next);
+  ap_abstract1_t join = apron.join(state_next, next);
 
   // Add the constraints
-  apron.to_constraints(inv, d_constraints);
+  apron.to_constraints(join, d_constraints);
 
   // Clear the abstract values
   ap_abstract1_clear(apron.man(), &constraints);
   ap_abstract1_clear(apron.man(), &state);
   ap_abstract1_clear(apron.man(), &next);
   ap_abstract1_clear(apron.man(), &state_next);
-  ap_abstract1_clear(apron.man(), &inv);
+  ap_abstract1_clear(apron.man(), &join);
 }
 
 }
