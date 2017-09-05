@@ -128,10 +128,8 @@ msat_term external_interpolator::compute(msat_term *a, msat_term *b, msat_proof 
   case INT_CONFLICT_RESOLUTION: {
     // Do conflict resolution
     if (can_handle(p)) {
-      conflict_resolution cr(d_env);
-      if (d_interpolation_type == INT_CONFLICT_RESOLUTION_AI) {
-        cr.set_var_to_var_map(&d_variables_AB);
-      }
+      conflict_resolution cr(d_env, (d_interpolation_type == INT_CONFLICT_RESOLUTION_AI));
+      cr.set_var_to_var_map(&d_variables_AB);
       result = cr.interpolate(a, b);
     } else {
       if (output::trace_tag_is_enabled("mathsat5::extitp::unhandled")) {

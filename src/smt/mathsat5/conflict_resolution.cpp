@@ -49,9 +49,10 @@ std::ostream& operator << (std::ostream& out, const linear_term& info) {
   return out;
 }
 
-conflict_resolution::conflict_resolution(msat_env env)
+conflict_resolution::conflict_resolution(msat_env env, bool use_apron)
 : d_env(env)
 , d_variable_AB_map(0)
+, d_use_apron(use_apron)
 {
 }
 
@@ -132,10 +133,9 @@ void conflict_resolution::variable_info::clear_bounds() {
   d_ub.clear();
 }
 
-void conflict_resolution::variable_info::add_class(variable_class var_class) {
-  if (var_class != d_class) {
-    d_class = VARIABLE_B;
-  }
+void conflict_resolution::variable_info::set_class(variable_class var_class) {
+  assert(d_class == VARIABLE_A && var_class == VARIABLE_B);
+  d_class = var_class;
 }
 
 variable_class conflict_resolution::variable_info::get_class() const {
@@ -437,18 +437,32 @@ void constraint::to_stream(std::ostream& out) const {
   out << ")";
 }
 
-variable_id conflict_resolution::add_variable(msat_term t, variable_class var_class) {
+variable_id conflict_resolution::add_variable(msat_term t, constraint_source source) {
+
+  // Class is difficult. Some variables are not A/B, for example Mathsat
+  // keeps ITEs that we treat as variables. We want to make sure that B variables 
+  // are lower than the A variables. So, if a variable is known to be A or B, we keep it 
+  // A or B. Otherwise, we use the constraint source to classify it:
+  // - If variable is only in A constraints, we mark it A
+  // - Otherwise, the variable is in A and B constraints, so we mark it B
+  bool is_A_variable = d_variable_AB_map->find(t) != d_variable_AB_map->end();
+  bool is_B_variable = d_variable_BA_map.find(t) != d_variable_BA_map.end();
+  variable_class var_class;
+  if (is_A_variable) var_class = VARIABLE_A;
+  else if (is_B_variable) var_class = VARIABLE_B;
+  else if (source == CONSTRAINT_A) var_class = VARIABLE_A;
+  else var_class = VARIABLE_B;
 
   // Check if the variable is already there
   term_to_variable_id_map::const_iterator find = d_term_to_variable_id_map.find(t);
   if (find != d_term_to_variable_id_map.end()) {
-    // Change the class if different
     variable_id t_id = find->second;
-    d_variable_info[t_id].add_class(var_class);
-    return t_id;
+    if (d_variable_info[t_id].get_class() == VARIABLE_A && var_class == VARIABLE_B) {
+      d_variable_info[t_id].set_class(VARIABLE_B);      
+    }
+    return find->second;
   }
-
-  // New variable, add it
+  
   variable_id t_id = d_variable_info.size();
   d_variable_info.push_back(variable_info(t, var_class));
   d_term_to_variable_id_map[t] = t_id;
@@ -469,11 +483,7 @@ variable_id conflict_resolution::get_variable(msat_term t) const {
 
 void conflict_resolution::add_to_watchlist(constraint_id C_id) {
   const constraint& C = d_constraints[C_id];
-  if (C.get_source() == CONSTRAINT_B) {
-    d_top_var_to_constraint[C.get_top_variable()].push_front(C_id);
-  } else {
-    d_top_var_to_constraint[C.get_top_variable()].push_back(C_id);
-  }
+  d_top_var_to_constraint[C.get_top_variable()].push_back(C_id);
 }
 
 const conflict_resolution::constraint_list& conflict_resolution::get_watchlist(variable_id x) const {
@@ -527,17 +537,7 @@ void conflict_resolution::add_to_linear_term(linear_term& term, const expr::rati
 
   if (msat_term_is_constant(d_env, t) || msat_term_is_term_ite(d_env, t)) {
     // Variables
-    variable_id x = variable_null;
-    switch (source) {
-    case CONSTRAINT_A:
-      x = add_variable(t, VARIABLE_A);
-      break;
-    case CONSTRAINT_B:
-      x = add_variable(t, VARIABLE_B);
-      break;
-    default:
-      assert(false);
-    }
+    variable_id x = add_variable(t, source);
     term.add(a, x);
   } else if (msat_term_is_plus(d_env, t)) {
     size_t size = msat_term_arity(t);
@@ -664,7 +664,7 @@ msat_term conflict_resolution::interpolate(msat_term* a, msat_term* b) {
     }
     add_constraint(b[i], CONSTRAINT_B);
   }
-
+  
   // if |A| = 0 => interpolant = T
   if (A_constraints.size() == 0) {
     return msat_make_true(d_env);
@@ -673,15 +673,15 @@ msat_term conflict_resolution::interpolate(msat_term* a, msat_term* b) {
     return msat_make_false(d_env);
   }
 
-  // If we have some releationship between variables, run apron
-  if (d_variable_AB_map && d_variable_AB_map->size()) {
+    // If we have some releationship between variables, run apron
+  if (d_use_apron && d_variable_AB_map->size()) {
     size_t old_size = d_constraints.size();
     learn_with_apron();
     for (constraint_id c_id = old_size; c_id < d_constraints.size(); ++ c_id) {
       A_constraints.insert(c_id);
     }
   }
-
+  
   // B: Order the variables B -> AB -> A
   variable_cmp var_cmp(*this);
   std::vector<variable_id> all_vars;
@@ -1285,37 +1285,33 @@ void conflict_resolution::learn_with_apron() {
   assert(d_variable_AB_map);
 
   // Separate the variables
-  // - A variables that we can rename -> state
-  // - A variables renamed -> next
-  // - Other variables -> to_remove 
   std::vector<variable_id> state_variables, next_variables;
   std::set<variable_id> state_variables_set, next_variables_set;
   for (variable_id x = 0; x < d_variable_info.size(); ++ x) {
-    if (d_variable_info[x].get_class() == VARIABLE_A) {
-      if (state_variables_set.count(x) == 0) {
-        msat_term x_term = d_variable_info[x].get_msat_term();
-        term_to_term_map::const_iterator x_find = d_variable_AB_map->find(x_term);
-        if (x_find != d_variable_AB_map->end()) {
-          variable_id x_next = add_variable(x_find->second, VARIABLE_B);
-          state_variables.push_back(x);
-          state_variables_set.insert(x);
-          next_variables.push_back(x_next);
-          next_variables_set.insert(x_next);
-        }
+    if (d_variable_info[x].get_class() == VARIABLE_A && state_variables_set.count(x) == 0) {
+      // State variable to add
+      msat_term x_term = d_variable_info[x].get_msat_term();
+      term_to_term_map::const_iterator x_find = d_variable_AB_map->find(x_term);
+      if (x_find != d_variable_AB_map->end()) {
+        variable_id x_next = add_variable(x_find->second, CONSTRAINT_A);
+        state_variables.push_back(x);
+        state_variables_set.insert(x);
+        next_variables.push_back(x_next);
+        next_variables_set.insert(x_next);
       }
-    } else {
-      if (next_variables_set.count(x) == 0) {
-        msat_term x_term = d_variable_info[x].get_msat_term();
-        term_to_term_map::const_iterator x_find = d_variable_BA_map.find(x_term);
-        if (x_find != d_variable_BA_map.end()) {
-          variable_id x_prev = add_variable(x_find->second, VARIABLE_B);
-          next_variables.push_back(x);
-          next_variables_set.insert(x);
-          state_variables.push_back(x_prev);
-          state_variables_set.insert(x_prev);
-        }
+    } 
+    if (d_variable_info[x].get_class() == VARIABLE_B && next_variables_set.count(x) == 0) {
+      // Next variable to add
+      msat_term x_term = d_variable_info[x].get_msat_term();
+      term_to_term_map::const_iterator x_find = d_variable_BA_map.find(x_term);
+      if (x_find != d_variable_BA_map.end()) {
+        variable_id x_prev = add_variable(x_find->second, CONSTRAINT_B);
+        state_variables.push_back(x_prev);
+        state_variables_set.insert(x_prev);
+        next_variables.push_back(x);
+        next_variables_set.insert(x);
       }
-    }
+    } 
   }
 
   size_t n_vars = d_variable_info.size();

@@ -238,8 +238,8 @@ private:
     /** Clear the bounds to -inf, +inf */
     void clear_bounds();
 
-    /** Add another class of this variable variable */
-    void add_class(variable_class var_class);
+    /** Set the class of this variable  */
+    void set_class(variable_class var_class);
 
     /** Get the class of the variable */
     variable_class get_class() const;
@@ -281,7 +281,7 @@ private:
   std::vector<variable_info> d_variable_info;
 
   /** Add a variable and return it's id */
-  variable_id add_variable(msat_term t, variable_class var_class);
+  variable_id add_variable(msat_term t, constraint_source source);
 
   /** Get an existing variables */
   variable_id get_variable(msat_term t) const;
@@ -355,13 +355,16 @@ private:
   /** Map from next variable to it's state version */
   term_to_term_map d_variable_BA_map;
 
+  /** Whether to use apron */
+  bool d_use_apron;
+
   /** Compute an interpolant with Apron */
   void learn_with_apron();
 
 public:
 
   /** Construct the conflict resolver */
-  conflict_resolution(msat_env env);
+  conflict_resolution(msat_env env, bool use_apron);
 
   /** Interpolate between the constraints in a and the constraint b. */
   msat_term interpolate(msat_term* a, msat_term b);
