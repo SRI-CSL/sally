@@ -47,8 +47,8 @@ enum constraint_source {
 
 /** Where does the variable occur (assigned to ease sorting) */
 enum variable_class {
-  VARIABLE_B = 0,  // B variable (can occur in B and A)
-  VARIABLE_A = 1   // A variable (occurs only in A)
+  VARIABLE_B = 0,  // B variable
+  VARIABLE_A = 1   // A variable
 };
 
 /** Variable ids */
@@ -165,6 +165,20 @@ public:
 };
 
 class conflict_resolution {
+
+public:
+
+  enum collection_type {
+    COLLECT_TOP,
+    COLLECT_BOT,
+    COLLECT_ALL
+  };
+  
+  enum apron_domain {
+    DOMAIN_BOX,
+    DOMAIN_OCT,
+    DOMAIN_POLKA
+  };
 
 private:
 
@@ -358,13 +372,21 @@ private:
   /** Whether to use apron */
   bool d_use_apron;
 
+  /** Which domain to use */
+  apron_domain d_domain;
+
+  /** Whether to use widening */
+  bool d_use_widnening;
+
   /** Compute an interpolant with Apron */
   void learn_with_apron();
+
+  collection_type d_collection_type;
 
 public:
 
   /** Construct the conflict resolver */
-  conflict_resolution(msat_env env, bool use_apron);
+  conflict_resolution(msat_env env);
 
   /** Interpolate between the constraints in a and the constraint b. */
   msat_term interpolate(msat_term* a, msat_term b);
@@ -374,6 +396,12 @@ public:
 
   /** Add a relationship between two variables */
   void set_var_to_var_map(const term_to_term_map* x_to_x_next);
+
+  /** Set whether to use apron (and whther to use widening) */
+  void set_use_apron(bool use_apron, apron_domain domain, bool widen);
+
+  /** Set collection type */
+  void set_collection_type(collection_type type);
 
   /** Get the variable info */
   variable_class get_variable_class(variable_id x) const;

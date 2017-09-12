@@ -59,6 +59,7 @@ public:
   delayed_wrapper(std::string name, expr::term_manager& tm, const options& opts, utils::statistics& stats, solver* s);
   ~delayed_wrapper();
 
+  void set_frame(size_t frame);
   bool supports(feature f) const;
   void add(expr::term_ref f, formula_class f_class);
   result check();

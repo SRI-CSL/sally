@@ -116,6 +116,7 @@ void solvers::init_reachability_solver(size_t k) {
     // A solver per frame
     while (d_reachability_solvers.size() <= k) {
       smt::solver* solver = smt::factory::mk_default_solver(d_tm, d_ctx.get_options(), d_ctx.get_statistics());
+      solver->set_frame(d_reachability_solvers.size());
       d_reachability_solvers.push_back(solver);
       solver->add_variables(x, x_next);
       solver->add_variables(input.begin(), input.end(), smt::solver::CLASS_T);

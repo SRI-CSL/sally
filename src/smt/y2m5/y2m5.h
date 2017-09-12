@@ -51,6 +51,9 @@ public:
   /** Destructor */
   ~y2m5();
 
+  /** Set the frame */
+  void set_frame(size_t frame);
+
   /** Features */
   bool supports(feature f) const;
 

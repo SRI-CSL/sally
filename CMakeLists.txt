@@ -45,7 +45,7 @@ else()
   message(FATAL_ERROR "Could not the GMP number library (sudo apt-get install libgmp-dev)")
 endif()
 
-# Find the GMP number library
+# Find the GMPFR number library
 if (SALLY_STATIC_BUILD)
   find_library(MPFR_LIBRARY libmpfr.a mpfr)
 else()
@@ -55,6 +55,27 @@ if (MPFR_LIBRARY)
   message(STATUS "MPFR library: " ${MPFR_LIBRARY})
 else()
   message(FATAL_ERROR "Could not the MPFR number library (sudo apt-get install libmpfr-dev)")
+endif()
+
+# Find the Apron number library
+if (SALLY_STATIC_BUILD)
+  find_library(APRON_LIBRARY libapron.a apron)
+  find_library(APRON_BOX_LIBRARY libboxMPQ.a boxMPQ)
+  find_library(APRON_OCT_LIBRARY liboctMPQ.a octMPQ)
+  find_library(APRON_POLKA_LIBRARY libpolkaMPQ.a polkaMPQ)
+else()
+  find_library(APRON_LIBRARY apron)
+  find_library(APRON_BOX_LIBRARY boxMPQ)
+  find_library(APRON_OCT_LIBRARY octMPQ)
+  find_library(APRON_POLKA_LIBRARY polkaMPQ)
+endif()
+if (APRON_LIBRARY AND APRON_BOX_LIBRARY AND APRON_OCT_LIBRARY AND APRON_POLKA_LIBRARY)
+  message(STATUS "Apron library: " ${APRON_LIBRARY})
+  message(STATUS "Apron box library: " ${APRON_BOX_LIBRARY})
+  message(STATUS "Apron oct library: " ${APRON_OCT_LIBRARY})
+  message(STATUS "Apron polka library: " ${APRON_POLKA_LIBRARY})
+else()
+  message(FATAL_ERROR "Could not the Apron abstract domain library (sudo apt-get install libapron-dev)")
 endif()
 
 # Find Yices
@@ -81,7 +102,6 @@ if (Z3_FOUND)
   include_directories(${Z3_INCLUDE_DIR})
 endif()
 
-
 # Make sure antlr C runtime is here
 include(ExternalProject) 
 ExternalProject_Add(
@@ -102,27 +122,8 @@ set_property(TARGET libantlr3c PROPERTY IMPORTED_LOCATION ${ANTLR3C_LIBRARY_DIR}
 # The antl3 binary
 set(ANTLR "${sally_SOURCE_DIR}/antlr/antlr3")
 
-# Install apron 
-ExternalProject_Add(
-  apron
-  SVN_REPOSITORY svn://scm.gforge.inria.fr/svnroot/apron/apron/trunk
-  UPDATE_COMMAND ""
-  CONFIGURE_COMMAND <SOURCE_DIR>/configure -prefix <INSTALL_DIR> -no-cxx -no-ocaml -no-ppl -no-java
-  BUILD_IN_SOURCE 1
-)
-ExternalProject_Get_Property(apron INSTALL_DIR)
-set(APRON_INCLUDE_DIR "${INSTALL_DIR}/include")
-set(APRON_LIBRARY_DIR "${INSTALL_DIR}/lib")
-add_library(libapron STATIC IMPORTED)
-add_library(libapron_polkaMPQ STATIC IMPORTED)
-add_library(libapron_itv STATIC IMPORTED)
-set_property(TARGET libapron PROPERTY IMPORTED_LOCATION ${APRON_LIBRARY_DIR}/libapron.a)
-set_property(TARGET libapron_polkaMPQ PROPERTY IMPORTED_LOCATION ${APRON_LIBRARY_DIR}/libpolkaMPQ.a)
-set_property(TARGET libapron_itv PROPERTY IMPORTED_LOCATION ${APRON_LIBRARY_DIR}/libitv.a)
-set(APRON_LIBRARIES libapron_polkaMPQ libapron_itv libapron)
-
 # Add includes 
-include_directories(${sally_SOURCE_DIR}/src ${ANTLR3C_INCLUDE_DIR} ${APRON_INCLUDE_DIR})
+include_directories(${sally_SOURCE_DIR}/src ${ANTLR3C_INCLUDE_DIR})
 
 # Configure the subdirectories
 add_subdirectory(src)

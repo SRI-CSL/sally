@@ -83,6 +83,9 @@ protected:
   typedef std::pair<expr::term_ref, expr::term_ref> term_pair;
   std::vector<term_pair> d_AB_variables;
 
+  /** The frame of this solver */
+  size_t d_frame;
+
 public:
 
   /** Result of the check */
@@ -140,6 +143,7 @@ public:
   , d_name(name)
   , d_tm(tm)
   , d_opts(opts)
+  , d_frame(0)
   {}
 
   /** Construct with the given context */
@@ -148,10 +152,17 @@ public:
   , d_name(name)
   , d_tm(ctx.tm)
   , d_opts(ctx.opts)
+  , d_frame(0)
   {}
 
   virtual
   ~solver() {};
+
+  /** Set the frame of the solver */
+  virtual
+  void set_frame(size_t frame) {
+    d_frame = frame;
+  }
 
   /** Get the solver name */
   std::string get_name() const {

@@ -128,6 +128,10 @@ void delayed_wrapper::get_assertions(std::vector<expr::term_ref>& out) const {
   }
 }
 
+void delayed_wrapper::set_frame(size_t frame) {
+  d_solver->set_frame(frame);
+}
+
 }
 }
 

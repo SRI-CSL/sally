@@ -26,6 +26,8 @@
 
 #include <ap_global0.h>
 #include <ap_global1.h>
+#include <box.h>
+#include <oct.h>
 #include <pk.h>
 #include <pkeq.h>
 
@@ -49,10 +51,13 @@ std::ostream& operator << (std::ostream& out, const linear_term& info) {
   return out;
 }
 
-conflict_resolution::conflict_resolution(msat_env env, bool use_apron)
+conflict_resolution::conflict_resolution(msat_env env)
 : d_env(env)
 , d_variable_AB_map(0)
-, d_use_apron(use_apron)
+, d_use_apron(false)
+, d_domain(DOMAIN_POLKA)
+, d_use_widnening(false)
+, d_collection_type(COLLECT_BOT)
 {
 }
 
@@ -134,8 +139,18 @@ void conflict_resolution::variable_info::clear_bounds() {
 }
 
 void conflict_resolution::variable_info::set_class(variable_class var_class) {
-  assert(d_class == VARIABLE_A && var_class == VARIABLE_B);
+  assert(d_class != VARIABLE_B && var_class == VARIABLE_B);
   d_class = var_class;
+}
+
+void conflict_resolution::set_use_apron(bool use_apron, apron_domain domain, bool use_widening) {
+  d_use_apron = use_apron;
+  d_domain = domain;
+  d_use_widnening = use_widening;
+}
+
+void conflict_resolution::set_collection_type(collection_type type) {
+  d_collection_type = type;
 }
 
 variable_class conflict_resolution::variable_info::get_class() const {
@@ -439,7 +454,7 @@ void constraint::to_stream(std::ostream& out) const {
 
 variable_id conflict_resolution::add_variable(msat_term t, constraint_source source) {
 
-  // Class is difficult. Some variables are not A/B, for example Mathsat
+// Class is difficult. Some variables are not A/B, for example Mathsat
   // keeps ITEs that we treat as variables. We want to make sure that B variables 
   // are lower than the A variables. So, if a variable is known to be A or B, we keep it 
   // A or B. Otherwise, we use the constraint source to classify it:
@@ -452,12 +467,14 @@ variable_id conflict_resolution::add_variable(msat_term t, constraint_source sou
   else if (is_B_variable) var_class = VARIABLE_B;
   else if (source == CONSTRAINT_A) var_class = VARIABLE_A;
   else var_class = VARIABLE_B;
-
+  
   // Check if the variable is already there
+  // - marked AB, and comes from B -> B
+  // - markes A, and comes from B -> B
   term_to_variable_id_map::const_iterator find = d_term_to_variable_id_map.find(t);
   if (find != d_term_to_variable_id_map.end()) {
     variable_id t_id = find->second;
-    if (d_variable_info[t_id].get_class() == VARIABLE_A && var_class == VARIABLE_B) {
+    if (d_variable_info[t_id].get_class() != VARIABLE_B && var_class == VARIABLE_B) {
       d_variable_info[t_id].set_class(VARIABLE_B);      
     }
     return find->second;
@@ -762,15 +779,27 @@ msat_term conflict_resolution::interpolate(msat_term* a, msat_term* b) {
       assert(!evaluate(R));
       TRACE("mathsat5::cr") << "CR: resolvent:" << "R: " << R << std::endl;
 
-      // We keep in the interpolant:
-      // - any A-derived constraints that are resolved with constraints from B
-      if (ub_C.get_source() == CONSTRAINT_A && lb_C.get_source() == CONSTRAINT_B) {
-        TRACE("mathsat5::cr") << "CR: adding to interpolant: " << ub_C << std::endl;
-        interpolants.insert(ub_C_id);
+      if (d_collection_type == COLLECT_BOT) {
+        // A-derived constraints that are resolved with constraints from B
+        if (ub_C.get_source() == CONSTRAINT_A && lb_C.get_source() == CONSTRAINT_B) {
+          TRACE("mathsat5::cr") << "CR: adding to interpolant: " << ub_C << std::endl;
+          interpolants.insert(ub_C_id);
+        }
+        if (ub_C.get_source() == CONSTRAINT_B && lb_C.get_source() == CONSTRAINT_A) {
+          TRACE("mathsat5::cr") << "CR: adding to interpolant: " << lb_C << std::endl;
+          interpolants.insert(lb_C_id);
+        }
       }
-      if (ub_C.get_source() == CONSTRAINT_B && lb_C.get_source() == CONSTRAINT_A) {
-        TRACE("mathsat5::cr") << "CR: adding to interpolant: " << lb_C << std::endl;
-        interpolants.insert(lb_C_id);
+      if (d_collection_type == COLLECT_TOP) {
+        // Keep any constraints originally in A
+        if (d_variable_info[x].get_class() != VARIABLE_A) {
+          if (A_constraints.count(lb_C_id) > 0) {
+            interpolants.insert(lb_C_id);
+          }
+          if (A_constraints.count(ub_C_id) > 0) {
+            interpolants.insert(ub_C_id);
+          }
+        }
       }
 
       // If resolvent is empty, we're done
@@ -790,6 +819,14 @@ msat_term conflict_resolution::interpolate(msat_term* a, msat_term* b) {
         // Check if to add to the interpolant
         variable_id x_new = R.get_top_variable();
 
+        // Add the resolvent if we went from A -> B
+        if (d_collection_type == COLLECT_TOP) {
+          if (d_variable_info[x].get_class() == VARIABLE_A &&
+              d_variable_info[x_new].get_class() != VARIABLE_A) {
+            interpolants.insert(R_id);
+          }
+        }
+
         // Backtrack to the new top variable
         x = x_new;
         while (all_vars[k] != x) {
@@ -799,6 +836,7 @@ msat_term conflict_resolution::interpolate(msat_term* a, msat_term* b) {
 
         // Add the constraint to list of x
         add_to_watchlist(R_id);
+
       }
 
       // Propagate the new constraint
@@ -1049,7 +1087,7 @@ class apron_helper {
   
 public:
 
-  apron_helper(size_t n_variables);
+  apron_helper(conflict_resolution::apron_domain, size_t n_variables);
   ~apron_helper();
     
   // Get the manager
@@ -1079,10 +1117,22 @@ public:
   void to_constraints(ap_abstract1_t a, std::vector<constraint>& out);
 };
 
-apron_helper::apron_helper(size_t n_variables)
+apron_helper::apron_helper(conflict_resolution::apron_domain domain, size_t n_variables)
 : d_man(0) 
 {
-  d_man = pk_manager_alloc(true);
+  switch (domain) {
+  case conflict_resolution::DOMAIN_BOX:
+    d_man = box_manager_alloc();
+    break;
+  case conflict_resolution::DOMAIN_OCT:
+    d_man = oct_manager_alloc();
+    break;
+  case conflict_resolution::DOMAIN_POLKA:
+    d_man = pk_manager_alloc(true);
+    break;
+  default: 
+    assert(false);
+  }
   ap_coeff_init(&d_coeff_tmp, AP_COEFF_SCALAR);
   mpq_init(d_mpq_coeff_tmp); 
   for (size_t i = 0; i < n_variables; ++ i) {
@@ -1315,7 +1365,7 @@ void conflict_resolution::learn_with_apron() {
   }
 
   size_t n_vars = d_variable_info.size();
-  apron_helper apron(n_vars);
+  apron_helper apron(d_domain, n_vars);
 
   // Apronize all A constraints
   std::vector<ap_lincons1_t> A_constraints;
@@ -1340,8 +1390,18 @@ void conflict_resolution::learn_with_apron() {
   // Join for the final result
   ap_abstract1_t join = apron.join(state_next, next);
 
+  // Widening if asked
+  ap_abstract1_t widen;
+  if (d_use_widnening) {
+    widen = apron.widen(state_next, join);
+  }
+
   // Add the constraints
-  apron.to_constraints(join, d_constraints);
+  if (d_use_widnening) {
+    apron.to_constraints(widen, d_constraints);
+  } else {
+    apron.to_constraints(join, d_constraints);
+  }
 
   // Clear the abstract values
   ap_abstract1_clear(apron.man(), &constraints);
@@ -1349,6 +1409,9 @@ void conflict_resolution::learn_with_apron() {
   ap_abstract1_clear(apron.man(), &next);
   ap_abstract1_clear(apron.man(), &state_next);
   ap_abstract1_clear(apron.man(), &join);
+  if (d_use_widnening) {
+    ap_abstract1_clear(apron.man(), &widen);
+  }
 }
 
 }

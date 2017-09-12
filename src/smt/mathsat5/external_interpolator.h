@@ -25,6 +25,8 @@
 
 #include "mathsat5_utils.h"
 
+#include "conflict_resolution.h"
+
 namespace sally {
 namespace smt {
 
@@ -41,6 +43,9 @@ class external_interpolator {
 
   /** Whether to use the standard interplant */
   interpolation_type d_interpolation_type;
+
+  /** Which domain to use if using abstract interpretation */
+  conflict_resolution::apron_domain d_apron_domain;
 
   /** Instance of the internal mathsat */
   size_t d_instance;
@@ -85,16 +90,22 @@ class external_interpolator {
   /** Map from x to x_next */
   term_to_term_map d_variables_AB;
 
+  /** Frame this interpolator is working on */
+  size_t d_frame;
+
 public:
 
   /**
    * Construct. If use_standard_interpolant = true, it will interpolate against
    * the standard interpolant, otherwise against all of B.
    */
-  external_interpolator(size_t instance, msat_env env, std::string interpolation_type);
+  external_interpolator(size_t instance, msat_env env, std::string interpolation_type, std::string apron_domain);
 
   /** Note a relationship between x and x' */
   void add_var_pair(msat_term x, msat_term x_next);
+
+  /** Set the frame */
+  void set_frame(size_t frame);
 
   /** Compute the interpolant */
   msat_term compute(msat_term *a, msat_term *b, msat_proof p);

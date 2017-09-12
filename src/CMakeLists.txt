@@ -33,7 +33,7 @@ endif()
 if (Z3_FOUND)
   target_link_libraries(sally ${Z3_LIBRARY})
 endif()
-target_link_libraries(sally ${APRON_LIBRARIES})
+target_link_libraries(sally ${APRON_LIBRARY} ${APRON_POLKA_LIBRARY} ${APRON_OCT_LIBRARY} ${APRON_BOX_LIBRARY})
 target_link_libraries(sally ${Boost_LIBRARIES} ${MPFR_LIBRARY} ${GMP_LIBRARY})
 
 # Add tests

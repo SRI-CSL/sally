@@ -180,6 +180,11 @@ void y2m5::get_assertions(std::vector<expr::term_ref>& out) const {
   d_yices2->get_assertions(out);
 }
 
+void y2m5::set_frame(size_t frame) {
+  d_yices2->set_frame(frame);
+  d_mathsat5->set_frame(frame);
+}
+
 }
 }
 

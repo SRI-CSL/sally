@@ -31,11 +31,12 @@
 namespace sally {
 namespace smt {
 
-external_interpolator::external_interpolator(size_t instance, msat_env env, std::string interpolation_type)
+external_interpolator::external_interpolator(size_t instance, msat_env env, std::string interpolation_type, std::string apron_domain)
 : d_interpolation_type(INT_STANDARD)
 , d_instance(instance)
 , d_env(env)
 , d_result_is_strict_inquality(false)
+, d_frame(0)
 {
   d_zero = msat_make_number(env, "0");
   d_one = msat_make_number(env, "1");
@@ -49,6 +50,16 @@ external_interpolator::external_interpolator(size_t instance, msat_env env, std:
     d_interpolation_type = INT_CONFLICT_RESOLUTION_AI;
   } else {
     throw exception("Unknown intepolation type");
+  }
+
+  if (apron_domain == "polka") {
+    d_apron_domain = conflict_resolution::DOMAIN_POLKA;
+  } else if (apron_domain == "oct") {
+    d_apron_domain = conflict_resolution::DOMAIN_OCT;
+  } else if (apron_domain == "box") {
+    d_apron_domain = conflict_resolution::DOMAIN_BOX;
+  } else {
+    throw exception("Unknown domain type");
   }
 }
 
@@ -128,8 +139,13 @@ msat_term external_interpolator::compute(msat_term *a, msat_term *b, msat_proof 
   case INT_CONFLICT_RESOLUTION: {
     // Do conflict resolution
     if (can_handle(p)) {
-      conflict_resolution cr(d_env, (d_interpolation_type == INT_CONFLICT_RESOLUTION_AI));
+      conflict_resolution cr(d_env);
       cr.set_var_to_var_map(&d_variables_AB);
+      if (d_interpolation_type == INT_CONFLICT_RESOLUTION_AI) {
+        bool use_widening = false; // d_frame >= 5;
+        cr.set_use_apron(true, d_apron_domain, use_widening);
+      }
+      cr.set_collection_type(conflict_resolution::COLLECT_TOP);
       result = cr.interpolate(a, b);
     } else {
       if (output::trace_tag_is_enabled("mathsat5::extitp::unhandled")) {
@@ -307,6 +323,10 @@ msat_term external_interpolator::process_la_hyp_eq(msat_proof p) {
 void external_interpolator::add_var_pair(msat_term x, msat_term x_next) {
   assert(d_variables_AB.find(x) == d_variables_AB.end());
   d_variables_AB[x] = x_next;
+}
+
+void external_interpolator::set_frame(size_t frame) {
+  d_frame = frame;
 }
 
 }

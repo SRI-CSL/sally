@@ -120,6 +120,9 @@ class mathsat5_internal {
   /** Remember pairs of (x, x_next) variables */
   std::vector<msat_term_pair> d_AB_variables;
 
+  /** Frame */
+  size_t d_frame;
+
 public:
 
   /** Construct an instance of mathsat5 with the given temr manager and options */
@@ -127,6 +130,14 @@ public:
 
   /** Destroy mathsat5 instance */
   ~mathsat5_internal();
+
+  /** Set the frame */
+  void set_frame(size_t frame) {
+    d_frame = frame;
+    if (d_cr_interpolator) {
+      d_cr_interpolator->set_frame(frame);
+    }
+  }
 
   /** Get the mathsat5 version of the term */
   msat_term to_mathsat5_term(expr::term_ref ref);
@@ -222,6 +233,7 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
 , d_itp_B(0)
 , d_cr_interpolator(0)
 , d_scope(0)
+, d_frame(0)
 {
 
   s_instances ++;
@@ -276,7 +288,8 @@ mathsat5_internal::mathsat5_internal(expr::term_manager& tm, const options& opts
 
   if (interpolation_type != "default") {
     // Make the inerpolator
-    d_cr_interpolator = new external_interpolator(instance(), d_env, interpolation_type);
+    std::string apron_domain = opts.get_string("mathsat5-ai-domain");
+    d_cr_interpolator = new external_interpolator(instance(), d_env, interpolation_type, apron_domain);
     msat_set_external_theory_interpolator(d_env, run_external_interpolator, d_cr_interpolator);
   } else {
     // No interpolator needed
@@ -1323,6 +1336,11 @@ void mathsat5::gc_collect(const expr::gc_relocator& gc_reloc) {
 void mathsat5::get_assertions(std::vector<expr::term_ref>& out) const {
   d_internal->get_assertions(out);
 }
+
+void mathsat5::set_frame(size_t frame) {
+  d_internal->set_frame(frame);
+}
+
 
 }
 }

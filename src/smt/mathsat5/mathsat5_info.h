@@ -39,6 +39,8 @@ struct mathsat5_info {
         ("mathsat5-generalize-qe", "Generalize through quantifier elimination")
         ("mathsat5-interpolation", value<std::string>()->default_value("default"),
             "Interpolant method to use (default, standard, cronflict-resolution, conflict-resolution-ai)")
+        ("mathsat5-ai-domain", value<std::string>()->default_value("polka"), 
+            "Domain to use for abstract interpretation (polka, oct, box)")
         ;
   }
 
