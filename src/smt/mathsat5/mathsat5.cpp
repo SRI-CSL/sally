@@ -1068,6 +1068,7 @@ void mathsat5_internal::interpolate(std::vector<expr::term_ref>& interpolant_out
       d_AB_variables.push_back(msat_term_pair(x, x_next));
       d_cr_interpolator->add_var_pair(x, x_next);
     }
+    d_cr_interpolator->interpolation_begin();
   }
 
   // Do the interpolation

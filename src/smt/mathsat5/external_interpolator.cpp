@@ -329,6 +329,10 @@ void external_interpolator::set_frame(size_t frame) {
   d_frame = frame;
 }
 
+void external_interpolator::interpolation_begin() {
+  d_interpolation_count ++;
+}
+
 }
 }
 

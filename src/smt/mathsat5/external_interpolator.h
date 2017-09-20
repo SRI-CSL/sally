@@ -93,6 +93,9 @@ class external_interpolator {
   /** Frame this interpolator is working on */
   size_t d_frame;
 
+  /** Interpolation count */
+  size_t d_interpolation_count;
+
 public:
 
   /**
@@ -100,6 +103,9 @@ public:
    * the standard interpolant, otherwise against all of B.
    */
   external_interpolator(size_t instance, msat_env env, std::string interpolation_type, std::string apron_domain);
+
+  /** To be called before a whole interpolation */
+  void interpolation_begin();  
 
   /** Note a relationship between x and x' */
   void add_var_pair(msat_term x, msat_term x_next);

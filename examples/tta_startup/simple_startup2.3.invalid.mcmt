@@ -51,8 +51,7 @@
           (= cal!flag!1 false)
           (= cal!flag!2 false)
           (= cal!origin 1)
-          (= cal!send 0)
-	  (and (< 0 propagation) (< propagation (/ slot_time 2))))
+          (= cal!send 0))
 )
 
 ;; Transition relation
