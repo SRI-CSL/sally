@@ -3,11 +3,11 @@ add_library(engine
   factory.cpp 
   bmc/bmc_engine.cpp
   kind/kind_engine.cpp
-  ic3/reachability.cpp  
-  ic3/ic3_engine.cpp  
-  ic3/solvers.cpp
-  ic3/induction_obligation.cpp
-  ic3/cex_manager.cpp
+  pdkind/reachability.cpp  
+  pdkind/pdkind_engine.cpp  
+  pdkind/solvers.cpp
+  pdkind/induction_obligation.cpp
+  pdkind/cex_manager.cpp
   translator/translator.cpp
 )
 

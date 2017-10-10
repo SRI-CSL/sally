@@ -23,7 +23,7 @@
 #include <vector>
 
 namespace sally {
-namespace ic3 {
+namespace pdkind {
 
 /**
  * An obligation to do at frame k. This is just a carrier, the semantics

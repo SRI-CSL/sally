@@ -17,7 +17,7 @@
 #include <deque>
 
 namespace sally {
-namespace ic3 {
+namespace pdkind {
 
 class reachability : public expr::gc_participant {
 

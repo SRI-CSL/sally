@@ -19,7 +19,7 @@
 #include "induction_obligation.h"
 
 namespace sally {
-namespace ic3 {
+namespace pdkind {
 
 bool induction_obligation_cmp_better::operator() (const induction_obligation& ind1, const induction_obligation& ind2) const {
   // Prefer sahllow ones

@@ -95,6 +95,11 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
   unsigned k = 0;
   while (true) {
 
+    // Did we go overboard
+    if (k >= kind_max) {
+      return UNKNOWN;
+    }
+
     MSG(1) << "K-Induction: checking initialization " << k << std::endl;
 
     // Check the current unrolling (1)
@@ -180,11 +185,6 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
 
       // Pop the solver
       scope2.pop();
-    }
-
-    // Did we go overboard
-    if (k > kind_max) {
-      return UNKNOWN;
     }
 
     // One more transition for solver 1

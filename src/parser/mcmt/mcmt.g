@@ -267,7 +267,7 @@ term returns [expr::term_ref t = expr::term_ref()]
      expr::bitvector_extract extract(hi_value.get_unsigned(), lo_value.get_unsigned());
      t = STATE->tm().mk_bitvector_extract(s, extract);
     }
-  | '(' 'cond' { STATE->lsal_extensions() }?
+  | '(' 'cond' 
        ( '(' term_list[children] ')' )+
        '(' 'else' else_term = term ')'
        { 
@@ -366,7 +366,7 @@ term_op returns [expr::term_op op = expr::OP_LAST]
   | '=>'             { op = expr::TERM_IMPLIES; } 
   | 'xor'            { op = expr::TERM_XOR; }
   | 'ite'            { op = expr::TERM_ITE; }
-    // Equeality
+    // Equality
   | '='              { op = expr::TERM_EQ;  }
     // Arithmetic
   | '+'              { op = expr::TERM_ADD; }
@@ -436,7 +436,7 @@ type returns [expr::term_ref type]
        type = STATE->get_bitvector_type(int_value.get_unsigned());       
     }
   ;
-      
+
 /** Comments (skip) */
 COMMENT
   : ';' (~('\n' | '\r'))* { SKIP(); }
@@ -466,7 +466,7 @@ NUMERAL: DIGIT+;
 BIN_NUMERAL: '#b' ('0'|'1')+;
 
 /** Matches a binary numeral (sequence of digits) */
-HEX_NUMERAL: '#h' ('0'|'1')+;
+HEX_NUMERAL: '#h' HEX_DIGIT+;
 
 /** Matches a digit */
 fragment 

@@ -31,7 +31,7 @@
 #include "induction_obligation.h"
 
 namespace sally {
-namespace ic3 {
+namespace pdkind {
 
 /**
  * Class to manage solvers in IC3.

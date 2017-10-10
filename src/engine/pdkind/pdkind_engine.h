@@ -36,7 +36,7 @@
 #include <iosfwd>
 
 namespace sally {
-namespace ic3 {
+namespace pdkind {
 
 class solvers;
 
@@ -76,7 +76,7 @@ struct frame_formula_parent_info {
   : parent(parent), refutes(refutes), depth(depth) {}
 };
 
-class ic3_engine : public engine {
+class pdkind_engine : public engine {
 
   typedef std::set<expr::term_ref> formula_set;
 
@@ -220,8 +220,8 @@ class ic3_engine : public engine {
 
 public:
 
-  ic3_engine(const system::context& ctx);
-  ~ic3_engine();
+  pdkind_engine(const system::context& ctx);
+  ~pdkind_engine();
 
   /** Query */
   result query(const system::transition_system* ts, const system::state_formula* sf);
