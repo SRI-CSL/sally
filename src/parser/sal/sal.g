@@ -40,7 +40,7 @@ options {
   parser::sal_state* pState;
 }
 
-/** SAL context returned as a sequence command. */
+/** SAL context returned as a sequence of commands. */
 command returns [cmd::command* cmd = 0]
   : context
   | EOF
@@ -997,4 +997,3 @@ fragment W:('w'|'W');
 fragment X:('x'|'X');
 fragment Y:('y'|'Y');
 fragment Z:('z'|'Z');  
-  
