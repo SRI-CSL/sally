@@ -85,7 +85,7 @@ void context::add_state_formula(std::string id, std::string type_id, expr::term_
 
 const state_formula* context::get_state_formula(std::string id) const {
   if (!d_state_formulas.has_entry(id)) {
-    throw exception(id + " not declered");
+    throw exception(id + " not declared");
   }
   return d_state_formulas.get_entry(id);
 }

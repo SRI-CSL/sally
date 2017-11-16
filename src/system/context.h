@@ -122,13 +122,13 @@ public:
   /** Get the iterator to all transition formulas of this type */
   id_set::const_iterator transition_formulas_begin(const system::state_type* st) const;
 
-  /** Get hte iterator to the end of transition formulas of this type */
+  /** Get the iterator to the end of transition formulas of this type */
   id_set::const_iterator transition_formulas_end(const system::state_type* st) const;
 
   /** Get the iterator to all transition formulas of this type */
   id_set::const_iterator transition_systems_begin(const system::state_type* st) const;
 
-  /** Get hte iterator to the end of transition formulas of this type */
+  /** Get the iterator to the end of transition formulas of this type */
   id_set::const_iterator transition_systems_end(const system::state_type* st) const;
 
 private:
