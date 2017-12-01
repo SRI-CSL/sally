@@ -1,8 +1,10 @@
-#include "remove_quantifiers.h"
 #include "expr/term_visitor.h"
+#include "remove_quantifiers.h"
+#include "term_utils.h"
 
 #include <boost/unordered_map.hpp>
 #include <iostream>
+#include <sstream>
 
 namespace sally {
 namespace cmd {
@@ -36,114 +38,25 @@ private:
   
   expr::term_manager& d_tm;
   term_to_term_map& d_subst_map; // quantifiers to non-quantifiers
-  
-  bool get_quantified_vars(expr::term_ref t_ref, var_to_interval_map &imap);
-  bool get_lower_bound(expr::term_ref t_ref, expr::term_ref var, expr::integer &lb);
-  bool get_upper_bound(expr::term_ref t_ref, expr::term_ref var, expr::integer &ub);
-  bool get_bounds_from_pred_subtype(expr::term_ref t_ref, interval_t &interval);
 
+  void error(expr::term_ref t_ref, std::string message) const;  
+  bool get_quantified_vars(expr::term_ref t_ref, var_to_interval_map &imap);
   void create_all_instantiations(var_to_interval_map::const_iterator it,
 				 var_to_interval_map::const_iterator et,
 				 std::vector<std::vector<expr::integer> > &instantiations);
   
 };
 
-// return true if it succeeds
-bool quantifier_subst_map_visitor:: get_lower_bound(expr::term_ref t_ref, expr::term_ref var, expr::integer &lb) {
-  expr::term_op op = d_tm.op_of(t_ref);
-  const expr::term& t = d_tm.term_of(t_ref);  
-  if (op == expr::TERM_GEQ) {
-    if (t[0] == var) {
-      // (>= v lb)
-      expr::term_op op1 = d_tm.op_of(t[1]);
-      if (op1 == expr::CONST_RATIONAL) {
-	const expr::term& t1 = d_tm.term_of(t[1]);	
-	expr::rational val = d_tm.get_rational_constant(t1);
-	// XXX: only integer indexes
-	if (val.is_integer()) {
-	  lb = val.get_numerator();
-	  return true;
-	}
-      }
-    }
-  } else if (op == expr::TERM_LEQ) {
-    if (t[1] == var) {
-      // (<= lb v)
-      expr::term_op op0 = d_tm.op_of(t[0]);
-      if (op0 == expr::CONST_RATIONAL) {
-	const expr::term& t0 = d_tm.term_of(t[0]);	
-	expr::rational val = d_tm.get_rational_constant(t0);
-	// XXX: only integer indexes
-	if (val.is_integer()) {
-	  lb = val.get_numerator();
-	  return true;
-	}
-      }
-    }
+void quantifier_subst_map_visitor::error(expr::term_ref t_ref, std::string message) const {
+  std::stringstream ss;
+  expr::term_manager* tm = output::get_term_manager(std::cerr);
+  if (tm->get_internal() == d_tm.get_internal()) {
+    output::set_term_manager(ss, tm);
   }
-  return false;
-}
-
-// return true if it succeeds  
-bool quantifier_subst_map_visitor:: get_upper_bound(expr::term_ref t_ref, expr::term_ref var, expr::integer &ub) {
-  expr::term_op op = d_tm.op_of(t_ref);
-  const expr::term& t = d_tm.term_of(t_ref);  
-  if (op == expr::TERM_LEQ) {
-    if (t[0] == var) {
-      // (<= v ub)
-      expr::term_op op1 = d_tm.op_of(t[1]);
-      if (op1 == expr::CONST_RATIONAL) {
-	const expr::term& t1 = d_tm.term_of(t[1]);	
-	expr::rational val = d_tm.get_rational_constant(t1);
-	// XXX: only integer indexes
-	if (val.is_integer()) {
-	  ub = val.get_numerator();
-	  return true;
-	}
-      }
-    }
-  } else if (op == expr::TERM_GEQ) {
-    if (t[1] == var) {
-      // (>= ub v)
-      expr::term_op op0 = d_tm.op_of(t[0]);
-      if (op0 == expr::CONST_RATIONAL) {
-	const expr::term& t0 = d_tm.term_of(t[0]);	
-        expr::rational val = d_tm.get_rational_constant(t0);
-	// XXX: only integer indexes
-	if (val.is_integer()) {
-	  ub = val.get_numerator();
-	  return true;
-	}
-      }
-    }
-  }
-  return false;
-}
-
-// return true if suceeds 
-bool quantifier_subst_map_visitor:: get_bounds_from_pred_subtype(expr::term_ref t_ref, interval_t &interval){
-  expr::term_op op = d_tm.op_of(t_ref);
-  assert (op == expr::VARIABLE);
-  expr::term_ref ty_ref = d_tm.type_of(t_ref);
-  if (d_tm.op_of(ty_ref) == expr::TYPE_PREDICATE_SUBTYPE) {
-    const expr::term& ty = d_tm.term_of(ty_ref);
-    // XXX: if t_ref is well-typed ty[0] must be a variable
-    expr::term_ref body = ty[1];
-    const expr::term& tbody = d_tm.term_of(body);
-    expr::term_op opbody = d_tm.op_of(body);
-    // XXX: search for (and p1 p2)
-    if (opbody == expr::TERM_AND && std::distance(tbody.begin(), tbody.end()) == 2) {
-      expr::integer lb, ub;
-      if ( (get_lower_bound(tbody[0], ty[0], lb) || get_lower_bound(tbody[1], ty[0], lb)) &&
-	   (get_upper_bound(tbody[0], ty[0], ub) || get_upper_bound(tbody[1], ty[0], ub))) {
-	if (lb <= ub) /* well-formed interval*/ {
-	  interval = interval_t(lb,ub);
-	  return true;
-	}
-      }
-    }
-  }
-  return false;
+  ss << "Can't remove quantifiers " << t_ref;
+  if (message.length() > 0) { ss << "(" << message << ")"; }
+  ss << ".";
+  throw exception(ss.str());
 }
   
 /* 
@@ -153,8 +66,8 @@ bool quantifier_subst_map_visitor:: get_bounds_from_pred_subtype(expr::term_ref 
 */
 bool quantifier_subst_map_visitor::get_quantified_vars(expr::term_ref quantifier,
 						      var_to_interval_map &imap) {
-  expr::term_op op = d_tm.op_of(quantifier);
-  assert (op == expr::TERM_EXISTS || op == expr::TERM_FORALL);
+  assert (d_tm.op_of(quantifier) == expr::TERM_EXISTS ||
+	  d_tm.op_of(quantifier) == expr::TERM_FORALL);
   
   const expr::term& t = d_tm.term_of(quantifier);
   size_t n_args = t.size()-1;
@@ -165,7 +78,7 @@ bool quantifier_subst_map_visitor::get_quantified_vars(expr::term_ref quantifier
     // yes then it extracts the lower and upper bounds
     if (imap.find(quantified_var) == imap.end()) {
       interval_t interval;
-      if (get_bounds_from_pred_subtype(quantified_var, interval)) {
+      if (expr::utils::get_bounds_from_pred_subtype(d_tm, d_tm.type_of(quantified_var), interval)) {
 	imap.insert(std::make_pair(quantified_var, interval));
       } else {
 	all_bounded = false;
@@ -175,7 +88,7 @@ bool quantifier_subst_map_visitor::get_quantified_vars(expr::term_ref quantifier
   return all_bounded;
 }
 
-  /** TODO: non-recursive **/
+/** TODO: non-recursive **/
 void quantifier_subst_map_visitor::
 create_all_instantiations(var_to_interval_map::const_iterator it,
 			  var_to_interval_map::const_iterator et,
@@ -232,9 +145,6 @@ expr::visitor_match_result quantifier_subst_map_visitor::match(expr::term_ref t)
 }
   
 void quantifier_subst_map_visitor::visit(expr::term_ref t_ref) {
-  std::stringstream error_message;
-  expr::term_manager* tm = output::get_term_manager(std::cerr);
-  output::set_term_manager(error_message, tm);
 
   const expr::term& t = d_tm.term_of(t_ref);
   expr::term_op op = t.op();
@@ -245,8 +155,7 @@ void quantifier_subst_map_visitor::visit(expr::term_ref t_ref) {
     // -- extract all quantified variables and their bounds
     var_to_interval_map imap;
     if (!get_quantified_vars(t_ref, imap)) {
-      error_message << "quantifier cannot be removed from " << t_ref << "\n";
-      break;
+      error(t_ref, "");
     }
     
     std::vector<std::vector<expr::integer> > instantiations;
@@ -289,34 +198,32 @@ remove_quantifiers::remove_quantifiers(system::context *ctx)
   
 const system::transition_system *remove_quantifiers::apply(const system::transition_system *ts) {
   
-  expr::term_ref init = ts->get_initial_states();
+  expr::term_ref init = ts->get_initial_states();  
   expr::term_ref tr = ts->get_transition_relation();
+
+  // do not leak: client is responsible to free this pointer  
+  system::state_formula * new_init =
+    new system::state_formula(d_ctx->tm(), ts->get_state_type(),
+			      expr::utils::rewrite<quantifier_subst_map_visitor>(init, d_ctx->tm()));
   
-  quantifier_subst_map_visitor::term_to_term_map subst_map;
-  quantifier_subst_map_visitor visitor(d_ctx->tm(), subst_map);
-  expr::term_visit_topological<quantifier_subst_map_visitor, expr::term_ref, expr::term_ref_hasher> visit_topological(visitor);
-  visit_topological.run(init);
-  visit_topological.run(tr);
+  system::transition_formula * new_tr =
+    new system::transition_formula(d_ctx->tm(), ts->get_state_type(),
+				   expr::utils::rewrite<quantifier_subst_map_visitor>(tr, d_ctx->tm()));
   
-  // do not leak!
-  system::state_formula * new_init = new system::state_formula(d_ctx->tm(), ts->get_state_type(),
-							       d_ctx->tm().substitute(init, subst_map));        
-  system::transition_formula * new_tr = new system::transition_formula(d_ctx->tm(), ts->get_state_type(),
-								       d_ctx->tm().substitute(tr, subst_map));        
-  const system::transition_system * new_ts = new system::transition_system(ts->get_state_type(), new_init, new_tr);
+  const system::transition_system * new_ts =
+    new system::transition_system(ts->get_state_type(), new_init, new_tr);
+  
   return new_ts;
 }
   
 const system::state_formula *remove_quantifiers::apply(const system::state_formula *sf){
   
-  quantifier_subst_map_visitor::term_to_term_map subst_map;
-  quantifier_subst_map_visitor visitor(d_ctx->tm(), subst_map);
-  expr::term_visit_topological<quantifier_subst_map_visitor, expr::term_ref, expr::term_ref_hasher> visit_topological(visitor);
-  visit_topological.run(sf->get_formula());
+  // do not leak: client is responsible to free this pointer
+  const system::state_formula * new_sf =
+    new system::state_formula(d_ctx->tm(), sf->get_state_type(),
+			      expr::utils::rewrite<quantifier_subst_map_visitor>(sf->get_formula(),
+										 d_ctx->tm()));
   
-  // do not leak!
-  const system::state_formula * new_sf = new system::state_formula(d_ctx->tm(), sf->get_state_type(),
-								   d_ctx->tm().substitute(sf->get_formula(), subst_map));
   return new_sf;
 }
 
