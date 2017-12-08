@@ -595,7 +595,8 @@ bool term_manager_internal::is_abstraction(const term& t) const {
 term_ref term_manager_internal::get_abstraction_body(term_ref abstraction) const {
   const term& t = term_of(abstraction);
   assert(is_abstraction(t));
-  assert(t.size() > 2);
+  assert(t.size() >= 2);
+  
   return t[t.size() - 1];
 }
 
