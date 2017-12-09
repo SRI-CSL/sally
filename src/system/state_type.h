@@ -57,6 +57,10 @@ public:
   /** Create a new state type of the given type and name */
   state_type(std::string id, expr::term_manager& tm, expr::term_ref state_type_var, expr::term_ref input_type_var, expr::term_ref params_type_var);
 
+  /** Create a new state type of a given type and name and state variables */
+  state_type(std::string id, expr::term_manager& tm, expr::term_ref state_type_var, expr::term_ref input_type_var, expr::term_ref params_type_var, expr::term_ref current_vars_struct, expr::term_ref next_vars_struct, expr::term_ref input_vars_struct, expr::term_ref param_vars_struct);
+
+  
   /** Print the state type to stream */
   void to_stream(std::ostream& out) const;
 
@@ -102,6 +106,9 @@ public:
   /** Check whether the given formula is a transition formula for this type */
   bool is_transition_formula(expr::term_ref f, bool print_info_on_false) const;
 
+  /** Get the Id of the type */
+  std::string get_id() const;
+  
   /** Get the term manager for this type */
   expr::term_manager& tm() const { return d_tm; }
 

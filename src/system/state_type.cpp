@@ -54,6 +54,33 @@ state_type::state_type(std::string id, expr::term_manager& tm, expr::term_ref st
   }
 }
 
+state_type::state_type(std::string id, expr::term_manager& tm, expr::term_ref state_type_var, expr::term_ref input_type_var, expr::term_ref params_type_var, expr::term_ref current_vars_struct, expr::term_ref next_vars_struct, expr::term_ref input_vars_struct, expr::term_ref param_vars_struct)
+: gc_participant(tm)
+, d_id(id)
+, d_tm(tm)
+, d_state_type_var(tm, state_type_var)
+, d_input_type_var(tm, input_type_var)
+, d_param_type_var(tm, params_type_var)
+{
+  // Create the state variables
+  d_current_vars_struct = expr::term_ref_strong(tm, current_vars_struct);
+  d_input_vars_struct = expr::term_ref_strong(tm, input_vars_struct);
+  d_next_vars_struct = expr::term_ref_strong(tm, next_vars_struct);
+  d_param_vars_struct = expr::term_ref_strong(tm, param_vars_struct);
+
+  // Get the variables
+  d_tm.get_struct_fields(d_tm.term_of(d_current_vars_struct), d_current_vars);
+  d_tm.get_struct_fields(d_tm.term_of(d_input_vars_struct), d_input_vars);
+  d_tm.get_struct_fields(d_tm.term_of(d_next_vars_struct), d_next_vars);
+  d_tm.get_struct_fields(d_tm.term_of(d_param_vars_struct), d_param_vars);
+
+  // Make the substitution map
+  for (size_t i = 0; i < d_current_vars.size(); ++ i) {
+    d_subst_current_next[d_current_vars[i]] = d_next_vars[i];
+    d_subst_next_current[d_next_vars[i]] = d_current_vars[i];
+  }
+}
+  
 void state_type::use_namespace() const {
   d_tm.use_namespace(d_id + "::");
 }
@@ -117,6 +144,11 @@ const std::vector<expr::term_ref>& state_type::get_variables(var_class vc) const
   }
 }
 
+  
+std::string state_type::get_id() const {
+  return d_id;
+}
+  
 std::ostream& operator << (std::ostream& out, const std::set<expr::term_ref>& term_set) {
   out << "{";
   std::set<expr::term_ref>::const_iterator it = term_set.begin();
@@ -139,7 +171,7 @@ bool state_type::is_state_formula(expr::term_ref f, bool print_if_false) const {
   bool ok = std::includes(state_variables.begin(), state_variables.end(), f_variables.begin(), f_variables.end());
   if (!ok && print_if_false) {
     std::cerr << "state_variables: " << state_variables << std::endl;
-    std::cerr << "f_variables: " << f_variables << std::endl;
+    std::cerr << "f_variables: " << f_variables << std::endl;    
   }
   return ok;
 }
@@ -162,7 +194,7 @@ bool state_type::is_transition_formula(expr::term_ref f, bool print_if_false) co
   bool ok = std::includes(all_variables.begin(), all_variables.end(), f_variables.begin(), f_variables.end());
   if (!ok && print_if_false) {
     std::cerr << "all_variables: " << all_variables << std::endl;
-    std::cerr << "f_variables:   " << f_variables << std::endl;
+    std::cerr << "f_variables: " << f_variables << std::endl;
   }
   return ok;
 }
