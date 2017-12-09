@@ -1,6 +1,6 @@
 #include "transforms.h"
 
-#include "remove_quantifiers.h"
+#include "expand_arrays.h"
 #include "remove_arrays.h"
 #include "remove_subtypes.h"
 
@@ -26,12 +26,12 @@ std::string preprocessor::run(std::string system_id, const system::transition_sy
 
   static unsigned k = 0;
   std::string new_system_id(system_id + "." + std::to_string(k++)); // must be unique
-  transforms::remove_quantifiers rq(d_ctx, new_system_id);
-  rq.apply(T);
-  rq.apply(Q);
+  transforms::expand_arrays ea(d_ctx, new_system_id);
+  ea.apply(T);
+  ea.apply(Q);
   const system::transition_system* T1 = d_ctx->get_transition_system(new_system_id);
   const system::state_formula* Q1 = d_ctx->get_state_formula(new_system_id);
-  MSG(1) << "After removal of quantifiers \n";
+  MSG(1) << "After expansion of arrays \n";
   MSG(1) << "TS: " << *T1 << "\n";
   MSG(1) << "QUERY: " << *Q1 << "\n";
   

@@ -7,7 +7,7 @@ add_library(command
   define_transition_system.cpp
   query.cpp
   sequence.cpp
-  transforms/remove_quantifiers.cpp
+  transforms/expand_arrays.cpp
   transforms/remove_arrays.cpp
   transforms/remove_subtypes.cpp
   transforms/transforms.cpp    
