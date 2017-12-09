@@ -74,15 +74,14 @@ void remove_arrays::apply(const system::state_formula *sf){
   m_pImpl->apply(sf);
 }
 
-static void error(term_ref t, term_manager &tm, std::string message) {
+static void error(term_manager &tm, term_ref t_ref, std::string message) {
   std::stringstream ss;
   term_manager* _tm = output::get_term_manager(std::cerr);
   if (_tm->get_internal() == tm.get_internal()) {
     output::set_term_manager(ss, _tm);
   }
-  ss << message;
-  if (!t.is_null())
-    ss << " (" << t << ")";
+  ss << "Can't remove arrays " << t_ref;
+  if (message.length() > 0) { ss << "(" << message << ")"; }
   ss << ".";
   throw exception(ss.str());
 }
@@ -132,7 +131,7 @@ public:
     if (d_tm.term_of(t).op() == TERM_ARRAY_WRITE ||
 	d_tm.term_of(t).op() == TERM_FORALL ||
 	d_tm.term_of(t).op() == TERM_EXISTS) {
-      error(t, d_tm, "Can't remove arrays: this term is not allowed!");
+      error(d_tm, t, "this term is not allowed!");
     }
     if (d_subst_map.find(t) != d_subst_map.end()) {
       // Don't visit children or this node or the node
@@ -218,7 +217,7 @@ term_ref remove_read_visitor::get_read_array_var(term_ref ref) {
     return get_read_array_var(a); // recursive
   }
   if (d_tm.op_of(ref) != VARIABLE) {
-    error(ref, d_tm, "Can't remove arrays: read array can be only either a nested array read or variable");
+    error(d_tm, ref, "read array can be only either a nested array read or variable");
   }
   return ref;
 }
@@ -235,19 +234,18 @@ void remove_read_visitor::get_read_array_indexes(term_ref ref,
       unsigned long lb = itv.first.get_unsigned();
       unsigned long ub = itv.second.get_unsigned();
       if (lb != 1) {
-	error(ref, d_tm, "Can't remove arrays: array term must be indexed from 1");
+	error(d_tm, ref, "array term must be indexed from 1");
       }
       get_read_array_indexes(a, indexes, max_indexes);  // recursive
       // XXX: important to return the transformed version of the index
       indexes.push_back(d_tm.substitute(i, d_subst_map));
       max_indexes.push_back(ub);
     } else {
-      error(ref, d_tm, "Can't remove arrays: array is not statically bounded");
+      error(d_tm, ref, "array is not statically bounded");
     }
   } else {
     if (d_tm.op_of(ref) != VARIABLE) {
-      error(ref, d_tm,
-	    "Can't remove arrays: read array can be only either a nested array read or variable");
+      error(d_tm, ref, "read array can be only either a nested array read or variable");
     }
   }
 }
@@ -301,7 +299,7 @@ term_ref remove_read_visitor::get_scalar_var(term_ref array_var,
   if (it != index_map.end()) {
     return it->second;
   } else {    
-    error(array_var, d_tm, "Can't remove arrays: cannot map array variable");
+    error(d_tm, array_var, "cannot map array variable");
     return term_ref();
   }
 }
@@ -390,13 +388,13 @@ static void get_array_type_bounds_and_scalar_type(term_manager &tm, term_ref ref
     if (expr::utils::get_bounds_from_pred_subtype(tm, index_type, itv)) {
       unsigned long lb = itv.first.get_unsigned();
       if (lb != 1) {
-	error(ref, tm, "Can't remove arrays: array term must be indexed from 1");
+	error(tm, ref, "array term must be indexed from 1");
       }
       bounds.push_back(itv);
       // recursive
       get_array_type_bounds_and_scalar_type(tm, element_type, bounds, scalar_type); 
     } else {
-      error(ref, tm, "Can't remove arrays: array is not statically bounded");
+      error(tm, ref, "array is not statically bounded");
     }
   } else {
     scalar_type = ref;

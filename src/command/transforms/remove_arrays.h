@@ -12,7 +12,7 @@ namespace cmd {
 namespace transforms {
   
 /** 
-    Remove arrays from transition systems and state formulas.
+    Remove array terms from transition systems and state formulas.
     This is only possible if all arrays are bounded.
 **/
   
