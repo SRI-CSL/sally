@@ -78,17 +78,14 @@ void remove_subtypes::apply(const system::state_formula *sf){
   m_pImpl->apply(sf);
 }
 
-static void error(term_ref t_ref, term_manager &tm, std::string message) {
+static void error(term_manager &tm, term_ref t_ref, std::string message) {
   std::stringstream ss;
   term_manager* _tm = output::get_term_manager(std::cerr);
   if (_tm->get_internal() == tm.get_internal()) {
     output::set_term_manager(ss, _tm);
   }
-
-  ss << message;
-  if (!t_ref.is_null()) {
-    ss << " (" << t_ref << ")";
-  }
+  ss << "Can't remove predicate subtype " << t_ref;
+  if (message.length() > 0) { ss << "(" << message << ")"; }
   ss << ".";
   throw exception(ss.str());
 }
@@ -140,7 +137,7 @@ mk_type_var_without_subtypes(term_manager &tm, term_ref type_var,
 	  d_assumptions.insert(std::make_pair(old_var_name, a));
 	}
       } else {
-	error(field_ty, tm, "Can't remove predicate subtype if different from bool, integer, or real");
+	error(tm, field_ty, "support only for bool, integer, or real");
       }
     }
   }
