@@ -23,6 +23,9 @@ typedef boost::unordered_map<std::string, index_map_t> arr_to_scalar_map;
 typedef std::map<unsigned, std::pair<std::string, term_ref> > index_type_map_t;
 typedef boost::unordered_map<std::string, index_type_map_t> arr_to_scalar_type_map;
 typedef boost::unordered_map<std::string, term_ref> name_to_term_map;
+
+// TODO: We need at least to check that all array accesses are fully
+// indexed. Otherwise, it will crash and it's hard to see the problem.
   
 class remove_arrays::remove_arrays_impl {
 
@@ -135,8 +138,8 @@ public:
       // Don't visit children or this node or the node
       return DONT_VISIT_AND_BREAK;
     } else if (d_tm.term_of(t).op() == TERM_ARRAY_READ) {
-      // Visit the children if needed and then the node
-      return VISIT_AND_CONTINUE;
+      // We stop at the top-level array read found
+      return VISIT_AND_BREAK;
     } else {
       // Don't visit this node but visit children
       return DONT_VISIT_AND_CONTINUE;    
@@ -212,15 +215,14 @@ static unsigned get_unidimensional_index(const std::vector<unsigned long> &indic
 term_ref remove_read_visitor::get_read_array_var(term_ref ref) {
   if (d_tm.op_of(ref) == TERM_ARRAY_READ) {
     term_ref a = d_tm.get_array_read_array(ref);
-    return get_read_array_var(a);
+    return get_read_array_var(a); // recursive
   }
-  
-  if (!(d_tm.op_of(ref) == VARIABLE)) {
-    error(ref, d_tm, "Can't remove arrays: can't find the array variable");
+  if (d_tm.op_of(ref) != VARIABLE) {
+    error(ref, d_tm, "Can't remove arrays: read array can be only either a nested array read or variable");
   }
   return ref;
 }
-
+  
 void remove_read_visitor::get_read_array_indexes(term_ref ref, std::vector<term_ref> &out) {
   if (d_tm.op_of(ref) == TERM_ARRAY_READ) {
     term_ref i = d_tm.get_array_read_index(ref);
@@ -228,6 +230,11 @@ void remove_read_visitor::get_read_array_indexes(term_ref ref, std::vector<term_
     get_read_array_indexes(a, out);  // recursive
     // XXX: important to return the transformed version of the index
     out.push_back(d_tm.substitute(i, d_subst_map));      
+  } else {
+    if (d_tm.op_of(ref) != VARIABLE) {
+      error(ref, d_tm,
+	    "Can't remove arrays: read array can be only either a nested array read or variable");
+    }
   }
 }
 
@@ -241,11 +248,16 @@ void remove_read_visitor::get_read_array_dimensions(term_ref ref, std::vector<un
       if (lb != 1) {
 	error(ref, d_tm, "Can't remove arrays: array term must be indexed from 1");
       }
+      get_read_array_dimensions(a, out); // recursive
       unsigned long ub = itv.second.get_unsigned();
       out.push_back(ub);
-      get_read_array_dimensions(a, out); // recursive
     } else {
       error(ref, d_tm, "Can't remove arrays: array is not statically bounded");
+    }
+  } else {
+    if (d_tm.op_of(ref) != VARIABLE) {
+      error(ref, d_tm,
+	    "Can't remove arrays: array read array can only be another array read or variable");
     }
   }
 }
@@ -298,7 +310,7 @@ term_ref remove_read_visitor::get_scalar_var(term_ref array_var,
   index_map_t::iterator it = index_map.find(idx);
   if (it != index_map.end()) {
     return it->second;
-  } else {
+  } else {    
     error(array_var, d_tm, "Can't remove arrays: cannot map array variable");
     return term_ref();
   }
@@ -327,6 +339,7 @@ void remove_read_visitor::visit(term_ref read_t) {
   std::vector<term_ref> indexes;
   term_ref array_var;
   std::vector<std::vector<unsigned long> > indexes_values;
+  //std::cout << read_t << std::endl;
   
   // An array term can have other array terms as subterms:
   //  - indexes is the array index of each array read subterm    
@@ -335,47 +348,56 @@ void remove_read_visitor::visit(term_ref read_t) {
   get_read_array_indexes(read_t, indexes);
   get_read_array_dimensions(read_t, dimensions);
   array_var = get_read_array_var(read_t);
+
+  assert (indexes.size() > 0);  
+  assert(dimensions.size() == indexes.size());
   
-  /** We make sure that the array if fully indexed */
-  if (indexes.size() == dimensions.size()) {
-    assert (indexes.size() > 0);
-    create_all_indexes_values(0, indexes, dimensions, indexes_values);
-    assert(indexes_values.size() > 0);
-    /** all indexes are constant **/     
-    if (indexes_values.size() == 1) { 
-      assert (indexes_values[0].size() == dimensions.size());
-      term_ref v = get_scalar_var(array_var, indexes_values[0], dimensions);
-      d_subst_map[read_t] = v;
-    } /** some indexes are symbolic: convert the read into a nested
-	  ite term **/
-    else { 
-      // Given (symbolic or constant) indexes [i1, 2, i3] and a
-      // sequence of constant values:
-      // [[c1, 2, c2], [c3, 2, c4], [c5, 2, c6], ... ]
-      // it generates the term:
-      // ite ((and (= i1 c1) (= i3 c3)), A_c1_2_c3,
-      //    ite((and (= i1 c3) (=i3 c4)), A_c3_2_c4,
-      //       ite((and (= i1 c5) (=i3 c6)), A_c5_2_c6, ....)))
-      
-      // We build the ite term starting from the two last sequence of
-      // constant indexes
-      std::vector<std::vector<unsigned long> >::reverse_iterator i_it, i_et;
-      i_it = indexes_values.rbegin();
-      i_et = indexes_values.rend();
-      term_ref then_v, else_v, t;
-      else_v = get_scalar_var(array_var, *i_it, dimensions);
-      ++i_it;
+  // std::cout << indexes.size() << std::endl;
+  // std::cout << dimensions.size() << std::endl;
+  // std::cout << "Indexes=";
+  // for(unsigned i=0; i < indexes.size(); ++i){
+  //   std::cout << indexes[i] << ";";
+  // }
+  // std::cout << std::endl << "Dimensions=";
+  // for(unsigned i=0; i < dimensions.size(); ++i){
+  //   std::cout << dimensions[i] << ";";
+  // }
+  // std::cout << std::endl;
+  
+  create_all_indexes_values(0, indexes, dimensions, indexes_values);
+  assert(indexes_values.size() > 0);
+  /** all indexes are constant **/     
+  if (indexes_values.size() == 1) { 
+    assert (indexes_values[0].size() == dimensions.size());
+    term_ref v = get_scalar_var(array_var, indexes_values[0], dimensions);
+    d_subst_map[read_t] = v;
+  } /** some indexes are symbolic: convert the read into a nested
+	ite term **/
+  else { 
+    // Given (symbolic or constant) indexes [i1, 2, i3] and a
+    // sequence of constant values:
+    // [[c1, 2, c2], [c3, 2, c4], [c5, 2, c6], ... ]
+    // it generates the term:
+    // ite ((and (= i1 c1) (= i3 c3)), A_c1_2_c3,
+    //    ite((and (= i1 c3) (=i3 c4)), A_c3_2_c4,
+    //       ite((and (= i1 c5) (=i3 c6)), A_c5_2_c6, ....)))
+    
+    // We build the ite term starting from the two last sequence of
+    // constant indexes
+    std::vector<std::vector<unsigned long> >::reverse_iterator i_it, i_et;
+    i_it = indexes_values.rbegin();
+    i_et = indexes_values.rend();
+    term_ref then_v, else_v, t;
+    else_v = get_scalar_var(array_var, *i_it, dimensions);
+    ++i_it;
+    then_v = get_scalar_var(array_var, *i_it, dimensions);
+    t = d_tm.mk_term(TERM_ITE, mk_and_of_eq(indexes, *i_it, d_tm), then_v, else_v);
+    ++i_it;
+    for (;i_it != i_et; ++i_it) {
       then_v = get_scalar_var(array_var, *i_it, dimensions);
-      t = d_tm.mk_term(TERM_ITE, mk_and_of_eq(indexes, *i_it, d_tm), then_v, else_v);
-      ++i_it;
-      for (;i_it != i_et; ++i_it) {
-	then_v = get_scalar_var(array_var, *i_it, dimensions);
-	t = d_tm.mk_term(TERM_ITE, mk_and_of_eq(indexes, *i_it, d_tm), then_v, t);
-      }
-      d_subst_map[read_t] = t;	
+      t = d_tm.mk_term(TERM_ITE, mk_and_of_eq(indexes, *i_it, d_tm), then_v, t);
     }
-  } else {
-    error(read_t, d_tm, "Can't remove arrays: array accesses must be fully indexed");
+    d_subst_map[read_t] = t;	
   }
 }
   
