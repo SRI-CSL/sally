@@ -5,6 +5,8 @@
 #include "system/state_formula.h"
 #include "system/transition_formula.h"
 
+#include <string>
+
 namespace sally {
 namespace cmd {
 namespace transforms {
@@ -18,19 +20,21 @@ namespace transforms {
 class remove_quantifiers {
 public:
 
-  remove_quantifiers(system::context *ctx);
+  remove_quantifiers(system::context *ctx, std::string id);
 
-  /* Create a new transition system without quantifiers (if
-     possible) */  
-  const system::transition_system *apply (const system::transition_system *ts);
+  /* Create a new transition system without quantifiers (if possible)
+     with the given id (to be managed by the context) */  
+  void apply (const system::transition_system *ts);
   
   /* Create a new state formula semantically equivalent to sf without
-     quantifiers (if possible) */
-  const system::state_formula *apply(const system::state_formula *sf);
+     quantifiers (if possible) with the given id (to be managed by the
+     context) */
+  void apply(const system::state_formula *sf);
 
 private:
   
   system::context *d_ctx;
+  std::string d_id;
 };
   
 }
