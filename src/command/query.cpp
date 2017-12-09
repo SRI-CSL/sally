@@ -1,7 +1,7 @@
 #include "query.h"
 
 #include "utils/trace.h"
-#include "transforms/remove_quantifiers.h"
+#include "transforms/transforms.h"
 
 #include <iostream>
 
@@ -27,19 +27,14 @@ void query::run(system::context* ctx, engine* e) {
   // Get the transition system
   const system::transition_system* T = ctx->get_transition_system(d_system_id);
 
-  /* Begin transformations */
-  transforms::remove_quantifiers rq (ctx);
-  const system::transition_system* T1 = rq.apply(T);
-  const system::state_formula * Q1 = rq.apply(d_query);
+  // Perform some transformations to avoid solvers complaining
+  transforms::preprocessor pp(ctx);
+  std::string new_system_id = pp.run(d_system_id, T, d_query);
+  const system::transition_system* Tf = ctx->get_transition_system(new_system_id);
+  const system::state_formula* Qf = ctx->get_state_formula(new_system_id);	
 
-  MSG(1) << "After removal of quantifiers \n";
-  MSG(1) << *T1 << "\n";
-  MSG(1) << *Q1 << "\n";  
-  
-  /* End transformations */
-  
   // Check the formula
-  engine::result result = e->query(T1, Q1);
+  engine::result result = e->query(Tf, Qf);
   // Output the result if not silent
   if (result != engine::SILENT) {
     std::cout << result << std::endl;
@@ -52,17 +47,13 @@ void query::run(system::context* ctx, engine* e) {
   // If valid, and asked to, show the invariant
   if (result == engine::VALID && ctx->get_options().has_option("show-invariant")) {
     engine::invariant inv = e->get_invariant();
-    const system::state_type* state_type = T1->get_state_type();
+    const system::state_type* state_type = Tf->get_state_type();
     state_type->use_namespace();
     state_type->use_namespace(system::state_type::STATE_CURRENT);
     std::cout << "(invariant " << inv.depth << " " << inv.F << ")" << std::endl;
     ctx->tm().pop_namespace();
     ctx->tm().pop_namespace();
   }
-
-  // FIXME: remove quantifiers should own the pointers
-  delete T1;
-  delete Q1;
 }
 
 query::~query() {

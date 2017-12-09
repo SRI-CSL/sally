@@ -8,5 +8,8 @@ add_library(command
   query.cpp
   sequence.cpp
   transforms/remove_quantifiers.cpp
+  transforms/remove_arrays.cpp
+  transforms/remove_subtypes.cpp
+  transforms/transforms.cpp    
 )
 
