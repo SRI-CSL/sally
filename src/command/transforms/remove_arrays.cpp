@@ -24,9 +24,6 @@ typedef std::map<unsigned, std::pair<std::string, term_ref> > index_type_map_t;
 typedef boost::unordered_map<std::string, index_type_map_t> arr_to_scalar_type_map;
 typedef boost::unordered_map<std::string, term_ref> name_to_term_map;
 
-// TODO: We need at least to check that all array accesses are fully
-// indexed. Otherwise, it will crash and it's hard to see the problem.
-  
 class remove_arrays::remove_arrays_impl {
 
 public:
@@ -89,22 +86,71 @@ static void error(term_manager &tm, term_ref t_ref, std::string message) {
 /**************************************************************************/  
 /****                 Remove array write terms                        *****/
 /**************************************************************************/    
+class remove_write_visitor {
+public:
   
-// class replace_write_with_read {
-//   /**  TODO: remove write terms by applying:
-//        - [read-over-write]    
-//          read(write(A,i,v),j) = if i==j then v else read(A,j)
-//        - [(bounded) partial equalities] 
-//           A' = write(A,i,v) 
-//          forall k in [lb,ub] :: if k==i then read(A',k)
-//                                 else read(A',k) = read(A,k)
-//   **/
-// };
+  remove_write_visitor(term_manager& tm, term_to_term_map& subst_map)
+  : d_tm(tm), d_subst_map(subst_map) {}
+    
+
+  // Non-null terms are good
+  bool is_good_term(term_ref t) const {
+    return !t.is_null();
+  }
+
+  /** Get the children of the term t that are relevant for removing
+      write terms */
+  void get_children(term_ref t, std::vector<term_ref>& children) {
+    const term& t_term = d_tm.term_of(t);
+    for (size_t i = 0; i < t_term.size(); ++ i) {
+      children.push_back(t_term[i]);
+    }
+  }
+
+  /** We visit only nodes that don't have types yet and are relevant
+      for removing writes */
+  visitor_match_result match(term_ref t) {
+    if (d_tm.term_of(t).op() == TERM_ARRAY_LAMBDA ||
+	d_tm.term_of(t).op() == TERM_FORALL ||
+	d_tm.term_of(t).op() == TERM_EXISTS) {
+      error(d_tm, t, "this term is not allowed!");
+    }
+    if (d_subst_map.find(t) != d_subst_map.end()) {
+      // Don't visit children or this node or the node
+      return DONT_VISIT_AND_BREAK;
+    } else if (d_tm.term_of(t).op() == TERM_ARRAY_WRITE) {
+      // We stop at the top-level array write found
+      return VISIT_AND_BREAK;
+    } else {
+      // Don't visit this node but visit children
+      return DONT_VISIT_AND_CONTINUE;    
+    }
+  }
+
+  /** Visit the term (children already processed) */
+  void visit(term_ref t_ref) {
+  /**  TODO: remove write terms by applying:
+        - [read-over-write]    
+          read(write(A,i,v),j) = if i==j then v else read(A,j)
+        - [(bounded) partial equalities] 
+           A' = write(A,i,v) 
+          forall k in [lb,ub] :: if k==i then read(A',k)
+                                 else read(A',k) = read(A,k)
+   **/
+    error(d_tm, t_ref, " we have not implemented yet the removal of array writes");
+  }
+  
+private:
+  
+  term_manager& d_tm;
+  term_to_term_map& d_subst_map; 
+  
+};  
 
 /**************************************************************************/  
 /*                 Remove array read terms                                */
 /*                                                                        */
-/* Preconditions: the term have neither quantifiers or array write terms. */
+/* Preconditions: all arrays have been expanded and no array write terms. */
 /**************************************************************************/    
 class remove_read_visitor {
 public:
@@ -129,6 +175,7 @@ public:
       for removing reads */
   visitor_match_result match(term_ref t) {
     if (d_tm.term_of(t).op() == TERM_ARRAY_WRITE ||
+	d_tm.term_of(t).op() == TERM_ARRAY_LAMBDA ||	
 	d_tm.term_of(t).op() == TERM_FORALL ||
 	d_tm.term_of(t).op() == TERM_EXISTS) {
       error(d_tm, t, "this term is not allowed!");
@@ -557,11 +604,25 @@ void remove_arrays::remove_arrays_impl::mk_state_type_without_arrays(const syste
 
 static term_ref rewrite(term_manager& tm, term_ref t,
 			term_to_term_map &subst_map, arr_to_scalar_map &arr_map)  {
-  typedef remove_read_visitor visitor_t;
-  visitor_t visitor(tm, subst_map, arr_map);
-  term_visit_topological<visitor_t, term_ref, term_ref_hasher> visit_topological(visitor);
-  visit_topological.run(t);
-  return tm.substitute(t, subst_map);
+  term_ref res(t);
+  
+  { // remove first all write terms
+    typedef remove_write_visitor visitor_t;    
+    visitor_t visitor(tm, subst_map);
+    term_visit_topological<visitor_t, term_ref, term_ref_hasher> visit_topological(visitor);
+    visit_topological.run(res);
+    res = tm.substitute(res, subst_map);
+  }
+
+  { // and then all read terms
+    typedef remove_read_visitor visitor_t;
+    visitor_t visitor(tm, subst_map, arr_map);
+    term_visit_topological<visitor_t, term_ref, term_ref_hasher> visit_topological(visitor);
+    visit_topological.run(res);
+    res = tm.substitute(t, subst_map);
+  }
+  
+  return res;
 }
   
 remove_arrays::remove_arrays_impl::remove_arrays_impl(system::context *ctx, std::string id,
@@ -572,9 +633,6 @@ remove_arrays::remove_arrays_impl::remove_arrays_impl(system::context *ctx, std:
     
 /** Create a new transition system but without arrays **/  
 void remove_arrays::remove_arrays_impl::apply(const system::transition_system *ts) {
-  /********************************/
-  /**  TODO: remove writes       **/
-  /********************************/  
   if (!d_ctx->has_state_type(d_id)) {
     std::stringstream ss;
     term_manager* tm = output::get_term_manager(std::cerr);
@@ -606,10 +664,6 @@ void remove_arrays::remove_arrays_impl::apply(const system::transition_system *t
   
 /** Create a new state formula but without arrays **/    
 void remove_arrays::remove_arrays_impl::apply(const system::state_formula *sf){
-  /********************************/
-  /**  TODO: remove writes       **/
-  /********************************/  
-  
   if (!d_ctx->has_state_type(d_id)) {
     std::stringstream ss;
     term_manager* tm = output::get_term_manager(std::cerr);
