@@ -536,7 +536,12 @@ public:
       }
       return false;
     }
-    bool ignore(const term& t) const { return false; }
+    bool ignore(const term& t) const {
+      // JN: ask DJ. I think we want to skip variables used in
+      // predicate subtypes.
+      return (tm.is_type(t));
+      //return false;
+    }
   };
 
   /** Return the subterms what return true on m(t) */
