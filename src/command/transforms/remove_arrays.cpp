@@ -157,22 +157,25 @@ public:
   
   remove_read_visitor(term_manager& tm, term_to_term_map& subst_map, arr_to_scalar_map& arr_map);
 
-  // Non-null terms are good
   bool is_good_term(term_ref t) const {
     return !t.is_null();
   }
 
-  /** Get the children of the term t that are relevant for remove read
-      terms */
   void get_children(term_ref t, std::vector<term_ref>& children) {
     const term& t_term = d_tm.term_of(t);
-    for (size_t i = 0; i < t_term.size(); ++ i) {
-      children.push_back(t_term[i]);
+
+    if (t_term.op() == TERM_ARRAY_READ) {
+      // If the term is an array read we only visit its index.  The
+      // index must be visited because it can contain another array
+      // read term.
+      children.push_back(d_tm.get_array_read_index(t));
+    } else {
+      for (size_t i = 0; i < t_term.size(); ++ i) {
+	children.push_back(t_term[i]);
+      }
     }
   }
 
-  /** We visit only nodes that don't have types yet and are relevant
-      for removing reads */
   visitor_match_result match(term_ref t) {
     if (d_tm.term_of(t).op() == TERM_ARRAY_WRITE ||
 	d_tm.term_of(t).op() == TERM_ARRAY_LAMBDA ||	
@@ -184,8 +187,8 @@ public:
       // Don't visit children or this node or the node
       return DONT_VISIT_AND_BREAK;
     } else if (d_tm.term_of(t).op() == TERM_ARRAY_READ) {
-      // We stop at the top-level array read found
-      return VISIT_AND_BREAK;
+      // Visit array read children
+      return VISIT_AND_CONTINUE; 
     } else {
       // Don't visit this node but visit children
       return DONT_VISIT_AND_CONTINUE;    
@@ -202,12 +205,10 @@ private:
   arr_to_scalar_map& d_arr_map;
 
   // ref is read(read(....,_),_)
-  // return the array variable of the innermost read term
-  term_ref get_read_array_var(term_ref ref);
-
-  // ref is read(read(....,_),_)
-  // return indexes and maximum value each index can take
-  void get_read_array_indexes(term_ref ref,
+  // return the array variable of the innermost read term and all the
+  // index terms (indexes) together with the maximum value each index
+  // can take (max_indexes).
+  term_ref process_read_array(term_ref ref,
 			      std::vector<term_ref> &indexes,
 			      std::vector<unsigned long> &max_indexes);
 
@@ -258,18 +259,7 @@ static unsigned get_unidimensional_index(const std::vector<unsigned long> &indic
   return r;
 }
       
-term_ref remove_read_visitor::get_read_array_var(term_ref ref) {
-  if (d_tm.op_of(ref) == TERM_ARRAY_READ) {
-    term_ref a = d_tm.get_array_read_array(ref);
-    return get_read_array_var(a); // recursive
-  }
-  if (d_tm.op_of(ref) != VARIABLE) {
-    error(d_tm, ref, "read array can be only either a nested array read or variable");
-  }
-  return ref;
-}
-
-void remove_read_visitor::get_read_array_indexes(term_ref ref,
+term_ref remove_read_visitor::process_read_array(term_ref ref,
 						 std::vector<term_ref> &indexes,
 						 std::vector<unsigned long> &max_indexes) {
   if (d_tm.op_of(ref) == TERM_ARRAY_READ) {
@@ -283,18 +273,19 @@ void remove_read_visitor::get_read_array_indexes(term_ref ref,
       if (lb != 1) {
 	error(d_tm, ref, "array term must be indexed from 1");
       }
-      get_read_array_indexes(a, indexes, max_indexes);  // recursive
+      term_ref res = process_read_array(a, indexes, max_indexes);  // recursive
       // XXX: important to return the transformed version of the index
       indexes.push_back(d_tm.substitute(i, d_subst_map));
       max_indexes.push_back(ub);
+      return res;
     } else {
       error(d_tm, ref, "array is not statically bounded");
     }
-  } else {
-    if (d_tm.op_of(ref) != VARIABLE) {
-      error(d_tm, ref, "read array can be only either a nested array read or variable");
-    }
+  } 
+  if (d_tm.op_of(ref) != VARIABLE) {
+    error(d_tm, ref, "read array can be only either a nested array read or variable");
   }
+  return ref;
 }
     
 /** TODO: non-recursive **/
@@ -375,12 +366,13 @@ void remove_read_visitor::visit(term_ref read_t) {
   std::vector<unsigned long> max_indexes;
   std::vector<std::vector<unsigned long> > indexes_values;
 
+  //std::cout << "read term: " << read_t << std::endl;
+  
   // An array term can have other array terms as subterms:
   //  - indexes is the array index of each array read subterm    
   //  - max_indexes contains the maximum value that an index can take
   //  - array_var is the array variable of the innermost select
-  get_read_array_indexes(read_t, indexes, max_indexes);
-  array_var = get_read_array_var(read_t);
+  array_var = process_read_array(read_t, indexes, max_indexes);
   assert (indexes.size() > 0);  
   create_all_indexes_values(0, indexes, max_indexes, indexes_values);
   assert(indexes_values.size() > 0);
@@ -419,6 +411,8 @@ void remove_read_visitor::visit(term_ref read_t) {
     }
     d_subst_map[read_t] = t;	
   }
+
+  //std::cout << "translated to: " << d_subst_map[read_t] << std::endl;
 }
   
 static void get_array_type_bounds_and_scalar_type(term_manager &tm, term_ref ref, 
