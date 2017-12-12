@@ -5,6 +5,8 @@
 #include "system/state_formula.h"
 #include "system/transition_formula.h"
 
+#include "transform.h"
+
 #include <string>
 
 namespace sally {
@@ -23,7 +25,7 @@ namespace transforms {
     function application term.
 **/
   
-class expand_arrays {
+class expand_arrays: public transform {
 public:
 
   expand_arrays(system::context *ctx, std::string id);
@@ -36,6 +38,10 @@ public:
      the context) */
   void apply(const system::state_formula *sf);
 
+  std::string get_name() const {
+    return "Expand arrays";
+  }
+  
 private:
   
   system::context *d_ctx;

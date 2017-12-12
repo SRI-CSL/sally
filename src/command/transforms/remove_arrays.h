@@ -5,6 +5,8 @@
 #include "system/state_formula.h"
 #include "system/transition_formula.h"
 
+#include "transform.h"
+
 #include <string>
 
 namespace sally {
@@ -16,7 +18,7 @@ namespace transforms {
     This is only possible if all arrays are bounded.
 **/
   
-class remove_arrays {
+class remove_arrays: public transform {
 public:
 
   // Id is a fresh identifier managed by the context ctx so that new
@@ -35,6 +37,10 @@ public:
      arrays (if possible) with the given id in the constructor (to be
      managed by the context) */
   void apply(const system::state_formula *sf);
+
+  std::string get_name() const {
+    return "Remove arrays";
+  }
 			         
 private:
 
