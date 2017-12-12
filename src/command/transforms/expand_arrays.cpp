@@ -388,7 +388,19 @@ void expand_arrays_visitor::visit(term_ref t_ref) {
 	new_children.push_back(c);
       }
     }
-    d_subst_map[t_ref] = d_tm.mk_term(op, new_children);
+
+    // Need special cases for operators with payload    
+    if (d_tm.term_of(t_ref).op() == TERM_BV_EXTRACT) {
+      // Make a copy, in case we resize on construction
+      bitvector_extract extract = d_tm.get_bitvector_extract(d_tm.term_of(t_ref));
+      d_subst_map[t_ref] = d_tm.mk_bitvector_extract(new_children[0], extract);
+    } else  if (d_tm.term_of(t_ref).op() == TERM_BV_SGN_EXTEND) {
+      // Make a copy, in case we resize on construction
+      bitvector_sgn_extend extend = d_tm.get_bitvector_sgn_extend(d_tm.term_of(t_ref));
+      d_subst_map[t_ref] = d_tm.mk_bitvector_sgn_extend(new_children[0], extend); 
+    } else {
+      d_subst_map[t_ref] = d_tm.mk_term(op, new_children);
+    }
   }
 }
 
