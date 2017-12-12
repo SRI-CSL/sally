@@ -51,8 +51,7 @@ private:
   
   system::context *d_ctx;
   std::string d_id;
-  name_to_term_map d_subs_map;
-  term_to_term_map d_term_subs_map;  
+  name_to_term_map d_name_to_term_map;
   assumption_map d_assumptions;
 
   void mk_state_type_without_subtypes(const system::state_type *st);
@@ -103,13 +102,13 @@ mk_renaming_map(term_manager &tm, term_ref type_var, term_ref vars_struct,
     std::string var_name = tm.get_struct_type_field_id(tm.term_of(type_var), i);
     term_ref var = tm.get_struct_field(tm.term_of(vars_struct), i);
     std::string old_var_name = st->get_canonical_name(var_name, vc);
-    d_subs_map[old_var_name] = var;
+    d_name_to_term_map[old_var_name] = var;
   }
 }
   
 /**
  Return a new type variable as type_var but all predicate subtype type
- variables are replace with the type of the subtype variable.
+ variables are replaced with the type of the subtype variable.
 **/
 term_ref remove_subtypes::remove_subtypes_impl::
 mk_type_var_without_subtypes(term_manager &tm, term_ref type_var,
@@ -133,6 +132,7 @@ mk_type_var_without_subtypes(term_manager &tm, term_ref type_var,
 	if (vc == system::state_type::STATE_CURRENT || vc == system::state_type::STATE_PARAM) {
 	  std::string old_var_name = st->get_canonical_name(field_id, vc);
 	  term_ref body = tm.get_predicate_subtype_body(field_ty);
+	  //std::cout << "Assumption " << var << " --- " << body << std::endl;
 	  assumption a(&tm, body, var);
 	  d_assumptions.insert(std::make_pair(old_var_name, a));
 	}
@@ -180,9 +180,34 @@ void remove_subtypes::remove_subtypes_impl::mk_state_type_without_subtypes(const
 }
 
 void remove_subtypes::remove_subtypes_impl::add_assumptions(term_manager &tm, system::transition_system* ts) {
-  const system::state_type* st = ts->get_state_type();  
+  const system::state_type* st = ts->get_state_type();
+  
+  // build a map from param names to their terms
+  name_to_term_map param_name_to_term_map;
+  const std::vector<term_ref>& param_type_vars = st->get_variables(system::state_type::STATE_PARAM);
+  for (std::vector<term_ref>::const_iterator it = param_type_vars.begin(), et=param_type_vars.end(); it!=et ; ++it) {
+    param_name_to_term_map[tm.get_variable_name(*it)] = *it;
+  }
+  
   for (assumption_map::iterator it = d_assumptions.begin() , et = d_assumptions.end(); it != et; ++it) {
-    term_ref sf = (it->second).replace(d_subs_map[it->first]);
+    term_ref sf = (it->second).replace(d_name_to_term_map[it->first]);
+
+    // Rename param type variables in safe with state variable This is
+    // possible when a predicate subtype uses some constants defined
+    // as param variables.
+    std::vector<term_ref> sf_vars;
+    tm.get_variables(sf, sf_vars);
+    term_to_term_map param_subs_map;
+    for (std::vector<term_ref>::const_iterator v_it = sf_vars.begin(), v_et=sf_vars.end(); v_it!=v_et ; ++v_it){
+      std::string name = st->get_canonical_name(tm.get_variable_name(*v_it),
+						system::state_type::STATE_PARAM);
+      name_to_term_map::const_iterator nt_it = param_name_to_term_map.find(name);
+      if (nt_it != param_name_to_term_map.end()) {
+     	param_subs_map[*v_it] = nt_it->second;
+	//std::cout << "replace " << *v_it << " with " << nt_it->second << std::endl;
+      }
+    }
+    sf = tm.substitute(sf, param_subs_map);
     ts->add_assumption(new system::state_formula(tm, st, sf));    
   }
 }
@@ -210,8 +235,8 @@ void remove_subtypes::remove_subtypes_impl::apply(const system::transition_syste
   
   init = ts->get_initial_states();
   tr = ts->get_transition_relation();
-  new_init = expr::utils::name_substitute(tm, init, d_subs_map);
-  new_tr = expr::utils::name_substitute(tm, tr, d_subs_map);
+  new_init = expr::utils::name_substitute(tm, init, d_name_to_term_map);
+  new_tr = expr::utils::name_substitute(tm, tr, d_name_to_term_map);
 
   const system::state_type* st = d_ctx->get_state_type(d_id);  
   system::state_formula* new_init_f = new system::state_formula(tm, st, new_init);
@@ -238,7 +263,7 @@ void remove_subtypes::remove_subtypes_impl::apply(const system::state_formula *s
   term_manager &tm = d_ctx->tm();  
   term_ref f, new_f;  
   f = sf->get_formula();
-  new_f = expr::utils::name_substitute(tm, f, d_subs_map);  
+  new_f = expr::utils::name_substitute(tm, f, d_name_to_term_map);  
   const system::state_type* st = d_ctx->get_state_type(d_id);  
   system::state_formula * new_sf = new system::state_formula(tm, st, new_f);
   d_ctx->add_state_formula(d_id, new_sf);

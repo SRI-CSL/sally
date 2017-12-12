@@ -5,6 +5,8 @@
 #include "system/state_formula.h"
 #include "system/transition_formula.h"
 
+#include "transform.h"
+
 #include <string>
 
 namespace sally {
@@ -15,7 +17,7 @@ namespace transforms {
     Remove predicate subtypes from transition systems and state formulas.
 **/
   
-class remove_subtypes {
+class remove_subtypes: public transform {
 public:
 
   // Id is a fresh identifier managed by the context ctx so that new
@@ -34,7 +36,11 @@ public:
      predicate subtypes with the given id in the constructor (to be
      managed by the context) */
   void apply(const system::state_formula *sf);
-			         
+
+  std::string get_name() const {
+    return "Remove predicate subtypes";
+  }
+  
 private:
 
   // forward declaration
