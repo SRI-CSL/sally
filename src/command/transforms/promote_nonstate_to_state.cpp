@@ -34,6 +34,7 @@ private:
   std::string d_id;
   // map variable names to terms
   name_to_term_map d_name_to_term_map;
+  std::vector<term_ref> d_promoted_vars;
 };
   
 promote_nonstate_to_state::promote_nonstate_to_state(system::context *ctx, std::string id, const system::state_type *st)
@@ -56,7 +57,7 @@ promote_nonstate_to_state_impl(system::context *ctx, std::string id, const syste
 : d_ctx(ctx), d_id(id)
 {
   /** 
-     Create a new state type (new_st) from st where param variables are
+     Create a new state type (new_st) from st where PARAM variables are
      promoted to state variables.
      FIXME: factorize code, otherwise it's hard to mantain.
   **/  
@@ -84,7 +85,7 @@ promote_nonstate_to_state_impl(system::context *ctx, std::string id, const syste
   
   state_type_var = tm.mk_struct_type(names, types);
   current_vars_struct = tm.mk_variable(st_id + "::" + st->to_string(system::state_type::STATE_CURRENT), state_type_var);
-  
+
   // -- create map between old state names (state_type_var) and new
   //    variables (current_vars_struct)
   unsigned state_type_var_size = tm.get_struct_type_size(tm.term_of(state_type_var));
@@ -94,6 +95,9 @@ promote_nonstate_to_state_impl(system::context *ctx, std::string id, const syste
     var_name = st->get_canonical_name(var_name, vc);    
     term_ref var = tm.get_struct_field(tm.term_of(current_vars_struct), i);
     d_name_to_term_map[var_name] = var;
+    if (i >= tm.get_struct_type_size(t1)) {
+      d_promoted_vars.push_back(var);
+    }
   }
   
   // -- Merge param + state next type vars
@@ -157,8 +161,21 @@ apply(const system::transition_system *ts) {
 
   new_init = expr::utils::name_substitute(tm, init, d_name_to_term_map);
   new_tr = expr::utils::name_substitute(tm, tr, d_name_to_term_map);
+
+  const system::state_type* st = d_ctx->get_state_type(d_id);
   
-  const system::state_type* st = d_ctx->get_state_type(d_id);  
+  // -- connect the promoted variables with their next versions
+  std::vector<term_ref> equalities;
+  for (std::vector<term_ref>::iterator it = d_promoted_vars.begin(), et = d_promoted_vars.end(); it != et; ++it) {
+    term_ref curr = *it;
+    term_ref next = st->change_formula_vars(system::state_type::STATE_CURRENT,
+					    system::state_type::STATE_NEXT,
+					    curr);
+    //std::cout << "ADD " << next << " = " << curr << std::endl;
+    equalities.push_back(tm.mk_term(TERM_EQ, next, curr));
+  }
+  new_tr = tm.mk_and(new_tr, tm.mk_and(equalities));
+  
   system::state_formula* new_init_f = new system::state_formula(tm, st, new_init);
   system::transition_formula* new_tr_f = new system::transition_formula(tm, st, new_tr);
   system::transition_system* new_ts = new system::transition_system(st, new_init_f, new_tr_f);
