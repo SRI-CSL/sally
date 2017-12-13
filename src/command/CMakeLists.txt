@@ -12,5 +12,6 @@ add_library(command
   transforms/remove_enum_types.cpp
   transforms/remove_subtypes.cpp
   transforms/transforms.cpp
+  transforms/promote_nonstate_to_state.cpp
 )
 

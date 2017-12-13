@@ -4,6 +4,7 @@
 #include "remove_arrays.h"
 #include "remove_subtypes.h"
 #include "remove_enum_types.h"
+#include "promote_nonstate_to_state.h"
 
 #include "utils/trace.h"
 
@@ -56,7 +57,25 @@ preprocessor::problem_t preprocessor::run(std::string system_id,
   new_system_id = system_id + "." + std::to_string(k++); 
   transforms::remove_subtypes rs(d_ctx, new_system_id, T3->get_state_type());
   preprocessor::problem_t r4 = run_transform(&rs, T3, Q3);
-  return r4;
+  system::transition_system* T4 = r4.first;
+  system::state_formula* Q4 = r4.second;
+  
+  /* this transformation can be done at anytime */
+
+  // JN: this transformation is needed otherwise the property can be
+  // trivially false. The issue can arise when we have assumptions
+  // over PARAM variables together with the fact that Yices
+  // generalization method gives default values when models are not
+  // fully defined. Under these circumstances, we can have some
+  // constraints over some PARAM variable that contradict some given
+  // default value. By promoting PARAM variables to state variables we
+  // ensure that all models are fully defined so Yices' generalization
+  // method does not need to assign default values.
+  new_system_id = system_id + "." + std::to_string(k++); 
+  transforms::promote_nonstate_to_state ps(d_ctx, new_system_id, T4->get_state_type());
+  preprocessor::problem_t r5 =  run_transform(&ps, T4, Q4);
+    
+  return r5;
 }
 
 }
