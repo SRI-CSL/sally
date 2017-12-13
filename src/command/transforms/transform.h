@@ -13,10 +13,10 @@ class transform {
 public:
   
   virtual ~transform() {}
+
+  virtual system::transition_system* apply (const system::transition_system *ts) = 0;
   
-  virtual void apply (const system::transition_system *ts) = 0;
-  
-  virtual void apply(const system::state_formula *sf) = 0;
+  virtual system::state_formula* apply(const system::state_formula *sf) = 0;
 
   virtual std::string get_name() const = 0;
 };

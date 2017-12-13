@@ -31,13 +31,13 @@ public:
 
   /* Create a new transition system without arrays (if possible) with
      the given id in the constructor (to be managed by the context) */  
-  void apply (const system::transition_system *ts);
+  system::transition_system* apply (const system::transition_system *ts);
   
   /* Create a new state formula semantically equivalent to sf without
      arrays (if possible) with the given id in the constructor (to be
      managed by the context) */
-  void apply(const system::state_formula *sf);
-
+  system::state_formula* apply(const system::state_formula *sf);
+  
   std::string get_name() const {
     return "Remove arrays";
   }

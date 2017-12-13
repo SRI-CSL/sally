@@ -11,6 +11,6 @@ add_library(command
   transforms/remove_arrays.cpp
   transforms/remove_enum_types.cpp
   transforms/remove_subtypes.cpp
-  transforms/transforms.cpp    
+  transforms/transforms.cpp
 )
 

@@ -29,9 +29,9 @@ void query::run(system::context* ctx, engine* e) {
 
   // Perform some transformations to avoid solvers complaining
   transforms::preprocessor pp(ctx);
-  std::string new_system_id = pp.run(d_system_id, T, d_query);
-  const system::transition_system* Tf = ctx->get_transition_system(new_system_id);
-  const system::state_formula* Qf = ctx->get_state_formula(new_system_id);	
+  transforms::preprocessor::problem_t TQ = pp.run(d_system_id, T, d_query);
+  const system::transition_system* Tf = TQ.first;
+  const system::state_formula* Qf = TQ.second;	
 
   // Check the formula
   engine::result result = e->query(Tf, Qf);

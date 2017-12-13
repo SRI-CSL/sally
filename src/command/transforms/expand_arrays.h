@@ -32,11 +32,11 @@ public:
 
   /* Create a new transition system with the given id (to be managed
      by the context) */  
-  void apply (const system::transition_system *ts);
+  system::transition_system* apply (const system::transition_system *ts);
   
   /* Create a new state formula with the given id (to be managed by
      the context) */
-  void apply(const system::state_formula *sf);
+  system::state_formula* apply(const system::state_formula *sf);
 
   std::string get_name() const {
     return "Expand arrays";

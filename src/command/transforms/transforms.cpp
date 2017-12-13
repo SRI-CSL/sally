@@ -14,54 +14,49 @@ namespace transforms {
 using namespace expr;
 
 preprocessor::preprocessor(system::context *ctx)
-  : d_ctx(ctx) {}
+: d_ctx(ctx) {}
 
-std::string preprocessor::run(std::string system_id,
-			      const system::transition_system* T, const system::state_formula* Q) {
-
-  static unsigned k = 0;
-  
-  std::string new_system_id(system_id + "." + std::to_string(k++)); // must be unique
-  transforms::expand_arrays ea(d_ctx, new_system_id);
-  ea.apply(T);
-  ea.apply(Q);
-  const system::transition_system* T1 = d_ctx->get_transition_system(new_system_id);
-  const system::state_formula* Q1 = d_ctx->get_state_formula(new_system_id);
-  MSG(2) << "After "  << ea.get_name() << std::endl;
+preprocessor::problem_t preprocessor::run_transform(transform* tr,
+						const system::transition_system* T,
+						const system::state_formula* Q){
+  system::transition_system* T1 = tr->apply(T);
+  system::state_formula* Q1 = tr->apply(Q);
+  MSG(2) << "After "  << tr->get_name() << std::endl;
   MSG(2) << "TS: "    << *T1 << std::endl;
   MSG(2) << "QUERY: " << *Q1 << std::endl;
+  return problem_t(T1,Q1);
+}
   
-  new_system_id = system_id + "." + std::to_string(k++); // must be unique 
-  transforms::remove_arrays ra(d_ctx, new_system_id, T1->get_state_type());
-  ra.apply(T1);
-  ra.apply(Q1);
-  const system::transition_system* T2 = d_ctx->get_transition_system(new_system_id);
-  const system::state_formula* Q2 = d_ctx->get_state_formula(new_system_id);
-  MSG(2) << "After "  << ra.get_name() << std::endl;
-  MSG(2) << "TS: "    << *T2 << std::endl;
-  MSG(2) << "QUERY: " << *Q2 << std::endl;
-  
-  new_system_id = system_id + "." + std::to_string(k++); // must be unique
-  transforms::remove_enum_types ret(d_ctx, new_system_id, T2->get_state_type());
-  ret.apply(T2);
-  ret.apply(Q2);
-  const system::transition_system* T3 = d_ctx->get_transition_system(new_system_id);
-  const system::state_formula* Q3 = d_ctx->get_state_formula(new_system_id);
-  MSG(2) << "After "  << ret.get_name() << std::endl;
-  MSG(2) << "TS: "    << *T3 << std::endl;
-  MSG(2) << "QUERY: " << *Q3 << std::endl;
-  
-  new_system_id = system_id + "." + std::to_string(k++); // must be unique
-  transforms::remove_subtypes rs(d_ctx, new_system_id, T3->get_state_type());
-  rs.apply(T3);
-  rs.apply(Q3);
-  const system::transition_system* T4 = d_ctx->get_transition_system(new_system_id);
-  const system::state_formula* Q4 = d_ctx->get_state_formula(new_system_id);
-  MSG(2) << "After "  << rs.get_name() << std::endl;
-  MSG(2) << "TS: "    << *T4 << std::endl;
-  MSG(2) << "QUERY: " << *Q4 << std::endl;
+preprocessor::problem_t preprocessor::run(std::string system_id,
+				      const system::transition_system* T,
+				      const system::state_formula* Q) {
+  // T is registered in system_id but Q might not.
+  static unsigned k = 0; // to generate unique id's
 
-  return new_system_id;
+  /* Then next four transformations must be done in this order */
+  std::string new_system_id(system_id + "." + std::to_string(k++)); 
+  transforms::expand_arrays ea(d_ctx, new_system_id);
+  preprocessor::problem_t r1 = run_transform(&ea, T, Q);
+  system::transition_system* T1 = r1.first;
+  system::state_formula* Q1 = r1.second;
+  
+  new_system_id = system_id + "." + std::to_string(k++); 
+  transforms::remove_arrays ra(d_ctx, new_system_id, T1->get_state_type());
+  preprocessor::problem_t r2 = run_transform(&ra, T1, Q1);
+  system::transition_system* T2 = r2.first;
+  system::state_formula* Q2 = r2.second;
+
+  new_system_id = system_id + "." + std::to_string(k++); 
+  transforms::remove_enum_types ret(d_ctx, new_system_id, T2->get_state_type());
+  preprocessor::problem_t r3 = run_transform(&ret, T2, Q2);
+  system::transition_system* T3 = r3.first;
+  system::state_formula* Q3 = r3.second;
+
+  
+  new_system_id = system_id + "." + std::to_string(k++); 
+  transforms::remove_subtypes rs(d_ctx, new_system_id, T3->get_state_type());
+  preprocessor::problem_t r4 = run_transform(&rs, T3, Q3);
+  return r4;
 }
 
 }

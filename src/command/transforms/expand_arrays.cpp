@@ -416,7 +416,7 @@ static term_ref rewrite(term_manager& tm, term_ref t)  {
 expand_arrays::expand_arrays(system::context *ctx, std::string id)
 : d_ctx(ctx), d_id(id) {}
   
-void expand_arrays::apply(const system::transition_system *ts) {
+system::transition_system* expand_arrays::apply(const system::transition_system *ts) {
 
   term_manager &tm = d_ctx->tm();
   const system::state_type* st = ts->get_state_type();
@@ -432,15 +432,17 @@ void expand_arrays::apply(const system::transition_system *ts) {
 
   system::transition_system* new_ts = new system::transition_system(st, new_init, new_tr);
   d_ctx->add_transition_system(d_id, new_ts);
+  return new_ts;
 }
   
-void expand_arrays::apply(const system::state_formula *sf) {
+system::state_formula* expand_arrays::apply(const system::state_formula *sf) {
   term_manager &tm = d_ctx->tm();
   const system::state_type* st = sf->get_state_type();
 
   system::state_formula* new_sf =
     new system::state_formula(tm, st, rewrite(tm, sf->get_formula()));
   d_ctx->add_state_formula(d_id, new_sf);
+  return new_sf;
 }
 
 

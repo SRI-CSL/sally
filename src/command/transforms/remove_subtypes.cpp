@@ -43,9 +43,9 @@ public:
   
   remove_subtypes_impl(system::context *ctx, std::string id, const system::state_type *st);
   
-  void apply (const system::transition_system *ts);
+  system::transition_system* apply (const system::transition_system *ts);
   
-  void apply(const system::state_formula *sf);
+  system::state_formula* apply(const system::state_formula *sf);
   
 private:
   
@@ -69,12 +69,12 @@ remove_subtypes::~remove_subtypes() {
   delete m_pImpl;
 }
   
-void remove_subtypes::apply(const system::transition_system *ts) {
-  m_pImpl->apply(ts);
+system::transition_system* remove_subtypes::apply(const system::transition_system *ts) {
+  return m_pImpl->apply(ts);
 }
   
-void remove_subtypes::apply(const system::state_formula *sf){
-  m_pImpl->apply(sf);
+system::state_formula* remove_subtypes::apply(const system::state_formula *sf){
+  return m_pImpl->apply(sf);
 }
 
 static void error(term_manager &tm, term_ref t_ref, std::string message) {
@@ -219,7 +219,7 @@ remove_subtypes::remove_subtypes_impl::remove_subtypes_impl(system::context *ctx
 }
     
 /** Create a new transition system but without subtypes **/  
-void remove_subtypes::remove_subtypes_impl::apply(const system::transition_system *ts) {
+system::transition_system* remove_subtypes::remove_subtypes_impl::apply(const system::transition_system *ts) {
   if (!d_ctx->has_state_type(d_id)) {
     std::stringstream ss;
     term_manager* tm = output::get_term_manager(std::cerr);
@@ -245,10 +245,11 @@ void remove_subtypes::remove_subtypes_impl::apply(const system::transition_syste
 
   add_assumptions(tm, new_ts);
   d_ctx->add_transition_system(d_id, new_ts);
+  return new_ts;
 }
 
 /** Create a new state formula but without subtypes **/    
-void remove_subtypes::remove_subtypes_impl::apply(const system::state_formula *sf){
+system::state_formula* remove_subtypes::remove_subtypes_impl::apply(const system::state_formula *sf){
   if (!d_ctx->has_state_type(d_id)) {
     std::stringstream ss;
     term_manager* tm = output::get_term_manager(std::cerr);
@@ -267,7 +268,7 @@ void remove_subtypes::remove_subtypes_impl::apply(const system::state_formula *s
   const system::state_type* st = d_ctx->get_state_type(d_id);  
   system::state_formula * new_sf = new system::state_formula(tm, st, new_f);
   d_ctx->add_state_formula(d_id, new_sf);
-  
+  return new_sf;
 }
 
 

@@ -4,6 +4,7 @@
 #include "system/state_type.h"
 #include "system/state_formula.h"
 #include "system/transition_formula.h"
+#include "transform.h"
 
 #include <string>
 
@@ -17,11 +18,13 @@ namespace transforms {
 **/
 class preprocessor {
 public:
-
+  
+  typedef std::pair<system::transition_system*, system::state_formula*> problem_t;
+  
   preprocessor(system::context* ctx);
   
-  /** JN: this current API performs transformation on each pair of
-      transition system and query. This the case for the query
+  /** JN: this current API performs transformation on each pair
+      transition system-query. This the case for the query
       command. This is very inneficient with multiple queries because
       it will transform the same transition system multiple times.
       Ideally, we would like to modify the context by replacing all
@@ -32,15 +35,16 @@ public:
   
   /**
      Perform several transformations on the given T and Q.  The
-     transformation is functional so it produces a new T and a new Q,
-     both managed by the context. Return the id associated to the new
-     T and Q.
+     transformation is functional so it produces a new T and a new Q.
   **/
-  std::string run(std::string id, const system::transition_system* T, const system::state_formula* Q);
+  problem_t run(std::string id, const system::transition_system* T, const system::state_formula* Q);
   
 private:
   
   system::context* d_ctx;
+  
+  problem_t run_transform(transform* tr, const system::transition_system* T, const system::state_formula* Q);
+  
 };
 }
 }
