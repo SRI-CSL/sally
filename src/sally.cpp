@@ -27,6 +27,7 @@
 #include "parser/parser.h"
 #include "engine/factory.h"
 #include "ai/factory.h"
+#include "command/transforms/transforms.h"
 #include "smt/factory.h"
 #include "utils/trace.h"
 #include "utils/statistics.h"
@@ -229,6 +230,9 @@ void parse_options(int argc, char* argv[], variables_map& variables)
   // Get the abstract interpreter options
   ai::factory::setup_options(description);
 
+  // Get the transformer options
+  cmd::transforms::preprocessor::setup_options(description);
+  
   // The input files can be positional
   positional_options_description positional;
   positional.add("input", -1);

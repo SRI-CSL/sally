@@ -6,6 +6,8 @@
 #include "system/transition_formula.h"
 #include "transform.h"
 
+#include <boost/program_options/options_description.hpp>
+
 #include <string>
 
 namespace sally {
@@ -38,6 +40,8 @@ public:
      transformation is functional so it produces a new T and a new Q.
   **/
   problem_t run(std::string id, const system::transition_system* T, const system::state_formula* Q);
+
+  static void setup_options(boost::program_options::options_description& options);
   
 private:
   
