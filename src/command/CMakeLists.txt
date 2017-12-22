@@ -14,5 +14,6 @@ add_library(command
   transforms/transforms.cpp
   transforms/promote_nonstate_to_state.cpp
   transforms/add_missing_next.cpp
+  transforms/inlining.cpp  
 )
 
