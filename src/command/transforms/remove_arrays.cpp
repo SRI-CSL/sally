@@ -206,10 +206,11 @@ private:
 
   // ref is read(read(....,_),_)
   // return the array variable of the innermost read term and all the
-  // index terms (indexes) together with the maximum value each index
-  // can take (max_indexes).
+  // index terms (indexes) together with the minimum/maximum value each index
+  // can take (min_indexes/max_indexes).
   term_ref process_read_array(term_ref ref,
 			      std::vector<term_ref> &indexes,
+			      std::vector<unsigned long> &min_indexes,
 			      std::vector<unsigned long> &max_indexes);
 
   /*
@@ -225,34 +226,40 @@ private:
    */
   void create_all_indexes_values(unsigned i,
 				 const std::vector<term_ref> &indices,
+				 const std::vector<unsigned long> &min_indices,
 				 const std::vector<unsigned long> &max_indices,
 				 std::vector<std::vector<unsigned long> > &indexes_values);
 
   /* map an array access to array_var denoted by indexes to a scalar variable */
   term_ref get_scalar_var(term_ref array_var, 
 			  const std::vector<unsigned long> &indexes,
+			  const std::vector<unsigned long> &min_indexes,
 			  const std::vector<unsigned long> &max_indexes);
 };
-
-
+      
 /* Return a number N from a sequence of indexes where
-  N = ((max_indices[0] * ... * max_indices[k-2]) * (indices[0] - 1)) + 
-      ((max_indices[1] * ... * max_indices[k-2]) * (indices[1] - 1)) + 
-      ((max_indices[2] * ... * max_indices[k-2]) * (indices[2] - 1)) + 
+  N = ((range[0] * ... * range[k-2]) * (indices[0] - 1)) + 
+      ((range[1] * ... * range[k-2]) * (indices[1] - 1)) + 
+      ((range[2] * ... * range[k-2]) * (indices[2] - 1)) + 
       ...
-      (max_indices[k-2]                   * (indices[k-2]-1)) + 
+      (range[k-2]                   * (indices[k-2]-1)) + 
       indices[k-1]
+
+   where range[i] = max_indices[i] - min_indices[i] + 1
 */
 static unsigned get_unidimensional_index(const std::vector<unsigned long> &indices,
+					 const std::vector<unsigned long> &min_indices,
 					 const std::vector<unsigned long> &max_indices) {
   assert (indices.size() > 0);
+  assert (min_indices.size() == max_indices.size());
   assert (indices.size() == max_indices.size());
+  
   unsigned r = 0;
   unsigned k = indices.size();  
   for (unsigned i=0; i < k; ++i) {
     unsigned v = 1;
     for (unsigned j=i; j < k-1; ++j) {
-      v *= max_indices[j];
+      v *= max_indices[j] - min_indices[j] + 1;
     }
       r += (v * ((i==k-1 ? indices[i] : indices[i] -1)));
   }
@@ -260,8 +267,9 @@ static unsigned get_unidimensional_index(const std::vector<unsigned long> &indic
 }
       
 term_ref remove_read_visitor::process_read_array(term_ref ref,
-						 std::vector<term_ref> &indexes,
-						 std::vector<unsigned long> &max_indexes) {
+						 std::vector<term_ref>& indexes,
+						 std::vector<unsigned long>& min_indexes,
+						 std::vector<unsigned long>& max_indexes) {
   if (d_tm.op_of(ref) == TERM_ARRAY_READ) {
     term_ref a = d_tm.get_array_read_array(ref);
     term_ref i = d_tm.get_array_read_index(ref);
@@ -270,12 +278,10 @@ term_ref remove_read_visitor::process_read_array(term_ref ref,
     if (expr::utils::get_bounds_from_pred_subtype(d_tm, i_ty, itv)) {
       unsigned long lb = itv.first.get_unsigned();
       unsigned long ub = itv.second.get_unsigned();
-      if (lb != 1) {
-	error(d_tm, ref, "array term must be indexed from 1");
-      }
-      term_ref res = process_read_array(a, indexes, max_indexes);  // recursive
+      term_ref res = process_read_array(a, indexes, min_indexes, max_indexes);  // recursive
       // XXX: important to return the transformed version of the index
       indexes.push_back(d_tm.substitute(i, d_subst_map));
+      min_indexes.push_back(lb);
       max_indexes.push_back(ub);
       return res;
     } else {
@@ -291,21 +297,25 @@ term_ref remove_read_visitor::process_read_array(term_ref ref,
 /** TODO: non-recursive **/
 void remove_read_visitor::create_all_indexes_values(unsigned i,
 						    const std::vector<term_ref> &indices,
+						    const std::vector<unsigned long> &min_indices,
 						    const std::vector<unsigned long> &max_indices,
 						    std::vector<std::vector<unsigned long> > &indexes_values) {
   if (i < indices.size()) {
+    unsigned long min_index = min_indices[i];    
     unsigned long max_index = max_indices[i];
     integer ind; 
     bool is_constant_index = expr::utils::term_to_integer(d_tm, indices[i], ind);
     unsigned long constant_index = 0;
     if (is_constant_index) {
       constant_index = ind.get_unsigned();
+      // any value as long as they are equal
+      min_index = 1;
       max_index = 1;
     }
-    create_all_indexes_values(++i, indices, max_indices, indexes_values);
+    create_all_indexes_values(++i, indices, min_indices, max_indices, indexes_values); // recursive
     
     if (indexes_values.empty()) {
-      for (unsigned long j=1; j <= max_index; ) {
+      for (unsigned long j=min_index; j <= max_index; ) {
 	std::vector<unsigned long> singleton;
 	singleton.push_back((is_constant_index ? constant_index : j));
 	indexes_values.push_back(singleton);
@@ -313,7 +323,7 @@ void remove_read_visitor::create_all_indexes_values(unsigned i,
       }
     } else {
       std::vector<std::vector<unsigned long> > new_indexes_values;      
-      for (unsigned long j = 1 ; j <= max_index; ) {
+      for (unsigned long j=min_index ; j <= max_index; ) {
 	std::vector<std::vector<unsigned long> >::iterator  it, et;	
 	for (it = indexes_values.begin(), et = indexes_values.end(); it != et; ++it) {
 	  std::vector<unsigned long> jj (*it);
@@ -330,8 +340,9 @@ void remove_read_visitor::create_all_indexes_values(unsigned i,
     
 term_ref remove_read_visitor::get_scalar_var(term_ref array_var, 
 					     const std::vector<unsigned long> &indexes,
+					     const std::vector<unsigned long> &min_indexes,
 					     const std::vector<unsigned long> &max_indexes) {
-  unsigned idx = get_unidimensional_index(indexes, max_indexes);
+  unsigned idx = get_unidimensional_index(indexes, min_indexes, max_indexes);
   index_map_t &index_map = d_arr_map[d_tm.get_variable_name(d_tm.term_of(array_var))];
   index_map_t::iterator it = index_map.find(idx);
   if (it != index_map.end()) {
@@ -363,24 +374,25 @@ remove_read_visitor::remove_read_visitor(term_manager& tm,
 void remove_read_visitor::visit(term_ref read_t) {
   term_ref array_var;
   std::vector<term_ref> indexes;
-  std::vector<unsigned long> max_indexes;
+  std::vector<unsigned long> min_indexes, max_indexes;
   std::vector<std::vector<unsigned long> > indexes_values;
 
   //std::cout << "read term: " << read_t << std::endl;
   
   // An array term can have other array terms as subterms:
-  //  - indexes is the array index of each array read subterm    
+  //  - indexes is the array index of each array read subterm
+  //  - min_indexes contains the minimum value that an index can take  
   //  - max_indexes contains the maximum value that an index can take
   //  - array_var is the array variable of the innermost select
-  array_var = process_read_array(read_t, indexes, max_indexes);
+  array_var = process_read_array(read_t, indexes, min_indexes, max_indexes);
   assert (indexes.size() > 0);  
-  create_all_indexes_values(0, indexes, max_indexes, indexes_values);
+  create_all_indexes_values(0, indexes, min_indexes, max_indexes, indexes_values);
   assert(indexes_values.size() > 0);
   
   if (indexes_values.size() == 1) {
     /** All indexes are constant **/         
     assert (indexes_values[0].size() == max_indexes.size());
-    term_ref v = get_scalar_var(array_var, indexes_values[0], max_indexes);
+    term_ref v = get_scalar_var(array_var, indexes_values[0], min_indexes, max_indexes);
     d_subst_map[read_t] = v;
   } else { 
     /** Some indexes are symbolic: convert the read into a nested
@@ -400,13 +412,13 @@ void remove_read_visitor::visit(term_ref read_t) {
     i_it = indexes_values.rbegin();
     i_et = indexes_values.rend();
     term_ref then_v, else_v, t;
-    else_v = get_scalar_var(array_var, *i_it, max_indexes);
+    else_v = get_scalar_var(array_var, *i_it, min_indexes, max_indexes);
     ++i_it;
-    then_v = get_scalar_var(array_var, *i_it, max_indexes);
+    then_v = get_scalar_var(array_var, *i_it, min_indexes, max_indexes);
     t = d_tm.mk_term(TERM_ITE, mk_and_of_eq(indexes, *i_it, d_tm), then_v, else_v);
     ++i_it;
     for (;i_it != i_et; ++i_it) {
-      then_v = get_scalar_var(array_var, *i_it, max_indexes);
+      then_v = get_scalar_var(array_var, *i_it, min_indexes, max_indexes);
       t = d_tm.mk_term(TERM_ITE, mk_and_of_eq(indexes, *i_it, d_tm), then_v, t);
     }
     d_subst_map[read_t] = t;	
@@ -427,10 +439,6 @@ static void get_array_type_bounds_and_scalar_type(term_manager &tm, term_ref ref
     term_ref element_type = t[1];
     expr::utils::interval_t itv;
     if (expr::utils::get_bounds_from_pred_subtype(tm, index_type, itv)) {
-      unsigned long lb = itv.first.get_unsigned();
-      if (lb != 1) {
-	error(tm, ref, "array term must be indexed from 1");
-      }
       bounds.push_back(itv);
       // recursive
       get_array_type_bounds_and_scalar_type(tm, element_type, bounds, scalar_type); 
@@ -457,12 +465,13 @@ static void expand_array(term_manager &tm, std::string var_name, term_ref type_r
   std::vector<expr::utils::interval_t> bounds;
   std::vector<std::vector<integer> > instantiations;
   std::vector<std::vector<integer> >::iterator it, et;
-  std::vector<unsigned long> max_indexes;    
+  std::vector<unsigned long> min_indexes, max_indexes;    
   term_ref scalar_type;
   index_type_map_t &imap = arr_type_map[var_name];
   
   get_array_type_bounds_and_scalar_type(tm, type_ref, bounds, scalar_type);
   for (unsigned i=0; i< bounds.size(); ++i) {
+    min_indexes.push_back(bounds[i].first.get_unsigned());
     max_indexes.push_back(bounds[i].second.get_unsigned());
   }
   expr::utils::create_all_instantiations(bounds.begin(), bounds.end(), instantiations);
@@ -477,7 +486,7 @@ static void expand_array(term_manager &tm, std::string var_name, term_ref type_r
       indices.push_back(idx);
       scalar_name += "_" + std::to_string(idx);
     }
-    unsigned key = get_unidimensional_index(indices, max_indexes);
+    unsigned key = get_unidimensional_index(indices, min_indexes, max_indexes);
     imap[key] = std::make_pair(scalar_name, scalar_type);
     scalar_names.push_back(scalar_name);
     scalar_types.push_back(scalar_type);
