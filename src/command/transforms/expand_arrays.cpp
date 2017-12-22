@@ -15,7 +15,7 @@ namespace transforms {
 using namespace expr;
 
 /** 
-    Expand arrays by removing array quantifiers, array lambda terms,
+    Expand arrays by removing quantifiers, array lambda terms,
     and removing array variables involved in equality terms.
  **/
 class expand_arrays_visitor {
@@ -81,7 +81,7 @@ private:
   void error(term_ref t_ref, std::string message) const;
   void get_array_type_bounds(term_ref t_ref, std::vector<interval_t> &bounds);
   
-  void process_array_quantifier(term_ref t_ref, var_to_interval_map &imap);
+  void process_quantifier(term_ref t_ref, var_to_interval_map &imap);
   term_ref process_array_lambda(term_ref t_ref, var_to_interval_map &imap);
 };
 
@@ -102,7 +102,7 @@ void expand_arrays_visitor::error(term_ref t_ref, std::string message) const {
              (j (subtype ((x Int)) (and (>= x 1) (<= x 4))))) Body)
    imap = { i -> (1,4), j -> (1,4) } 
 */
-void expand_arrays_visitor::process_array_quantifier(term_ref ref, var_to_interval_map &imap) {
+void expand_arrays_visitor::process_quantifier(term_ref ref, var_to_interval_map &imap) {
   assert (d_tm.op_of(ref) == TERM_EXISTS || d_tm.op_of(ref) == TERM_FORALL);
 
   std::vector<term_ref> quantified_vars;
@@ -113,7 +113,16 @@ void expand_arrays_visitor::process_array_quantifier(term_ref ref, var_to_interv
     // yes then it extracts the lower and upper bounds
     if (imap.find(quantified_var) == imap.end()) {
       interval_t interval;
-      if (expr::utils::get_bounds_from_pred_subtype(d_tm, d_tm.type_of(quantified_var), interval)) {
+      if (d_tm.term_of(d_tm.type_of(quantified_var)).op() == TYPE_BOOL) {
+	// XXX: array terms can only have sort Int -> Int|Real. If the
+	// quantifier variable is of bool type and used as array index
+	// the back-end solvers will complain.  A tempting solution is
+	// to add an interval (0,1) from Bool. However, this won't
+	// type check. TODO: The solution is to change the index types
+	// of the arrays by replacing Bool with [0..1].
+	error(ref, "quantifier variable cannot be of bool type");	
+	imap.insert(std::make_pair(quantified_var, interval_t(integer((long) 0),integer(1))));
+      } else if (expr::utils::get_bounds_from_pred_subtype(d_tm, d_tm.type_of(quantified_var), interval)) {
 	imap.insert(std::make_pair(quantified_var, interval));
       } else {
 	error(ref, "array is not statically bounded");	
@@ -138,7 +147,9 @@ term_ref expand_arrays_visitor::process_array_lambda(term_ref ref, var_to_interv
     term_ref index_t = t[0];
     term_ref body_t = t[1];
     expr::utils::interval_t itv;
-    if (expr::utils::get_bounds_from_pred_subtype(d_tm, d_tm.type_of(index_t), itv)) {
+    if (d_tm.term_of(d_tm.type_of(index_t)).op() == TYPE_BOOL) {
+      error(ref, "array index cannot be bool");      
+    } else if (expr::utils::get_bounds_from_pred_subtype(d_tm, d_tm.type_of(index_t), itv)) {    
       imap.insert(std::make_pair(index_t, itv));
       return process_array_lambda(body_t, imap); // recursive
     } else {
@@ -157,11 +168,9 @@ void expand_arrays_visitor::get_array_type_bounds(term_ref ref, std::vector<inte
     term_ref index_type = t[0];
     term_ref element_type = t[1];
     expr::utils::interval_t itv;
-    if (expr::utils::get_bounds_from_pred_subtype(d_tm, index_type, itv)) {
-      unsigned long lb = itv.first.get_unsigned();
-      if (lb != 1) {
-	error(ref, "array term must be indexed from 1");
-      }
+    if (d_tm.term_of(index_type).op() == TYPE_BOOL) {
+      error(ref, "array index cannot be bool");
+    } else if (expr::utils::get_bounds_from_pred_subtype(d_tm, index_type, itv)) {     
       bounds.push_back(itv);
       get_array_type_bounds(element_type, bounds); // recursive
     } else {
@@ -316,7 +325,7 @@ void expand_arrays_visitor::visit(term_ref t_ref) {
     }
     break;
   }
-  /** Array quantifiers **/
+  /** quantifiers (body might have array terms or not) **/
   case TERM_EXISTS:
   case TERM_FORALL: {
     /* 
@@ -332,9 +341,9 @@ void expand_arrays_visitor::visit(term_ref t_ref) {
     var_to_interval_map imap;
     std::vector<std::vector<integer> > instantiations;
     
-    process_array_quantifier(t_ref, imap);
+    process_quantifier(t_ref, imap);
     expr::utils::create_all_instantiations(
-	   boost::make_transform_iterator(imap.begin(), take_second<var_to_interval_map>()),	
+	   boost::make_transform_iterator(imap.begin(), take_second<var_to_interval_map>()),
 	   boost::make_transform_iterator(imap.end(), take_second<var_to_interval_map>()),
 	   instantiations);
 
