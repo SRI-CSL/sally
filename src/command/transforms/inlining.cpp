@@ -35,14 +35,18 @@ public:
   
   inliner_impl(system::context *ctx, std::string id, const system::state_type *st);
   
-  system::transition_system* apply (const system::transition_system *ts);
+  void apply (const system::transition_system* ts,
+	      const std::vector<const system::state_formula*>& queries,
+	      system::transition_system*& new_ts,
+	      std::vector<const system::state_formula*>& new_queries);
   
-  system::state_formula* apply(const system::state_formula *sf);
-
 private:
   
   system::context *d_ctx;
   std::string d_id;
+
+  system::transition_system* apply (const system::transition_system *ts);
+  system::state_formula* apply(const system::state_formula *sf);
   
 };
   
@@ -53,14 +57,13 @@ inliner::~inliner() {
   delete m_pImpl;
 }
   
-system::transition_system* inliner::apply(const system::transition_system *ts) {
-  return m_pImpl->apply(ts);
+void inliner::apply(const system::transition_system* ts,
+		    const std::vector<const system::state_formula*>& queries,
+		    system::transition_system*& new_ts,
+		    std::vector<const system::state_formula*>& new_queries) {
+  m_pImpl->apply(ts, queries, new_ts, new_queries);
 }
   
-system::state_formula* inliner::apply(const system::state_formula *sf){
-  return m_pImpl->apply(sf);
-}
-
 
 class check_no_func_app_visitor {
 public:
@@ -152,6 +155,21 @@ system::state_formula* inliner::inliner_impl::apply(const system::state_formula 
   return new_sf;  
 }
 
+void inliner::inliner_impl::apply(const system::transition_system *ts,
+				  const std::vector<const system::state_formula*>& queries,
+				  system::transition_system *& new_ts,
+				  std::vector<const system::state_formula*>& new_queries) {
+  
+  new_ts = apply(ts);
+  new_queries.clear();
+  new_queries.reserve(queries.size());
+  for (std::vector<const system::state_formula*>::const_iterator it = queries.begin(),
+	 et = queries.end(); it!=et; ++it) {
+    new_queries.push_back(apply(*it));
+  }
+  
+}
+  
 
 }
 }

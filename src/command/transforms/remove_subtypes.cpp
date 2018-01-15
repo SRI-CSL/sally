@@ -43,9 +43,10 @@ public:
   
   remove_subtypes_impl(system::context *ctx, std::string id, const system::state_type *st);
   
-  system::transition_system* apply (const system::transition_system *ts);
-  
-  system::state_formula* apply(const system::state_formula *sf);
+  void apply (const system::transition_system* ts,
+	      const std::vector<const system::state_formula*>& queries,
+	      system::transition_system*& new_ts,
+	      std::vector<const system::state_formula*>& new_queries);
   
 private:
   
@@ -60,6 +61,10 @@ private:
   void mk_renaming_map(term_manager &tm, term_ref type_var, term_ref vars_struct,
 		       const system::state_type* st, system::state_type::var_class vc);
   void add_assumptions(term_manager &tm, system::transition_system* ts);
+
+  system::transition_system* apply (const system::transition_system *ts);
+  system::state_formula* apply(const system::state_formula *sf);
+  
 };
   
 remove_subtypes::remove_subtypes(system::context *ctx, std::string id, const system::state_type *st)
@@ -69,12 +74,11 @@ remove_subtypes::~remove_subtypes() {
   delete m_pImpl;
 }
   
-system::transition_system* remove_subtypes::apply(const system::transition_system *ts) {
-  return m_pImpl->apply(ts);
-}
-  
-system::state_formula* remove_subtypes::apply(const system::state_formula *sf){
-  return m_pImpl->apply(sf);
+void remove_subtypes::apply (const system::transition_system* ts,
+			     const std::vector<const system::state_formula*>& queries,
+			     system::transition_system*& new_ts,
+			     std::vector<const system::state_formula*>& new_queries) {
+  m_pImpl->apply(ts, queries, new_ts, new_queries);
 }
 
 static void error(term_manager &tm, term_ref t_ref, std::string message) {
@@ -269,6 +273,20 @@ system::state_formula* remove_subtypes::remove_subtypes_impl::apply(const system
   system::state_formula * new_sf = new system::state_formula(tm, st, new_f);
   d_ctx->add_state_formula(d_id, new_sf);
   return new_sf;
+}
+
+void remove_subtypes::remove_subtypes_impl::apply(const system::transition_system *ts,
+						  const std::vector<const system::state_formula*>& queries,
+						  system::transition_system *& new_ts,
+						  std::vector<const system::state_formula*>& new_queries) {
+  new_ts = apply(ts);
+  new_queries.clear();
+  new_queries.reserve(queries.size());
+  for (std::vector<const system::state_formula*>::const_iterator it = queries.begin(),
+	 et = queries.end(); it!=et; ++it) {
+    new_queries.push_back(apply(*it));
+  }
+  
 }
 
 

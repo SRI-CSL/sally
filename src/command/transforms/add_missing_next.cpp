@@ -12,10 +12,10 @@ using namespace expr;
   
 add_missing_next::add_missing_next(system::context *ctx, std::string id)
 : d_ctx(ctx), d_id(id) {}
-  
-system::transition_system* add_missing_next::apply(const system::transition_system *ts) {
 
-  term_manager &tm = d_ctx->tm();
+static system::transition_system* apply_ts(system::context* ctx, std::string id, const system::transition_system *ts) {
+
+  term_manager &tm = ctx->tm();  
   const system::state_type* st = ts->get_state_type();
   term_ref tr = ts->get_transition_relation();
 
@@ -47,20 +47,32 @@ system::transition_system* add_missing_next::apply(const system::transition_syst
   system::transition_formula* new_tr_f = new system::transition_formula(tm, st, new_tr);
 
   system::transition_system* new_ts = new system::transition_system(st, new_init_t, new_tr_f);
-  d_ctx->add_transition_system(d_id, new_ts);
+  ctx->add_transition_system(id, new_ts);
   return new_ts;
 }
   
-system::state_formula* add_missing_next::apply(const system::state_formula *sf) {
-  
-  term_manager &tm = d_ctx->tm();
+static system::state_formula* apply_sf(system::context* ctx, const system::state_formula *sf) {
+  term_manager& tm = ctx->tm();  
   const system::state_type* st = sf->get_state_type();  
   system::state_formula* new_sf = new system::state_formula(tm, st, sf->get_formula());
-  
   return new_sf;
 }
-
-
+  
+void add_missing_next::apply(const system::transition_system *ts,
+			     const std::vector<const system::state_formula*>& queries,
+			     system::transition_system *& new_ts,
+			     std::vector<const system::state_formula*>& new_queries) {
+  
+  new_ts = apply_ts(d_ctx, d_id, ts);
+  new_queries.clear();
+  new_queries.reserve(queries.size());
+  for (std::vector<const system::state_formula*>::const_iterator it = queries.begin(),
+	 et = queries.end(); it!=et; ++it) {
+    new_queries.push_back(apply_sf(d_ctx, *it));
+  }
+  
+}
+  
 }
 }
 }

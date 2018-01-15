@@ -24,9 +24,10 @@ public:
   
   promote_nonstate_to_state_impl(system::context *ctx, std::string id, const system::state_type *st);
   
-  system::transition_system* apply (const system::transition_system *ts);
-  
-  system::state_formula* apply(const system::state_formula *sf);
+  void apply(const system::transition_system* ts,
+	     const std::vector<const system::state_formula*>& queries,
+	     system::transition_system*& new_ts,
+	     std::vector<const system::state_formula*>& new_queries);
   
 private:
   
@@ -35,6 +36,10 @@ private:
   // map variable names to terms
   name_to_term_map d_name_to_term_map;
   std::vector<term_ref> d_promoted_vars;
+
+  system::transition_system* apply (const system::transition_system *ts);
+  system::state_formula* apply(const system::state_formula *sf);
+  
 };
   
 promote_nonstate_to_state::promote_nonstate_to_state(system::context *ctx, std::string id, const system::state_type *st)
@@ -44,14 +49,13 @@ promote_nonstate_to_state::~promote_nonstate_to_state() {
   delete m_pImpl;
 }
   
-system::transition_system* promote_nonstate_to_state::apply(const system::transition_system *ts) {
-  return m_pImpl->apply(ts);
+void promote_nonstate_to_state::apply(const system::transition_system* ts,
+					const std::vector<const system::state_formula*>& queries,
+					system::transition_system*& new_ts,
+					std::vector<const system::state_formula*>& new_queries) {
+  m_pImpl->apply(ts, queries, new_ts, new_queries);
 }
-  
-system::state_formula* promote_nonstate_to_state::apply(const system::state_formula *sf){
-  return m_pImpl->apply(sf);
-}
-  
+    
 promote_nonstate_to_state::promote_nonstate_to_state_impl::
 promote_nonstate_to_state_impl(system::context *ctx, std::string id, const system::state_type *st)
 : d_ctx(ctx), d_id(id)
@@ -209,7 +213,22 @@ apply(const system::state_formula *sf){
   return new_sf;
 }
 
-
+void promote_nonstate_to_state::promote_nonstate_to_state_impl::
+apply(const system::transition_system *ts,
+      const std::vector<const system::state_formula*>& queries,
+      system::transition_system *& new_ts,
+      std::vector<const system::state_formula*>& new_queries) {
+  
+  new_ts = apply(ts);
+  new_queries.clear();
+  new_queries.reserve(queries.size());
+  for (std::vector<const system::state_formula*>::const_iterator it = queries.begin(),
+	 et = queries.end(); it!=et; ++it) {
+    new_queries.push_back(apply(*it));
+  }
+  
+}
+  
 }
 }
 }

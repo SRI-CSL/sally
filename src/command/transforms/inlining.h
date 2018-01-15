@@ -21,22 +21,21 @@ class inliner: public transform {
 public:
 
   // Id is a fresh identifier managed by the context ctx so that new
-  // state type, transition system, and state formula are associated
+  // state type, transition system, and state formulas are associated
   // to Id. The constructor also creates the new state type from st
   // and it will be managed by the context.
   inliner(system::context *ctx, std::string id, const system::state_type *st);
   
   ~inliner();
 
-  /* Create a new transition system without enum types with
-     the given id in the constructor (to be managed by the context) */  
-  system::transition_system* apply (const system::transition_system *ts);
+  /* Create a new transition system and state formulas without enum
+     types with the given id in the constructor (to be managed by the
+     context) */  
+  void apply (const system::transition_system *ts,
+	      const std::vector<const system::state_formula*>& queries,
+	      system::transition_system*& new_ts,
+	      std::vector<const system::state_formula*>& new_queries);
   
-  /* Create a new state formula semantically equivalent to sf without
-     enum types with the given id in the constructor (to be managed by
-     the context) */
-  system::state_formula* apply(const system::state_formula *sf);
-
   std::string get_name() const {
     return "Function inliner";
   }

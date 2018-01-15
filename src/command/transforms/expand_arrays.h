@@ -30,13 +30,12 @@ public:
 
   expand_arrays(system::context *ctx, std::string id);
 
-  /* Create a new transition system with the given id (to be managed
-     by the context) */  
-  system::transition_system* apply (const system::transition_system *ts);
-  
-  /* Create a new state formula with the given id (to be managed by
-     the context) */
-  system::state_formula* apply(const system::state_formula *sf);
+  /* Create a new transition system and state formulas with the given
+     id (to be managed by the context) */
+  void apply (const system::transition_system *ts,
+	      const std::vector<const system::state_formula*>& queries,
+	      system::transition_system*& new_ts,
+	      std::vector<const system::state_formula*>& new_queries);
 
   std::string get_name() const {
     return "Expand arrays";

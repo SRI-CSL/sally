@@ -9,6 +9,7 @@
 #include <boost/program_options/options_description.hpp>
 
 #include <string>
+#include <vector>
 
 namespace sally {
 namespace cmd {
@@ -21,25 +22,18 @@ namespace transforms {
 class preprocessor {
 public:
   
-  typedef std::pair<system::transition_system*, system::state_formula*> problem_t;
-  
   preprocessor(system::context* ctx);
   
-  /** JN: this current API performs transformation on each pair
-      transition system-query. This the case for the query
-      command. This is very inneficient with multiple queries because
-      it will transform the same transition system multiple times.
-      Ideally, we would like to modify the context by replacing all
-      the transition systems, formulas, etc associated with each id by
-      their transformed versions. However, this requires to change the
-      current API of the context class.
-  **/
-  
   /**
-     Perform several transformations on the given T and Q.  The
-     transformation is functional so it produces a new T and a new Q.
+     Perform several transformations on the given ts and queries.  The
+     transformation is functional so it produces a new transition
+     system and a new vector of queries.
   **/
-  problem_t run(std::string id, const system::transition_system* T, const system::state_formula* Q);
+  void run(std::string id,
+	   const system::transition_system* ts,
+	   const std::vector<const system::state_formula*>& queries,
+	   system::transition_system*& new_ts,
+	   std::vector<const system::state_formula*>& new_queries);
 
   static void setup_options(boost::program_options::options_description& options);
   
@@ -47,8 +41,11 @@ private:
   
   system::context* d_ctx;
   
-  problem_t run_transform(transform* tr, const system::transition_system* T, const system::state_formula* Q);
-  
+  void run_transform(transform* tr,
+		     const system::transition_system* ts,
+		     const std::vector<const system::state_formula*>& queries,
+		     system::transition_system*& new_ts,
+		     std::vector<const system::state_formula*>& new_queries);
 };
 }
 }

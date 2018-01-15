@@ -28,10 +28,18 @@ void query::run(system::context* ctx, engine* e) {
   const system::transition_system* T = ctx->get_transition_system(d_system_id);
 
   // Perform some transformations to avoid solvers complaining
+  // 
+  // FIXME: the preprocessor will be run on each query. Therefore, the
+  // transition system will preprocessed over and over again with each
+  // query. This is clearly a waste of resources.
   transforms::preprocessor pp(ctx);
-  transforms::preprocessor::problem_t TQ = pp.run(d_system_id, T, d_query);
-  const system::transition_system* Tf = TQ.first;
-  const system::state_formula* Qf = TQ.second;	
+  std::vector<const system::state_formula*> Qs;
+  Qs.push_back(d_query);  
+  system::transition_system* Tf = nullptr;
+  std::vector<const system::state_formula*> Qsf;
+  pp.run(d_system_id, T, Qs, Tf, Qsf);
+  assert(Qsf.size () == 1);
+  const system::state_formula* Qf = Qsf[0];	
 
   // Check the formula
   engine::result result = e->query(Tf, Qf);

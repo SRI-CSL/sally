@@ -30,9 +30,10 @@ public:
   
   remove_arrays_impl(system::context *ctx, std::string id, const system::state_type *st);
   
-  system::transition_system* apply (const system::transition_system *ts);
-  
-  system::state_formula* apply(const system::state_formula *sf);
+  void apply (const system::transition_system* ts,
+	      const std::vector<const system::state_formula*>& queries,
+	      system::transition_system*& new_ts,
+	      std::vector<const system::state_formula*>& new_queries);
   
 private:
   
@@ -53,7 +54,11 @@ private:
   void mk_renaming_maps(term_manager &tm, term_ref type_var, term_ref vars_struct,
 			const system::state_type* st, system::state_type::var_class vc,
 			const arr_to_scalar_type_map &arr_type_map,
-			const std::set<std::string> &non_arr_vars);    
+			const std::set<std::string> &non_arr_vars);
+
+  system::transition_system* apply (const system::transition_system *ts);
+  system::state_formula* apply(const system::state_formula *sf);
+  
 };
   
 remove_arrays::remove_arrays(system::context *ctx, std::string id, const system::state_type *st)
@@ -62,14 +67,14 @@ remove_arrays::remove_arrays(system::context *ctx, std::string id, const system:
 remove_arrays::~remove_arrays() {
   delete m_pImpl;
 }
-  
-system::transition_system* remove_arrays::apply(const system::transition_system *ts) {
-  return m_pImpl->apply(ts);
+
+void remove_arrays::apply (const system::transition_system* ts,
+			   const std::vector<const system::state_formula*>& queries,
+			   system::transition_system*& new_ts,
+			   std::vector<const system::state_formula*>& new_queries) {
+  m_pImpl->apply(ts, queries, new_ts, new_queries);
 }
   
-system::state_formula* remove_arrays::apply(const system::state_formula *sf){
-  return m_pImpl->apply(sf);
-}
 
 static void error(term_manager &tm, term_ref t_ref, std::string message) {
   std::stringstream ss;
@@ -692,7 +697,20 @@ system::state_formula* remove_arrays::remove_arrays_impl::apply(const system::st
   return new_sf;
 }
 
-
+void remove_arrays::remove_arrays_impl::apply(const system::transition_system *ts,
+					      const std::vector<const system::state_formula*>& queries,
+					      system::transition_system *& new_ts,
+					      std::vector<const system::state_formula*>& new_queries) {
+  
+  new_ts = apply(ts);
+  new_queries.clear();
+  new_queries.reserve(queries.size());
+  for (std::vector<const system::state_formula*>::const_iterator it = queries.begin(),
+	 et = queries.end(); it!=et; ++it) {
+    new_queries.push_back(apply(*it));
+  }
+}
+  
 }
 }
 }

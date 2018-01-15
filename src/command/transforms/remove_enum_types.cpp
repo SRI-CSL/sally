@@ -24,10 +24,10 @@ public:
   
   remove_enum_types_impl(system::context *ctx, std::string id, const system::state_type *st);
   
-  system::transition_system* apply (const system::transition_system *ts);
-  
-  system::state_formula* apply(const system::state_formula *sf);
-  
+  void apply (const system::transition_system* ts,
+	      const std::vector<const system::state_formula*>& queries,
+	      system::transition_system*& new_ts,
+	      std::vector<const system::state_formula*>& new_queries);
 private:
   
   system::context *d_ctx;
@@ -42,6 +42,10 @@ private:
 					const system::state_type *st, system::state_type::var_class vc);
   void mk_renaming_map(term_manager &tm, term_ref type_var, term_ref vars_struct,
 		       const system::state_type* st, system::state_type::var_class vc);
+
+  system::transition_system* apply (const system::transition_system *ts);
+  system::state_formula* apply(const system::state_formula *sf);
+  
 };
   
 remove_enum_types::remove_enum_types(system::context *ctx, std::string id, const system::state_type *st)
@@ -50,15 +54,14 @@ remove_enum_types::remove_enum_types(system::context *ctx, std::string id, const
 remove_enum_types::~remove_enum_types() {
   delete m_pImpl;
 }
-  
-system::transition_system* remove_enum_types::apply(const system::transition_system *ts) {
-  return m_pImpl->apply(ts);
-}
-  
-system::state_formula* remove_enum_types::apply(const system::state_formula *sf){
-  return m_pImpl->apply(sf);
-}
 
+void remove_enum_types::apply(const system::transition_system* ts,
+			      const std::vector<const system::state_formula*>& queries,
+			      system::transition_system*& new_ts,
+			      std::vector<const system::state_formula*>& new_queries){
+  m_pImpl->apply(ts, queries, new_ts, new_queries);
+}
+  
 /** 
  This function relates the old state variables with new state variables 
 **/
@@ -221,6 +224,20 @@ system::state_formula* remove_enum_types::remove_enum_types_impl::apply(const sy
   return new_sf;
 }
 
+void remove_enum_types::remove_enum_types_impl::apply(const system::transition_system *ts,
+						      const std::vector<const system::state_formula*>& queries,
+						      system::transition_system *& new_ts,
+						      std::vector<const system::state_formula*>& new_queries) {
+  new_ts = apply(ts);
+  new_queries.clear();
+  new_queries.reserve(queries.size());
+  for (std::vector<const system::state_formula*>::const_iterator it = queries.begin(),
+	 et = queries.end(); it!=et; ++it) {
+    new_queries.push_back(apply(*it));
+  }
+  
+}
+  
 
 }
 }

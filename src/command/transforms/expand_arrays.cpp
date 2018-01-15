@@ -424,10 +424,12 @@ static term_ref rewrite(term_manager& tm, term_ref t)  {
   
 expand_arrays::expand_arrays(system::context *ctx, std::string id)
 : d_ctx(ctx), d_id(id) {}
-  
-system::transition_system* expand_arrays::apply(const system::transition_system *ts) {
 
-  term_manager &tm = d_ctx->tm();
+  
+static system::transition_system* apply_ts(system::context* ctx, std::string id,
+					   const system::transition_system *ts) {
+
+  term_manager &tm = ctx->tm();
   const system::state_type* st = ts->get_state_type();
   
   term_ref init = ts->get_initial_states();  
@@ -440,19 +442,36 @@ system::transition_system* expand_arrays::apply(const system::transition_system 
     new system::transition_formula(tm, st, rewrite(tm, tr));
 
   system::transition_system* new_ts = new system::transition_system(st, new_init, new_tr);
-  d_ctx->add_transition_system(d_id, new_ts);
+  ctx->add_transition_system(id, new_ts);
   return new_ts;
 }
   
-system::state_formula* expand_arrays::apply(const system::state_formula *sf) {
-  term_manager &tm = d_ctx->tm();
+static system::state_formula* apply_sf(system::context* ctx, std::string id,
+				       const system::state_formula *sf) {
+  term_manager &tm = ctx->tm();
   const system::state_type* st = sf->get_state_type();
 
   system::state_formula* new_sf =
     new system::state_formula(tm, st, rewrite(tm, sf->get_formula()));
-  d_ctx->add_state_formula(d_id, new_sf);
+  ctx->add_state_formula(id, new_sf);
   return new_sf;
 }
+
+void expand_arrays::apply(const system::transition_system *ts,
+			  const std::vector<const system::state_formula*>& queries,
+			  system::transition_system *& new_ts,
+			  std::vector<const system::state_formula*>& new_queries) {
+  
+  new_ts = apply_ts(d_ctx, d_id, ts);
+  new_queries.clear();
+  new_queries.reserve(queries.size());
+  for (std::vector<const system::state_formula*>::const_iterator it = queries.begin(),
+	 et = queries.end(); it!=et; ++it) {
+    new_queries.push_back(apply_sf(d_ctx, d_id, *it));
+  }
+  
+}
+  
 
 
 }

@@ -28,15 +28,14 @@ public:
   
   ~remove_subtypes();
 
-  /* Create a new transition system without predicate subtypes with
-     the given id in the constructor (to be managed by the context) */  
-  system::transition_system* apply (const system::transition_system *ts);
-  
-  /* Create a new state formula semantically equivalent to sf without
+  /* Create a new transition system and state formulas without
      predicate subtypes with the given id in the constructor (to be
      managed by the context) */
-  system::state_formula* apply(const system::state_formula *sf);
-
+  void apply (const system::transition_system *ts,
+	      const std::vector<const system::state_formula*>& queries,
+	      system::transition_system*& new_ts,
+	      std::vector<const system::state_formula*>& new_queries);
+  
   std::string get_name() const {
     return "Remove predicate subtypes";
   }
