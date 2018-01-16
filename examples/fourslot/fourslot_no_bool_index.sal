@@ -1,0 +1,97 @@
+fourslot: CONTEXT = 
+BEGIN
+
+item: TYPE = [0..3];
+index_type: TYPE = [0..1];
+	
+reader: MODULE =
+BEGIN
+INPUT
+  latest: BOOLEAN,
+  index: ARRAY index_type OF BOOLEAN,
+  slot:  ARRAY index_type OF ARRAY index_type OF item,
+  wpc: [0..4]
+OUTPUT
+  reading: BOOLEAN,
+  rpair, rindex: BOOLEAN,
+  rpc: [0..3]
+LOCAL
+  out: item
+INITIALIZATION
+    reading = FALSE; rpair = FALSE; rindex = FALSE;
+    out = 0;
+    rpc =0;
+TRANSITION
+  [
+    rpc = 0 AND wpc /= 4 --> rpair' = latest;
+                rpc' = 1;
+  []
+    rpc = 0 AND wpc = 4 --> rpair' = TRUE;
+                rpc' = 1;
+  []
+    rpc = 0 AND wpc = 4 --> rpair' = FALSE;
+                rpc' = 1;
+  []
+    rpc = 1 --> reading' = rpair; % bug if flipped
+                rpc' = 2;
+  []
+    rpc = 2 AND wpc /= 3 --> rindex' = index[IF rpair THEN 1 ELSE 0 ENDIF];
+                rpc' = 3;
+  []
+    rpc = 2 AND wpc = 3 --> rindex' = TRUE;
+                rpc' = 3;
+  []
+    rpc = 2 AND wpc = 3 --> rindex' = FALSE;
+                rpc' = 3;
+  []
+    rpc = 3 --> out' = slot[IF rpair THEN 1 ELSE 0 ENDIF][IF rindex THEN 1 ELSE 0 ENDIF];
+                rpc' = 0;
+  ]
+END;
+
+writer: MODULE =
+BEGIN
+INPUT
+  reading: BOOLEAN,
+  rpc: [0..3]
+OUTPUT
+  latest: BOOLEAN,
+  index: ARRAY index_type OF BOOLEAN,
+  slot:  ARRAY index_type OF ARRAY index_type OF item,
+  wpair, windex: BOOLEAN,
+  wpc: [0..4]
+INITIALIZATION
+    latest = FALSE; wpair = FALSE; windex = FALSE;
+    wpc = 0;
+    index[1] = FALSE; 
+    slot = [ [idx : index_type] [ [idx : index_type] 0 ] ];
+TRANSITION
+  [
+    ini : wpc = 0 AND rpc /= 1 --> wpair' = NOT reading;
+                                   wpc' = 1
+  []
+  ([](arb: index_type):
+    wpc = 0 AND rpc = 1 --> wpair' = IF arb = 1 THEN TRUE ELSE FALSE ENDIF;
+                wpc' = 1)
+  []
+    wpc = 1 --> windex' = NOT index[IF wpair THEN 1 ELSE 0 ENDIF]; % bug if flipped
+                wpc' = 2
+  []
+    ([] (val: item):
+    wpc = 2 --> slot'[IF wpair THEN 1 else 0 ENDIF][IF windex THEN 1 ELSE 0 ENDIF] = val;
+                wpc' = 3)
+  []
+    wpc = 3 --> index'[IF wpair THEN 1 else 0 ENDIF] = windex;
+                wpc' = 4
+  []
+    wpc = 4 --> latest' = wpair;
+                wpc' = 0
+  ]
+END;
+
+system: MODULE = reader [] writer;
+
+mutex: LEMMA system |-
+        G((wpc = 2 AND rpc = 3) => (wpair /= rpair OR windex /= rindex));
+
+END
