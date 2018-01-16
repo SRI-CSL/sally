@@ -13,7 +13,7 @@ namespace cmd {
 namespace transforms {
 
 using namespace expr;
-
+   
 /** 
     Expand arrays by removing quantifiers, array lambda terms,
     and removing array variables involved in equality terms.
@@ -92,7 +92,7 @@ void expand_arrays_visitor::error(term_ref t_ref, std::string message) const {
     output::set_term_manager(ss, tm);
   }
   ss << "Can't expand arrays " << t_ref;
-  if (message.length() > 0) { ss << "(" << message << ")"; }
+  if (message.length() > 0) { ss << ". " << message; }
   ss << ".";
   throw exception(ss.str());
 }
@@ -414,12 +414,13 @@ void expand_arrays_visitor::visit(term_ref t_ref) {
 }
 
 static term_ref rewrite(term_manager& tm, term_ref t)  {
-  term_manager::substitution_map subst_map;
-  typedef expand_arrays_visitor visitor_t;
-  visitor_t visitor(tm, subst_map);
-  term_visit_topological<visitor_t, term_ref, term_ref_hasher> visit_topological(visitor);
-  visit_topological.run(t);
-  return subst_map[t];        
+  // expand arrays
+  term_manager::substitution_map subst_map;    
+  expand_arrays_visitor array_visitor(tm, subst_map);
+  term_visit_topological<expand_arrays_visitor, term_ref, term_ref_hasher>
+    array_visit_topological(array_visitor);
+  array_visit_topological.run(t);  
+  return subst_map[t];
 }
   
 expand_arrays::expand_arrays(system::context *ctx, std::string id)
