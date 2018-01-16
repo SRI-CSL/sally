@@ -171,7 +171,17 @@ bool state_type::is_state_formula(expr::term_ref f, bool print_if_false) const {
   bool ok = std::includes(state_variables.begin(), state_variables.end(), f_variables.begin(), f_variables.end());
   if (!ok && print_if_false) {
     std::cerr << "state_variables: " << state_variables << std::endl;
-    std::cerr << "f_variables: " << f_variables << std::endl;    
+    std::cerr << "f_variables: " << f_variables << std::endl;
+    std::cerr << "f:" << f << std::endl;
+    std::set<expr::term_ref> out_of_scope;
+    std::set_difference(f_variables.begin(), f_variables.end(),
+			state_variables.begin(), state_variables.end(),
+                        std::inserter(out_of_scope, out_of_scope.begin()));
+    std::cerr << "These variables should be in the state variables" << std::endl;
+    for(std::set<expr::term_ref>::iterator it = out_of_scope.begin(), et = out_of_scope.end();
+	it!=et; ++it) {
+      std::cerr << "\t" << *it << "(" << d_tm.type_of(*it) << ")" << std::endl;
+    }
   }
   return ok;
 }
@@ -194,7 +204,17 @@ bool state_type::is_transition_formula(expr::term_ref f, bool print_if_false) co
   bool ok = std::includes(all_variables.begin(), all_variables.end(), f_variables.begin(), f_variables.end());
   if (!ok && print_if_false) {
     std::cerr << "all_variables: " << all_variables << std::endl;
-    std::cerr << "f_variables: " << f_variables << std::endl;
+    std::cerr << "f_variables  : " << f_variables << std::endl;
+    std::cerr << "f            : " << f << std::endl;
+    std::set<expr::term_ref> out_of_scope;
+    std::set_difference(f_variables.begin(), f_variables.end(),
+			all_variables.begin(), all_variables.end(),
+                        std::inserter(out_of_scope, out_of_scope.begin()));
+    std::cerr << "These variables should be in the state variables" << std::endl;
+    for(std::set<expr::term_ref>::iterator it = out_of_scope.begin(), et = out_of_scope.end();
+	it!=et; ++it) {
+      std::cerr << "\t" << *it << "(" << d_tm.type_of(*it) << ")" << std::endl;
+    }
   }
   return ok;
 }
