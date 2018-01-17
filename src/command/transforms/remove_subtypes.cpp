@@ -88,7 +88,7 @@ static void error(term_manager &tm, term_ref t_ref, std::string message) {
     output::set_term_manager(ss, _tm);
   }
   ss << "Can't remove predicate subtype " << t_ref;
-  if (message.length() > 0) { ss << "(" << message << ")"; }
+  if (message.length() > 0) { ss << ". " << message; }
   ss << ".";
   throw exception(ss.str());
 }
