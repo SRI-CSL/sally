@@ -564,11 +564,21 @@ definition_list returns [expr::term_ref t]
     { STATE->lvalues_clear(); }
   ;
 
+// assignments[std::vector<expr::term_ref>& a]
+//   : { STATE->lvalues_clear(); }
+//     t1 = simple_definition { a.push_back(t1); } 
+//     (';' t2 = simple_definition { a.push_back(t2); })* ';'?
+//     { STATE->lvalues_clear(); }
+//   ;
+
+/** JN: we don't clear lvalues after assignments have been
+    processed. Otheriwse, at the time they are needed in
+    sal_state::mk_term_from_guarded they are already gone.
+**/
 assignments[std::vector<expr::term_ref>& a]
   : { STATE->lvalues_clear(); }
     t1 = simple_definition { a.push_back(t1); } 
     (';' t2 = simple_definition { a.push_back(t2); })* ';'?
-    { STATE->lvalues_clear(); }
   ;
 
 /** 
