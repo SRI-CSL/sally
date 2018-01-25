@@ -545,7 +545,8 @@ private:
 	       d_tm.op_of(ref) == TERM_ARRAY_READ) {
       return d_tm.mk_array_read(ref, idx); 
     } else {
-      assert(false && "unsupported case in push_down_read");
+      error(d_tm, ref, "Unsupported case in push_down_read");
+      return ref;
     }
   }
 };
