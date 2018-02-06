@@ -45,6 +45,13 @@ void preprocessor::run_transform(transform* tr,
   }
 }
   
+std::string make_id(std::string prefix) {
+  static unsigned k = 0; // to generate unique id's
+  std::stringstream system_id_ss;
+  system_id_ss << prefix << "." << k ++;
+  return system_id_ss.str();
+}
+
 void preprocessor::run(std::string system_id,
 		       const system::transition_system* T,
 		       const std::vector<const system::state_formula*>& Qs,
@@ -54,40 +61,35 @@ void preprocessor::run(std::string system_id,
   // T is registered in the context with system_id but Qs might not.
 
   options& opts = d_ctx->get_options();
-  static unsigned k = 0; // to generate unique id's
+
 
   // Inline functions
-  std::string new_system_id(system_id + "." + std::to_string(k++)); 
-  transforms::inliner i(d_ctx, new_system_id, T->get_state_type());
-  system::transition_system* T1 = nullptr;
+  transforms::inliner i(d_ctx, make_id(system_id), T->get_state_type());
+  system::transition_system* T1 = 0;
   std::vector<const system::state_formula*> Qs1;  
   run_transform(&i, T, Qs, T1, Qs1);
   MSG(1) << "Inlined functions." << std::endl;
   // Remove quantifiers, array lambda terms, etc
-  new_system_id = system_id + "." + std::to_string(k++); 
-  transforms::expand_arrays ea(d_ctx, new_system_id);
-  system::transition_system* T2 = nullptr;
+  transforms::expand_arrays ea(d_ctx, make_id(system_id));
+  system::transition_system* T2 = 0;
   std::vector<const system::state_formula*> Qs2;    
   run_transform(&ea, T1, Qs1, T2, Qs2);
   MSG(1) << "Removed quantifiers and array lambda terms." << std::endl;  
   // Remove array terms (select/write)
-  new_system_id = system_id + "." + std::to_string(k++); 
-  transforms::remove_arrays ra(d_ctx, new_system_id, T2->get_state_type());
-  system::transition_system* T3 = nullptr;
+  transforms::remove_arrays ra(d_ctx, make_id(system_id), T2->get_state_type());
+  system::transition_system* T3 = 0;
   std::vector<const system::state_formula*> Qs3;    
   run_transform(&ra, T2, Qs2, T3, Qs3);
   MSG(1) << "Removed array terms." << std::endl;    
   // Remove enumerate types
-  new_system_id = system_id + "." + std::to_string(k++); 
-  transforms::remove_enum_types ret(d_ctx, new_system_id, T3->get_state_type());
-  system::transition_system* T4 = nullptr;
+  transforms::remove_enum_types ret(d_ctx, make_id(system_id), T3->get_state_type());
+  system::transition_system* T4 = 0;
   std::vector<const system::state_formula*> Qs4;    
   run_transform(&ret, T3, Qs3, T4, Qs4);
   MSG(1) << "Removed enumerate types." << std::endl;        
   // Remove predicate subtypes
-  new_system_id = system_id + "." + std::to_string(k++); 
-  transforms::remove_subtypes rs(d_ctx, new_system_id, T4->get_state_type());
-  system::transition_system* T5 = nullptr;
+  transforms::remove_subtypes rs(d_ctx, make_id(system_id), T4->get_state_type());
+  system::transition_system* T5 = 0;
   std::vector<const system::state_formula*> Qs5;   
   run_transform(&rs, T4, Qs4, T5, Qs5);
   MSG(1) << "Removed predicate subtypes." << std::endl;      
@@ -100,16 +102,14 @@ void preprocessor::run(std::string system_id,
   // default value. By promoting PARAM variables to state variables we
   // ensure that all models are fully defined so Yices' generalization
   // method does not need to assign default values.
-  new_system_id = system_id + "." + std::to_string(k++); 
-  transforms::promote_nonstate_to_state ps(d_ctx, new_system_id, T5->get_state_type());
-  system::transition_system* T6 = nullptr;
+  transforms::promote_nonstate_to_state ps(d_ctx, make_id(system_id), T5->get_state_type());
+  system::transition_system* T6 = 0;
   std::vector<const system::state_formula*> Qs6;    
   run_transform(&ps, T5, Qs5, T6, Qs6);
   MSG(1) << "Promoted all PARAM variables to state ones." << std::endl;
   
   if (opts.has_option("add-missed-next")) {
-    new_system_id = system_id + "." + std::to_string(k++); 
-    transforms::add_missing_next amn(d_ctx, new_system_id);
+    transforms::add_missing_next amn(d_ctx, make_id(system_id));
     run_transform(&amn, T6, Qs6, newT, newQs);
     MSG(1) << "Added x' = x for any unused current x variable." << std::endl;    
   } else {

@@ -929,16 +929,16 @@ static void expand_array(term_manager &tm, std::string var_name, term_ref type_r
     const std::vector<integer> &inst = *it;
     assert(!inst.empty());
 
-    std::string scalar_name(var_name);
+    std::stringstream scalar_name(var_name);
     std::vector<unsigned long> indices;
     for (unsigned i=0; i < inst.size(); ++i) {
       unsigned long idx = inst[i].get_unsigned();
       indices.push_back(idx);
-      scalar_name += "_" + std::to_string(idx);
+      scalar_name << "_" << idx;
     }
     unsigned key = get_unidimensional_index(indices, min_indexes, max_indexes);
-    imap[key] = std::make_pair(scalar_name, scalar_type);
-    scalar_names.push_back(scalar_name);
+    imap[key] = std::make_pair(scalar_name.str(), scalar_type);
+    scalar_names.push_back(scalar_name.str());
     scalar_types.push_back(scalar_type);
   }
 }
@@ -1167,7 +1167,7 @@ static term_ref rewrite(term_manager& tm, term_ref t,
   
 remove_arrays::remove_arrays_impl::remove_arrays_impl(system::context *ctx, std::string id,
 						      const system::state_type *st)
-  : d_ctx(ctx), d_id(id), d_new_st(nullptr) {
+  : d_ctx(ctx), d_id(id), d_new_st(0) {
   mk_state_type_without_arrays(st);
 }
 

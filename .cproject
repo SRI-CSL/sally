@@ -179,4 +179,5 @@
 			<file-mapping configuration="" language="org.eclipse.cdt.core.g++" path="src/parser/sal/salParser.c"/>
 		</project-mappings>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 </cproject>

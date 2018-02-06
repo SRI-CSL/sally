@@ -35,7 +35,7 @@ void query::run(system::context* ctx, engine* e) {
   transforms::preprocessor pp(ctx);
   std::vector<const system::state_formula*> Qs;
   Qs.push_back(d_query);  
-  system::transition_system* Tf = nullptr;
+  system::transition_system* Tf = 0;
   std::vector<const system::state_formula*> Qsf;
   pp.run(d_system_id, T, Qs, Tf, Qsf);
   assert(Qsf.size () == 1);
