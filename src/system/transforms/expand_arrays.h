@@ -26,6 +26,9 @@ namespace transforms {
 **/
   
 class expand_arrays: public transform {
+
+  static factory::register_transform s_register;
+
 public:
 
   expand_arrays(system::context *ctx, std::string id);
@@ -41,6 +44,10 @@ public:
     return "Expand arrays";
   }
   
+  virtual size_t get_priority() const {
+    return 1;
+  }
+
 private:
   
   system::context *d_ctx;

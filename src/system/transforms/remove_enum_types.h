@@ -19,6 +19,9 @@ namespace transforms {
 **/
   
 class remove_enum_types: public transform {
+
+  static factory::register_transform s_register;
+
 public:
 
   // Id is a fresh identifier managed by the context ctx so that new
@@ -41,6 +44,10 @@ public:
     return "Remove enumeration types";
   }
   
+  virtual size_t get_priority() const {
+    return 3;
+  }
+
 private:
 
   // forward declaration

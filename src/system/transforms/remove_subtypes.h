@@ -18,6 +18,9 @@ namespace transforms {
 **/
   
 class remove_subtypes: public transform {
+
+  static factory::register_transform s_register;
+
 public:
 
   // Id is a fresh identifier managed by the context ctx so that new
@@ -40,6 +43,10 @@ public:
     return "Remove predicate subtypes";
   }
   
+  virtual size_t get_priority() const {
+    return 4;
+  }
+
 private:
 
   // forward declaration

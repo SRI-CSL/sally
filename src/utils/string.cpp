@@ -71,6 +71,9 @@ bool string::operator == (const string& s) const {
   return strcmp(d_data, s.d_data) == 0;
 }
 
+bool string::operator < (const string& s) const {
+  return strcmp(d_data, s.d_data) < 0;
+}
 
 const char* string::begin() const {
   return d_data;
@@ -79,7 +82,6 @@ const char* string::begin() const {
 const char* string::end() const {
   return d_data + size();
 }
-
 
 size_t string::size() const {
   if (d_data) {

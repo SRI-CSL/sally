@@ -19,6 +19,9 @@ namespace transforms {
 **/
   
 class remove_arrays: public transform {
+
+  static factory::register_transform s_register;
+
 public:
 
   // Id is a fresh identifier managed by the context ctx so that new
@@ -40,7 +43,11 @@ public:
   std::string get_name() const {
     return "Remove arrays";
   }
-			         
+
+  virtual size_t get_priority() const {
+    return 2;
+  }
+
 private:
 
   // forward declaration

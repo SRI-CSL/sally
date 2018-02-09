@@ -18,6 +18,9 @@ namespace transforms {
 **/
   
 class promote_nonstate_to_state: public transform {
+
+  static factory::register_transform s_register;
+
 public:
 
   // Id is a fresh identifier managed by the context ctx so that new
@@ -39,6 +42,10 @@ public:
     return "Promote non-state to state variables";
   }
   
+  virtual size_t get_priority() const {
+    return 5;
+  }
+
 private:
 
   // forward declaration

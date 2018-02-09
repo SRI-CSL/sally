@@ -12,13 +12,16 @@
 namespace sally {
 namespace cmd {
 namespace transforms {
-  
+
 /** 
     Search in the transition relation if a variable x is not updated
     and it adds an equality next.x = current.x
 **/
   
 class add_missing_next: public transform {
+
+  static factory::register_transform s_register;
+
 public:
 
   add_missing_next(system::context *ctx, std::string id);
@@ -34,6 +37,10 @@ public:
     return "Add missing prime variables";
   }
   
+  virtual size_t get_priority() const {
+    return 6;
+  }
+
 private:
   
   system::context *d_ctx;

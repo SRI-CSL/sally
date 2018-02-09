@@ -1,4 +1,3 @@
-#include "transforms.h"
 #include "expand_arrays.h"
 #include "remove_arrays.h"
 #include "remove_subtypes.h"
@@ -11,6 +10,7 @@
 #include "utils/options.h"
 
 #include <boost/program_options/options_description.hpp>
+#include "preprocessor.h"
 
 namespace sally {
 namespace cmd {
@@ -19,15 +19,25 @@ namespace transforms {
 using namespace expr;
 
 void preprocessor::setup_options(boost::program_options::options_description& options) {
+  std::string default_transforms = factory::get_default_transforms_list();
+
+  std::stringstream available_transforms;
+  available_transforms << "List separated transforms. Available: " << factory::get_transforms_list();
+
   using namespace boost::program_options;
   options.add_options()
-    ("add-missed-next", 
-     "The MCMT model is extended with (next.x = state.x) if next.x is not used in the transition relation.")
-    ;
+    ("add-missed-next", "Extend the model is with (next.x = state.x) if next.x is not used.")
+    ("preprocessor-transforms",
+        boost::program_options::value<std::string>()->default_value(default_transforms),
+        available_transforms.str().c_str())
+  ;
 }
   
-preprocessor::preprocessor(system::context *ctx)
-: d_ctx(ctx) {}
+preprocessor::preprocessor(system::context *ctx, std::string system_id, std::string preprocessed_id)
+: d_ctx(ctx)
+, d_original(ctx->get_transition_system(system_id))
+{
+}
 
 void preprocessor::run_transform(transform* tr,
 				 const system::transition_system* ts,

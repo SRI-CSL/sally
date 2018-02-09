@@ -18,6 +18,9 @@ namespace transforms {
 **/
   
 class inliner: public transform {
+
+  static factory::register_transform s_register;
+
 public:
 
   // Id is a fresh identifier managed by the context ctx so that new
@@ -40,6 +43,10 @@ public:
     return "Function inliner";
   }
   
+  virtual size_t get_priority() const {
+    return 0;
+  }
+
 private:
 
   // forward declaration

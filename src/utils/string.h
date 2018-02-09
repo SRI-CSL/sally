@@ -38,6 +38,7 @@ public:
 
   string& operator = (const string& s);
   bool operator == (const string& s) const;
+  bool operator < (const string& s) const;
 
   const char* begin() const;
   const char* end() const;
