@@ -27,7 +27,7 @@
 #include "parser/parser.h"
 #include "engine/factory.h"
 #include "ai/factory.h"
-#include "command/transforms/transforms.h"
+#include "system/transforms/transforms.h"
 #include "smt/factory.h"
 #include "utils/trace.h"
 #include "utils/statistics.h"
