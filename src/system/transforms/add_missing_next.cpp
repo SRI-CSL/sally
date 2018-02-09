@@ -10,8 +10,6 @@ namespace transforms {
 
 using namespace expr;
 
-factory::register_transform add_missing_next::s_register("add_missing_next", 6);
-
 add_missing_next::add_missing_next(system::context *ctx, std::string id)
 : d_ctx(ctx), d_id(id) {}
 

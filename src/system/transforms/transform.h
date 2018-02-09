@@ -34,9 +34,12 @@ public:
 
 };
 
-class transform_info {
-public:
-  virtual ~transform_info() {};
+struct transform_info {
+  std::string id;
+  size_t priority;
+  transform_info() {}
+  transform_info(std::string id, size_t priority)
+  : id(id), priority(priority) {}
 };
 
 /**
@@ -44,12 +47,11 @@ public:
  */
 class factory {
 
-  typedef std::map<std::string, transform_info*> transforms_info_map;
+  typedef std::map<std::string, transform_info> transforms_info_map;
 
   struct info {
     transforms_info_map* m;
     transforms_info_map* get();
-    ~info();
   };
 
   /** Map from id's to the info */
