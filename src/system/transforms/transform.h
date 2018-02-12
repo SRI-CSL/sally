@@ -1,5 +1,6 @@
 #pragma once
 
+#include "expr/model.h"
 #include "system/state_formula.h"
 #include "system/transition_system.h"
 
@@ -63,13 +64,16 @@ public:
   };
 
   /** Apply the transform to a state formula */
-  system::state_formula* apply(const system::state_formula* f_state, direction D);
+  virtual
+  system::state_formula* apply(const system::state_formula* f_state, direction D) = 0;
 
   /** Apply the transform to a transition formula */
-  system::transition_formula* apply(const system::transition_formula* f_trans, direction D);
+  virtual
+  system::transition_formula* apply(const system::transition_formula* f_trans, direction D) = 0;
 
   /** Apply the transform to a model */
-  expr::model::ref apply(expr::model::ref model, direction d);
+  virtual
+  expr::model::ref apply(expr::model::ref model, direction d) = 0;
 
   /** Apply the transform */
   virtual void apply (const system::transition_system *ts,

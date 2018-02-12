@@ -79,6 +79,25 @@ remove_arrays::~remove_arrays() {
   delete m_pImpl;
 }
 
+system::state_formula* remove_arrays::apply(const system::state_formula* f_state, direction D) {
+  // TODO
+  assert(false);
+  return 0;
+}
+
+system::transition_formula* remove_arrays::apply(const system::transition_formula* f_trans, direction D) {
+  // TODO
+  assert(false);
+  return 0;
+}
+
+expr::model::ref remove_arrays::apply(expr::model::ref model, direction d) {
+  // TODO
+  assert(false);
+  return model;
+}
+
+
 void remove_arrays::apply (const system::transition_system* ts,
 			   const std::vector<const system::state_formula*>& queries,
 			   system::transition_system*& new_ts,

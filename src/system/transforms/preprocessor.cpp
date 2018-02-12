@@ -37,6 +37,101 @@ preprocessor::preprocessor(system::context *ctx, std::string system_id, std::str
 : d_ctx(ctx)
 , d_original(ctx->get_transition_system(system_id))
 {
+  std::vector<std::string> transforms;
+
+  // Get the list of transforms from comma separated option
+  std::string transforms_list = ctx->get_options().get_string("preprocessor-transforms");
+  size_t start = 0, find = std::string::npos;
+  std::string transform_name;
+  while ((find = transforms_list.find(',', start)) != std::string::npos) {
+    transform_name = transforms_list.substr(start, find - start);
+    transforms.push_back(transform_name);
+    start = find + 1;
+  }
+  transform_name = transforms_list.substr(start);
+  transforms.push_back(transform_name);
+
+  // Allocate the transforms
+  const system::transition_system* current_system = d_original;
+  for (size_t i = 0; i < transforms.size(); ++ i) {
+    transform* current_transform = factory::mk_transform(transforms[i], current_system);
+    d_transforms.push_back(current_transform);
+    current_system = current_transform->get_transformed();
+  }
+
+}
+
+preprocessor::~preprocessor() {
+  for (size_t i = 0; i < d_transforms.size(); ++ i) {
+    delete d_transforms[i];
+  }
+}
+
+system::state_formula* preprocessor::apply(const system::state_formula* sf, transform::direction D) {
+  const system::state_formula* current = sf;
+  system::state_formula* next = 0;
+  switch (D) {
+  case transform::TRANSFORM_FORWARD:
+    for (transforms_vector::iterator it = d_transforms.begin(); it != d_transforms.end(); ++ it) {
+      next = (*it)->apply(current, D);
+      if (current != sf) { delete current; }
+      current = next;
+    }
+    break;
+  case transform::TRANSFORM_BACKWARD:
+    for (transforms_vector::reverse_iterator it = d_transforms.rbegin(); it != d_transforms.rend(); ++ it) {
+      next = (*it)->apply(current, D);
+      if (current != sf) { delete current; }
+      current = next;
+    }
+    break;
+  }
+  // Return the last one transformed
+  return next;
+}
+
+system::transition_formula* preprocessor::apply(const system::transition_formula* tf, transform::direction D) {
+  const system::transition_formula* current = tf;
+  system::transition_formula* next = 0;
+  switch (D) {
+  case transform::TRANSFORM_FORWARD:
+    for (transforms_vector::iterator it = d_transforms.begin(); it != d_transforms.end(); ++ it) {
+      next = (*it)->apply(current, D);
+      if (current != tf) { delete current; }
+      current = next;
+    }
+    break;
+  case transform::TRANSFORM_BACKWARD:
+    for (transforms_vector::reverse_iterator it = d_transforms.rbegin(); it != d_transforms.rend(); ++ it) {
+      next = (*it)->apply(current, D);
+      if (current != tf) { delete current; }
+      current = next;
+    }
+    break;
+  }
+  // Return the last one transformed
+  return next;
+}
+
+expr::model::ref preprocessor::apply(expr::model::ref m, transform::direction D) {
+  expr::model::ref current = m;
+  expr::model::ref next;
+  switch (D) {
+  case transform::TRANSFORM_FORWARD:
+    for (transforms_vector::iterator it = d_transforms.begin(); it != d_transforms.end(); ++ it) {
+      next = (*it)->apply(current, D);
+      current = next;
+    }
+    break;
+  case transform::TRANSFORM_BACKWARD:
+    for (transforms_vector::reverse_iterator it = d_transforms.rbegin(); it != d_transforms.rend(); ++ it) {
+      next = (*it)->apply(current, D);
+      current = next;
+    }
+    break;
+  }
+  // Return the last one transformed
+  return next;
 }
 
 void preprocessor::run_transform(transform* tr,

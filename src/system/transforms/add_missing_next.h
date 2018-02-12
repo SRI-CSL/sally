@@ -27,6 +27,15 @@ public:
   add_missing_next(const system::transition_system* original)
   : transform(original) {}
 
+  /** Apply the transform to a state formula */
+  system::state_formula* apply(const system::state_formula* f_state, direction D);
+
+  /** Apply the transform to a transition formula */
+  system::transition_formula* apply(const system::transition_formula* f_trans, direction D);
+
+  /** Apply the transform to a model */
+  expr::model::ref apply(expr::model::ref model, direction d);
+
   add_missing_next(const system::transition_system* original, system::context *ctx, std::string id);
 
   /* Create a new transition system and state formulas with the given

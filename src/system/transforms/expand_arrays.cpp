@@ -186,7 +186,6 @@ expand_arrays_visitor::expand_arrays_visitor(term_manager& tm, term_to_term_map 
   d_subst_map(subst_map)
 {}
 
-
 /** 
     The visitor is building the new expanded term in d_subst_map.  The
     visitor traverses the term in a bottom-up fashion and when
@@ -428,7 +427,24 @@ static term_ref rewrite(term_manager& tm, term_ref t)  {
 expand_arrays::expand_arrays(const system::transition_system* original, system::context *ctx, std::string id)
 : transform(original), d_ctx(ctx), d_id(id) {}
 
-  
+system::state_formula* expand_arrays::apply(const system::state_formula* f_state, direction D) {
+  // TODO
+  assert(false);
+  return 0;
+}
+
+system::transition_formula* expand_arrays::apply(const system::transition_formula* f_trans, direction D) {
+  // TODO
+  assert(false);
+  return 0;
+}
+
+expr::model::ref expand_arrays::apply(expr::model::ref model, direction d) {
+  // TODO
+  assert(false);
+  return model;
+}
+
 static system::transition_system* apply_ts(system::context* ctx, std::string id,
 					   const system::transition_system *ts) {
 

@@ -26,6 +26,15 @@ public:
   remove_subtypes(const system::transition_system* original)
   : transform(original) {}
 
+  /** Apply the transform to a state formula */
+  system::state_formula* apply(const system::state_formula* f_state, direction D);
+
+  /** Apply the transform to a transition formula */
+  system::transition_formula* apply(const system::transition_formula* f_trans, direction D);
+
+  /** Apply the transform to a model */
+  expr::model::ref apply(expr::model::ref model, direction d);
+
   // Id is a fresh identifier managed by the context ctx so that new
   // state type, transition system, and state formula are associated
   // to Id. The constructor also creates the new state type from st

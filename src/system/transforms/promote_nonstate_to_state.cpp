@@ -48,6 +48,25 @@ promote_nonstate_to_state::promote_nonstate_to_state(const system::transition_sy
 promote_nonstate_to_state::~promote_nonstate_to_state() {
   delete m_pImpl;
 }
+
+system::state_formula* promote_nonstate_to_state::apply(const system::state_formula* f_state, direction D) {
+  // TODO
+  assert(false);
+  return 0;
+}
+
+system::transition_formula* promote_nonstate_to_state::apply(const system::transition_formula* f_trans, direction D) {
+  // TODO
+  assert(false);
+  return 0;
+}
+
+expr::model::ref promote_nonstate_to_state::apply(expr::model::ref model, direction d) {
+  // TODO
+  assert(false);
+  return model;
+}
+
   
 void promote_nonstate_to_state::apply(const system::transition_system* ts,
 					const std::vector<const system::state_formula*>& queries,

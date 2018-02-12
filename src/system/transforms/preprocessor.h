@@ -27,6 +27,10 @@ class preprocessor {
   /** Original transition system */
   const system::transition_system* d_original;
 
+  /** List of transforms, in order */
+  typedef std::vector<transform*> transforms_vector;
+  transforms_vector d_transforms;
+
 public:
   
   /**
@@ -36,13 +40,18 @@ public:
   preprocessor(system::context* ctx, std::string system_id, std::string preprocessed_id);
 
   /**
-   * Get the list of all available transforms.
+   * Destroy the preprocess and all the transforms.
    */
-
-
+  ~preprocessor();
 
   /** Run the pre-processor on the given state formula. */
-  system::state_formula* apply(const system::state_formula* sf);
+  system::state_formula* apply(const system::state_formula* sf, transform::direction D);
+
+  /** Run the pre-processor on the given transition formula. */
+  system::transition_formula* apply(const system::transition_formula* sf, transform::direction D);
+
+  /** Run the pre-processor on the given model. */
+  expr::model::ref apply(expr::model::ref m, transform::direction D);
 
   /**
    * Perform several transformations on the given ts and queries. The
@@ -53,6 +62,7 @@ public:
 	   const std::vector<const system::state_formula*>& queries,
 	   system::transition_system*& new_ts,
 	   std::vector<const system::state_formula*>& new_queries);
+
 
   /** Setup the options */
   static

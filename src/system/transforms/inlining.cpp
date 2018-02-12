@@ -57,6 +57,24 @@ inliner::~inliner() {
   delete m_pImpl;
 }
   
+system::state_formula* inliner::apply(const system::state_formula* f_state, direction D) {
+  // TODO
+  assert(false);
+  return 0;
+}
+
+system::transition_formula* inliner::apply(const system::transition_formula* f_trans, direction D) {
+  // TODO
+  assert(false);
+  return 0;
+}
+
+expr::model::ref inliner::apply(expr::model::ref model, direction d) {
+  // TODO
+  assert(false);
+  return model;
+}
+
 void inliner::apply(const system::transition_system* ts,
 		    const std::vector<const system::state_formula*>& queries,
 		    system::transition_system*& new_ts,
