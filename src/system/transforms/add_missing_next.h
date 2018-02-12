@@ -26,6 +26,8 @@ public:
 
   add_missing_next(system::context *ctx, std::string id);
 
+  add_missing_next(system::context *ctx, std::string id);
+
   /* Create a new transition system and state formulas with the given
      id (to be managed by the context) */
   void apply (const system::transition_system *ts,

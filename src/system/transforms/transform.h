@@ -16,8 +16,14 @@ namespace transforms {
  */
 class transform {
 
+protected:
+
+  const system::transition_system* d_original;
+
 public:
   
+  transform(const system::transition_system* original);
+
   virtual ~transform() {}
 
   /** Apply the transform */
@@ -37,7 +43,7 @@ public:
 struct transform_info {
   std::string id;
   size_t priority;
-  transform_info() {}
+  transform_info(): priority(0) {}
   transform_info(std::string id, size_t priority)
   : id(id), priority(priority) {}
 };
