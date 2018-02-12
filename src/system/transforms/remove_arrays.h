@@ -25,7 +25,7 @@ class remove_arrays: public transform {
 public:
 
   remove_arrays(const system::transition_system* original)
-  : transform(original) {}
+  : transform(original), m_pImpl(0) {}
 
   /** Apply the transform to a state formula */
   system::state_formula* apply(const system::state_formula* f_state, direction D);

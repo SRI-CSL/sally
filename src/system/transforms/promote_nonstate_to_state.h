@@ -24,7 +24,7 @@ class promote_nonstate_to_state: public transform {
 public:
 
   promote_nonstate_to_state(const system::transition_system* original)
-  : transform(original) {}
+  : transform(original), m_pImpl(0) {}
 
   /** Apply the transform to a state formula */
   system::state_formula* apply(const system::state_formula* f_state, direction D);
