@@ -20,9 +20,12 @@ namespace transforms {
   
 class remove_enum_types: public transform {
 
-  static factory::register_transform s_register;
+  static factory::register_transform<remove_enum_types> s_register;
 
 public:
+
+  remove_enum_types(const system::transition_system* original)
+  : transform(original) {}
 
   // Id is a fresh identifier managed by the context ctx so that new
   // state type, transition system, and state formula are associated

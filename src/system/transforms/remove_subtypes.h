@@ -19,9 +19,12 @@ namespace transforms {
   
 class remove_subtypes: public transform {
 
-  static factory::register_transform s_register;
+  static factory::register_transform<remove_subtypes> s_register;
 
 public:
+
+  remove_subtypes(const system::transition_system* original)
+  : transform(original) {}
 
   // Id is a fresh identifier managed by the context ctx so that new
   // state type, transition system, and state formula are associated

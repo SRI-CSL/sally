@@ -32,7 +32,7 @@ public:
   /** Base class for a transform constructor */
   class constructor {
   public:
-    transform* mk_new(const system::transition_system* original);
+    virtual transform* mk_new(const system::transition_system* original) = 0;
     virtual ~constructor() {}
   };
 
@@ -85,12 +85,14 @@ public:
 
 };
 
+/** Information for constructing a transformer by name */
 struct transform_info {
   std::string id;
   size_t priority;
-  transform_info(): priority(0) {}
-  transform_info(std::string id, size_t priority)
-  : id(id), priority(priority) {}
+  transform::constructor* constructor;
+  transform_info(): priority(0), constructor(0) {}
+  transform_info(std::string id, size_t priority, transform::constructor* constructor)
+  : id(id), priority(priority), constructor(constructor) {}
 };
 
 /**
@@ -98,11 +100,14 @@ struct transform_info {
  */
 class factory {
 
+  /** Map from transform IDs to info about them */
   typedef std::map<std::string, transform_info> transforms_info_map;
 
+  /** Convenience so that we can have safe static initialization */
   struct info {
     transforms_info_map* m;
     transforms_info_map* get();
+    ~info();
   };
 
   /** Map from id's to the info */
@@ -112,6 +117,8 @@ class factory {
 
 public:
 
+  /** Convenience class for registering a transform */
+  template<typename T>
   class register_transform {
     register_transform();
   public:
@@ -126,8 +133,9 @@ public:
   static
   std::string get_default_transforms_list();
 
+  /** Construct a transform by name, given a transition system to operate on */
   static
-  transform* mk_transform(std::string id);
+  transform* mk_transform(std::string id, const system::transition_system* original);
 
 };
 

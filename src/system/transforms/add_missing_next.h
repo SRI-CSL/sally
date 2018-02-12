@@ -20,9 +20,12 @@ namespace transforms {
   
 class add_missing_next: public transform {
 
-  static factory::register_transform s_register;
+  static factory::register_transform<add_missing_next> s_register;
 
 public:
+
+  add_missing_next(const system::transition_system* original)
+  : transform(original) {}
 
   add_missing_next(const system::transition_system* original, system::context *ctx, std::string id);
 

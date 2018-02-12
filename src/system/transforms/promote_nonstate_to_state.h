@@ -19,9 +19,12 @@ namespace transforms {
   
 class promote_nonstate_to_state: public transform {
 
-  static factory::register_transform s_register;
+  static factory::register_transform<promote_nonstate_to_state> s_register;
 
 public:
+
+  promote_nonstate_to_state(const system::transition_system* original)
+  : transform(original) {}
 
   // Id is a fresh identifier managed by the context ctx so that new
   // state type, transition system, and state formula are associated

@@ -19,9 +19,12 @@ namespace transforms {
   
 class inliner: public transform {
 
-  static factory::register_transform s_register;
+  static factory::register_transform<inliner> s_register;
 
 public:
+
+  inliner(const system::transition_system* original)
+  : transform(original) {}
 
   // Id is a fresh identifier managed by the context ctx so that new
   // state type, transition system, and state formulas are associated

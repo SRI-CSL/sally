@@ -1,3 +1,5 @@
+#include "expr/term.h"
+#include "expr/term_manager.h"
 #include "expr/term_visitor.h"
 #include "expand_arrays.h"
 #include "term_utils.h"

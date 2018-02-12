@@ -20,9 +20,12 @@ namespace transforms {
   
 class remove_arrays: public transform {
 
-  static factory::register_transform s_register;
+  static factory::register_transform<remove_arrays> s_register;
 
 public:
+
+  remove_arrays(const system::transition_system* original)
+  : transform(original) {}
 
   // Id is a fresh identifier managed by the context ctx so that new
   // state type, transition system, and state formula are associated

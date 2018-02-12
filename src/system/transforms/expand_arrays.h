@@ -27,9 +27,12 @@ namespace transforms {
   
 class expand_arrays: public transform {
 
-  static factory::register_transform s_register;
+  static factory::register_transform<expand_arrays> s_register;
 
 public:
+
+  expand_arrays(const system::transition_system* original)
+  : transform(original) {}
 
   expand_arrays(const system::transition_system* original, system::context *ctx, std::string id);
 
