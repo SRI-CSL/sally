@@ -28,7 +28,7 @@ public:
   // state type, transition system, and state formula are associated
   // to Id. The constructor also creates the new state type from st
   // and it will be managed by the context.
-  remove_enum_types(system::context *ctx, std::string id, const system::state_type *st);
+  remove_enum_types(const system::transition_system* original, system::context *ctx, std::string id, const system::state_type *st);
   
   ~remove_enum_types();
 

@@ -27,7 +27,7 @@ public:
   // state type, transition system, and state formulas are associated
   // to Id. The constructor also creates the new state type from st
   // and it will be managed by the context.
-  inliner(system::context *ctx, std::string id, const system::state_type *st);
+  inliner(const system::transition_system* original, system::context *ctx, std::string id, const system::state_type *st);
   
   ~inliner();
 

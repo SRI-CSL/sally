@@ -10,8 +10,8 @@ namespace transforms {
 
 using namespace expr;
 
-add_missing_next::add_missing_next(system::context *ctx, std::string id)
-: d_ctx(ctx), d_id(id) {}
+add_missing_next::add_missing_next(const system::transition_system* original, system::context *ctx, std::string id)
+: transform(original), d_ctx(ctx), d_id(id) {}
 
 static system::transition_system* apply_ts(system::context* ctx, std::string id, const system::transition_system *ts) {
 

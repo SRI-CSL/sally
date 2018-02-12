@@ -67,8 +67,8 @@ private:
   
 };
   
-remove_subtypes::remove_subtypes(system::context *ctx, std::string id, const system::state_type *st)
-  : m_pImpl(new remove_subtypes_impl(ctx, id, st)) {}
+remove_subtypes::remove_subtypes(const system::transition_system* original, system::context *ctx, std::string id, const system::state_type *st)
+  : transform(original), m_pImpl(new remove_subtypes_impl(ctx, id, st)) {}
 
 remove_subtypes::~remove_subtypes() {
   delete m_pImpl;

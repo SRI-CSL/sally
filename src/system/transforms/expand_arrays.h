@@ -31,7 +31,7 @@ class expand_arrays: public transform {
 
 public:
 
-  expand_arrays(system::context *ctx, std::string id);
+  expand_arrays(const system::transition_system* original, system::context *ctx, std::string id);
 
   /* Create a new transition system and state formulas with the given
      id (to be managed by the context) */

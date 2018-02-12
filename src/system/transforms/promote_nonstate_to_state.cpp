@@ -42,8 +42,8 @@ private:
   
 };
   
-promote_nonstate_to_state::promote_nonstate_to_state(system::context *ctx, std::string id, const system::state_type *st)
-  : m_pImpl(new promote_nonstate_to_state_impl(ctx, id, st)) {}
+promote_nonstate_to_state::promote_nonstate_to_state(const system::transition_system* original, system::context *ctx, std::string id, const system::state_type *st)
+  : transform(original), m_pImpl(new promote_nonstate_to_state_impl(ctx, id, st)) {}
 
 promote_nonstate_to_state::~promote_nonstate_to_state() {
   delete m_pImpl;

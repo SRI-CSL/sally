@@ -71,8 +71,8 @@ private:
   term_ref apply_term(term_ref t);
 };
   
-remove_arrays::remove_arrays(system::context *ctx, std::string id, const system::state_type *st)
-  : m_pImpl(new remove_arrays_impl(ctx, id, st)) {}
+remove_arrays::remove_arrays(const system::transition_system* original, system::context *ctx, std::string id, const system::state_type *st)
+  : transform(original), m_pImpl(new remove_arrays_impl(ctx, id, st)) {}
   
 
 remove_arrays::~remove_arrays() {

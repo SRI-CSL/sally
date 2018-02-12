@@ -50,8 +50,8 @@ private:
   
 };
   
-inliner::inliner(system::context *ctx, std::string id, const system::state_type *st)
-  : m_pImpl(new inliner_impl(ctx, id, st)) {}
+inliner::inliner(const system::transition_system* original, system::context *ctx, std::string id, const system::state_type *st)
+  : transform(original), m_pImpl(new inliner_impl(ctx, id, st)) {}
 
 inliner::~inliner() {
   delete m_pImpl;

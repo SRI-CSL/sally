@@ -33,7 +33,7 @@ class transition_system {
   /** The state information */
   const state_type* d_state_type;
 
-  /** The intial states */
+  /** The initial states */
   state_formula* d_initial_states;
 
   /** The transition formula */

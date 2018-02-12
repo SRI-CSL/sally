@@ -423,8 +423,8 @@ static term_ref rewrite(term_manager& tm, term_ref t)  {
   return subst_map[t];
 }
   
-expand_arrays::expand_arrays(system::context *ctx, std::string id)
-: d_ctx(ctx), d_id(id) {}
+expand_arrays::expand_arrays(const system::transition_system* original, system::context *ctx, std::string id)
+: transform(original), d_ctx(ctx), d_id(id) {}
 
   
 static system::transition_system* apply_ts(system::context* ctx, std::string id,

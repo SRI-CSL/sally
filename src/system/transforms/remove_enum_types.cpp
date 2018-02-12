@@ -48,8 +48,8 @@ private:
   
 };
   
-remove_enum_types::remove_enum_types(system::context *ctx, std::string id, const system::state_type *st)
-  : m_pImpl(new remove_enum_types_impl(ctx, id, st)) {}
+remove_enum_types::remove_enum_types(const system::transition_system* original, system::context *ctx, std::string id, const system::state_type *st)
+  : transform(original), m_pImpl(new remove_enum_types_impl(ctx, id, st)) {}
 
 remove_enum_types::~remove_enum_types() {
   delete m_pImpl;

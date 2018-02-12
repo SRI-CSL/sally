@@ -24,9 +24,7 @@ class add_missing_next: public transform {
 
 public:
 
-  add_missing_next(system::context *ctx, std::string id);
-
-  add_missing_next(system::context *ctx, std::string id);
+  add_missing_next(const system::transition_system* original, system::context *ctx, std::string id);
 
   /* Create a new transition system and state formulas with the given
      id (to be managed by the context) */

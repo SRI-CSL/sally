@@ -18,13 +18,58 @@ class transform {
 
 protected:
 
+  /** The original transition system */
   const system::transition_system* d_original;
+
+  /** The transformed transition system */
+  system::transition_system* d_transformed;
 
 public:
   
+  /** Construct the transform that tranforms the given transition system */
   transform(const system::transition_system* original);
 
+  /** Base class for a transform constructor */
+  class constructor {
+  public:
+    transform* mk_new(const system::transition_system* original);
+    virtual ~constructor() {}
+  };
+
+  /** Constructor for a specific translate */
+  template<typename T>
+  class constructor_for : public constructor {
+  public:
+	transform* mk_new(const system::transition_system* original) {
+	  return new T(original);
+	}
+  };
+
+  /** Get the original transition system */
+  const system::transition_system* get_original() const { return d_original; }
+
+  /** Get the transformed transition system */
+  const system::transition_system* get_transformed() const { return d_transformed; }
+
+  /** Destructor */
   virtual ~transform() {}
+
+  /** Direction of the transformation */
+  enum direction {
+	/** Tranform forward, from original to new */
+    TRANSFORM_FORWARD,
+	/** Transform backward, from new to original */
+	TRANSFORM_BACKWARD
+  };
+
+  /** Apply the transform to a state formula */
+  system::state_formula* apply(const system::state_formula* f_state, direction D);
+
+  /** Apply the transform to a transition formula */
+  system::transition_formula* apply(const system::transition_formula* f_trans, direction D);
+
+  /** Apply the transform to a model */
+  expr::model::ref apply(expr::model::ref model, direction d);
 
   /** Apply the transform */
   virtual void apply (const system::transition_system *ts,
