@@ -231,7 +231,7 @@ void parse_options(int argc, char* argv[], variables_map& variables)
   ai::factory::setup_options(description);
 
   // Get the transformer options
-  cmd::transforms::preprocessor::setup_options(description);
+  system::transforms::preprocessor::setup_options(description);
   
   // The input files can be positional
   positional_options_description positional;

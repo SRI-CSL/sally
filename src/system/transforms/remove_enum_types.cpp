@@ -10,7 +10,7 @@
 #include <vector>
 
 namespace sally {
-namespace cmd {
+namespace system {
 namespace transforms {
 
 using namespace expr;
@@ -22,46 +22,46 @@ class remove_enum_types::remove_enum_types_impl {
 
 public:
   
-  remove_enum_types_impl(system::context *ctx, std::string id, const system::state_type *st);
+  remove_enum_types_impl(context *ctx, std::string id, const state_type *st);
   
-  void apply (const system::transition_system* ts,
-	      const std::vector<const system::state_formula*>& queries,
-	      system::transition_system*& new_ts,
-	      std::vector<const system::state_formula*>& new_queries);
+  void apply (const transition_system* ts,
+	      const std::vector<const state_formula*>& queries,
+	      transition_system*& new_ts,
+	      std::vector<const state_formula*>& new_queries);
 private:
   
-  system::context *d_ctx;
+  context *d_ctx;
   std::string d_id;
   // map variable names to terms
   name_to_term_map d_name_to_term_map;
   // map CONST_ENUM values to CONST_RATIONAL values
   term_to_term_map d_subs_map;  
 
-  void mk_state_type_without_enum_types(const system::state_type *st);
+  void mk_state_type_without_enum_types(const state_type *st);
   term_ref mk_type_var_without_enum_types(term_manager &tm, term_ref type_var,
-					const system::state_type *st, system::state_type::var_class vc);
+					const state_type *st, state_type::var_class vc);
   void mk_renaming_map(term_manager &tm, term_ref type_var, term_ref vars_struct,
-		       const system::state_type* st, system::state_type::var_class vc);
+		       const state_type* st, state_type::var_class vc);
 
-  system::transition_system* apply (const system::transition_system *ts);
-  system::state_formula* apply(const system::state_formula *sf);
+  transition_system* apply (const transition_system *ts);
+  state_formula* apply(const state_formula *sf);
   
 };
   
-remove_enum_types::remove_enum_types(const system::transition_system* original, system::context *ctx, std::string id, const system::state_type *st)
-  : transform(original), m_pImpl(new remove_enum_types_impl(ctx, id, st)) {}
+remove_enum_types::remove_enum_types(const transition_system* original, context *ctx, std::string id, const state_type *st)
+  : transform(ctx, original), m_pImpl(new remove_enum_types_impl(ctx, id, st)) {}
 
 remove_enum_types::~remove_enum_types() {
   delete m_pImpl;
 }
 
-system::state_formula* remove_enum_types::apply(const system::state_formula* f_state, direction D) {
+state_formula* remove_enum_types::apply(const state_formula* f_state, direction D) {
   // TODO
   assert(false);
   return 0;
 }
 
-system::transition_formula* remove_enum_types::apply(const system::transition_formula* f_trans, direction D) {
+transition_formula* remove_enum_types::apply(const transition_formula* f_trans, direction D) {
   // TODO
   assert(false);
   return 0;
@@ -73,10 +73,10 @@ expr::model::ref remove_enum_types::apply(expr::model::ref model, direction d) {
   return model;
 }
 
-void remove_enum_types::apply(const system::transition_system* ts,
-			      const std::vector<const system::state_formula*>& queries,
-			      system::transition_system*& new_ts,
-			      std::vector<const system::state_formula*>& new_queries){
+void remove_enum_types::apply(const transition_system* ts,
+			      const std::vector<const state_formula*>& queries,
+			      transition_system*& new_ts,
+			      std::vector<const state_formula*>& new_queries){
   m_pImpl->apply(ts, queries, new_ts, new_queries);
 }
   
@@ -85,7 +85,7 @@ void remove_enum_types::apply(const system::transition_system* ts,
 **/
 void remove_enum_types::remove_enum_types_impl::
 mk_renaming_map(term_manager &tm, term_ref type_var, term_ref vars_struct,
-		const system::state_type* st, system::state_type::var_class vc) {
+		const state_type* st, state_type::var_class vc) {
   
   unsigned type_var_size = tm.get_struct_type_size(tm.term_of(type_var));
   assert(type_var_size == tm.get_struct_size(tm.term_of(vars_struct)));
@@ -103,7 +103,7 @@ mk_renaming_map(term_manager &tm, term_ref type_var, term_ref vars_struct,
 **/
 term_ref remove_enum_types::remove_enum_types_impl::
 mk_type_var_without_enum_types(term_manager &tm, term_ref type_var,
-			       const system::state_type* st, system::state_type::var_class vc) {
+			       const state_type* st, state_type::var_class vc) {
   const term& t = tm.term_of(type_var);
   assert(t.op() == TYPE_STRUCT);
   std::vector<std::string> new_vars;  
@@ -146,45 +146,45 @@ mk_type_var_without_enum_types(term_manager &tm, term_ref type_var,
 /** 
  Create a new state type (new_st) from st.
 **/  
-void remove_enum_types::remove_enum_types_impl::mk_state_type_without_enum_types(const system::state_type *st) {
+void remove_enum_types::remove_enum_types_impl::mk_state_type_without_enum_types(const state_type *st) {
   term_manager &tm = d_ctx->tm();  
   std::string st_id(d_id + "_state_type");
-  system::state_type::var_class vc;
+  state_type::var_class vc;
 
-  vc = system::state_type::STATE_CURRENT;
+  vc = state_type::STATE_CURRENT;
   term_ref state_type_var = mk_type_var_without_enum_types(tm, st->get_state_type_var(), st, vc);
   term_ref current_vars_struct = tm.mk_variable(st_id + "::" + st->to_string(vc), state_type_var);
   mk_renaming_map(tm, state_type_var, current_vars_struct, st, vc);
 
-  vc = system::state_type::STATE_NEXT;
+  vc = state_type::STATE_NEXT;
   term_ref next_vars_struct = tm.mk_variable(st_id + "::" + st->to_string(vc), state_type_var);
   mk_renaming_map(tm, state_type_var, next_vars_struct, st, vc);
 
-  vc = system::state_type::STATE_INPUT;  
+  vc = state_type::STATE_INPUT;
   term_ref input_type_var = mk_type_var_without_enum_types(tm, st->get_input_type_var(), st, vc);
   term_ref input_vars_struct = tm.mk_variable(st_id + "::" + st->to_string(vc),input_type_var);
   mk_renaming_map(tm, input_type_var, input_vars_struct, st, vc);
 
-  vc = system::state_type::STATE_PARAM;    
+  vc = state_type::STATE_PARAM;
   term_ref param_type_var = mk_type_var_without_enum_types(tm, st->get_param_type_var(), st, vc);
   term_ref param_vars_struct = tm.mk_variable(st_id + "::" + st->to_string(vc), param_type_var);
   mk_renaming_map(tm, param_type_var, param_vars_struct, st, vc);
 
-  system::state_type *new_st = new system::state_type(st_id, tm, state_type_var, input_type_var, param_type_var,
+  state_type *new_st = new state_type(st_id, tm, state_type_var, input_type_var, param_type_var,
   						      current_vars_struct, next_vars_struct,
 						      input_vars_struct, param_vars_struct);
   d_ctx->add_state_type(d_id, new_st);
 }
 
-remove_enum_types::remove_enum_types_impl::remove_enum_types_impl(system::context *ctx, std::string id,
-								  const system::state_type *st)
+remove_enum_types::remove_enum_types_impl::remove_enum_types_impl(context *ctx, std::string id,
+								  const state_type *st)
 : d_ctx(ctx), d_id(id)
 {
   mk_state_type_without_enum_types(st);
 }
   
 /** Create a new transition system but without enum types **/  
-system::transition_system* remove_enum_types::remove_enum_types_impl::apply(const system::transition_system *ts) {
+transition_system* remove_enum_types::remove_enum_types_impl::apply(const transition_system *ts) {
   if (!d_ctx->has_state_type(d_id)) {
     std::stringstream ss;
     term_manager* tm = output::get_term_manager(std::cerr);
@@ -207,17 +207,17 @@ system::transition_system* remove_enum_types::remove_enum_types_impl::apply(cons
   new_tr = expr::utils::name_substitute(tm, tr, d_name_to_term_map);
   new_tr =  tm.substitute(new_tr, d_subs_map);
   
-  const system::state_type* st = d_ctx->get_state_type(d_id);  
-  system::state_formula* new_init_f = new system::state_formula(tm, st, new_init);
-  system::transition_formula* new_tr_f = new system::transition_formula(tm, st, new_tr);
-  system::transition_system* new_ts = new system::transition_system(st, new_init_f, new_tr_f);
+  const state_type* st = d_ctx->get_state_type(d_id);
+  state_formula* new_init_f = new state_formula(tm, st, new_init);
+  transition_formula* new_tr_f = new transition_formula(tm, st, new_tr);
+  transition_system* new_ts = new transition_system(st, new_init_f, new_tr_f);
 
   d_ctx->add_transition_system(d_id, new_ts);
   return new_ts;
 }
 
 /** Create a new state formula but without enum types **/    
-system::state_formula* remove_enum_types::remove_enum_types_impl::apply(const system::state_formula *sf){
+state_formula* remove_enum_types::remove_enum_types_impl::apply(const state_formula *sf){
   if (!d_ctx->has_state_type(d_id)) {
     std::stringstream ss;
     term_manager* tm = output::get_term_manager(std::cerr);
@@ -236,20 +236,20 @@ system::state_formula* remove_enum_types::remove_enum_types_impl::apply(const sy
   new_f = expr::utils::name_substitute(tm, f, d_name_to_term_map);
   new_f = tm.substitute(new_f, d_subs_map);
   
-  const system::state_type* st = d_ctx->get_state_type(d_id);  
-  system::state_formula * new_sf = new system::state_formula(tm, st, new_f);
+  const state_type* st = d_ctx->get_state_type(d_id);
+  state_formula * new_sf = new state_formula(tm, st, new_f);
   d_ctx->add_state_formula(d_id, new_sf);
   return new_sf;
 }
 
-void remove_enum_types::remove_enum_types_impl::apply(const system::transition_system *ts,
-						      const std::vector<const system::state_formula*>& queries,
-						      system::transition_system *& new_ts,
-						      std::vector<const system::state_formula*>& new_queries) {
+void remove_enum_types::remove_enum_types_impl::apply(const transition_system *ts,
+						      const std::vector<const state_formula*>& queries,
+						      transition_system *& new_ts,
+						      std::vector<const state_formula*>& new_queries) {
   new_ts = apply(ts);
   new_queries.clear();
   new_queries.reserve(queries.size());
-  for (std::vector<const system::state_formula*>::const_iterator it = queries.begin(),
+  for (std::vector<const state_formula*>::const_iterator it = queries.begin(),
 	 et = queries.end(); it!=et; ++it) {
     new_queries.push_back(apply(*it));
   }

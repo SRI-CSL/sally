@@ -10,7 +10,7 @@ add_library(system
   transforms/remove_arrays.cpp
   transforms/remove_enum_types.cpp
   transforms/remove_subtypes.cpp
-  transforms/promote_nonstate_to_state.cpp
+  transforms/promote_params_to_state.cpp
   transforms/add_missing_next.cpp
   transforms/inlining.cpp
   transforms/preprocessor.cpp

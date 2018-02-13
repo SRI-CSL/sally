@@ -10,27 +10,25 @@
 #include <string>
 
 namespace sally {
-namespace cmd {
+namespace system {
 namespace transforms {
   
 /** 
-    Inline functions.
-**/
-  
+ * Inline all defined function applications.
+ */
 class inliner: public transform {
 
   static factory::register_transform<inliner> s_register;
 
 public:
 
-  inliner(const system::transition_system* original)
-  : transform(original), m_pImpl(0) {}
+  inliner(context* ctx, const transition_system* original);
 
   /** Apply the transform to a state formula */
-  system::state_formula* apply(const system::state_formula* f_state, direction D);
+  state_formula* apply(const state_formula* f_state, direction D);
 
   /** Apply the transform to a transition formula */
-  system::transition_formula* apply(const system::transition_formula* f_trans, direction D);
+  transition_formula* apply(const transition_formula* f_trans, direction D);
 
   /** Apply the transform to a model */
   expr::model::ref apply(expr::model::ref model, direction d);
@@ -40,17 +38,15 @@ public:
   // state type, transition system, and state formulas are associated
   // to Id. The constructor also creates the new state type from st
   // and it will be managed by the context.
-  inliner(const system::transition_system* original, system::context *ctx, std::string id, const system::state_type *st);
+  inliner(const transition_system* original, context *ctx, std::string id, const state_type *st);
   
-  ~inliner();
-
   /* Create a new transition system and state formulas without enum
      types with the given id in the constructor (to be managed by the
      context) */  
-  void apply (const system::transition_system *ts,
-	      const std::vector<const system::state_formula*>& queries,
-	      system::transition_system*& new_ts,
-	      std::vector<const system::state_formula*>& new_queries);
+  void apply (const transition_system *ts,
+	      const std::vector<const state_formula*>& queries,
+	      transition_system*& new_ts,
+	      std::vector<const state_formula*>& new_queries);
   
   std::string get_name() const {
     return "Function inliner";
@@ -59,12 +55,6 @@ public:
   virtual size_t get_priority() const {
     return 0;
   }
-
-private:
-
-  // forward declaration
-  class inliner_impl;
-  inliner_impl *m_pImpl;
   
 };
   

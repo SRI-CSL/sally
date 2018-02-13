@@ -11,18 +11,38 @@
 #include <sstream>
 
 namespace sally {
-namespace cmd {
+namespace system {
 namespace transforms {
 
 using namespace expr;
-   
-/** 
-    Expand arrays by removing quantifiers, array lambda terms,
-    and removing array variables involved in equality terms.
+
+expand_arrays::expand_arrays(context* ctx, const transition_system* original)
+: transform(ctx, original)
+{
+  const state_type* st = original->get_state_type();
+
+  // Transform the initial states
+  term_ref init = original->get_initial_states();
+  term_ref new_init = rewrite(init);
+
+  // Transform the transtition relation
+  term_ref tr = original->get_transition_relation();
+  term_ref new_tr = rewrite(tr);
+
+  // Construct the new system
+  d_transformed = new transition_system(st,
+      new state_formula(tm(), st, new_init),
+      new transition_formula(tm(), st, new_tr)
+  );
+}
+
+/**
+ * Expand arrays by removing quantifiers, array lambda terms, and removing array
+ * variables involved in equality terms.
  **/
 class expand_arrays_visitor {
 public:
-  
+
   typedef std::pair<integer, integer> interval_t;
   typedef boost::unordered_map<term_ref, interval_t, term_ref_hasher> var_to_interval_map;
 
@@ -31,11 +51,12 @@ public:
     std::unary_function<typename Map::value_type, typename Map::mapped_type> {
     typename Map::mapped_type operator()(typename Map::value_type p) const
     { return p.second; }
-  };  
+  };
 
-  typedef term_manager::substitution_map term_to_term_map;
-  
-  expand_arrays_visitor(term_manager& tm, term_to_term_map &subst_map);
+  typedef term_manager::substitution_map substitution_map;
+
+  expand_arrays_visitor(term_manager& tm, substitution_map &subst_map)
+  : d_tm(tm), d_subst_map(subst_map) {}
 
   // Non-null terms are good
   bool is_good_term(term_ref t) const {
@@ -52,40 +73,69 @@ public:
 
   /** We visit only nodes that are not types, constants or variables */
   visitor_match_result match(term_ref t) {
-    if (d_tm.is_type(t) || d_tm.term_of(t).op() == VARIABLE ||
-	d_tm.term_of(t).op() == CONST_BOOL ||
-	d_tm.term_of(t).op() == CONST_RATIONAL ||
-	d_tm.term_of(t).op() == CONST_BITVECTOR ||
-	d_tm.term_of(t).op() == CONST_ENUM ||
-	d_tm.term_of(t).op() == CONST_STRING) {
-      // Don't visit children or this node or the node
+    // No types
+    if (d_tm.is_type(t)) {
       return DONT_VISIT_AND_BREAK;
     }
-    
-    if (d_subst_map.find(t) == d_subst_map.end()) {
-      // Visit the children if needed and then the node
-      return VISIT_AND_CONTINUE;
-    } else {
+    // No constants
+    switch (d_tm.term_of(t).op()) {
+    case VARIABLE:
+    case CONST_BOOL:
+    case CONST_RATIONAL:
+    case CONST_BITVECTOR:
+    case CONST_ENUM:
+    case CONST_STRING:
       // Don't visit children or this node or the node
       return DONT_VISIT_AND_BREAK;
+    default:
+      break;
     }
+    // If it's already cached (e.g., in from some other formula), no need to do it again
+    if (d_subst_map.find(t) != d_subst_map.end()) {
+      return DONT_VISIT_AND_BREAK;
+    }
+    // Visit the children if needed and then the node
+    return VISIT_AND_CONTINUE;
   }
-  
+
   /** Visit the term and expand arrays (children already expanded) */
   void visit(term_ref t_ref);
 
 private:
 
-  
   term_manager& d_tm;
-  term_to_term_map& d_subst_map; 
+  substitution_map& d_subst_map;
 
   void error(term_ref t_ref, std::string message) const;
   void get_array_type_bounds(term_ref t_ref, std::vector<interval_t> &bounds);
-  
+
   void process_quantifier(term_ref t_ref, var_to_interval_map &imap);
   term_ref process_array_lambda(term_ref t_ref, var_to_interval_map &imap);
 };
+
+term_ref expand_arrays::rewrite(term_ref t)  {
+  // expand arrays using the visitor
+  expand_arrays_visitor visitor(tm(), d_subst_map);
+  term_visit_topological<expand_arrays_visitor, term_ref, term_ref_hasher> visit(visitor);
+  visit.run(t);
+  assert(d_subst_map.find(t) != d_subst_map.end());
+  return d_subst_map[t];
+}
+
+state_formula* expand_arrays::apply(const state_formula* f_state, direction D) {
+  // We don't change state type, just change the representation
+  return new state_formula(tm(), f_state->get_state_type(), rewrite(f_state->get_formula()));
+}
+
+transition_formula* expand_arrays::apply(const transition_formula* f_trans, direction D) {
+  // We don't change state type, just change the representation
+  return new transition_formula(tm(), f_trans->get_state_type(), rewrite(f_trans->get_formula()));
+}
+
+expr::model::ref expand_arrays::apply(expr::model::ref model, direction d) {
+  // We don't change state type so model stays the same
+  return model;
+}
 
 void expand_arrays_visitor::error(term_ref t_ref, std::string message) const {
   std::stringstream ss;
@@ -181,20 +231,14 @@ void expand_arrays_visitor::get_array_type_bounds(term_ref ref, std::vector<inte
   }
 }
   
-expand_arrays_visitor::expand_arrays_visitor(term_manager& tm, term_to_term_map &subst_map)
-: d_tm(tm),
-  d_subst_map(subst_map)
-{}
-
 /** 
-    The visitor is building the new expanded term in d_subst_map.  The
-    visitor traverses the term in a bottom-up fashion and when
-    necessary uses the mapped term (QF terms) rather than the original
-    term. For instance, this ensures that if at anytime the subterm at
-    hand is a quantifier then its body cannot have quantifiers. This
-    allows to remove safely all quantifiers even if the term is not in
-    prenex normal form.
-**/
+ * The visitor is building the new expanded term in d_subst_map. The visitor
+ * traverses the term in a bottom-up fashion and when necessary uses the mapped
+ * term (QF terms) rather than the original term. For instance, this ensures
+ * that if at anytime the subterm at hand is a quantifier then its body cannot
+ * have quantifiers. This allows to remove safely all quantifiers even if the
+ * term is not in prenex normal form.
+ **/
 void expand_arrays_visitor::visit(term_ref t_ref) {
   // pre: children have been already processed and the result is
   // already in d_subst_map.
@@ -424,67 +468,49 @@ static term_ref rewrite(term_manager& tm, term_ref t)  {
   return subst_map[t];
 }
   
-expand_arrays::expand_arrays(const system::transition_system* original, system::context *ctx, std::string id)
-: transform(original), d_ctx(ctx), d_id(id) {}
+expand_arrays::expand_arrays(const transition_system* original, context *ctx, std::string id)
+: transform(ctx, original), d_id(id) {}
 
-system::state_formula* expand_arrays::apply(const system::state_formula* f_state, direction D) {
-  // TODO
-  assert(false);
-  return 0;
-}
-
-system::transition_formula* expand_arrays::apply(const system::transition_formula* f_trans, direction D) {
-  // TODO
-  assert(false);
-  return 0;
-}
-
-expr::model::ref expand_arrays::apply(expr::model::ref model, direction d) {
-  // TODO
-  assert(false);
-  return model;
-}
-
-static system::transition_system* apply_ts(system::context* ctx, std::string id,
-					   const system::transition_system *ts) {
+static transition_system* apply_ts(context* ctx, std::string id,
+					   const transition_system *ts) {
 
   term_manager &tm = ctx->tm();
-  const system::state_type* st = ts->get_state_type();
+  const state_type* st = ts->get_state_type();
   
   term_ref init = ts->get_initial_states();  
   term_ref tr = ts->get_transition_relation();
 
-  system::state_formula* new_init =
-    new system::state_formula(tm, st, rewrite(tm, init));
+  state_formula* new_init =
+    new state_formula(tm, st, rewrite(tm, init));
 
-  system::transition_formula* new_tr =
-    new system::transition_formula(tm, st, rewrite(tm, tr));
+  transition_formula* new_tr =
+    new transition_formula(tm, st, rewrite(tm, tr));
 
-  system::transition_system* new_ts = new system::transition_system(st, new_init, new_tr);
+  transition_system* new_ts = new transition_system(st, new_init, new_tr);
   ctx->add_transition_system(id, new_ts);
   return new_ts;
 }
   
-static system::state_formula* apply_sf(system::context* ctx, std::string id,
-				       const system::state_formula *sf) {
+static state_formula* apply_sf(context* ctx, std::string id,
+				       const state_formula *sf) {
   term_manager &tm = ctx->tm();
-  const system::state_type* st = sf->get_state_type();
+  const state_type* st = sf->get_state_type();
 
-  system::state_formula* new_sf =
-    new system::state_formula(tm, st, rewrite(tm, sf->get_formula()));
+  state_formula* new_sf =
+    new state_formula(tm, st, rewrite(tm, sf->get_formula()));
   ctx->add_state_formula(id, new_sf);
   return new_sf;
 }
 
-void expand_arrays::apply(const system::transition_system *ts,
-			  const std::vector<const system::state_formula*>& queries,
-			  system::transition_system *& new_ts,
-			  std::vector<const system::state_formula*>& new_queries) {
+void expand_arrays::apply(const transition_system *ts,
+			  const std::vector<const state_formula*>& queries,
+			  transition_system *& new_ts,
+			  std::vector<const state_formula*>& new_queries) {
   
   new_ts = apply_ts(d_ctx, d_id, ts);
   new_queries.clear();
   new_queries.reserve(queries.size());
-  for (std::vector<const system::state_formula*>::const_iterator it = queries.begin(),
+  for (std::vector<const state_formula*>::const_iterator it = queries.begin(),
 	 et = queries.end(); it!=et; ++it) {
     new_queries.push_back(apply_sf(d_ctx, d_id, *it));
   }

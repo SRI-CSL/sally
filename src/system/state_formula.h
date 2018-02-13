@@ -46,6 +46,11 @@ public:
    */
   state_formula(expr::term_manager& tm, const state_type* st, expr::term_ref formula);
 
+  /**
+   * Construct a copy of the given state formula.
+   */
+  state_formula(const state_formula* f);
+
   /** Destruct and unregister. */
   ~state_formula();
 

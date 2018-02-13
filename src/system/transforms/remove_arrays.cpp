@@ -11,7 +11,7 @@
 #include <vector>
 
 namespace sally {
-namespace cmd {
+namespace system {
 namespace transforms {
 
 using namespace expr;
@@ -30,16 +30,16 @@ class remove_arrays::remove_arrays_impl {
 
 public:
   
-  remove_arrays_impl(system::context *ctx, std::string id, const system::state_type *st);
+  remove_arrays_impl(context *ctx, std::string id, const state_type *st);
   
-  void apply (const system::transition_system* ts,
-	      const std::vector<const system::state_formula*>& queries,
-	      system::transition_system*& new_ts,
-	      std::vector<const system::state_formula*>& new_queries);
+  void apply (const transition_system* ts,
+	      const std::vector<const state_formula*>& queries,
+	      transition_system*& new_ts,
+	      std::vector<const state_formula*>& new_queries);
   
 private:
   
-  system::context *d_ctx;
+  context *d_ctx;
   std::string d_id;
   term_manager::substitution_map d_subs_map;
   /* map old array variable names with scalar terms */
@@ -49,9 +49,9 @@ private:
   /* map old non-array variable names with new renamed terms */
   name_to_term_map d_non_arr_name_map;
   /* new state type after all arrays have been removed */
-  system::state_type* d_new_st;
+  state_type* d_new_st;
   
-  void mk_state_type_without_arrays(const system::state_type *st);
+  void mk_state_type_without_arrays(const state_type *st);
 
   // extend d_new_st with (scalar) vars such that:
   // - vars are added as current vars
@@ -64,28 +64,28 @@ private:
 				  std::set<std::string> &orig_scalar_vars);
   
   void mk_renaming_maps(term_manager &tm, term_ref type_var, term_ref vars_struct,
-			const system::state_type* st, system::state_type::var_class vc,
+			const state_type* st, state_type::var_class vc,
 			const arr_name_to_scalar_type_map &arr_type_map,
 			const std::set<std::string> &non_arr_vars);
   
   term_ref apply_term(term_ref t);
 };
   
-remove_arrays::remove_arrays(const system::transition_system* original, system::context *ctx, std::string id, const system::state_type *st)
-  : transform(original), m_pImpl(new remove_arrays_impl(ctx, id, st)) {}
+remove_arrays::remove_arrays(const transition_system* original, context *ctx, std::string id, const state_type *st)
+  : transform(ctx, original), m_pImpl(new remove_arrays_impl(ctx, id, st)) {}
   
 
 remove_arrays::~remove_arrays() {
   delete m_pImpl;
 }
 
-system::state_formula* remove_arrays::apply(const system::state_formula* f_state, direction D) {
+state_formula* remove_arrays::apply(const state_formula* f_state, direction D) {
   // TODO
   assert(false);
   return 0;
 }
 
-system::transition_formula* remove_arrays::apply(const system::transition_formula* f_trans, direction D) {
+transition_formula* remove_arrays::apply(const transition_formula* f_trans, direction D) {
   // TODO
   assert(false);
   return 0;
@@ -98,10 +98,10 @@ expr::model::ref remove_arrays::apply(expr::model::ref model, direction d) {
 }
 
 
-void remove_arrays::apply (const system::transition_system* ts,
-			   const std::vector<const system::state_formula*>& queries,
-			   system::transition_system*& new_ts,
-			   std::vector<const system::state_formula*>& new_queries) {
+void remove_arrays::apply (const transition_system* ts,
+			   const std::vector<const state_formula*>& queries,
+			   transition_system*& new_ts,
+			   std::vector<const state_formula*>& new_queries) {
   m_pImpl->apply(ts, queries, new_ts, new_queries);
 }
   
@@ -999,7 +999,7 @@ mk_type_without_arrays(term_manager &tm, term_ref type_ref,
 **/
 void remove_arrays::remove_arrays_impl::
 mk_renaming_maps(term_manager &tm, term_ref struct_type, term_ref struct_term,
-		 const system::state_type* st, system::state_type::var_class vc,
+		 const state_type* st, state_type::var_class vc,
 		 const arr_name_to_scalar_type_map &arr_type_map,
 		 const std::set<std::string> &non_arr_vars) {
   
@@ -1036,10 +1036,10 @@ mk_renaming_maps(term_manager &tm, term_ref struct_type, term_ref struct_term,
  relate variables from old state type (st) with the new one that is
  created here (new_st).
 **/  
-void remove_arrays::remove_arrays_impl::mk_state_type_without_arrays(const system::state_type *st) {
+void remove_arrays::remove_arrays_impl::mk_state_type_without_arrays(const state_type *st) {
   std::string st_id(d_id + "_state_type");
   term_manager &tm = d_ctx->tm();
-  system::state_type::var_class vc;
+  state_type::var_class vc;
   
   // variables that were already scalar before removing arrays variables.
   std::set<std::string> orig_scalar_vars;
@@ -1065,20 +1065,20 @@ void remove_arrays::remove_arrays_impl::mk_state_type_without_arrays(const syste
   term_ref param_vars;
   
   state_type = mk_type_without_arrays(tm, st->get_state_type_var(), arr_state_type_map, orig_scalar_vars); 
-  vc = system::state_type::STATE_CURRENT;    
+  vc = state_type::STATE_CURRENT;
   current_vars = tm.mk_variable(st_id + "::" + st->to_string(vc), state_type);
   mk_renaming_maps(tm, state_type, current_vars, st, vc, arr_state_type_map, orig_scalar_vars);
 
-  vc = system::state_type::STATE_NEXT;
+  vc = state_type::STATE_NEXT;
   next_vars = tm.mk_variable(st_id + "::" + st->to_string(vc), state_type);
   mk_renaming_maps(tm, state_type, next_vars, st, vc, arr_state_type_map, orig_scalar_vars);
 
-  vc = system::state_type::STATE_INPUT;
+  vc = state_type::STATE_INPUT;
   input_var = mk_type_without_arrays(tm, st->get_input_type_var(), arr_input_type_map, orig_scalar_vars);
   input_vars = tm.mk_variable(st_id + "::" + st->to_string(vc),input_var);
   mk_renaming_maps(tm, input_var, input_vars, st, vc, arr_input_type_map, orig_scalar_vars);
 
-  vc = system::state_type::STATE_PARAM;
+  vc = state_type::STATE_PARAM;
   param_type = mk_type_without_arrays(tm, st->get_param_type_var(), arr_param_type_map, orig_scalar_vars);
   param_vars = tm.mk_variable(st_id + "::" + st->to_string(vc), param_type);
   mk_renaming_maps(tm, param_type, param_vars, st, vc, arr_param_type_map, orig_scalar_vars);
@@ -1099,10 +1099,10 @@ add_state_type_variables(const std::vector<term_ref>& vars,
   term_ref state_type = d_new_st->get_state_type_var();
   term_ref input_type = d_new_st->get_input_type_var();
   term_ref param_type = d_new_st->get_param_type_var();
-  term_ref current_st = d_new_st->get_vars_struct(system::state_type::STATE_CURRENT);
-  term_ref next_st = d_new_st->get_vars_struct(system::state_type::STATE_NEXT);
-  term_ref input_st = d_new_st->get_vars_struct(system::state_type::STATE_INPUT);
-  term_ref param_st = d_new_st->get_vars_struct(system::state_type::STATE_PARAM);  
+  term_ref current_st = d_new_st->get_vars_struct(state_type::STATE_CURRENT);
+  term_ref next_st = d_new_st->get_vars_struct(state_type::STATE_NEXT);
+  term_ref input_st = d_new_st->get_vars_struct(state_type::STATE_INPUT);
+  term_ref param_st = d_new_st->get_vars_struct(state_type::STATE_PARAM);
 
   term_ref new_state_type;
   term_ref new_current_st;
@@ -1133,7 +1133,7 @@ add_state_type_variables(const std::vector<term_ref>& vars,
   for(unsigned i=0, e = vars.size(); i < e; ++i) {
     // FIXME: expose internal details of state_type
     std::string canonical = d_id + "_state_type::" +
-                            d_new_st->to_string(system::state_type::STATE_CURRENT) + "." +
+                            d_new_st->to_string(state_type::STATE_CURRENT) + "." +
                             d_ctx->tm().get_variable_name(d_ctx->tm().term_of(vars[i]));
     term_ref v = d_ctx->tm().mk_variable(canonical, d_ctx->tm().type_of(vars[i])); 
 					 
@@ -1184,8 +1184,8 @@ static term_ref rewrite(term_manager& tm, term_ref t,
   return res;
 }
   
-remove_arrays::remove_arrays_impl::remove_arrays_impl(system::context *ctx, std::string id,
-						      const system::state_type *st)
+remove_arrays::remove_arrays_impl::remove_arrays_impl(context *ctx, std::string id,
+						      const state_type *st)
   : d_ctx(ctx), d_id(id), d_new_st(0) {
   mk_state_type_without_arrays(st);
 }
@@ -1202,10 +1202,10 @@ term_ref remove_arrays::remove_arrays_impl::apply_term(term_ref t) {
 }
 
 void remove_arrays::remove_arrays_impl::
-apply(const system::transition_system *ts,
-      const std::vector<const system::state_formula*>& queries,
-      system::transition_system *& new_ts,
-      std::vector<const system::state_formula*>& new_queries) {
+apply(const transition_system *ts,
+      const std::vector<const state_formula*>& queries,
+      transition_system *& new_ts,
+      std::vector<const state_formula*>& new_queries) {
 
   new_queries.clear();
   new_queries.reserve(queries.size());
@@ -1252,13 +1252,13 @@ apply(const system::transition_system *ts,
   // Finally, register the new state type in the context
   d_ctx->add_state_type(d_id, d_new_st);  
 
-  const system::state_type* st = d_ctx->get_state_type(d_id);
-  system::state_formula* new_init = new system::state_formula(d_ctx->tm(), st, new_init_t);
-  system::transition_formula* new_tr = new system::transition_formula(d_ctx->tm(), st, new_tr_t);
-  new_ts = new system::transition_system(st, new_init, new_tr);
+  const state_type* st = d_ctx->get_state_type(d_id);
+  state_formula* new_init = new state_formula(d_ctx->tm(), st, new_init_t);
+  transition_formula* new_tr = new transition_formula(d_ctx->tm(), st, new_tr_t);
+  new_ts = new transition_system(st, new_init, new_tr);
   d_ctx->add_transition_system(d_id, new_ts);
   for (unsigned i=0, e = new_st_formulas.size(); i < e; ++i) {
-    system::state_formula* new_sf = new system::state_formula(d_ctx->tm(), st, new_st_formulas[i]); 
+    state_formula* new_sf = new state_formula(d_ctx->tm(), st, new_st_formulas[i]);
     d_ctx->add_state_formula(d_id, new_sf);
     new_queries.push_back(new_sf);
   }

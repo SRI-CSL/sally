@@ -43,6 +43,12 @@ transition_formula::transition_formula(expr::term_manager& tm, const state_type*
   assert(st->is_transition_formula(tf, true));
 }
 
+transition_formula::transition_formula(const transition_formula* f)
+: gc_participant(f->tm())
+, d_state_type(f->get_state_type())
+, d_transition_formula(f->tm(), f->get_formula())
+{}
+
 void transition_formula::gc_collect(const expr::gc_relocator& gc_reloc) {
   gc_reloc.reloc(d_transition_formula);
 }

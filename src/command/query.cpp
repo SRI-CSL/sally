@@ -2,7 +2,7 @@
 
 #include "utils/trace.h"
 #include <iostream>
-#include "../system/transforms/preprocessor.h"
+#include "system/transforms/preprocessor.h"
 
 namespace sally {
 namespace cmd {
@@ -31,7 +31,7 @@ void query::run(system::context* ctx, engine* e) {
   // FIXME: the preprocessor will be run on each query. Therefore, the
   // transition system will preprocessed over and over again with each
   // query. This is clearly a waste of resources.
-  transforms::preprocessor pp(ctx, d_system_id, d_system_id + "_pp");
+  system::transforms::preprocessor pp(ctx, d_system_id, d_system_id + "_pp");
   std::vector<const system::state_formula*> Qs;
   Qs.push_back(d_query);  
   system::transition_system* Tf = 0;

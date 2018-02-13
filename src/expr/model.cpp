@@ -17,18 +17,20 @@
  */
 
 #include "expr/model.h"
+#include "expr/term_ops.h"
 #include "expr/term_visitor.h"
 #include "utils/exception.h"
 #include "utils/trace.h"
 
 #include <sstream>
 #include <cassert>
+#include <vector>
 #include <iostream>
 
 namespace sally {
 namespace expr {
 
-model::model(expr::term_manager& tm, bool undef_to_default)
+model::model(term_manager& tm, bool undef_to_default)
 : d_tm(tm)
 , d_undef_to_default(undef_to_default)
 , d_true(true)
@@ -61,39 +63,39 @@ void model::clear() {
   d_variables.clear();
 }
 
-void model::set_variable_value(expr::term_ref var, value v) {
-  assert(d_tm.term_of(var).op() == expr::VARIABLE);
+void model::set_variable_value(term_ref var, value v) {
+  assert(d_tm.term_of(var).op() == VARIABLE);
   iterator find = d_variable_to_value_map.find(var);
   if (find != d_variable_to_value_map.end()) {
     find->second = v;
   } else {
-    d_variables.push_back(expr::term_ref_strong(d_tm, var));
+    d_variables.push_back(term_ref_strong(d_tm, var));
     d_variable_to_value_map[var] = v;
   }
 }
 
-value model::get_variable_value(expr::term_ref var) const {
-  expr::term_manager::substitution_map renaming;
+value model::get_variable_value(term_ref var) const {
+  term_manager::substitution_map renaming;
   return get_variable_value(var, renaming);
 }
 
-value model::get_variable_value(expr::term_ref var, const expr::term_manager::substitution_map& var_renaming) const {
-  assert(d_tm.term_of(var).op() == expr::VARIABLE);
+value model::get_variable_value(term_ref var, const term_manager::substitution_map& var_renaming) const {
+  assert(d_tm.term_of(var).op() == VARIABLE);
 
   // Rename the variable if necessary
-  expr::term_manager::substitution_map::const_iterator renaming_find = var_renaming.find(var);
-  expr::term_ref var_to_evaluate;
+  term_manager::substitution_map::const_iterator renaming_find = var_renaming.find(var);
+  term_ref var_to_evaluate;
   if (renaming_find == var_renaming.end()) {
     var_to_evaluate = var;
   } else {
     var_to_evaluate = renaming_find->second;
-    TRACE("expr::model") << "get_variable_value(" << var << ") => evaluating " << var_to_evaluate << std::endl;
+    TRACE("model") << "get_variable_value(" << var << ") => evaluating " << var_to_evaluate << std::endl;
   }
 
   const_iterator find = d_variable_to_value_map.find(var_to_evaluate);
   if (find == d_variable_to_value_map.end()) {
     if (d_undef_to_default) {
-      expr::term_ref type = d_tm.type_of(var_to_evaluate);
+      term_ref type = d_tm.type_of(var_to_evaluate);
       value v;
       switch (d_tm.term_of(type).op()) {
       case TYPE_BOOL:
@@ -110,7 +112,7 @@ value model::get_variable_value(expr::term_ref var, const expr::term_manager::su
         assert(false);
       }
 
-      TRACE("expr::model") << "get_variable_value(" << var_to_evaluate << ") => [default] " << v << std::endl;
+      TRACE("model") << "get_variable_value(" << var_to_evaluate << ") => [default] " << v << std::endl;
       return v;
     } else {
       std::stringstream ss;
@@ -119,17 +121,17 @@ value model::get_variable_value(expr::term_ref var, const expr::term_manager::su
     }
   } else {
     value v = find->second;
-    TRACE("expr::model") << "get_variable_value(" << var_to_evaluate << ") => " << v << std::endl;
+    TRACE("model") << "get_variable_value(" << var_to_evaluate << ") => " << v << std::endl;
     return v;
   }
 }
 
-value model::get_term_value(expr::term_ref t) const {
-  expr::term_manager::substitution_map renaming;
+value model::get_term_value(term_ref t) const {
+  term_manager::substitution_map renaming;
   return get_term_value(t, renaming);
 }
 
-value model::get_term_value(expr::term_ref t, const expr::term_manager::substitution_map& var_renaming) const {
+value model::get_term_value(term_ref t, const term_manager::substitution_map& var_renaming) const {
   term_to_value_map cache;
   return get_term_value_internal(t, var_renaming, cache);
 }
@@ -137,7 +139,7 @@ value model::get_term_value(expr::term_ref t, const expr::term_manager::substitu
 class evaluation_visitor {
 
   term_manager& d_tm;
-  const expr::term_manager::substitution_map& d_var_renaming;
+  const term_manager::substitution_map& d_var_renaming;
   model::term_to_value_map& d_cache;
   const model& d_model;
 
@@ -148,7 +150,7 @@ class evaluation_visitor {
 
 public:
 
-  evaluation_visitor(expr::term_manager& tm, const expr::term_manager::substitution_map& var_renaming, model::term_to_value_map& cache, const model& model)
+  evaluation_visitor(term_manager& tm, const term_manager::substitution_map& var_renaming, model::term_to_value_map& cache, const model& model)
   : d_tm(tm)
   , d_var_renaming(var_renaming)
   , d_cache(cache)
@@ -160,13 +162,13 @@ public:
   ~evaluation_visitor() {}
 
   // Non-null terms are good
-  bool is_good_term(expr::term_ref t) const {
+  bool is_good_term(term_ref t) const {
     return !t.is_null();
   }
 
   // Get the children of t
-  void get_children(expr::term_ref t, std::vector<expr::term_ref>& children) {
-    const expr::term& t_term = d_tm.term_of(t);
+  void get_children(term_ref t, std::vector<term_ref>& children) {
+    const term& t_term = d_tm.term_of(t);
     for (size_t i = 0; i < t_term.size(); ++ i) {
       children.push_back(t_term[i]);
     }
@@ -207,7 +209,7 @@ public:
     children_values.clear();
 
     for (size_t i = 0; i < t_size; ++ i) {
-      expr::term_ref child = d_tm.term_of(t)[i];
+      term_ref child = d_tm.term_of(t)[i];
       model::term_to_value_map::const_iterator find = d_cache.find(child);
       assert(find != d_cache.end());
       children_values.push_back(find->second);
@@ -521,7 +523,7 @@ public:
 
     assert(!v.is_null());
 
-    TRACE("expr::model") << "get_term_value_internal(" << t << ") => " << v << std::endl;
+    TRACE("model") << "get_term_value_internal(" << t << ") => " << v << std::endl;
 
     // Remember the cache
     d_cache[t] = v;
@@ -529,33 +531,33 @@ public:
 };
 
 
-value model::get_term_value_internal(expr::term_ref t, const expr::term_manager::substitution_map& var_renaming, term_to_value_map& cache) const {
+value model::get_term_value_internal(term_ref t, const term_manager::substitution_map& var_renaming, term_to_value_map& cache) const {
   evaluation_visitor visitor(d_tm, var_renaming, cache, *this);
   term_visit_topological<evaluation_visitor, term_ref, term_ref_hasher> visit_topological(visitor);
   visit_topological.run(t);
   return cache[t];
 }
 
-bool model::is_true(expr::term_ref f) const {
-  expr::term_manager::substitution_map renaming;
+bool model::is_true(term_ref f) const {
+  term_manager::substitution_map renaming;
   return is_true(f, renaming);
 }
 
-bool model::is_true(expr::term_ref f, const expr::term_manager::substitution_map& var_renaming) const {
+bool model::is_true(term_ref f, const term_manager::substitution_map& var_renaming) const {
   return get_term_value(f, var_renaming) == d_true;
 }
 
-bool model::is_false(expr::term_ref f) const {
-  expr::term_manager::substitution_map renaming;
+bool model::is_false(term_ref f) const {
+  term_manager::substitution_map renaming;
   return is_false(f, renaming);
 }
 
-bool model::is_false(expr::term_ref f, const expr::term_manager::substitution_map& var_renaming) const {
+bool model::is_false(term_ref f, const term_manager::substitution_map& var_renaming) const {
   return get_term_value(f, var_renaming) == d_false;
 }
 
-bool model::has_value(expr::term_ref var) const {
-  assert(d_tm.term_of(var).op() == expr::VARIABLE);
+bool model::has_value(term_ref var) const {
+  assert(d_tm.term_of(var).op() == VARIABLE);
   return d_variable_to_value_map.find(var) != d_variable_to_value_map.end();
 }
 
@@ -567,8 +569,8 @@ model::const_iterator model::values_end() const {
   return d_variable_to_value_map.end();
 }
 
-void model::restrict_vars_to(const expr::term_manager::substitution_map& subst) {
-  typedef expr::term_manager::substitution_map substitution_map;
+void model::restrict_vars_to(const term_manager::substitution_map& subst) {
+  typedef term_manager::substitution_map substitution_map;
 
   substitution_map::const_iterator it;
 
@@ -593,6 +595,16 @@ void model::restrict_vars_to(const expr::term_manager::substitution_map& subst) 
   }
 }
 
+model* model::rename_variables(const expr::term_manager::substitution_map& subst) const {
+  model* result = new model(d_tm, d_undef_to_default);
+  term_to_value_map::const_iterator it = d_variable_to_value_map.begin();
+  term_to_value_map::const_iterator it_end = d_variable_to_value_map.end();
+  for(; it != it_end; ++ it) {
+    term_ref x = d_tm.substitute(it->first, subst);
+    result->set_variable_value(x, it->second);
+  }
+  return result;
+}
 
 void model::to_stream(std::ostream& out) const {
   for (const_iterator it = values_begin(); it != values_end(); ++ it) {

@@ -12,7 +12,7 @@
 #include <vector>
 
 namespace sally {
-namespace cmd {
+namespace system {
 namespace transforms {
 
 /**
@@ -22,10 +22,10 @@ namespace transforms {
 class preprocessor {
 
   /** The context we're operating under */
-  system::context* d_ctx;
+  context* d_ctx;
 
   /** Original transition system */
-  const system::transition_system* d_original;
+  const transition_system* d_original;
 
   /** List of transforms, in order */
   typedef std::vector<transform*> transforms_vector;
@@ -37,7 +37,7 @@ public:
    * Create the preprocessor for the given transition system. It will create
    * a pre-processed system in the context with the given id.
    */
-  preprocessor(system::context* ctx, std::string system_id, std::string preprocessed_id);
+  preprocessor(context* ctx, std::string system_id, std::string preprocessed_id);
 
   /**
    * Destroy the preprocess and all the transforms.
@@ -45,10 +45,10 @@ public:
   ~preprocessor();
 
   /** Run the pre-processor on the given state formula. */
-  system::state_formula* apply(const system::state_formula* sf, transform::direction D);
+  state_formula* apply(const state_formula* sf, transform::direction D);
 
   /** Run the pre-processor on the given transition formula. */
-  system::transition_formula* apply(const system::transition_formula* sf, transform::direction D);
+  transition_formula* apply(const transition_formula* sf, transform::direction D);
 
   /** Run the pre-processor on the given model. */
   expr::model::ref apply(expr::model::ref m, transform::direction D);
@@ -58,10 +58,10 @@ public:
    * transformation is functional so it produces a new transition system and
    * a new vector of queries. **/
   void run(std::string id,
-	   const system::transition_system* ts,
-	   const std::vector<const system::state_formula*>& queries,
-	   system::transition_system*& new_ts,
-	   std::vector<const system::state_formula*>& new_queries);
+	   const transition_system* ts,
+	   const std::vector<const state_formula*>& queries,
+	   transition_system*& new_ts,
+	   std::vector<const state_formula*>& new_queries);
 
 
   /** Setup the options */
@@ -71,10 +71,10 @@ public:
 private:
   
   void run_transform(transform* tr,
-		     const system::transition_system* ts,
-		     const std::vector<const system::state_formula*>& queries,
-		     system::transition_system*& new_ts,
-		     std::vector<const system::state_formula*>& new_queries);
+		     const transition_system* ts,
+		     const std::vector<const state_formula*>& queries,
+		     transition_system*& new_ts,
+		     std::vector<const state_formula*>& new_queries);
 };
 
 }}} // End namespace

@@ -31,6 +31,14 @@ transition_system::transition_system(const state_type* state_type, state_formula
   d_trace_helper = new trace_helper(state_type);
 }
 
+transition_system::transition_system(const transition_system* ts)
+: d_state_type(ts->get_state_type())
+, d_initial_states(new state_formula(ts->d_initial_states))
+, d_transition_relation(new transition_formula(ts->d_transition_relation))
+{
+  d_trace_helper = new trace_helper(d_state_type);
+}
+
 void transition_system::to_stream(std::ostream& out) const {
   out << "[" << std::endl;
   out << "type: " << *d_state_type << std::endl;

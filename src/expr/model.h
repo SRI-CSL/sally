@@ -96,6 +96,9 @@ public:
   /** Only keep variables in the map, and replace them with given substitution */
   void restrict_vars_to(const expr::term_manager::substitution_map& subst);
 
+  /** Return a new model where any variables in the model have been renamed through substitution */
+  model* rename_variables(const expr::term_manager::substitution_map& subst) const;
+
 private:
 
   /** The term manager */

@@ -27,6 +27,7 @@ context::context(expr::term_manager& tm, options& opts, utils::statistics& stats
 , d_state_formulas("state formulas")
 , d_transition_formulas("state transition formulas")
 , d_transition_systems("state transition systems")
+, d_fresh_id(0)
 , d_options(opts)
 , d_stats(stats)
 {
@@ -41,6 +42,7 @@ void context::add_state_type(std::string id, state_type* st) {
   d_state_types_to_state_formulas[st] = id_set();
   d_state_types_to_transition_formulas[st] = id_set();
   d_state_types_to_transition_systems[st] = id_set();
+  d_all_ids.insert(id);
 }
 
 void context::add_state_type(std::string id,
@@ -75,6 +77,7 @@ void context::add_state_formula(std::string id, state_formula* sf) {
   }
   d_state_formulas.add_entry(id, sf);
   d_state_types_to_state_formulas[sf->get_state_type()].insert(id);
+  d_all_ids.insert(id);
 }
 
 void context::add_state_formula(std::string id, std::string type_id, expr::term_ref f) {
@@ -104,6 +107,7 @@ void context::add_transition_formula(std::string id, transition_formula* tf) {
   }
   d_transition_formulas.add_entry(id, tf);
   d_state_types_to_transition_formulas[tf->get_state_type()].insert(id);
+  d_all_ids.insert(id);
 }
 
 void context::add_transition_formula(std::string id, std::string type_id, expr::term_ref f) {
@@ -133,6 +137,7 @@ void context::add_transition_system(std::string id, transition_system* ts) {
   }
   d_transition_systems.add_entry(id, ts);
   d_state_types_to_transition_systems[ts->get_state_type()].insert(id);
+  d_all_ids.insert(id);
 }
 
 const system::transition_system* context::get_transition_system(std::string id) const {
@@ -217,6 +222,17 @@ context::id_set::const_iterator context::transition_systems_end(const system::st
   return it->second.end();
 }
 
+std::string context::get_fresh_id(std::string stem) {
+  for (;;) {
+    std::stringstream ss;
+    ss << stem << "_" << (d_fresh_id ++);
+    std::string name = ss.str();
+    if (d_all_ids.count(name) == 0) {
+      return name;
+    }
+  }
+  return "never_here";
+}
 
 }
 }

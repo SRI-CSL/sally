@@ -352,6 +352,10 @@ public:
   /** Make a new struct type */
   term_ref mk_struct_type(const std::vector<std::string>& names, const std::vector<term_ref>& types);
 
+  /** Get the struct elements */
+  void get_struct_type_elements(const term& t, std::vector<std::string>& names, std::vector<term_ref>& types) const;
+  void get_struct_type_elements(term_ref t, std::vector<std::string>& names, std::vector<term_ref>& types) const;
+
   /** Get the size of the type */
   size_t get_struct_type_size(const term& t) const;
 

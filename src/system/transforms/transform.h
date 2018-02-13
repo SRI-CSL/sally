@@ -1,6 +1,7 @@
 #pragma once
 
 #include "expr/model.h"
+#include "system/context.h"
 #include "system/state_formula.h"
 #include "system/transition_system.h"
 
@@ -8,7 +9,7 @@
 #include <vector>
 
 namespace sally {
-namespace cmd {
+namespace system {
 namespace transforms {
 
 /**
@@ -19,21 +20,24 @@ class transform {
 
 protected:
 
+  /** The context */
+  context* d_ctx;
+
   /** The original transition system */
-  const system::transition_system* d_original;
+  const transition_system* d_original;
 
   /** The transformed transition system */
-  system::transition_system* d_transformed;
+  transition_system* d_transformed;
 
 public:
   
-  /** Construct the transform that tranforms the given transition system */
-  transform(const system::transition_system* original);
+  /** Construct the transform that transforms the given transition system */
+  transform(context* ctx, const transition_system* original);
 
   /** Base class for a transform constructor */
   class constructor {
   public:
-    virtual transform* mk_new(const system::transition_system* original) = 0;
+    virtual transform* mk_new(context* ctx, const transition_system* original) = 0;
     virtual ~constructor() {}
   };
 
@@ -41,16 +45,16 @@ public:
   template<typename T>
   class constructor_for : public constructor {
   public:
-	transform* mk_new(const system::transition_system* original) {
-	  return new T(original);
-	}
+    transform* mk_new(context* ctx, const transition_system* original) {
+      return new T(ctx, original);
+    }
   };
 
   /** Get the original transition system */
-  const system::transition_system* get_original() const { return d_original; }
+  const transition_system* get_original() const { return d_original; }
 
   /** Get the transformed transition system */
-  const system::transition_system* get_transformed() const { return d_transformed; }
+  const transition_system* get_transformed() const { return d_transformed; }
 
   /** Destructor */
   virtual ~transform() {}
@@ -65,27 +69,33 @@ public:
 
   /** Apply the transform to a state formula */
   virtual
-  system::state_formula* apply(const system::state_formula* f_state, direction D) = 0;
+  state_formula* apply(const state_formula* f_state, direction D) = 0;
 
   /** Apply the transform to a transition formula */
   virtual
-  system::transition_formula* apply(const system::transition_formula* f_trans, direction D) = 0;
+  transition_formula* apply(const transition_formula* f_trans, direction D) = 0;
 
   /** Apply the transform to a model */
   virtual
   expr::model::ref apply(expr::model::ref model, direction d) = 0;
 
   /** Apply the transform */
-  virtual void apply (const system::transition_system *ts,
-		      const std::vector<const system::state_formula*>& queries,
-		      system::transition_system*& new_ts,
-		      std::vector<const system::state_formula*>& new_queries) = 0;
+  virtual void apply (const transition_system *ts,
+		      const std::vector<const state_formula*>& queries,
+		      transition_system*& new_ts,
+		      std::vector<const state_formula*>& new_queries) = 0;
   
   /** Get the id to use for this transform */
   virtual std::string get_name() const = 0;
 
   /** The the priority of this transform (smaller goes first) */
   virtual size_t get_priority() const = 0;
+
+  /** Get the associated term manger */
+  expr::term_manager& tm() const { return d_ctx->tm(); }
+
+  /** Get the associated context */
+  context* ctx() const { return d_ctx; }
 
 };
 
@@ -137,9 +147,9 @@ public:
   static
   std::string get_default_transforms_list();
 
-  /** Construct a transform by name, given a transition system to operate on */
+  /** Construct a transform by name, given a context and transition system to operate on */
   static
-  transform* mk_transform(std::string id, const system::transition_system* original);
+  transform* mk_transform(std::string id, context* ctx, const transition_system* original);
 
 };
 

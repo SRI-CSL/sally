@@ -48,6 +48,8 @@ public:
   /** Called for the participant to collect unused terms and reallocate used terms */
   virtual void gc_collect(const gc_relocator& gc_reloc) = 0;
 
+  /** Returns the term manager */
+  term_manager& tm() const;
 };
 
 }

@@ -2,7 +2,6 @@
 #include "remove_arrays.h"
 #include "remove_subtypes.h"
 #include "remove_enum_types.h"
-#include "promote_nonstate_to_state.h"
 #include "add_missing_next.h"
 #include "inlining.h"
 
@@ -11,9 +10,10 @@
 
 #include <boost/program_options/options_description.hpp>
 #include "preprocessor.h"
+#include "promote_params_to_state.h"
 
 namespace sally {
-namespace cmd {
+namespace system {
 namespace transforms {
 
 using namespace expr;
@@ -33,7 +33,7 @@ void preprocessor::setup_options(boost::program_options::options_description& op
   ;
 }
   
-preprocessor::preprocessor(system::context *ctx, std::string system_id, std::string preprocessed_id)
+preprocessor::preprocessor(context *ctx, std::string system_id, std::string preprocessed_id)
 : d_ctx(ctx)
 , d_original(ctx->get_transition_system(system_id))
 {
@@ -52,9 +52,9 @@ preprocessor::preprocessor(system::context *ctx, std::string system_id, std::str
   transforms.push_back(transform_name);
 
   // Allocate the transforms
-  const system::transition_system* current_system = d_original;
+  const transition_system* current_system = d_original;
   for (size_t i = 0; i < transforms.size(); ++ i) {
-    transform* current_transform = factory::mk_transform(transforms[i], current_system);
+    transform* current_transform = factory::mk_transform(transforms[i], ctx, current_system);
     d_transforms.push_back(current_transform);
     current_system = current_transform->get_transformed();
   }
@@ -67,9 +67,9 @@ preprocessor::~preprocessor() {
   }
 }
 
-system::state_formula* preprocessor::apply(const system::state_formula* sf, transform::direction D) {
-  const system::state_formula* current = sf;
-  system::state_formula* next = 0;
+state_formula* preprocessor::apply(const state_formula* sf, transform::direction D) {
+  const state_formula* current = sf;
+  state_formula* next = 0;
   switch (D) {
   case transform::TRANSFORM_FORWARD:
     for (transforms_vector::iterator it = d_transforms.begin(); it != d_transforms.end(); ++ it) {
@@ -90,9 +90,9 @@ system::state_formula* preprocessor::apply(const system::state_formula* sf, tran
   return next;
 }
 
-system::transition_formula* preprocessor::apply(const system::transition_formula* tf, transform::direction D) {
-  const system::transition_formula* current = tf;
-  system::transition_formula* next = 0;
+transition_formula* preprocessor::apply(const transition_formula* tf, transform::direction D) {
+  const transition_formula* current = tf;
+  transition_formula* next = 0;
   switch (D) {
   case transform::TRANSFORM_FORWARD:
     for (transforms_vector::iterator it = d_transforms.begin(); it != d_transforms.end(); ++ it) {
@@ -135,16 +135,16 @@ expr::model::ref preprocessor::apply(expr::model::ref m, transform::direction D)
 }
 
 void preprocessor::run_transform(transform* tr,
-				 const system::transition_system* ts,
-				 const std::vector<const system::state_formula*>& queries,
-				 system::transition_system*& new_ts,
-				 std::vector<const system::state_formula*>& new_queries) {
+				 const transition_system* ts,
+				 const std::vector<const state_formula*>& queries,
+				 transition_system*& new_ts,
+				 std::vector<const state_formula*>& new_queries) {
   
   tr->apply(ts, queries, new_ts, new_queries);
   MSG(2) << "After "  << tr->get_name() << std::endl;
   MSG(2) << "TS: "    << *new_ts << std::endl;
   MSG(2) << "QUERIES: \n";
-  for (std::vector<const system::state_formula*>::iterator it = new_queries.begin(),
+  for (std::vector<const state_formula*>::iterator it = new_queries.begin(),
 	 et = new_queries.end(); it!=et; ++it) {
     MSG(2) << "\t" << *(*it) << std::endl;
   }
@@ -158,10 +158,10 @@ std::string make_id(std::string prefix) {
 }
 
 void preprocessor::run(std::string system_id,
-		       const system::transition_system* T,
-		       const std::vector<const system::state_formula*>& Qs,
-		       system::transition_system*& newT,
-		       std::vector<const system::state_formula*>& newQs) {
+		       const transition_system* T,
+		       const std::vector<const state_formula*>& Qs,
+		       transition_system*& newT,
+		       std::vector<const state_formula*>& newQs) {
   
   // T is registered in the context with system_id but Qs might not.
 
@@ -170,32 +170,32 @@ void preprocessor::run(std::string system_id,
 
   // Inline functions
   transforms::inliner i(T, d_ctx, make_id(system_id), T->get_state_type());
-  system::transition_system* T1 = 0;
-  std::vector<const system::state_formula*> Qs1;  
+  transition_system* T1 = 0;
+  std::vector<const state_formula*> Qs1;
   run_transform(&i, T, Qs, T1, Qs1);
   MSG(1) << "Inlined functions." << std::endl;
   // Remove quantifiers, array lambda terms, etc
   transforms::expand_arrays ea(i.get_transformed(), d_ctx, make_id(system_id));
-  system::transition_system* T2 = 0;
-  std::vector<const system::state_formula*> Qs2;    
+  transition_system* T2 = 0;
+  std::vector<const state_formula*> Qs2;
   run_transform(&ea, T1, Qs1, T2, Qs2);
   MSG(1) << "Removed quantifiers and array lambda terms." << std::endl;  
   // Remove array terms (select/write)
   transforms::remove_arrays ra(ea.get_transformed(), d_ctx, make_id(system_id), T2->get_state_type());
-  system::transition_system* T3 = 0;
-  std::vector<const system::state_formula*> Qs3;    
+  transition_system* T3 = 0;
+  std::vector<const state_formula*> Qs3;
   run_transform(&ra, T2, Qs2, T3, Qs3);
   MSG(1) << "Removed array terms." << std::endl;    
   // Remove enumerate types
   transforms::remove_enum_types ret(ra.get_transformed(), d_ctx, make_id(system_id), T3->get_state_type());
-  system::transition_system* T4 = 0;
-  std::vector<const system::state_formula*> Qs4;    
+  transition_system* T4 = 0;
+  std::vector<const state_formula*> Qs4;
   run_transform(&ret, T3, Qs3, T4, Qs4);
   MSG(1) << "Removed enumerate types." << std::endl;        
   // Remove predicate subtypes
   transforms::remove_subtypes rs(ret.get_transformed(), d_ctx, make_id(system_id), T4->get_state_type());
-  system::transition_system* T5 = 0;
-  std::vector<const system::state_formula*> Qs5;   
+  transition_system* T5 = 0;
+  std::vector<const state_formula*> Qs5;
   run_transform(&rs, T4, Qs4, T5, Qs5);
   MSG(1) << "Removed predicate subtypes." << std::endl;      
   // JN: this transformation is needed otherwise the property can be
@@ -207,9 +207,9 @@ void preprocessor::run(std::string system_id,
   // default value. By promoting PARAM variables to state variables we
   // ensure that all models are fully defined so Yices' generalization
   // method does not need to assign default values.
-  transforms::promote_nonstate_to_state ps(rs.get_transformed(), d_ctx, make_id(system_id), T5->get_state_type());
-  system::transition_system* T6 = 0;
-  std::vector<const system::state_formula*> Qs6;    
+  transforms::promote_params_to_state ps(rs.get_transformed(), d_ctx, make_id(system_id), T5->get_state_type());
+  transition_system* T6 = 0;
+  std::vector<const state_formula*> Qs6;
   run_transform(&ps, T5, Qs5, T6, Qs6);
   MSG(1) << "Promoted all PARAM variables to state ones." << std::endl;
   

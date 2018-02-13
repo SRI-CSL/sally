@@ -131,6 +131,9 @@ public:
   /** Get the iterator to the end of transition formulas of this type */
   id_set::const_iterator transition_systems_end(const system::state_type* st) const;
 
+  /** Get a fresh id not used before */
+  std::string get_fresh_id(std::string stem);
+
 private:
 
   /** The term manager */
@@ -156,6 +159,12 @@ private:
 
   /** Map from state_type to their transition systems */
   std::map<const state_type*, id_set> d_state_types_to_transition_systems;
+
+  /** Set of all ids ever encountered */
+  id_set d_all_ids;
+
+  /** Counter for fresh ids */
+  size_t d_fresh_id;
 
   /** Various options */
   options& d_options;

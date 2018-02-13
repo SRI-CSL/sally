@@ -90,7 +90,7 @@ static void create_all_instantiations(IntervalIterator it, IntervalIterator et,
 				      std::vector<std::vector<integer> > &instantiations) {
   if (it != et) {
     integer lb = (*it).first;
-    integer ub = (*it).second;    
+    integer ub = (*it).second;
     IntervalIterator next(it);
     create_all_instantiations(++next, et, instantiations);
     
@@ -102,9 +102,9 @@ static void create_all_instantiations(IntervalIterator it, IntervalIterator et,
 	i = i + 1;
       }
     } else {
-      std::vector<std::vector<integer> > new_instantiations;      
+      std::vector<std::vector<integer> > new_instantiations;
       for (integer i = lb ; i <= ub; ) {
-	std::vector<std::vector<integer> >::iterator  iit, iet;	
+	std::vector<std::vector<integer> >::iterator  iit, iet;
 	for (iit = instantiations.begin(), iet = instantiations.end(); iit != iet; ++iit) {
 	  std::vector<integer> jj (*iit);
 	  jj.insert(jj.begin(), i);
@@ -122,14 +122,14 @@ static void create_all_instantiations(IntervalIterator it, IntervalIterator et,
 // terms. Here we replace terms that have a particular name with
 // another term.
 // FIXME: do this more efficiently.
-  template<typename NameToTermMap>  
+template<typename NameToTermMap>
 static inline term_ref name_substitute(term_manager &tm, term_ref t,
 				       const NameToTermMap &subs_map) {
   
   if (std::distance(subs_map.begin(), subs_map.end()) == 0) {
     return t;
   } else {
-    term_manager::substitution_map term_subs_map;    
+    term_manager::substitution_map term_subs_map;
     std::vector<term_ref> vars;
     tm.get_variables(t, vars);
     for (std::vector<term_ref>::const_iterator it = vars.begin(), et = vars.end(); it!=et; ++it){

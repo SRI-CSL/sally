@@ -40,6 +40,9 @@ public:
   /** Create a transition formula from the type and the actual formula */
   transition_formula(expr::term_manager& tm, const state_type* st, expr::term_ref tf);
 
+  /** Create a copy of the transition formula */
+  transition_formula(const transition_formula* f);
+
   /** Get the state formula */
   expr::term_ref get_formula() const {
     return d_transition_formula;

@@ -16,6 +16,7 @@
  * along with sally.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "expr/term.h"
 #include "expr/term_manager.h"
 #include "expr/term_manager_internal.h"
 #include "utils/trace.h"
@@ -506,6 +507,21 @@ term_ref term_manager::mk_struct_type(const std::vector<std::string>& names, con
   term_ref result = mk_term(TYPE_STRUCT, type_argumens);
   d_tm->typecheck(result);
   return result;
+}
+
+void term_manager::get_struct_type_elements(const term& t, std::vector<std::string>& names, std::vector<term_ref>& types) const {
+  assert(t.op() == TYPE_STRUCT);
+  for (size_t i = 0; i < t.size(); ++ i) {
+    if (i % 2) {
+      types.push_back(t[i]);
+    } else {
+      names.push_back(get_string_constant(term_of(t[i])));
+    }
+  }
+}
+
+void term_manager::get_struct_type_elements(term_ref t, std::vector<std::string>& names, std::vector<term_ref>& types) const {
+  return get_struct_type_elements(term_of(t), names, types);
 }
 
 size_t term_manager::get_struct_type_size(const term& t) const {

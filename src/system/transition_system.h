@@ -67,7 +67,18 @@ class transition_system {
 
 public:
 
+  /**
+   * Make a transition system of the given state type, initial states and
+   * transition formula. Transition system takes ownership of the formulas,
+   * the state_type is managed outside.
+   */
   transition_system(const state_type* state_type, state_formula* initial_states, transition_formula* transition_relation);
+
+  /**
+   * Make a copy of the transition system.
+   */
+  transition_system(const transition_system* ts);
+
   ~transition_system();
 
   /** Get the state type */
@@ -78,7 +89,7 @@ public:
   /** Get the initial states */
   expr::term_ref get_initial_states() const;
 
-  /** Get the whole transition relation (disjunction) */
+  /** Get the whole transition relation */
   expr::term_ref get_transition_relation() const;
 
   /** Get the trace helper */

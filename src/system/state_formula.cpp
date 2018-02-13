@@ -46,6 +46,13 @@ state_formula::state_formula(expr::term_manager& tm, const state_type* st, expr:
 state_formula::~state_formula() {
 }
 
+state_formula::state_formula(const state_formula* f)
+: gc_participant(f->tm())
+, d_state_type(f->get_state_type())
+, d_state_formula(f->tm(), f->get_formula())
+{
+}
+
 void state_formula::gc_collect(const expr::gc_relocator& gc_reloc) {
   gc_reloc.reloc(d_state_formula);
 }

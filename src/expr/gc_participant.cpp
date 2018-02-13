@@ -35,6 +35,10 @@ gc_participant::~gc_participant()
   }
 }
 
+term_manager& gc_participant::tm() const {
+  return d_gc_participant_tm;
+}
+
 }
 }
 
