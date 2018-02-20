@@ -138,15 +138,7 @@ expr::model::ref expand_arrays::apply(expr::model::ref model, direction d) {
 }
 
 void expand_arrays_visitor::error(term_ref t_ref, std::string message) const {
-  std::stringstream ss;
-  term_manager* tm = output::get_term_manager(std::cerr);
-  if (tm->get_internal() == d_tm.get_internal()) {
-    output::set_term_manager(ss, tm);
-  }
-  ss << "Can't expand arrays " << t_ref;
-  if (message.length() > 0) { ss << ". " << message; }
-  ss << ".";
-  throw exception(ss.str());
+  throw exception(d_tm) << "Can't expand arrays " << t_ref << ". " << message;
 }
 
 /* 

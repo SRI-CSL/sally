@@ -305,6 +305,18 @@ bool term_manager_internal::is_integer_type(term_ref t) const {
   return false;
 }
 
+bool term_manager_internal::is_real_type(term_ref t) const {
+  const term& t_term = term_of(t);
+  if (t_term.d_op == TYPE_REAL) return true;
+  if (t_term.d_op == TYPE_PREDICATE_SUBTYPE) {
+    term_ref var = t_term[0];
+    term_ref var_type = type_of_if_exists(var);
+    assert(!var_type.is_null());
+    return is_real_type(var_type);
+  }
+  return false;
+}
+
 bool term_manager_internal::is_bitvector_type(term_ref t) const {
   return term_of(t).d_op == TYPE_BITVECTOR;
 }
@@ -321,8 +333,16 @@ bool term_manager_internal::is_tuple_type(term_ref t) const {
   return term_of(t).d_op == TYPE_TUPLE;
 }
 
+bool term_manager_internal::is_enum_type(term_ref t) const {
+  return term_of(t).d_op == TYPE_ENUM;
+}
+
 bool term_manager_internal::is_record_type(term_ref t) const {
   return term_of(t).d_op == TYPE_RECORD;
+}
+
+bool term_manager_internal::is_struct_type(term_ref t) const {
+  return term_of(t).d_op == TYPE_STRUCT;
 }
 
 bool term_manager_internal::is_type(const term& t) {

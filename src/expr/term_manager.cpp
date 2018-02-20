@@ -927,12 +927,24 @@ bool term_manager::is_integer_type(term_ref t) const {
   return d_tm->is_integer_type(t);
 }
 
+bool term_manager::is_real_type(term_ref t) const {
+  return d_tm->is_real_type(t);
+}
+
 bool term_manager::is_tuple_type(term_ref t) const {
   return d_tm->is_tuple_type(t);
 }
 
+bool term_manager::is_enum_type(term_ref t) const {
+  return d_tm->is_enum_type(t);
+}
+
 bool term_manager::is_record_type(term_ref t) const {
   return d_tm->is_record_type(t);
+}
+
+bool term_manager::is_struct_type(term_ref t) const {
+  return d_tm->is_struct_type(t);
 }
 
 void term_manager::set_name_transformer(const utils::name_transformer* transformer) {

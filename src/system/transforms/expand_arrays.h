@@ -16,7 +16,7 @@ namespace system {
 namespace transforms {
   
 /** 
- * Expand arrays from transition systems and state formulas.  The
+ * Expand arrays from transition systems and state formulas. The
  * expansion consists of removing quantifiers, array lambda terms and
  * array variables involved in equalities. As a result of this
  * expansion, all array variables should appear only as arguments of

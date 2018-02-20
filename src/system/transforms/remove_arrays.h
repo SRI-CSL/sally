@@ -14,18 +14,33 @@ namespace system {
 namespace transforms {
   
 /** 
-    Remove array terms from transition systems and state formulas.
-    This is only possible if all arrays are bounded.
-**/
-  
+ * Reduce to formula to array reads only when the index domain is finit. This can
+ * be done by:
+ * - For equalities a = b, reduce to forall i. a[i] = b[i]
+ * - For function application f(a), reduce to f'(a[0], ..., a[n])
+ * - Push reads until they are on base arrays, for example
+ *
+ *   (ite c A B)[i] -> (ite c A[i] B[i])
+ *   (write A i v)[k] -> (ite (= i k) v A[i])
+ */
 class remove_arrays: public transform {
 
   static factory::register_transform<remove_arrays> s_register;
 
+  typedef expr::term_manager::substitution_map substitution_map;
+
+  /** Main cache for rewrites */
+  substitution_map d_substitution_map;
+
+  /**
+   * Main function that goes over the formula, identifies full-array
+   * atoms, and decomposes them into individual reads.
+   */
+  expr::term_ref process(expr::term_ref f);
+
 public:
 
-  remove_arrays(context* ctx, const transition_system* original)
-  : transform(ctx, original), m_pImpl(0) {}
+  remove_arrays(context* ctx, const transition_system* original);
 
   /** Apply the transform to a state formula */
   state_formula* apply(const state_formula* f_state, direction D);

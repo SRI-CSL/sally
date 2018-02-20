@@ -55,23 +55,139 @@ remove_enum_types::~remove_enum_types() {
   delete m_pImpl;
 }
 
+
+remove_enum_types::remove_enum_types(context* ctx, const transition_system* original)
+: transform(ctx, original), m_pImpl(0)
+{
+  const state_type* original_st = original->get_state_type();
+
+  // First, make a new state type with no enum types
+  term_ref state_type_var = process(original_st->get_state_type_var());
+  term_ref input_type_var = process(original_st->get_state_type_var());
+  term_ref param_type_var = process(original_st->get_state_type_var());
+
+  // New state type
+  std::string transformed_id = ctx->get_fresh_id(original_st->get_id());
+  state_type* transformed_st = new state_type(transformed_id, tm(), state_type_var, input_type_var, param_type_var);
+  d_ctx->add_state_type(transformed_id, transformed_st);
+
+  // Collect the substitutions
+  term_ref_vec tcc;
+  process(original_st->get_variables(state_type::STATE_CURRENT), transformed_st->get_variables(state_type::STATE_CURRENT), tcc);
+  process(original_st->get_variables(state_type::STATE_INPUT), transformed_st->get_variables(state_type::STATE_INPUT), tcc);
+  process(original_st->get_variables(state_type::STATE_NEXT), transformed_st->get_variables(state_type::STATE_NEXT), tcc);
+  process(original_st->get_variables(state_type::STATE_PARAM), transformed_st->get_variables(state_type::STATE_PARAM), tcc);
+
+  // Create the new transition system
+  term_ref init = tm().substitute(original->get_initial_states(), d_substitution_map);
+  term_ref trans = tm().substitute(original->get_transition_relation(), d_substitution_map);
+  d_transformed = new transition_system(transformed_st,
+      new state_formula(tm(), transformed_st, init),
+      new transition_formula(tm(), transformed_st, trans));
+
+  // Add assumptions (TCCs on the new variables: x = 0 or x = 1 or .. or x = MAX
+  if (tcc.size() > 0) {
+    term_ref tcc_formula = tm().mk_and(tcc);
+    state_formula* tcc_sf = new state_formula(tm(), transformed_st, tcc_formula);
+    d_transformed->add_assumption(tcc_sf);
+  }
+}
+
 state_formula* remove_enum_types::apply(const state_formula* f_state, direction D) {
-  // TODO
-  assert(false);
-  return 0;
+  assert(D = TRANSFORM_FORWARD);
+  const state_type* transformed_state_type = d_transformed->get_state_type();
+  term_ref transformed_f = tm().substitute(f_state->get_formula(), d_substitution_map);
+  return new state_formula(tm(), transformed_state_type, transformed_f);
 }
 
 transition_formula* remove_enum_types::apply(const transition_formula* f_trans, direction D) {
-  // TODO
-  assert(false);
-  return 0;
+  assert(D = TRANSFORM_FORWARD);
+  const state_type* transformed_state_type = d_transformed->get_state_type();
+  term_ref transformed_f = tm().substitute(f_trans->get_formula(), d_substitution_map);
+  return new transition_formula(tm(), transformed_state_type, transformed_f);
 }
 
-expr::model::ref remove_enum_types::apply(expr::model::ref model, direction d) {
-  // TODO
-  assert(false);
-  return model;
+class value_transformer {
+  term_manager& d_tm;
+public:
+  value_transformer(term_manager& tm): d_tm(tm) {}
+
+  /** Returns the value of y, given x and x_value */
+  value operator () (term_ref x, term_ref y, const value& x_value) const {
+    assert(x != y);
+    term_ref x_type = d_tm.type_of(x);
+    term_ref y_type = d_tm.type_of(y);
+    if (d_tm.is_enum_type(x_type) && d_tm.is_real_type(y_type)) {
+      // TODO: move value from enum -> rational
+      assert(false);
+      return value();
+    } else
+    if (d_tm.is_enum_type(y_type) && d_tm.is_real_type(x_type)) {
+      // TODO: move value from rational -> enum
+      assert(false);
+      return value();
+    } else {
+      assert(false);
+      return value();
+    }
+  }
+};
+
+model::ref remove_enum_types::apply(model::ref model, direction D) {
+  assert(D == TRANSFORM_FORWARD);
+  return model->rename_variables(d_substitution_map, value_transformer(tm()));
 }
+
+void remove_enum_types::process(const term_ref_vec& v1, const term_ref_vec& v2, term_ref_vec& tcc) {
+  assert(v1.size() == v2.size());
+  for(size_t i = 0; i < v1.size(); ++ i) {
+    term_ref t1 = v1[i];
+    term_ref t2 = v2[i];
+    term_ref t1_type = tm().type_of(t1);
+    term_ref t2_type = tm().type_of(t2);
+    if (t1_type != t2_type) {
+      // t1: ENUM -> t2: REAL
+      assert(d_substitution_map.find(t1) == d_substitution_map.end());
+      assert(tm().is_enum_type(t1_type));
+      d_substitution_map[t1] = t2;
+      // Add to TCC, (or ... t2[i] = i);
+      // and remember the value substitution subst[ENUM_i] = i
+      size_t enum_size = tm().get_enum_type_size(t2_type);
+      term_ref_vec disjuncts;
+      for (size_t enum_i = 0; enum_i < enum_size; ++ enum_i) {
+        term_ref enum_value = tm().mk_enum_constant(enum_i, t1_type);
+        term_ref rational_value = tm().mk_rational_constant(rational(enum_i, 1));
+        disjuncts.push_back(tm().mk_term(TERM_EQ, t2, rational_value));
+        if (d_substitution_map.find(enum_value) == d_substitution_map.end()) {
+          d_substitution_map[enum_value] = rational_value;
+        }
+      }
+      tcc.push_back(tm().mk_or(disjuncts));
+    }
+  }
+}
+
+term_ref remove_enum_types::process(term_ref t) {
+  if (tm().is_struct_type(t)) {
+    // Return a new type variable with enums -> rational
+    std::vector<std::string> names;
+    std::vector<term_ref> types;
+    tm().get_struct_type_elements(t, names, types);
+    for (size_t i = 0; i < types.size(); ++ i) {
+      term_ref type_i = types[i];
+      if (tm().is_enum_type(type_i)) {
+        // Change to real type
+        types[i] = tm().real_type();
+      }
+    }
+    // Return the new state var
+    return tm().mk_struct_type(names, types);
+  } else {
+    assert(false);
+    return term_ref();
+  }
+}
+
 
 void remove_enum_types::apply(const transition_system* ts,
 			      const std::vector<const state_formula*>& queries,
@@ -186,14 +302,7 @@ remove_enum_types::remove_enum_types_impl::remove_enum_types_impl(context *ctx, 
 /** Create a new transition system but without enum types **/  
 transition_system* remove_enum_types::remove_enum_types_impl::apply(const transition_system *ts) {
   if (!d_ctx->has_state_type(d_id)) {
-    std::stringstream ss;
-    term_manager* tm = output::get_term_manager(std::cerr);
-    if (tm->get_internal() == d_ctx->tm().get_internal()) {
-      output::set_term_manager(ss, tm);
-    }
-    ss << "Can't remove enum type ";
-    ss << "(no state type found for Id " << d_id << ")";
-    throw exception(ss.str());
+    throw exception(d_ctx->tm()) << "Can't remove enum type (no state type found for Id " << d_id << ")";
   }
   term_manager &tm = d_ctx->tm();
   term_ref init, tr, new_init, new_tr;

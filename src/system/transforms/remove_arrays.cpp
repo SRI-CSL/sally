@@ -1,6 +1,7 @@
 #include "expr/term_manager_internal.h"
 #include "expr/term_manager.h"
 #include "expr/term_visitor.h"
+#include "expr/term.h"
 
 #include "remove_arrays.h"
 #include "term_utils.h"
@@ -24,6 +25,60 @@ typedef boost::unordered_map<std::string, index_map_t> arr_name_to_scalar_map;
 typedef boost::unordered_map<term_ref, index_map_t, term_ref_hasher> arr_term_to_scalar_map;
 typedef std::map<unsigned, std::pair<std::string, term_ref> > index_type_map_t;
 typedef boost::unordered_map<std::string, index_type_map_t> arr_name_to_scalar_type_map;
+
+remove_arrays::remove_arrays(context* ctx, const transition_system* original)
+: transform(ctx, original), m_pImpl(0)
+{
+  // We keep the state type, we're just rewriting
+  const state_type* st = original->get_state_type();
+  // New initial states
+  term_ref init = original->get_initial_states();
+  init = process(init);
+  // New transition relation
+  term_ref trans = original->get_transition_relation();
+  trans = process(trans);
+  // New transition system
+  d_transformed = new transition_system(st,
+      new state_formula(tm(), st, init),
+      new transition_formula(tm(), st, trans)
+  );
+}
+
+state_formula* remove_arrays::apply(const state_formula* f_state, direction D) {
+  if (D == TRANSFORM_FORWARD) {
+    const state_type* st = f_state->get_state_type();
+    term_ref f = f_state->get_formula();
+    f = process(f);
+    return new state_formula(tm(), st, f);
+  } else {
+    return new state_formula(f_state);
+  }
+}
+
+transition_formula* remove_arrays::apply(const transition_formula* f_trans, direction D) {
+  if (D == TRANSFORM_FORWARD) {
+    const state_type* st = f_trans->get_state_type();
+    term_ref f = f_trans->get_formula();
+    f = process(f);
+    return new transition_formula(tm(), st, f);
+  } else {
+    return new transition_formula(f_trans);
+  }
+}
+
+model::ref remove_arrays::apply(model::ref model, direction d) {
+  // We don't change state type, same model applies
+  return model;
+}
+
+
+term_ref remove_arrays::process(term_ref f) {
+
+  // Collect the array terms of interest:
+  // - A = B
+
+  return term_ref();
+}
 
 
 class remove_arrays::remove_arrays_impl {
@@ -79,25 +134,6 @@ remove_arrays::~remove_arrays() {
   delete m_pImpl;
 }
 
-state_formula* remove_arrays::apply(const state_formula* f_state, direction D) {
-  // TODO
-  assert(false);
-  return 0;
-}
-
-transition_formula* remove_arrays::apply(const transition_formula* f_trans, direction D) {
-  // TODO
-  assert(false);
-  return 0;
-}
-
-expr::model::ref remove_arrays::apply(expr::model::ref model, direction d) {
-  // TODO
-  assert(false);
-  return model;
-}
-
-
 void remove_arrays::apply (const transition_system* ts,
 			   const std::vector<const state_formula*>& queries,
 			   transition_system*& new_ts,
@@ -105,17 +141,8 @@ void remove_arrays::apply (const transition_system* ts,
   m_pImpl->apply(ts, queries, new_ts, new_queries);
 }
   
-
-static void error(term_manager &tm, term_ref t_ref, std::string message) {
-  std::stringstream ss;
-  term_manager* _tm = output::get_term_manager(std::cerr);
-  if (_tm->get_internal() == tm.get_internal()) {
-    output::set_term_manager(ss, _tm);
-  }
-  ss << "Can't remove arrays " << t_ref;
-  if (message.length() > 0) { ss << ". " << message; }
-  ss << ".";
-  throw exception(ss.str());
+static void error(term_manager &tm, term_ref t, std::string message = "") {
+  throw exception(tm) << "Can't remove arrays " << t << ". " << message << ".";
 }
 
 /**************************************************************************/  
@@ -124,7 +151,7 @@ static void error(term_manager &tm, term_ref t_ref, std::string message) {
 
 // Certain array terms t cannot be removed without having an explicit
 // name for them. After normalization, t is only allowed to appear in
-// equalties of the form v = t where v is a fresh variable.
+// equalities of the form v = t where v is a fresh variable.
 class term_normalizer {
 public:
   

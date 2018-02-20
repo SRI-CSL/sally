@@ -14,18 +14,36 @@ namespace sally {
 namespace system {
 namespace transforms {
   
-/** 
-    Remove enum types from transition systems and state formulas.
-**/
-  
+/**
+ * Remove enum types from transition systems and state formulas.
+ */
 class remove_enum_types: public transform {
 
   static factory::register_transform<remove_enum_types> s_register;
 
+  typedef expr::term_manager::substitution_map substitution_map;
+
+  /** Renaming of old variable to new variables */
+  substitution_map d_substitution_map;
+
+  typedef std::vector<expr::term_ref> term_ref_vec;
+
+  /**
+   * Take two vectors of variables and make a subsitution where types
+   * differ, i.e. where we have ENUM -> REAL. For these variables we
+   * also collect the TCC.
+   */
+  void process(const term_ref_vec& v1, const term_ref_vec& v2, term_ref_vec& tcc);
+
+  /**
+   * Takes a type variable (struct) and returns a new one without it.
+   * The enum type is replaced with the real type.
+   */
+  expr::term_ref process(expr::term_ref type_var);
+
 public:
 
-  remove_enum_types(context* ctx, const transition_system* original)
-  : transform(ctx, original), m_pImpl(0) {}
+  remove_enum_types(context* ctx, const transition_system* original);
 
   /** Apply the transform to a state formula */
   state_formula* apply(const state_formula* f_state, direction D);

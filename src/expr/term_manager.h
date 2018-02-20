@@ -450,11 +450,20 @@ public:
   /** Check if t is an integer type */
   bool is_integer_type(term_ref t) const;
 
+  /** Check if t is an integer type */
+  bool is_real_type(term_ref t) const;
+
   /** Check if t is a tuple type */
   bool is_tuple_type(term_ref t) const;
 
+  /** Check if t is an enum type */
+  bool is_enum_type(term_ref t) const;
+
   /** Check if t is a record type */
   bool is_record_type(term_ref t) const;
+
+  /** CHec if t is a stuct type */
+  bool is_struct_type(term_ref t) const;
 
   /** Get the TCC of the term */
   term_ref tcc_of(const term& t) const;

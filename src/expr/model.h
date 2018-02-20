@@ -96,8 +96,18 @@ public:
   /** Only keep variables in the map, and replace them with given substitution */
   void restrict_vars_to(const expr::term_manager::substitution_map& subst);
 
-  /** Return a new model where any variables in the model have been renamed through substitution */
+  /**
+   * Return a new model where any variables in the model have been renamed through substitution.
+   * This variant assumes the variable changes are of the same type.
+   */
   model* rename_variables(const expr::term_manager::substitution_map& subst) const;
+
+  /**
+   * Return a new model where any variables in the model have been renamed through substitution.
+   * This variant needs takes a value transformer to transform values.
+   */
+  template <typename value_transformer>
+  model* rename_variables(const expr::term_manager::substitution_map& subst, const value_transformer& v) const;
 
 private:
 
@@ -126,6 +136,20 @@ private:
 std::ostream& operator << (std::ostream& out, const model& m);
 
 std::ostream& operator << (std::ostream& out, const model::ref& m);
+
+template <typename value_transformer>
+model* model::rename_variables(const expr::term_manager::substitution_map& subst, const value_transformer& v) const {
+  model* result = new model(d_tm, d_undef_to_default);
+  term_to_value_map::const_iterator it = d_variable_to_value_map.begin();
+  term_to_value_map::const_iterator it_end = d_variable_to_value_map.end();
+  for(; it != it_end; ++ it) {
+    term_ref x = d_tm.substitute(it->first, subst);
+    assert(d_tm.type_of(x) == d_tm.type_of(it->first));
+    result->set_variable_value(x, v(it->first, x, it->second));
+  }
+  return result;
+}
+
 
 }
 }

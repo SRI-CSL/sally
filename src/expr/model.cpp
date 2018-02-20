@@ -601,6 +601,7 @@ model* model::rename_variables(const expr::term_manager::substitution_map& subst
   term_to_value_map::const_iterator it_end = d_variable_to_value_map.end();
   for(; it != it_end; ++ it) {
     term_ref x = d_tm.substitute(it->first, subst);
+    assert(d_tm.type_of(x) == d_tm.type_of(it->first));
     result->set_variable_value(x, it->second);
   }
   return result;

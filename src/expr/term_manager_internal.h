@@ -357,6 +357,9 @@ public:
   /** Returns the size of the bitvector type */
   size_t bitvector_type_size(term_ref t) const;
 
+  /** Is it a struct type */
+  bool is_struct_type(term_ref t) const;
+
   /** Generic term constructor */
   template <term_op op, typename iterator_type>
   term_ref mk_term(const typename term_op_traits<op>::payload_type& payload, iterator_type children_begin, iterator_type children_end);
