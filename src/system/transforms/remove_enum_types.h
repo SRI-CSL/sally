@@ -29,11 +29,15 @@ class remove_enum_types: public transform {
   typedef std::vector<expr::term_ref> term_ref_vec;
 
   /**
-   * Take two vectors of variables and make a subsitution where types
-   * differ, i.e. where we have ENUM -> REAL. For these variables we
-   * also collect the TCC.
+   * Replace the given enum type with a predicate subtype.
    */
-  void process(const term_ref_vec& v1, const term_ref_vec& v2, term_ref_vec& tcc);
+  expr::term_ref enum_to_predicate_subtype(expr::term_ref t);
+
+  /**
+   * Take two vectors of variables and make a subsitution where types
+   * differ, i.e. where we have ENUM -> REAL.
+   */
+  void process(const term_ref_vec& v1, const term_ref_vec& v2);
 
   /**
    * Takes a type variable (struct) and returns a new one without it.

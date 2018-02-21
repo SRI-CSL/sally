@@ -59,6 +59,9 @@ remove_enum_types::~remove_enum_types() {
 remove_enum_types::remove_enum_types(context* ctx, const transition_system* original)
 : transform(ctx, original), m_pImpl(0)
 {
+  // TODO: Any functions should be replaced with new signatures and definitions
+  //       that don't have enum types.
+
   const state_type* original_st = original->get_state_type();
 
   // First, make a new state type with no enum types
@@ -72,11 +75,10 @@ remove_enum_types::remove_enum_types(context* ctx, const transition_system* orig
   d_ctx->add_state_type(transformed_id, transformed_st);
 
   // Collect the substitutions
-  term_ref_vec tcc;
-  process(original_st->get_variables(state_type::STATE_CURRENT), transformed_st->get_variables(state_type::STATE_CURRENT), tcc);
-  process(original_st->get_variables(state_type::STATE_INPUT), transformed_st->get_variables(state_type::STATE_INPUT), tcc);
-  process(original_st->get_variables(state_type::STATE_NEXT), transformed_st->get_variables(state_type::STATE_NEXT), tcc);
-  process(original_st->get_variables(state_type::STATE_PARAM), transformed_st->get_variables(state_type::STATE_PARAM), tcc);
+  process(original_st->get_variables(state_type::STATE_CURRENT), transformed_st->get_variables(state_type::STATE_CURRENT));
+  process(original_st->get_variables(state_type::STATE_INPUT), transformed_st->get_variables(state_type::STATE_INPUT));
+  process(original_st->get_variables(state_type::STATE_NEXT), transformed_st->get_variables(state_type::STATE_NEXT));
+  process(original_st->get_variables(state_type::STATE_PARAM), transformed_st->get_variables(state_type::STATE_PARAM));
 
   // Create the new transition system
   term_ref init = tm().substitute(original->get_initial_states(), d_substitution_map);
@@ -84,13 +86,6 @@ remove_enum_types::remove_enum_types(context* ctx, const transition_system* orig
   d_transformed = new transition_system(transformed_st,
       new state_formula(tm(), transformed_st, init),
       new transition_formula(tm(), transformed_st, trans));
-
-  // Add assumptions (TCCs on the new variables: x = 0 or x = 1 or .. or x = MAX
-  if (tcc.size() > 0) {
-    term_ref tcc_formula = tm().mk_and(tcc);
-    state_formula* tcc_sf = new state_formula(tm(), transformed_st, tcc_formula);
-    d_transformed->add_assumption(tcc_sf);
-  }
 }
 
 state_formula* remove_enum_types::apply(const state_formula* f_state, direction D) {
@@ -138,7 +133,7 @@ model::ref remove_enum_types::apply(model::ref model, direction D) {
   return model->rename_variables(d_substitution_map, value_transformer(tm()));
 }
 
-void remove_enum_types::process(const term_ref_vec& v1, const term_ref_vec& v2, term_ref_vec& tcc) {
+void remove_enum_types::process(const term_ref_vec& v1, const term_ref_vec& v2) {
   assert(v1.size() == v2.size());
   for(size_t i = 0; i < v1.size(); ++ i) {
     term_ref t1 = v1[i];
@@ -150,21 +145,30 @@ void remove_enum_types::process(const term_ref_vec& v1, const term_ref_vec& v2, 
       assert(d_substitution_map.find(t1) == d_substitution_map.end());
       assert(tm().is_enum_type(t1_type));
       d_substitution_map[t1] = t2;
-      // Add to TCC, (or ... t2[i] = i);
-      // and remember the value substitution subst[ENUM_i] = i
-      size_t enum_size = tm().get_enum_type_size(t2_type);
-      term_ref_vec disjuncts;
-      for (size_t enum_i = 0; enum_i < enum_size; ++ enum_i) {
-        term_ref enum_value = tm().mk_enum_constant(enum_i, t1_type);
-        term_ref rational_value = tm().mk_rational_constant(rational(enum_i, 1));
-        disjuncts.push_back(tm().mk_term(TERM_EQ, t2, rational_value));
-        if (d_substitution_map.find(enum_value) == d_substitution_map.end()) {
-          d_substitution_map[enum_value] = rational_value;
-        }
-      }
-      tcc.push_back(tm().mk_or(disjuncts));
     }
   }
+}
+
+term_ref remove_enum_types::enum_to_predicate_subtype(term_ref t) {
+  assert(tm().is_enum_type(t));
+  if (d_substitution_map.find(t) == d_substitution_map.end()) {
+    // and remember the value substitution subst[ENUM_i] = i
+    size_t enum_size = tm().get_enum_type_size(t);
+    term_ref_vec disjuncts;
+    term_ref x = tm().mk_variable(tm().real_type());
+    for (size_t enum_i = 0; enum_i < enum_size; ++enum_i) {
+      term_ref enum_value = tm().mk_enum_constant(enum_i, t);
+      term_ref rational_value = tm().mk_rational_constant(rational(enum_i, 1));
+      disjuncts.push_back(tm().mk_term(TERM_EQ, x, rational_value));
+      assert(d_substitution_map.find(enum_value) == d_substitution_map.end());
+      d_substitution_map[enum_value] = rational_value;
+    }
+    // Change to real type with
+    term_ref predicate = tm().mk_or(disjuncts);
+    term_ref new_type = tm().mk_predicate_subtype(x, predicate);
+    d_substitution_map[t] = new_type;
+  }
+  return d_substitution_map[t];
 }
 
 term_ref remove_enum_types::process(term_ref t) {
@@ -174,10 +178,8 @@ term_ref remove_enum_types::process(term_ref t) {
     std::vector<term_ref> types;
     tm().get_struct_type_elements(t, names, types);
     for (size_t i = 0; i < types.size(); ++ i) {
-      term_ref type_i = types[i];
-      if (tm().is_enum_type(type_i)) {
-        // Change to real type
-        types[i] = tm().real_type();
+      if (tm().is_enum_type(types[i])) {
+        types[i] = enum_to_predicate_subtype(types[i]);
       }
     }
     // Return the new state var
