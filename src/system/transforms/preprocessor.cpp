@@ -37,28 +37,30 @@ preprocessor::preprocessor(context *ctx, std::string system_id, std::string prep
 : d_ctx(ctx)
 , d_original(ctx->get_transition_system(system_id))
 {
-  std::vector<std::string> transforms;
+  // Remove for now
+  if (false) {
+    std::vector<std::string> transforms;
 
-  // Get the list of transforms from comma separated option
-  std::string transforms_list = ctx->get_options().get_string("preprocessor-transforms");
-  size_t start = 0, find = std::string::npos;
-  std::string transform_name;
-  while ((find = transforms_list.find(',', start)) != std::string::npos) {
-    transform_name = transforms_list.substr(start, find - start);
+    // Get the list of transforms from comma separated option
+    std::string transforms_list = ctx->get_options().get_string("preprocessor-transforms");
+    size_t start = 0, find = std::string::npos;
+    std::string transform_name;
+    while ((find = transforms_list.find(',', start)) != std::string::npos) {
+      transform_name = transforms_list.substr(start, find - start);
+      transforms.push_back(transform_name);
+      start = find + 1;
+    }
+    transform_name = transforms_list.substr(start);
     transforms.push_back(transform_name);
-    start = find + 1;
-  }
-  transform_name = transforms_list.substr(start);
-  transforms.push_back(transform_name);
 
-  // Allocate the transforms
-  const transition_system* current_system = d_original;
-  for (size_t i = 0; i < transforms.size(); ++ i) {
-    transform* current_transform = factory::mk_transform(transforms[i], ctx, current_system);
-    d_transforms.push_back(current_transform);
-    current_system = current_transform->get_transformed();
+    // Allocate the transforms
+    const transition_system* current_system = d_original;
+    for (size_t i = 0; i < transforms.size(); ++ i) {
+      transform* current_transform = factory::mk_transform(transforms[i], ctx, current_system);
+      d_transforms.push_back(current_transform);
+      current_system = current_transform->get_transformed();
+    }
   }
-
 }
 
 preprocessor::~preprocessor() {

@@ -46,6 +46,11 @@ void inliner::apply(const transition_system *ts,
     const std::vector<const state_formula*>& queries,
     transition_system*& new_ts,
     std::vector<const state_formula*>& new_queries) {
+  // NOOP for now to be able to run regressions
+  new_ts = const_cast<transition_system*>(ts);
+  for (size_t i = 0; i < queries.size(); ++ i) {
+    new_queries.push_back(queries[i]);
+  }
 }
 
 
