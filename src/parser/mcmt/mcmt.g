@@ -457,13 +457,13 @@ NUMERAL: DIGIT+;
 BIN_NUMERAL: '#b' ('0'|'1')+;
 
 /** Matches a binary numeral (sequence of digits) */
-HEX_NUMERAL: '#h' HEX_DIGIT+;
+HEX_NUMERAL: '#x' HEX_DIGIT+;
 
 /** Matches a digit */
 fragment 
 DIGIT : '0'..'9';  
 
-/** MAthces a hexadecimal digit */
+/** Matches a hexadecimal digit */
 fragment 
 HEX_DIGIT : DIGIT | 'a'..'f' | 'A'..'F';
  
