@@ -357,7 +357,7 @@ term_op returns [expr::term_op op = expr::OP_LAST]
   | '=>'             { op = expr::TERM_IMPLIES; } 
   | 'xor'            { op = expr::TERM_XOR; }
   | 'ite'            { op = expr::TERM_ITE; }
-    // Equeality
+    // Equality
   | '='              { op = expr::TERM_EQ;  }
     // Arithmetic
   | '+'              { op = expr::TERM_ADD; }
@@ -427,7 +427,7 @@ type returns [expr::term_ref type]
        type = STATE->get_bitvector_type(int_value.get_unsigned());       
     }
   ;
-      
+
 /** Comments (skip) */
 COMMENT
   : ';' (~('\n' | '\r'))* { SKIP(); }
@@ -457,13 +457,13 @@ NUMERAL: DIGIT+;
 BIN_NUMERAL: '#b' ('0'|'1')+;
 
 /** Matches a binary numeral (sequence of digits) */
-HEX_NUMERAL: '#h' HEX_DIGIT+;
+HEX_NUMERAL: '#x' HEX_DIGIT+;
 
 /** Matches a digit */
 fragment 
 DIGIT : '0'..'9';  
 
-/** MAthces a hexadecimal digit */
+/** Matches a hexadecimal digit */
 fragment 
 HEX_DIGIT : DIGIT | 'a'..'f' | 'A'..'F';
  

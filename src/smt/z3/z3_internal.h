@@ -20,7 +20,11 @@
 
 #ifdef WITH_Z3
 
+// BD: we need to avoid redefining __STDC_LIMIT_MACROS
+// otherwise compilation fails with Clang++ on the Mac
+#ifndef __STDC_LIMIT_MACROS
 #define __STDC_LIMIT_MACROS 1
+#endif
 
 #include <gmp.h>
 #include <vector>
