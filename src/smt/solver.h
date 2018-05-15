@@ -118,6 +118,10 @@ public:
     }
   }
 
+  void add_variables(const std::vector<expr::term_ref>& vars, variable_class f_class) {
+    add_variables(vars.begin(), vars.end(), f_class);
+  }
+
   /** Construct with the given term manager */
   solver(std::string name, expr::term_manager& tm, const options& opts, utils::statistics& stats)
   : gc_participant(tm)

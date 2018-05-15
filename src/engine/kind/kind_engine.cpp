@@ -72,6 +72,13 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
   // The trace we are building
   d_trace = ts->get_trace_helper();
 
+  typedef std::vector<expr::term_ref> var_vec;
+
+  // Add initial state variables
+  const var_vec& x0 = d_trace->get_state_variables(0);
+  d_solver_1->add_variables(x0, smt::solver::CLASS_A);
+  d_solver_2->add_variables(x0, smt::solver::CLASS_A);
+
   // Initial states go to solver 1
   expr::term_ref initial_states = ts->get_initial_states();
   d_solver_1->add(d_trace->get_state_formula(initial_states, 0), smt::solver::CLASS_A);
@@ -112,15 +119,6 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
     // See what happened
     switch(r_1) {
     case smt::solver::SAT: {
-      // Add the variables, so that the solver can make a model
-      for (size_t i = 0; i <= k; ++ i) {
-        const std::vector<expr::term_ref>& state_vars = d_trace->get_state_variables(i);
-        d_solver_1->add_variables(state_vars.begin(), state_vars.end(), smt::solver::CLASS_A);
-        if (i < k) {
-          const std::vector<expr::term_ref>& input_vars = d_trace->get_input_variables(i);
-          d_solver_1->add_variables(input_vars.begin(), input_vars.end(), smt::solver::CLASS_A);
-        }
-      }
       // Get the model
       expr::model::ref m = d_solver_1->get_model();
       // Add model to trace
@@ -138,6 +136,12 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
 
     // Pop the solver
     scope1.pop();
+
+    // Variables of the transition
+    d_solver_2->add_variables(d_trace->get_input_variables(k), smt::solver::CLASS_A);
+    d_solver_2->add_variables(d_trace->get_state_variables(k+1), smt::solver::CLASS_A);
+    d_solver_1->add_variables(d_trace->get_input_variables(k), smt::solver::CLASS_A);
+    d_solver_1->add_variables(d_trace->get_state_variables(k+1), smt::solver::CLASS_A);
 
     // For (2) add property and transition
     d_solver_2->add(property_k, smt::solver::CLASS_A);
