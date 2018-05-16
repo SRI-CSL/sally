@@ -6,6 +6,7 @@ pushd .
 git clone https://github.com/SRI-CSL/libpoly.git
 cd libpoly/build
 cmake -DCMAKE_BUILD_TYPE=Release ..
+make
 sudo make install
 popd 
 
@@ -15,6 +16,7 @@ git clone https://github.com/ivmai/cudd.git
 cd cudd
 git checkout tags/cudd-3.0.0
 ./configure --enable-shared
+make
 sudo make install
 popd
 

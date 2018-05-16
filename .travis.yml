@@ -32,10 +32,6 @@ addons:
       - default-jre
       - gperf
 
-cache:
-  directories:
-    - $HOME/yices2
-
 install:
   - bash contrib/install_yices2.sh
   - if [[ $ENABLE_COVERAGE == ON ]]; then 
