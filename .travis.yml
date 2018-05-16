@@ -3,7 +3,7 @@ language: cpp
 notifications:
   slack: sriformalmethods:wSnZggI8D3mxI5uqDsElZbV2
   
-sudo: false
+sudo: true
 
 compiler:
   # - clang (Disabling until boost and clang play well)
@@ -20,6 +20,7 @@ env:
 
 addons:
   apt:
+    update: true
     sources:
       - boost-latest
     packages:
