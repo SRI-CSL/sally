@@ -44,7 +44,7 @@ install:
   
 script:
   - cd build
-  - cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DENABLE_COVERAGE=${ENABLE_COVERAGE} -DYICES2_HOME=$HOME/yices2 ..
+  - cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DENABLE_COVERAGE=${ENABLE_COVERAGE} ..
   - make 
   - make check
 
