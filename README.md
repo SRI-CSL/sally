@@ -53,6 +53,11 @@ make
 make check
 ```
 
+In order to use the non-linear capabilities of Yices2 in Sally, the 
+version of Yices2 used mused be compiled with MCSAT enabled, and LibPoly 
+must be available. Similar to above, you can pass `-DLIBPOLY_HOME=$LPD` 
+to cmake if LibPoly is installed in a non-standard location. 
+
 ### Input Language
 
 Sally takes as input a simple description of transition systems based on the 
