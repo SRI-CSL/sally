@@ -1,1 +1,2 @@
---engine bmc --yices2-mcsat
+--engine bmc --yices2-mcsat --show-trace
+
