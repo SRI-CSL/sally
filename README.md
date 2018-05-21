@@ -223,8 +223,8 @@ unknown
     
 * Checking the property with BMC with a bigger bound and showing any 
 counter-example traces
-> sally --engine bmc --bmc-max 20 --show-trace examples/example.mcmt
 ```bash
+> sally --engine bmc --bmc-max 20 --show-trace examples/example.mcmt
 unknown
 unknown
 unknown
