@@ -25,6 +25,7 @@
 #include "utils/options.h"
 #include "utils/name_transformer.h"
 #include "utils/statistics.h"
+#include "utils/smart_ptr.h"
 
 namespace sally {
 namespace smt {
@@ -75,6 +76,9 @@ protected:
   std::set<expr::term_ref> d_T_variables;
 
 public:
+
+  /** Smart pointer reference */
+  typedef utils::smart_ptr<solver> ref;
 
   /** Result of the check */
   enum result {

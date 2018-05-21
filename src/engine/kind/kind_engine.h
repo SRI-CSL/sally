@@ -40,12 +40,6 @@ namespace kind {
  */
 class kind_engine : public engine {
 
-  /** SMT solver for proving (1) */
-  smt::solver* d_solver_1;
-
-  /** SMT solver for proving (2) */
-  smt::solver* d_solver_2;
-
   /** The trace we're building */
   system::trace_helper* d_trace;
 

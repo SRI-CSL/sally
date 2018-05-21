@@ -264,3 +264,54 @@ valid
 invalid
 valid
 ```
+
+* Checking nonlinear properties with Yices2 
+
+By relying on Yices2 with support for MCSAT, you can use Sally to reason 
+about (polynomial) non-linear systems using BMC and k-induction. The
+following example models two systems computing sums `S1 = 1 + 2 + ... + n` and
+`S2 = 1^2 + 2^2 + ... + n^2`, and asks whether `S1 = n*(n+1)/2` and 
+`S2 = n*(n+1)*(2n+1)/6`. 
+
+```lisp
+;; Maintain Sum and n
+(define-state-type ST ((Sum Real) (n Real)))
+;; Initial states: Sum = 0, n = 0
+(define-states Init ST (and (= Sum 0) (= n 0)))
+
+;; Transition: Sum += n; n ++;
+(define-transition Trans1 ST (and 
+  (= next.Sum (+ state.Sum state.n))
+  (= next.n (+ state.n 1))
+))   
+
+;; Transition system: Sum = 1 + 2 + ... + (n-1)
+(define-transition-system T1 ST Init Trans1)
+;; Sum = n*(n-1)/2
+(query T1 (= Sum (/ (* n (- n 1)) 2)))
+
+;; Transition: Sum += n^2; n ++;
+(define-transition Trans2 ST (and 
+    (= next.Sum (+ state.Sum (* state.n state.n)))
+    (= next.n (+ state.n 1))
+))   
+
+;; Transition system: Sum = 1^2 + 2^2 + ... + (n-1)^2
+(define-transition-system T2 ST Init Trans2)
+;; Sum = n*(n-1)/2
+(query T2 (= Sum (/ (* n (- n 1) (- (* 2 n) 1)) 6)))
+
+```
+
+We can prove these two properties with Sally by using Yices2 with MCSAT 
+as follows
+
+```bash
+> sally --engine kind --yices2-mcsat ../examples/example-nra.mcmt
+valid
+valid
+```
+
+
+  
+

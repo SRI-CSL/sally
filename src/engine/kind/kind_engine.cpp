@@ -34,14 +34,9 @@ kind_engine::kind_engine(const system::context& ctx)
 , d_trace(0)
 , d_invariant(expr::term_ref(), 0)
 {
-  // Make the solvers
-  d_solver_1 = smt::factory::mk_default_solver(ctx.tm(), ctx.get_options(), ctx.get_statistics());
-  d_solver_2 = smt::factory::mk_default_solver(ctx.tm(), ctx.get_options(), ctx.get_statistics());
 }
 
 kind_engine::~kind_engine() {
-  delete d_solver_1;
-  delete d_solver_2;
 }
 
 engine::result kind_engine::query(const system::transition_system* ts, const system::state_formula* sf) {
@@ -63,11 +58,10 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
 
   */
 
-  // Scopes for solver push/pop
-  smt::solver_scope scope1(d_solver_1);
-  smt::solver_scope scope2(d_solver_2);
-  scope1.push();
-  scope2.push();
+  /** SMT solver for proving (1) */
+  smt::solver::ref solver1(smt::factory::mk_default_solver(tm(), ctx().get_options(), ctx().get_statistics()));
+  /** SMT solver for proving (2) */
+  smt::solver::ref solver2(smt::factory::mk_default_solver(tm(), ctx().get_options(), ctx().get_statistics()));
 
   // The trace we are building
   d_trace = ts->get_trace_helper();
@@ -76,12 +70,12 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
 
   // Add initial state variables
   const var_vec& x0 = d_trace->get_state_variables(0);
-  d_solver_1->add_variables(x0, smt::solver::CLASS_A);
-  d_solver_2->add_variables(x0, smt::solver::CLASS_A);
+  solver1->add_variables(x0, smt::solver::CLASS_A);
+  solver2->add_variables(x0, smt::solver::CLASS_A);
 
   // Initial states go to solver 1
   expr::term_ref initial_states = ts->get_initial_states();
-  d_solver_1->add(d_trace->get_state_formula(initial_states, 0), smt::solver::CLASS_A);
+  solver1->add(d_trace->get_state_formula(initial_states, 0), smt::solver::CLASS_A);
 
   // Transition formula
   expr::term_ref transition_formula = ts->get_transition_relation();
@@ -110,9 +104,9 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
     MSG(1) << "K-Induction: checking initialization " << k << std::endl;
 
     // Check the current unrolling (1)
-    scope1.push();
-    d_solver_1->add(property_not_k, smt::solver::CLASS_A);
-    smt::solver::result r_1 = d_solver_1->check();
+    solver1->push();
+    solver1->add(property_not_k, smt::solver::CLASS_A);
+    smt::solver::result r_1 = solver1->check();
 
     MSG(1) << "K-Induction: got " << r_1 << std::endl;
 
@@ -120,7 +114,7 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
     switch(r_1) {
     case smt::solver::SAT: {
       // Get the model
-      expr::model::ref m = d_solver_1->get_model();
+      expr::model::ref m = solver1->get_model();
       // Add model to trace
       d_trace->set_model(m,0, k);
       return INVALID;
@@ -135,22 +129,22 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
     }
 
     // Pop the solver
-    scope1.pop();
+    solver1->pop();
 
     // Variables of the transition
-    d_solver_2->add_variables(d_trace->get_input_variables(k), smt::solver::CLASS_A);
-    d_solver_2->add_variables(d_trace->get_state_variables(k+1), smt::solver::CLASS_A);
-    d_solver_1->add_variables(d_trace->get_input_variables(k), smt::solver::CLASS_A);
-    d_solver_1->add_variables(d_trace->get_state_variables(k+1), smt::solver::CLASS_A);
+    solver2->add_variables(d_trace->get_input_variables(k), smt::solver::CLASS_A);
+    solver2->add_variables(d_trace->get_state_variables(k+1), smt::solver::CLASS_A);
+    solver1->add_variables(d_trace->get_input_variables(k), smt::solver::CLASS_A);
+    solver1->add_variables(d_trace->get_state_variables(k+1), smt::solver::CLASS_A);
 
     // For (2) add property and transition
-    d_solver_2->add(property_k, smt::solver::CLASS_A);
+    solver2->add(property_k, smt::solver::CLASS_A);
 
     // Unroll the transition relation once more
     transition_k = d_trace->get_transition_formula(transition_formula, k);
 
     // For (2) add property and transition
-    d_solver_2->add(transition_k, smt::solver::CLASS_A);
+    solver2->add(transition_k, smt::solver::CLASS_A);
 
     // Should we do the check at k
     bool check_consecution = k >= kind_min;
@@ -165,9 +159,9 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
 
     // Check the current unrolling (2)
     if (check_consecution) {
-      scope2.push();
-      d_solver_2->add(property_not_k, smt::solver::CLASS_A);
-      smt::solver::result r_2 = d_solver_2->check();
+      solver2->push();
+      solver2->add(property_not_k, smt::solver::CLASS_A);
+      smt::solver::result r_2 = solver2->check();
 
       MSG(1) << "K-Induction: got " << r_2 << std::endl;
 
@@ -188,11 +182,11 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
       }
 
       // Pop the solver
-      scope2.pop();
+      solver2->pop();
     }
 
     // One more transition for solver 1
-    d_solver_1->add(transition_k, smt::solver::CLASS_A);
+    solver1->add(transition_k, smt::solver::CLASS_A);
   }
 
   return UNKNOWN;
