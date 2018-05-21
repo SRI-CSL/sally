@@ -31,19 +31,14 @@ bmc_engine::bmc_engine(const system::context& ctx)
 : engine(ctx)
 , d_trace(0)
 {
-  // Make the solver
-  d_solver = smt::factory::mk_default_solver(ctx.tm(), ctx.get_options(), ctx.get_statistics());
 }
 
-bmc_engine::~bmc_engine() {
-  delete d_solver;
-}
+bmc_engine::~bmc_engine() {}
 
 engine::result bmc_engine::query(const system::transition_system* ts, const system::state_formula* sf) {
 
-  // Scope for push/pop on the solver
-  smt::solver_scope scope(d_solver);
-  scope.push();
+  // Make the solver
+  smt::solver::ref d_solver(smt::factory::mk_default_solver(tm(), ctx().get_options(), ctx().get_statistics()));
 
   // The trace we are using
   d_trace = ts->get_trace_helper();
@@ -81,7 +76,7 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
         }
       }
 
-      scope.push();
+      d_solver->push();
       expr::term_ref property_not = tm().mk_term(expr::TERM_NOT, property);
       d_solver->add(d_trace->get_state_formula(property_not, k), smt::solver::CLASS_A);
       smt::solver::result r = d_solver->check();
@@ -105,7 +100,7 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
       }
 
       // Pop the solver
-      scope.pop();
+      d_solver->pop();
     }
 
     // Add the variables to the solver
