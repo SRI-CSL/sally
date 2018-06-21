@@ -74,7 +74,8 @@ enum input_language {
   INPUT_MCMT,
   INPUT_BTOR,
   INPUT_SAL,
-  INPUT_AIGER
+  INPUT_AIGER,
+  INPUT_CHC
 };
 
 /** Internal parser interface. */

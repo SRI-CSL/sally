@@ -20,6 +20,7 @@
 #include "parser/antlr_parser.h"
 
 #include "parser/mcmt/mcmt.h"
+#include "parser/chc/chc.h"
 #include "parser/btor/btor.h"
 #include "parser/sal/sal.h"
 #include "parser/aiger/aiger.h"
@@ -96,6 +97,8 @@ parser::parser(const system::context& ctx, input_language lang, const char* file
   case INPUT_AIGER:
     d_internal = new_aiger_parser(ctx, filename);
     break;
+  case INPUT_CHC:
+    d_internal = new_chc_parser(ctx, filename);
   default:
     assert(false);
   }
@@ -135,6 +138,9 @@ input_language parser::guess_language(std::string filename) {
     }
     if (extension == "aig") {
       return INPUT_AIGER;
+    }
+    if (extension == "smt2") {
+      return INPUT_CHC;
     }
     return INPUT_MCMT;
   }

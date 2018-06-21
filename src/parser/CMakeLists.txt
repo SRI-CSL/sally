@@ -20,6 +20,27 @@ set_source_files_properties(
 
 add_custom_command(
    OUTPUT 
+     ${CMAKE_CURRENT_SOURCE_DIR}/chc/chcParser.h
+     ${CMAKE_CURRENT_SOURCE_DIR}/chc/chcParser.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/chc/chcLexer.h
+     ${CMAKE_CURRENT_SOURCE_DIR}/chc/chcLexer.c
+     ${CMAKE_CURRENT_SOURCE_DIR}/chc/chc.tokens
+   COMMAND 
+     ${ANTLR} -make -fo ${CMAKE_CURRENT_SOURCE_DIR}/chc/ ${CMAKE_CURRENT_SOURCE_DIR}/chc/chc.g 
+   DEPENDS 
+     ${CMAKE_CURRENT_SOURCE_DIR}/chc/chc.g libantlr3c-3.4
+)
+
+set_source_files_properties(
+  chc/chcParser.c chc/chcLexer.c 
+  PROPERTIES 
+    LANGUAGE CXX
+    COMPILE_FLAGS "-Wno-parentheses-equality -Wno-sign-compare -Wno-unused-function -Wno-unused-variable -Wno-tautological-compare -x c++"
+)
+
+
+add_custom_command(
+   OUTPUT 
      ${CMAKE_CURRENT_SOURCE_DIR}/btor/btorParser.h
      ${CMAKE_CURRENT_SOURCE_DIR}/btor/btorParser.c
      ${CMAKE_CURRENT_SOURCE_DIR}/btor/btorLexer.h
@@ -69,6 +90,10 @@ add_library(parser
   mcmt/mcmtLexer.c 
   mcmt/mcmt_state.cpp
   mcmt/mcmt.cpp
+  chc/chcParser.c 
+  chc/chcLexer.c 
+  chc/chc_state.cpp
+  chc/chc.cpp
   btor/btorParser.c 
   btor/btorLexer.c 
   btor/btor_state.cpp
@@ -78,7 +103,7 @@ add_library(parser
   sal/sal_state.cpp
   sal/sal_context.cpp
   sal/sal_module.cpp
-  sal/sal.cpp
+  sal/sal.cpp  
   aiger/aiger.cpp
   aiger/aiger-1.9.4/aiger.c
   parser.cpp
