@@ -22,7 +22,9 @@
 #include "expr/term_manager.h"
 #include "system/context.h"
 #include "utils/symbol_table.h"
+#include "chc_system.h"
 
+#include "command/command.h"
 
 #include <iosfwd>
 
@@ -44,6 +46,9 @@ class chc_state {
 
   /** The context */
   const system::context& d_context;
+
+  /** The CHC system we're building */
+  chc_system d_system;
 
   /** Symbol table for variables */
   utils::symbol_table<expr::term_ref_strong> d_variables;
@@ -102,8 +107,14 @@ public:
   /** Check if declared */
   bool is_declared(std::string id, chc_object type) const;
 
+  /** Assert a CHC rule */
+  void assert_chc(expr::term_ref head, expr::term_ref tail);
+
   /** Collect terms */
   void gc_collect(const expr::gc_relocator& gc_reloc);
+
+  /** Returns the final command (or throws execption if translatio not possible) */
+  cmd::command* finalize();
 
 };
 

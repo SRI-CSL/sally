@@ -99,6 +99,7 @@ parser::parser(const system::context& ctx, input_language lang, const char* file
     break;
   case INPUT_CHC:
     d_internal = new_chc_parser(ctx, filename);
+    break;
   default:
     assert(false);
   }

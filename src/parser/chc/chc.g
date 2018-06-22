@@ -25,13 +25,6 @@ options {
 @parser::includes {
   #include <string>
   #include "command/command.h"
-  #include "command/assume.h"
-  #include "command/declare_state_type.h"
-  #include "command/define_states.h"
-  #include "command/define_transition.h"
-  #include "command/define_transition_system.h"
-  #include "command/query.h"
-  #include "command/sequence.h" 
   #include "chc_state.h"
   using namespace sally;
 }
@@ -49,7 +42,7 @@ options {
 
 /** Parses a command */
 command returns [cmd::command* cmd = 0] 
-  : (chc_command*)
+  : (chc_command*) { cmd = STATE->finalize(); }
   ;
 
 chc_command
@@ -81,14 +74,17 @@ chc_assert
     '(' 'assert' 
         '(' 'forall' 
             '(' chc_assert_variable+ ')'
-            '(' '=>' term term ')'
+            '(' '=>' tail = term head = term ')'
         ')'
     ')'
-    { STATE->pop_scope(); }
+    { 
+      STATE->pop_scope();
+      STATE->assert_chc(head, tail); 
+    }
   | term
   ;     
 
-chc_assert_variable
+chc_assert_variable returns [expr::term_ref t = expr::term_ref()]
 @declarations{
   std::string var_id;
 }

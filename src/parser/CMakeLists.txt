@@ -94,6 +94,7 @@ add_library(parser
   chc/chcLexer.c 
   chc/chc_state.cpp
   chc/chc.cpp
+  chc/chc_system.cpp
   btor/btorParser.c 
   btor/btorLexer.c 
   btor/btor_state.cpp

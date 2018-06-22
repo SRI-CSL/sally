@@ -22,6 +22,8 @@
 #include "expr/term_manager.h"
 #include "expr/gc_relocator.h"
 
+#include "utils/trace.h"
+
 #include <cassert>
 
 using namespace sally;
@@ -32,6 +34,7 @@ using namespace std;
 
 chc_state::chc_state(const system::context& context)
 : d_context(context)
+, d_system(context)
 , d_variables("local vars")
 , d_types("types")
 , d_functions("predicates")
@@ -129,5 +132,14 @@ void chc_state::declare_function(std::string id, const std::vector<expr::term_re
   term_ref f_type = tm().function_type(signature);
   term_ref f = tm().mk_variable(id, f_type);
   d_functions.add_entry(id, term_ref_strong(tm(), f));
+}
+
+void chc_state::assert_chc(expr::term_ref head, expr::term_ref tail) {
+  TRACE("chc::parse") << "chc rule: " << head << " <- " << tail << std::endl;
+  d_system.add_rule(head, tail);
+}
+
+cmd::command* chc_state::finalize() {
+  return d_system.to_commands();
 }
 

@@ -79,6 +79,7 @@ void term::mk_let_cache(term_manager& tm, expr_let_cache& let_cache, std::vector
   case TYPE_STRING:
   case TYPE_TYPE:
   case VARIABLE:
+  case TERM_FUN_APP:
   case CONST_BOOL:
   case CONST_RATIONAL:
   case CONST_BITVECTOR:
