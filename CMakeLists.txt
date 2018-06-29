@@ -47,7 +47,7 @@ endif()
 
 # Find Yices
 SET(YICES2_HOME CACHE STRING "Yices2 installation directory")
-find_package(Yices2 2.3.0)
+find_package(Yices2 2.6.0)
 if (YICES2_FOUND)
   add_definitions(-DWITH_YICES2)
   include_directories(${YICES2_INCLUDE_DIR}) 
