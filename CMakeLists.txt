@@ -45,20 +45,22 @@ else()
   message(FATAL_ERROR "Could not the GMP number library (sudo apt-get install libgmp-dev)")
 endif()
 
-# Find Yices
-SET(YICES2_HOME CACHE STRING "Yices2 installation directory")
-find_package(Yices2 2.6.0)
-if (YICES2_FOUND)
-  add_definitions(-DWITH_YICES2)
-  include_directories(${YICES2_INCLUDE_DIR}) 
-endif()
-
 # Find LibPoly
 SET(LIBPOLY_HOME CACHE STRING "LibPoly installation directory")
-find_package(LibPoly 0.1.1)
+find_package(LibPoly 0.1.5)
 if (LIBPOLY_FOUND)
   add_definitions(-DWITH_LIBPOLY)
   include_directories(${LIBPOLY_INCLUDE_DIR})
+endif()
+
+# Find Yices if LibPoly is there
+if (LIBPOLY_FOUND)
+  SET(YICES2_HOME CACHE STRING "Yices2 installation directory")
+  find_package(Yices2 2.6.0)
+  if (YICES2_FOUND)
+    add_definitions(-DWITH_YICES2)
+    include_directories(${YICES2_INCLUDE_DIR}) 
+  endif()
 endif()
 
 # Find MathSAT5
