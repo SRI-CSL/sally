@@ -59,6 +59,10 @@ term_ref mcmt_state::get_bitvector_type(size_t size) const {
   return tm().bitvector_type(size);
 }
 
+term_ref mcmt_state::get_array_type(term_ref index_type, term_ref element_type) {
+  return tm().array_type(index_type, element_type);
+}
+
 term_ref mcmt_state::get_variable(std::string id) const {
   if (!d_variables.has_entry(id)) {
     throw parser_exception(id + "undeclared");

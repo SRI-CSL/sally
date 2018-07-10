@@ -1,0 +1,76 @@
+;; Define state variables (s1,s2) and input (x)
+(define-state-type vars ((s1 Bool) (s2 Bool) (x_ Bool)
+                         (i Int) (mark Int) (length Int))
+                        ((x Bool))
+)
+
+;; Initial state
+(define-states I vars 
+  (and (= s1 false) (= s2 false) (= i 0) (= mark 0) (= length 0) (= x_ false)
+  )
+)
+
+;; Increment i
+(define-transition inc_i vars
+  (= next.i (+ state.i 1)))
+;; Remember the last x
+(define-transition copy_last_x vars
+  (= next.x_ input.x))
+
+(define-transition transitions vars
+ (let ((b (and (not state.x_) input.x)) (e (and state.x_ (not input.x))))
+ (and inc_i copy_last_x
+  (or 
+;; IDLE -> IDLE
+  (and (not state.s1) (not state.s2)
+       (not b)
+       (= next.s1 false) (= next.s2 false))
+       (= next.mark state.mark)
+       (= next.length state.length)
+;; IDLE -> RISE
+  (and (and (not state.s1) (not state.s2))
+       b
+       (= next.s2 true) (= next.s1 false)
+       (= next.mark state.i)
+       (= next.length state.length)
+  )
+;; RISE -> IDLE
+  (and (and (not state.s1) state.s2)
+       e
+       (= next.s2 false) (= next.s1 false)
+       (= next.mark 0)
+       (= next.length state.length)
+  )
+;; RISE -> RUN
+  (and (and (not state.s1) state.s2)
+       (not e)
+       (= next.s2 true) (= next.s1 true)
+       (= next.mark state.mark)
+       (= next.length state.length)
+  )
+;; RUN -> RUN
+  (and (and state.s1 state.s2)
+       (not e)
+       (= next.s2 true) (= next.s1 true)
+       (= next.mark state.mark)
+       (= next.length state.length)
+  )
+;; RUN -> IDLE
+  (and (and state.s1 state.s2)
+       e
+       (= next.s2 false) (= next.s1 false)
+       (= next.mark state.mark)
+       (= next.length (- state.i state.mark))
+  )
+ )
+)
+)
+)
+
+;; Transistion system
+(define-transition-system T vars I transitions)
+
+;; property queries
+;;(query T (=> s2 (>= i 1))) ;; this is expected to be unknown
+(query T (=> s2 (>= i 2))) ;; this is expected to be invalid
+;;(query T (< length 5))     ;; this is expected to be invalid

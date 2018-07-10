@@ -99,6 +99,9 @@ public:
   /** Returns the bit-vector type of the given size */
   expr::term_ref get_bitvector_type(size_t size) const;
 
+  /** Returns the array type of the given index and element types */
+  expr::term_ref get_array_type(expr::term_ref index_type, expr::term_ref element_type);
+  
   /** Returns the a variable with the given id */
   expr::term_ref get_variable(std::string id) const;
 

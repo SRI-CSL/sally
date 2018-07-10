@@ -248,6 +248,12 @@ term returns [expr::term_ref t = expr::term_ref()]
         term_list[children] 
      ')'   
      { t = STATE->tm().mk_term(op, children); }
+  | '(' 'select' array = term index = term ')' {
+       t = STATE->tm().mk_array_read(array, index);
+     }
+  | '(' 'store' array = term index = term element = term ')' {
+       t = STATE->tm().mk_array_write(array, index, element);            
+     }        
   | '(' 
        '(_' 'extract' high = NUMERAL low = NUMERAL ')'
        s = term
@@ -415,17 +421,21 @@ variable_list[std::vector<std::string>& out_vars, std::vector<expr::term_ref>& o
     ')'
   ; 
         
-type returns [expr::term_ref type]
+type returns [expr::term_ref ty]
 @declarations {
   std::string type_id;
 }
   : // Primitive types
-    symbol[type_id, parser::MCMT_TYPE, true] { type = STATE->get_type(type_id); }  
+    symbol[type_id, parser::MCMT_TYPE, true] { ty = STATE->get_type(type_id); }  
   | // Bitvector types 
     '(_' 'BitVec' size = NUMERAL ')' { 
        expr::integer int_value(STATE->token_text(size), 10);
-       type = STATE->get_bitvector_type(int_value.get_unsigned());       
+       ty = STATE->get_bitvector_type(int_value.get_unsigned());       
     }
+  | // Array type
+    '(' 'Array' index_ty = type element_ty = type ')' {
+       ty = STATE->get_array_type(index_ty, element_ty);
+    }   
   ;
 
 /** Comments (skip) */
@@ -463,7 +473,7 @@ HEX_NUMERAL: '#h' HEX_DIGIT+;
 fragment 
 DIGIT : '0'..'9';  
 
-/** MAthces a hexadecimal digit */
+/** Matches a hexadecimal digit */
 fragment 
 HEX_DIGIT : DIGIT | 'a'..'f' | 'A'..'F';
  

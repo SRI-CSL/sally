@@ -1,0 +1,35 @@
+;; State type
+(define-state-type state_type (
+  (x Int)
+  (y Int)  
+  (a (Array Int Int))
+))
+
+;; Initial states 
+(define-states initial_states state_type
+  (and 
+    (= x 0)
+    (= y 0)
+  )
+)
+
+;; One transition 
+(define-transition transition state_type
+  ;; Implicit variables next, state
+  (and 
+    (= next.x (+ state.x state.y)) 
+    (= next.y (+ state.y 1))
+    (= next.a (store state.a state.y 0))    
+  )
+)
+
+;; The system
+(define-transition-system T 
+  state_type
+  initial_states
+  transition
+)
+
+;; Query
+(query T (and (< x 1) (= (select a 2) 0)))
+

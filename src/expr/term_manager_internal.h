@@ -762,6 +762,8 @@ term_ref term_manager_internal::mk_term(term_op op, iterator begin, iterator end
     SWITCH_TO_TERM(TERM_LT)
     SWITCH_TO_TERM(TERM_GEQ)
     SWITCH_TO_TERM(TERM_GT)
+    SWITCH_TO_TERM(TERM_ARRAY_READ)
+    SWITCH_TO_TERM(TERM_ARRAY_WRITE)
     SWITCH_TO_TERM(TERM_BV_ADD)
     SWITCH_TO_TERM(TERM_BV_SUB)
     SWITCH_TO_TERM(TERM_BV_MUL)

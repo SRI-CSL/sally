@@ -42,6 +42,7 @@ value::value(const value& v)
 , d_b(v.d_b)
 , d_bv(v.d_bv)
 , d_q(v.d_q)
+, d_a(v.d_a)
 {
 }
 
@@ -59,6 +60,14 @@ value::value(const bitvector& bv)
 {
 }
 
+value::value(const array& a)
+: d_type(VALUE_ARRAY)
+, d_b(false)
+, d_a(a)
+{
+}
+  
+  
 value::value(const term_manager& tm, term_ref t)
 : d_type(VALUE_NONE)
 , d_b(false)
@@ -89,6 +98,7 @@ value& value::operator = (const value& v) {
     d_b = v.d_b;
     d_bv = v.d_bv;
     d_q = v.d_q;
+    d_a = v.d_a;
   }
   return *this;
 }
@@ -108,6 +118,8 @@ bool value::operator == (const value& v) const {
     return d_bv == v.d_bv;
   case VALUE_RATIONAL:
     return d_q == v.d_q;
+  case VALUE_ARRAY:
+    return d_a == v.d_a;
   default:
     return false;
   }
@@ -127,6 +139,8 @@ size_t value::hash() const {
     return d_bv.hash();
   case VALUE_RATIONAL:
     return d_q.hash();
+  case VALUE_ARRAY:
+    return d_a.hash();
   default:
     return 0;
   }
@@ -146,6 +160,9 @@ void value::to_stream(std::ostream& out) const {
   case VALUE_RATIONAL:
     out << d_q;
     break;
+  case VALUE_ARRAY:
+    out << d_a;
+    break;
   }
 }
 
@@ -164,6 +181,11 @@ const rational& value::get_rational() const {
   return d_q;
 }
 
+const array& value::get_array() const {
+  assert(is_array());
+  return d_a;
+}
+  
 term_ref value::to_term(term_manager& tm) const {
   switch (d_type) {
   case VALUE_NONE:
@@ -174,6 +196,8 @@ term_ref value::to_term(term_manager& tm) const {
     return tm.mk_bitvector_constant(d_bv);
   case VALUE_RATIONAL:
     return tm.mk_rational_constant(d_q);
+  case VALUE_ARRAY:;;
+    //return tm.mk_array(d_a);
   }
   return term_ref();
 }

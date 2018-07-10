@@ -22,6 +22,7 @@
 
 #include "expr/bitvector.h"
 #include "expr/rational.h"
+#include "expr/array.h"
 
 namespace sally {
 namespace expr {
@@ -35,7 +36,8 @@ class value {
     VALUE_NONE,
     VALUE_BOOL,
     VALUE_RATIONAL,
-    VALUE_BITVECTOR
+    VALUE_BITVECTOR,
+    VALUE_ARRAY
   };
 
   type d_type;
@@ -43,6 +45,7 @@ class value {
   bool d_b;
   bitvector d_bv;
   rational d_q;
+  array d_a;
 
 public:
 
@@ -51,6 +54,7 @@ public:
   value(bool b);
   value(const rational& q);
   value(const bitvector& bv);
+  value(const array& a);
   value(const term_manager& tm, term_ref t);
 
   value& operator = (const value& v);
@@ -66,10 +70,12 @@ public:
   bool is_bool() const { return d_type == VALUE_BOOL; }
   bool is_bitvector() const { return d_type == VALUE_BITVECTOR; }
   bool is_rational() const { return d_type == VALUE_RATIONAL; }
+  bool is_array() const { return d_type == VALUE_ARRAY; }  
 
   bool get_bool() const;
   const bitvector& get_bitvector() const;
   const rational& get_rational() const;
+  const array& get_array() const;
 
   term_ref to_term(term_manager& tm) const;
 };

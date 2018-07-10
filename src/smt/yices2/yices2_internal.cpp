@@ -166,6 +166,14 @@ term_t yices2_internal::mk_yices2_term(expr::term_op op, size_t n, term_t* child
     assert(n == 3);
     result = yices_ite(children[0], children[1], children[2]);
     break;
+  case expr::TERM_ARRAY_READ:
+    assert(n == 2);
+    result = yices_application1(children[0], children[1]);
+    break;
+  case expr::TERM_ARRAY_WRITE:
+    assert(n == 3);
+    result = yices_update1(children[0], children[1], children[2]);
+    break;
   case expr::TERM_BV_ADD: {
     assert(n >= 2);
     result = yices_bvadd(children[0], children[1]);
@@ -322,6 +330,26 @@ type_t yices2_internal::to_yices2_type(expr::term_ref ref) {
     result = yices_bv_type(size);
     break;
   }
+  case expr::TYPE_ARRAY: {
+    // recursive call
+    type_t index_type = to_yices2_type(d_tm.get_array_type_index(ref));
+    if (index_type < 0) {
+      std::stringstream ss;
+      char* error = yices_error_string();
+      ss << "Yices error (array index term creation): " << error;
+      throw exception(ss.str());      
+    } 
+    // recursive call
+    type_t element_type = to_yices2_type(d_tm.get_array_type_element(ref));
+    if (element_type < 0) {
+      std::stringstream ss;
+      char* error = yices_error_string();
+      ss << "Yices error (array element term creation): " << error;
+      throw exception(ss.str());      
+    } 
+    result = yices_function_type1(index_type, element_type);
+    break;
+  }
   default:
     assert(false);
   }
@@ -422,6 +450,8 @@ public:
     case expr::TERM_LT:
     case expr::TERM_GEQ:
     case expr::TERM_GT:
+    case expr::TERM_ARRAY_READ:
+    case expr::TERM_ARRAY_WRITE:      
     case expr::TERM_BV_ADD:
     case expr::TERM_BV_SUB:
     case expr::TERM_BV_MUL:
@@ -1090,8 +1120,47 @@ model_t* yices2_internal::get_yices_model(expr::model::ref m) {
 
   return yices_model;
 }
-
-
+  
+static expr::array::array_element_ref array_element_from_yices_yval(model_t* yices_model, const yval_t *v) {
+  switch(v->node_tag){
+  case YVAL_BOOL: {
+    int32_t val;
+    int32_t res = yices_val_get_bool(yices_model, v, &val);
+    if(res) { assert(false); }
+    return expr::array::mk_array_element_bool(val);
+  }
+  case YVAL_RATIONAL:
+    if (yices_val_is_integer(yices_model, v)) {
+      mpz_t val;
+      mpz_init(val);
+      int32_t res = yices_val_get_mpz(yices_model, v, val);
+      if(res) { assert(false); }
+      expr::array::array_element_ref e = expr::array::mk_array_element_z(val);
+      mpz_clear(val);
+      return e;
+    } else {
+      mpq_t val;
+      mpq_init(val);
+      int32_t res = yices_val_get_mpq(yices_model, v, val);
+      if(res) { assert(false); }
+      expr::array::array_element_ref e = expr::array::mk_array_element_q(val);
+      mpq_clear(val);
+      return e;
+    }
+  case YVAL_BV: {
+    size_t size = yices_val_bitsize(yices_model, v);
+    int32_t* val = new int32_t[size];
+    int32_t res = yices_val_get_bv(yices_model, v, val);
+    if (res) { assert(false); }
+    expr::bitvector bv = bitvector_from_int32(size, val);
+    delete[] val;
+    return expr::array::mk_array_element_bv(bv);
+  }
+  default:
+    assert(false);
+    return expr::array::array_element_ref();
+  }
+}
 
 expr::model::ref yices2_internal::get_model() {
   assert(d_last_check_status == STATUS_SAT);
@@ -1184,6 +1253,43 @@ expr::model::ref yices2_internal::get_model() {
       expr::bitvector bv = bitvector_from_int32(size, value);
       var_value = expr::value(bv);
       delete[] value;
+      break;
+    }
+    case expr::TYPE_ARRAY: {
+      /*
+	An example of a yices array is a function as a node with tag
+	YVAL_FUNCTION and with three children:
+     	    (1) YVAL_MAPPING node [0 -> 0]
+	    (2) YVAL_MAPPING node [1 -> 1]
+            (3) leaf node with the constant -2
+       */
+      yval_t fun_value;
+      yices_get_value(yices_model, yices_var, &fun_value);
+      assert(fun_value.node_tag == YVAL_FUNCTION);
+      yval_t def; // default value for the function
+      yval_vector_t kids;
+      yices_init_yval_vector(&kids);
+      yices_val_expand_function(yices_model, &fun_value, &def, &kids);
+      expr::array::array_element_ref a_def_val = array_element_from_yices_yval(yices_model, &def);
+      expr::array::mapping_vector_t a_mappings;
+      for (unsigned i=0, e=kids.size; i<e; ++i) {
+	yval_t m = kids.data[i];
+	assert(m.node_tag == YVAL_MAPPING);
+	size_t size = yices_val_mapping_arity(yices_model, &m);
+	yval_t *tup = new yval_t[size];
+	yval_t val;
+	yices_val_expand_mapping(yices_model, &m, tup, &val);
+	expr::array::mapping_t mapping;
+	for (unsigned j=0; j<size; ++j) {
+	  mapping.push_back(array_element_from_yices_yval(yices_model, &(tup[j])));
+	}
+	delete []tup;	
+	mapping.push_back(array_element_from_yices_yval(yices_model, &val));
+	a_mappings.push_back(mapping);
+      }
+      
+      var_value = expr::array(a_def_val, a_mappings);
+      yices_delete_yval_vector(&kids);
       break;
     }
     default:

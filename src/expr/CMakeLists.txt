@@ -4,6 +4,7 @@ add_library(expr
   integer.cpp
   rational.cpp  
   bitvector.cpp
+  array.cpp
   value.cpp
   term_manager_internal.cpp 
   term_manager.cpp
