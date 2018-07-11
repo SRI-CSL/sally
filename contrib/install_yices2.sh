@@ -1,11 +1,21 @@
 #!/bin/bash
 set -e 
 
-# Check if the yices2 folder is empty
-if [ ! -d "$HOME/yices2/lib" ]; then
-  wget "http://yices.csl.sri.com/cgi-bin/yices2-newnewdownload.cgi?file=yices-2.3.1-src.tar.gz&accept=I+Agree" -O yices.tar.gz
-  tar xzvf yices.tar.gz
-  cd yices* && autoconf && ./configure --prefix=$HOME/yices2 && make MODE=release && make MODE=release install && cd ..
-else
-  echo 'Using cached directory.';
-fi
+# libpoly
+pushd .
+git clone https://github.com/SRI-CSL/libpoly.git
+cd libpoly/build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+make
+sudo make install
+popd 
+
+# yices2
+pushd .
+git clone https://github.com/SRI-CSL/yices2.git
+cd yices2
+autoconf
+./configure --enable-mcsat 
+make 
+sudo make install
+popd 

@@ -467,7 +467,7 @@ NUMERAL: DIGIT+;
 BIN_NUMERAL: '#b' ('0'|'1')+;
 
 /** Matches a binary numeral (sequence of digits) */
-HEX_NUMERAL: '#h' HEX_DIGIT+;
+HEX_NUMERAL: '#x' HEX_DIGIT+;
 
 /** Matches a digit */
 fragment 

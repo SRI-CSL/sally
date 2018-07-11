@@ -32,9 +32,6 @@ namespace bmc {
  */
 class bmc_engine : public engine {
 
-  /** SMT solver we're using */
-  smt::solver* d_solver;
-
   /** The trace we're building */
   system::trace_helper* d_trace;
 

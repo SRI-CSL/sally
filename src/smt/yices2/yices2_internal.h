@@ -102,6 +102,9 @@ class yices2_internal {
       const std::vector<expr::term_ref>& forall_vars_1,
       const std::vector<expr::term_ref>& forall_vars_2);
 
+  /** Check the error */
+  void check_error(int ret, const char* error_msg) const;
+
 public:
 
   /** Construct an instance of yices with the given temr manager and options */

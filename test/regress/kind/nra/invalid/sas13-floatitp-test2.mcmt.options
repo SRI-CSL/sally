@@ -1,0 +1,2 @@
+--engine kind --yices2-mcsat --lsal-extensions --kind-max 12
+

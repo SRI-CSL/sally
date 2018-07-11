@@ -20,6 +20,7 @@
 
 #include "smt/z3/z3_internal.h"
 #include "z3_common.h"
+#include "z3_interp.h"
 #include "utils/trace.h"
 #include "expr/gc_relocator.h"
 #include "utils/output.h"
@@ -476,9 +477,6 @@ expr::term_ref z3_internal::mk_term(Z3_decl_kind kind, const std::vector<expr::t
     result = d_tm.mk_term(expr::TERM_IMPLIES, children);
     break;
   case Z3_OP_OEQ:
-    assert(false);
-    break;
-  case Z3_OP_INTERP:
     assert(false);
     break;
 

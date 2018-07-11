@@ -25,6 +25,7 @@
 #include "utils/options.h"
 #include "utils/name_transformer.h"
 #include "utils/statistics.h"
+#include "utils/smart_ptr.h"
 
 namespace sally {
 namespace smt {
@@ -76,6 +77,9 @@ protected:
 
 public:
 
+  /** Smart pointer reference */
+  typedef utils::smart_ptr<solver> ref;
+
   /** Result of the check */
   enum result {
     /** Formula is satisfiable */
@@ -116,6 +120,10 @@ public:
     for(; begin != end; ++ begin) {
       add_variable(*begin, f_class);
     }
+  }
+
+  void add_variables(const std::vector<expr::term_ref>& vars, variable_class f_class) {
+    add_variables(vars.begin(), vars.end(), f_class);
   }
 
   /** Construct with the given term manager */

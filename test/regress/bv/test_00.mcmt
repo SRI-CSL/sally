@@ -3,7 +3,7 @@
 (define-states init vars
   (or
     (= x #b0000)
-    (= x #h0)
+    (= x #x0)
     (= x (_ bv0 4))
   )
 )
