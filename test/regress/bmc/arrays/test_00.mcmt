@@ -1,0 +1,44 @@
+;; State type
+;;(define-state-type state_type (
+;;  (x Real) 
+;;  (y Real)
+;;))
+
+;; x = a[0], y = a[1]
+(define-state-type state_type ((a (Array Real Real))))
+
+;; Initial states 
+(define-states initial_states state_type
+  (and
+    ;(= x 0)
+    ;(= y (/ 1 2))
+    (= (select a 0) 0)
+    (= (select a 1) (/ 1 2))
+  )
+)
+
+;; One transition 
+(define-transition transition state_type
+  ;; Implicit variables next, state
+  ;;(and 
+  ;;(= next.x (+ state.x state.y)) 
+  ;;(= next.y (/ state.y 2)))
+    (= next.a (store
+               (store state.a 0 (+ (select state.a 0) (select state.a 1)))
+	       1
+	       (/ (select state.a 1) 2)
+	       )
+    )
+)
+
+;; The system
+(define-transition-system T 
+  state_type
+  initial_states
+  transition
+)
+
+;; Query
+;;(query T (< x 1))
+(query T (< (select a 1) 1))
+
