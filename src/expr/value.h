@@ -22,13 +22,16 @@
 
 #include "expr/bitvector.h"
 #include "expr/rational.h"
-#include "expr/array.h"
 
 namespace sally {
 namespace expr {
 
 class term_manager;
 class term_ref;
+
+// FWD for arrays, they include other values
+// to use array, include "expr/array.h"
+class array;
 
 class value {
 
@@ -45,7 +48,7 @@ class value {
   bool d_b;
   bitvector d_bv;
   rational d_q;
-  array d_a;
+  array* d_a;
 
 public:
 
@@ -56,11 +59,14 @@ public:
   value(const bitvector& bv);
   value(const array& a);
   value(const term_manager& tm, term_ref t);
+  ~value();
 
   value& operator = (const value& v);
 
   bool operator == (const value& v) const;
   bool operator != (const value& v) const;
+
+  bool operator < (const value& v) const;
 
   size_t hash() const;
 

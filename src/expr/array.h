@@ -1,101 +1,72 @@
+/**
+ * This file is part of sally.
+ * Copyright (C) 2015 SRI International.
+ *
+ * Sally is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Sally is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with sally.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #pragma once
 
 #include <iosfwd>
-#include <vector>
+#include <map>
+
+#include "value.h"
 #include "utils/hash.h"
-#include "utils/smart_ptr.h"
-#include "expr/integer.h"
-#include "expr/rational.h"
-#include "expr/bitvector.h"
 
 namespace sally {
 namespace expr {
 
-/* Another wrapper for primitive types*/  
-struct array_element {
-  enum type_t { 
-    ARRAY_BOOL,
-    ARRAY_INTEGER,        
-    ARRAY_RATIONAL,
-    ARRAY_BITVECTOR
-  };
-  type_t element_type;
-  array_element(type_t t);
 
-  virtual ~array_element() {}
-  virtual bool operator==(const array_element& other) const = 0;
-  virtual size_t hash() const = 0;
-  virtual void write(std::ostream& out) const = 0;
-};
-
-std::ostream& operator<<(std::ostream& out, const array_element& e);
-  
-class array_element_b: public array_element {
-  bool element;
-public:
-  array_element_b(bool e);
-  bool operator==(const array_element& other) const;
-  size_t hash() const;
-  void write(std::ostream& out) const;
-};
-
-class array_element_z: public array_element {
-  integer element;
-public:
-  array_element_z(integer e);
-  bool operator==(const array_element& other) const;
-  size_t hash() const;
-  void write(std::ostream& out) const;
-};
-  
-class array_element_q: public array_element {
-  rational element;
-public:
-  array_element_q(rational e);
-  bool operator==(const array_element& other) const;
-  size_t hash() const;
-  void write(std::ostream& out) const;
-};
-
-class array_element_bv: public array_element {
-  bitvector element;
-public:
-  array_element_bv(bitvector e);
-  bool operator==(const array_element& other) const;
-  size_t hash() const;
-  void write(std::ostream& out) const;
-};
-  
-
-/* 
-   An array is a finite list of mappings and a default value. A
-   mapping is of the form [x_1 ... x_k-1 -> x_k]. Each mapping
-   specifies the value of an specific array element.
-*/
+/**
+ * An array is a finite list of mappings and a default value. A
+ * mapping is of the form [x_1 ... x_k-1 -> x_k]. Each mapping
+ * specifies the value of a specific array element.
+ */
 class array {
+
 public:
-  typedef utils::smart_ptr<array_element> array_element_ref;
-  typedef std::vector<array_element_ref> mapping_t;
-  typedef std::vector<mapping_t> mapping_vector_t;
   
+  typedef std::map<value, value> value_to_value_map;
+
 private:
-  array_element_ref def_val;
-  mapping_vector_t mappings;
+
+  /** Default value (for indices not in the mapping) */
+  value d_def_val;
+
+  /** Mapping indices -> values */
+  value_to_value_map d_mapping;
     
 public:
-  static array_element_ref mk_array_element_bool(int32_t v);
-  static array_element_ref mk_array_element_z(mpz_t v);
-  static array_element_ref mk_array_element_q(mpq_t v);
-  static array_element_ref mk_array_element_bv(bitvector v);
-  
+
   array();
-  array(array_element_ref def_val, const mapping_vector_t& mappings);
+  array(const array& a);
+
+  /** Construct the array given default value and the mapping */
+  array(const value& def_val, const value_to_value_map& mapping);
+
+  /** Check equality */
   bool operator==(const array& other) const;
+
+  /** Get the hash */
   size_t hash() const;
-  void write(std::ostream& out) const;
+
+  /** Write to stream */
+  void to_stream(std::ostream& out) const;
 };
 
 std::ostream& operator<<(std::ostream& out, const array& a);
+
 }
 
 namespace utils {

@@ -17,6 +17,7 @@
  */
 
 #include "value.h"
+#include "array.h"
 #include "expr/term_manager.h"
 
 #include <iostream>
@@ -28,12 +29,14 @@ namespace expr {
 value::value()
 : d_type(VALUE_NONE)
 , d_b(false)
+, d_a(0)
 {
 }
 
 value::value(bool b)
 : d_type(VALUE_BOOL)
 , d_b(b)
+, d_a(0)
 {
 }
 
@@ -42,14 +45,19 @@ value::value(const value& v)
 , d_b(v.d_b)
 , d_bv(v.d_bv)
 , d_q(v.d_q)
-, d_a(v.d_a)
+, d_a(0)
 {
+  if (d_type == VALUE_ARRAY) {
+    assert(v.d_a);
+    d_a = new array(*v.d_a);
+  }
 }
 
 value::value(const rational& q)
 : d_type(VALUE_RATIONAL)
 , d_b(false)
 , d_q(q)
+, d_a(0)
 {
 }
 
@@ -57,20 +65,21 @@ value::value(const bitvector& bv)
 : d_type(VALUE_BITVECTOR)
 , d_b(false)
 , d_bv(bv)
+, d_a(0)
 {
 }
 
 value::value(const array& a)
 : d_type(VALUE_ARRAY)
 , d_b(false)
-, d_a(a)
+, d_a(new array(a))
 {
 }
-  
   
 value::value(const term_manager& tm, term_ref t)
 : d_type(VALUE_NONE)
 , d_b(false)
+, d_a(0)
 {
   const expr::term& t_term = tm.term_of(t);
   expr::term_op op = t_term.op();
@@ -92,13 +101,24 @@ value::value(const term_manager& tm, term_ref t)
   }
 }
 
+value::~value() {
+  if (d_type == VALUE_ARRAY) {
+    delete d_a;
+  }
+}
+
 value& value::operator = (const value& v) {
   if (this != &v) {
     d_type = v.d_type;
     d_b = v.d_b;
     d_bv = v.d_bv;
     d_q = v.d_q;
-    d_a = v.d_a;
+    if (d_type == VALUE_ARRAY) {
+      d_a = new array(*v.d_a);
+    } else {
+      assert(v.d_a == 0);
+      d_a = 0;
+    }
   }
   return *this;
 }
@@ -125,6 +145,28 @@ bool value::operator == (const value& v) const {
   }
 }
 
+bool value::operator < (const value& v) const {
+  if (d_type != v.d_type) {
+    return d_type < v.d_type;
+  } else {
+    switch (d_type) {
+    case VALUE_NONE:
+      return false;
+    case VALUE_BOOL:
+      return d_b < v.d_b;
+    case VALUE_BITVECTOR:
+      return d_bv < v.d_bv;
+    case VALUE_RATIONAL:
+      return d_q < v.d_q;
+    case VALUE_ARRAY:
+      return d_a < v.d_a;
+    default:
+      return false;
+    }
+  }
+}
+
+
 bool value::operator != (const value& v) const {
   return !(*this == v);
 }
@@ -140,7 +182,7 @@ size_t value::hash() const {
   case VALUE_RATIONAL:
     return d_q.hash();
   case VALUE_ARRAY:
-    return d_a.hash();
+    return d_a->hash();
   default:
     return 0;
   }
@@ -161,7 +203,7 @@ void value::to_stream(std::ostream& out) const {
     out << d_q;
     break;
   case VALUE_ARRAY:
-    out << d_a;
+    out << *d_a;
     break;
   }
 }
@@ -183,7 +225,7 @@ const rational& value::get_rational() const {
 
 const array& value::get_array() const {
   assert(is_array());
-  return d_a;
+  return *d_a;
 }
   
 term_ref value::to_term(term_manager& tm) const {

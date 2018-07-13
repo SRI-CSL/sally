@@ -72,6 +72,12 @@ public:
     return d_size == other.d_size && cmp(other) == 0;
   }
 
+  /** Comparison for sorting */
+  bool operator < (const bitvector& other) const {
+    if (d_size != other.d_size) { return d_size < other.d_size; }
+    return d_gmp_int < other.d_gmp_int;
+  }
+
   /** Output to stream */
   void to_stream(std::ostream& out) const;
 

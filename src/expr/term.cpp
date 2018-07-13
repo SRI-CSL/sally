@@ -77,6 +77,7 @@ void term::mk_let_cache(term_manager& tm, expr_let_cache& let_cache, std::vector
   case TYPE_STRUCT:
   case TYPE_BITVECTOR:
   case TYPE_STRING:
+  case TYPE_ARRAY:
   case TYPE_TYPE:
   case VARIABLE:
   case CONST_BOOL:
@@ -130,6 +131,8 @@ void term::mk_let_cache(term_manager& tm, expr_let_cache& let_cache, std::vector
   case TERM_BV_SUB:
   case TERM_BV_EXTRACT:
   case TERM_BV_SGN_EXTEND:
+  case TERM_ARRAY_READ:
+  case TERM_ARRAY_WRITE:
     for (const term_ref* it = begin(); it != end(); ++ it) {
       const term& child = tm.term_of(*it);
       child.mk_let_cache(tm, let_cache, definitions);

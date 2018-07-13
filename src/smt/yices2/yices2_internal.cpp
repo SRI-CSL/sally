@@ -29,6 +29,8 @@
 #include "expr/term_visitor.h"
 #include "utils/output.h"
 
+#include "expr/array.h"
+
 #include <iostream>
 #include <fstream>
 
@@ -1060,18 +1062,6 @@ solver::result yices2_internal::check() {
   return solver::UNKNOWN;
 }
 
-static
-expr::bitvector bitvector_from_int32(size_t size, int32_t* value) {
-  char* value_str = new char[size+1];
-  for (size_t i = 0; i < size; ++ i) {
-    value_str[size - i - 1] = value[i] ? '1' : '0';
-  }
-  value_str[size] = 0;
-  expr::bitvector bv(value_str);
-  delete[] value_str;
-  return bv;
-}
-
 model_t* yices2_internal::get_yices_model(expr::model::ref m) {
 
   // Get the variables
@@ -1137,8 +1127,14 @@ model_t* yices2_internal::get_yices_model(expr::model::ref m) {
   return yices_model;
 }
   
-static expr::array::array_element_ref array_element_from_yices_yval(model_t* yices_model, const yval_t *v) {
+/**
+ * Convert a yices value to sally value.
+ */
+static
+expr::value get_value_from_yices_yval(model_t* yices_model, const yval_t *v) {
+
   int32_t ret = 0;
+  expr::value v_value;
   
   switch(v->node_tag){
   case YVAL_BOOL: {
@@ -1147,46 +1143,76 @@ static expr::array::array_element_ref array_element_from_yices_yval(model_t* yic
     if(ret < 0) {
       throw exception("Error obtaining Bool value from Yices2 model.");
     }
-    return expr::array::mk_array_element_bool(val);
+    v_value = expr::value(bool(val));
+    break;
   }
   case YVAL_RATIONAL:
     if (yices_val_is_integer(yices_model, v)) {
       mpz_t val;
       mpz_init(val);
       ret = yices_val_get_mpz(yices_model, v, val);
-      if(ret < 0) {
-	throw exception("Error obtaining real value from Yices2 model.");
+      if (ret < 0) {
+	throw exception("Error obtaining integer value from Yices2 model.");
       }
-      expr::array::array_element_ref e = expr::array::mk_array_element_z(val);
+      // We return a rational number (integers are only used inside of bit-vectors)
+      v_value = expr::value(expr::rational(val));
       mpz_clear(val);
-      return e;
     } else {
       mpq_t val;
       mpq_init(val);
       ret = yices_val_get_mpq(yices_model, v, val);
-      if(ret < 0) {
-	throw exception("Error obtaining integer value from Yices2 model.");
+      if (ret < 0) {
+	throw exception("Error obtaining rational value from Yices2 model.");
       }
-      expr::array::array_element_ref e = expr::array::mk_array_element_q(val);
+      v_value = expr::value(expr::rational(val));
       mpq_clear(val);
-      return e;
     }
+    break;
   case YVAL_BV: {
     size_t size = yices_val_bitsize(yices_model, v);
     int32_t* val = new int32_t[size];
     ret = yices_val_get_bv(yices_model, v, val);
-    if(ret < 0) {
+    if (ret < 0) {
       throw exception("Error obtaining bit-vector value from Yices2 model.");
     }
-    expr::bitvector bv = bitvector_from_int32(size, val);
+    v_value = expr::value(yices_bv_to_bitvector(size, val));
     delete[] val;
-    return expr::array::mk_array_element_bv(bv);
+    break;
+  }
+  case YVAL_FUNCTION: {
+    yval_t def; // default value for the function
+    yval_vector_t kids;
+    yices_init_yval_vector(&kids);
+    yices_val_expand_function(yices_model, v, &def, &kids);
+    expr::value a_def_val = get_value_from_yices_yval(yices_model, &def);
+    expr::array::value_to_value_map a_mapping;
+    for (unsigned i=0, e=kids.size; i<e; ++i) {
+      yval_t m = kids.data[i];
+      assert(m.node_tag == YVAL_MAPPING);
+      size_t size = yices_val_mapping_arity(yices_model, &m);
+      (void) size;
+      assert(size == 1); // arrays have arity 1
+      yval_t arg;
+      yval_t val;
+      ret = yices_val_expand_mapping(yices_model, &m, &arg, &val);
+      if (ret < 0) {
+        throw exception("Error obtaining array value from Yices2 model.");
+      }
+      expr::value value_arg = get_value_from_yices_yval(yices_model, &arg);
+      expr::value value_val = get_value_from_yices_yval(yices_model, &val);
+      a_mapping[value_arg] = value_val;
+    }
+    v_value = expr::value(expr::array(a_def_val, a_mapping));
+    yices_delete_yval_vector(&kids);
+    break;
   }
   default:
     assert(false);
-    return expr::array::array_element_ref();
   }
+
+  return v_value;
 }
+
 
 expr::model::ref yices2_internal::get_model() {
   assert(d_last_check_status == STATUS_SAT);
@@ -1307,7 +1333,7 @@ expr::model::ref yices2_internal::get_model() {
       if (ret < 0) {
         throw exception("Error obtaining bit-vector value from Yices2 model.");
       }
-      expr::bitvector bv = bitvector_from_int32(size, value);
+      expr::bitvector bv = yices_bv_to_bitvector(size, value);
       var_value = expr::value(bv);
       delete[] value;
       break;
@@ -1323,30 +1349,7 @@ expr::model::ref yices2_internal::get_model() {
       yval_t fun_value;
       yices_get_value(yices_model, yices_var, &fun_value);
       assert(fun_value.node_tag == YVAL_FUNCTION);
-      yval_t def; // default value for the function
-      yval_vector_t kids;
-      yices_init_yval_vector(&kids);
-      yices_val_expand_function(yices_model, &fun_value, &def, &kids);
-      expr::array::array_element_ref a_def_val = array_element_from_yices_yval(yices_model, &def);
-      expr::array::mapping_vector_t a_mappings;
-      for (unsigned i=0, e=kids.size; i<e; ++i) {
-	yval_t m = kids.data[i];
-	assert(m.node_tag == YVAL_MAPPING);
-	size_t size = yices_val_mapping_arity(yices_model, &m);
-	yval_t *tup = new yval_t[size];
-	yval_t val;
-	yices_val_expand_mapping(yices_model, &m, tup, &val);
-	expr::array::mapping_t mapping;
-	for (unsigned j=0; j<size; ++j) {
-	  mapping.push_back(array_element_from_yices_yval(yices_model, &(tup[j])));
-	}
-	delete []tup;	
-	mapping.push_back(array_element_from_yices_yval(yices_model, &val));
-	a_mappings.push_back(mapping);
-      }
-      
-      var_value = expr::array(a_def_val, a_mappings);
-      yices_delete_yval_vector(&kids);
+      var_value = get_value_from_yices_yval(yices_model, &fun_value);
       break;
     }
     default:
