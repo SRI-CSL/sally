@@ -55,6 +55,16 @@ bool array::operator==(const array& other) const {
   return std::equal(d_mapping.begin(), d_mapping.end(), other.d_mapping.begin());
 }
 
+bool array::operator < (const array& other) const {
+  if (d_def_val != other.d_def_val) {
+    return d_def_val < other.d_def_val;
+  }
+
+  return std::lexicographical_compare(d_mapping.begin(), d_mapping.end(),
+      other.d_mapping.begin(), other.d_mapping.end());
+}
+
+
 size_t array::hash() const {
 
   utils::sequence_hash hasher;

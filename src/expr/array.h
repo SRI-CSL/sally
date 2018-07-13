@@ -56,7 +56,14 @@ public:
   array(const value& def_val, const value_to_value_map& mapping);
 
   /** Check equality */
-  bool operator==(const array& other) const;
+  bool operator == (const array& other) const;
+
+  /**
+   * Compare two arrays lexicographically as [def, (i1, v1), ..., (in, vn)].
+   * Pairs and recursive arrays are compared as expected. Doesn't check types,
+   * just compares as above.
+   */
+  bool operator < (const array& other) const;
 
   /** Get the hash */
   size_t hash() const;

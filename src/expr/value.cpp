@@ -159,7 +159,7 @@ bool value::operator < (const value& v) const {
     case VALUE_RATIONAL:
       return d_q < v.d_q;
     case VALUE_ARRAY:
-      return d_a < v.d_a;
+      return *d_a < *v.d_a;
     default:
       return false;
     }
