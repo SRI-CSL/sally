@@ -1131,7 +1131,8 @@ model_t* yices2_internal::get_yices_model(expr::model::ref m) {
  * Convert a yices value to sally value.
  */
 static
-expr::value get_value_from_yices_yval(model_t* yices_model, const yval_t *v) {
+expr::value get_value_from_yices_yval(model_t* yices_model, const yval_t *v,
+				      expr::term_manager &tm, expr::term_ref v_type) {
 
   int32_t ret = 0;
   expr::value v_value;
@@ -1180,11 +1181,14 @@ expr::value get_value_from_yices_yval(model_t* yices_model, const yval_t *v) {
     break;
   }
   case YVAL_FUNCTION: {
+    assert(tm.is_array_type(v_type));
+    expr::term_ref idx_type = tm.get_array_type_index(v_type);
+    expr::term_ref elem_type = tm.get_array_type_element(v_type);    
     yval_t def; // default value for the function
     yval_vector_t kids;
     yices_init_yval_vector(&kids);
     yices_val_expand_function(yices_model, v, &def, &kids);
-    expr::value a_def_val = get_value_from_yices_yval(yices_model, &def);
+    expr::value a_def_val = get_value_from_yices_yval(yices_model, &def, tm, elem_type);
     expr::array::value_to_value_map a_mapping;
     for (unsigned i=0, e=kids.size; i<e; ++i) {
       yval_t m = kids.data[i];
@@ -1198,11 +1202,11 @@ expr::value get_value_from_yices_yval(model_t* yices_model, const yval_t *v) {
       if (ret < 0) {
         throw exception("Error obtaining array value from Yices2 model.");
       }
-      expr::value value_arg = get_value_from_yices_yval(yices_model, &arg);
-      expr::value value_val = get_value_from_yices_yval(yices_model, &val);
+      expr::value value_arg = get_value_from_yices_yval(yices_model, &arg, tm, idx_type);
+      expr::value value_val = get_value_from_yices_yval(yices_model, &val, tm, elem_type);
       a_mapping[value_arg] = value_val;
     }
-    v_value = expr::value(expr::array(a_def_val, a_mapping));
+    v_value = expr::value(expr::array(a_def_val, a_mapping, v_type));
     yices_delete_yval_vector(&kids);
     break;
   }
@@ -1349,7 +1353,7 @@ expr::model::ref yices2_internal::get_model() {
       yval_t fun_value;
       yices_get_value(yices_model, yices_var, &fun_value);
       assert(fun_value.node_tag == YVAL_FUNCTION);
-      var_value = get_value_from_yices_yval(yices_model, &fun_value);
+      var_value = get_value_from_yices_yval(yices_model, &fun_value, d_tm, var_type);
       break;
     }
     default:

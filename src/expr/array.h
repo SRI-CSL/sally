@@ -21,12 +21,12 @@
 #include <iosfwd>
 #include <map>
 
+#include "term.h"
 #include "value.h"
 #include "utils/hash.h"
 
 namespace sally {
 namespace expr {
-
 
 /**
  * An array is a finite list of mappings and a default value. A
@@ -46,14 +46,17 @@ private:
 
   /** Mapping indices -> values */
   value_to_value_map d_mapping;
-    
+
+  /** Type of the array **/
+  term_ref d_type;
+  
 public:
 
   array();
   array(const array& a);
-
-  /** Construct the array given default value and the mapping */
-  array(const value& def_val, const value_to_value_map& mapping);
+  
+  /** Construct the array given default value, the mapping, and the array type */
+  array(const value& def_val, const value_to_value_map& mapping, term_ref type);
 
   /** Check equality */
   bool operator == (const array& other) const;
