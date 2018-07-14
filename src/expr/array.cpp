@@ -81,35 +81,21 @@ size_t array::hash() const {
   return hasher.get();
 }
 
-template <typename T>  
-static std::string to_str(T x, std::ostringstream &out) {
-  out << x;
-  std::string res = out.str();
-  // clear out
-  out.str("");
-  out.clear();
-  return res;
-}
-
 void array::to_stream(std::ostream& out) const {
   output::language lang = output::get_output_language(out);
   switch (lang) {
   case output::MCMT:
   case output::HORN: {
     assert (!d_def_val.is_null());
-
-    expr::term_manager* tm = output::get_term_manager(out);
-    std::ostringstream oss;
-    output::set_output_language(oss, lang);
-    output::set_term_manager(oss, tm);
-    
-    std::string str;
-    str = "((as const " + to_str(d_type, oss)  + ") " + to_str(d_def_val, oss) + ")";
+    // (store (store (... (store (as const type default) i1 v1) i2 v2)... )
+    for (size_t i = 0; i < d_mapping.size(); ++ i) {
+      out << "(store ";
+    }
+    out << "((as const " << d_type << ") " << d_def_val << ")";
     value_to_value_map::const_iterator it = d_mapping.begin();
     for (; it != d_mapping.end(); ++ it) {
-      str = "(store " + str + " " + to_str(it->first, oss) + " " + to_str(it->second, oss) + ")";
+      out << " " << it->first << " " << it->second << ")";
     }
-    out << str;
     break;
   }
   case output::NUXMV:
