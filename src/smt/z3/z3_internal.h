@@ -36,6 +36,7 @@ extern "C"
 
 #include "expr/term_manager.h"
 #include "smt/solver.h"
+#include "expr/value.h"
 
 namespace sally {
 namespace smt {
@@ -92,6 +93,8 @@ class z3_internal {
   /** The instance */
   size_t d_instance;
 
+  expr::value to_value(Z3_model model, Z3_ast value, expr::term_ref type);
+
 public:
 
   /** Construct an instance of yices with the given temr manager and options */
@@ -114,7 +117,6 @@ public:
 
   /** Make a term given z3 operator and children */
   expr::term_ref mk_term(Z3_decl_kind kind, const std::vector<expr::term_ref>& children);
-
 
   /** Add an assertion to yices */
   void add(expr::term_ref ref, solver::formula_class f_class);

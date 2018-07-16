@@ -24,6 +24,7 @@
 #include "utils/trace.h"
 #include "expr/gc_relocator.h"
 #include "utils/output.h"
+#include "expr/array.h"
 
 #include <iostream>
 #include <fstream>
@@ -259,6 +260,12 @@ Z3_ast z3_internal::mk_z3_term(expr::term_op op, size_t n, const std::vector<Z3_
     assert(n == 2);
     result = Z3_mk_bvsgt(d_ctx, children[0], children[1]);
     break;
+  case expr::TERM_ARRAY_READ:
+    result = Z3_mk_select(d_ctx, children[0], children[1]);
+    break;
+  case expr::TERM_ARRAY_WRITE:
+    result = Z3_mk_store(d_ctx, children[0], children[1], children[2]);
+    break;
   default:
     assert(false);
   }
@@ -297,6 +304,14 @@ Z3_sort z3_internal::to_z3_type(expr::term_ref ref) {
   case expr::TYPE_BITVECTOR: {
     size_t size = d_tm.get_bitvector_type_size(ref);
     result = Z3_mk_bv_sort(d_ctx, size);
+    break;
+  }
+  case expr::TYPE_ARRAY: {
+    expr::term_ref index_type = d_tm.get_array_type_index(ref);
+    expr::term_ref element_type = d_tm.get_array_type_element(ref);
+    Z3_sort index_type_z3 = to_z3_type(index_type);
+    Z3_sort element_type_z3 = to_z3_type(element_type);
+    result = Z3_mk_array_sort(d_ctx, index_type_z3, element_type_z3);
     break;
   }
   default:
@@ -400,6 +415,8 @@ Z3_ast z3_internal::to_z3_term(expr::term_ref ref) {
   case expr::TERM_BV_SGEQ:
   case expr::TERM_BV_UGT:
   case expr::TERM_BV_SGT:
+  case expr::TERM_ARRAY_READ:
+  case expr::TERM_ARRAY_WRITE:
   {
     size_t size = t.size();
     assert(size > 0);
@@ -416,6 +433,8 @@ Z3_ast z3_internal::to_z3_term(expr::term_ref ref) {
     result = Z3_mk_extract(d_ctx, extract.high, extract.low, child);
     break;
   }
+
+
   default:
     assert(false);
   }
@@ -878,6 +897,82 @@ solver::result z3_internal::check() {
   return solver::UNKNOWN;
 }
 
+expr::value z3_internal::to_value(Z3_model model, Z3_ast value, expr::term_ref type) {
+
+  expr::value result;
+
+  switch (d_tm.term_of(type).op()) {
+  case expr::TYPE_BOOL: {
+    result = expr::value(Z3_get_bool_value(d_ctx, value));
+    break;
+  }
+  case expr::TYPE_INTEGER: {
+    Z3_string value_string = Z3_get_numeral_string(d_ctx, value);
+    expr::rational q_value(value_string);
+    result = expr::value(q_value);
+    break;
+  }
+  case expr::TYPE_REAL: {
+    Z3_string value_string = Z3_get_numeral_string(d_ctx, value);
+    expr::rational q_value(value_string);
+    result = expr::value(q_value);
+    break;
+  }
+  case expr::TYPE_BITVECTOR: {
+    Z3_string value_string = Z3_get_numeral_string(d_ctx, value);
+    size_t bv_size = d_tm.get_bitvector_type_size(type);
+    expr::integer z_value(value_string, 10);
+    result = expr::value(expr::bitvector(bv_size, z_value));
+    break;
+  }
+  case expr::TYPE_ARRAY: {
+
+    // Types of the indices and elements
+    expr::term_ref type_index = d_tm.get_array_type_index(type);
+    expr::term_ref type_value = d_tm.get_array_type_element(type);
+
+    Z3_func_decl value_fun_decl = Z3_get_as_array_func_decl(d_ctx, value);
+    Z3_func_interp_opt value_fun_interp = Z3_model_get_func_interp(d_ctx, model, value_fun_decl);
+    Z3_func_interp_inc_ref(d_ctx, value_fun_interp);
+
+    // Get mapping elements
+    expr::array::value_to_value_map value_map;
+    unsigned num_entries = Z3_func_interp_get_num_entries(d_ctx, value_fun_interp);
+    for(unsigned i = 0; i < num_entries; ++ i) {
+      // Get a[i] -> v from z3
+      Z3_func_entry entry_i = Z3_func_interp_get_entry(d_ctx, value_fun_interp, i);
+      Z3_ast entry_i_value = Z3_func_entry_get_value(d_ctx, entry_i);
+      assert(Z3_func_entry_get_num_args(d_ctx, entry_i) == 1);
+      Z3_ast entry_i_index = Z3_func_entry_get_arg(d_ctx, entry_i, 0);
+      // Turn to our values
+      expr::value value_i_index = to_value(model, entry_i_index, type_index);
+      expr::value value_i_value = to_value(model, entry_i_value, type_value);
+      value_map[value_i_index] = value_i_value;
+    }
+
+    // Default value
+    Z3_ast value_default_ast = Z3_func_interp_get_else(d_ctx, value_fun_interp);
+    expr::value value_default = to_value(model, value_default_ast, type_value);
+
+    // Make the resulting array
+    expr::array result_array = expr::array(value_default, value_map, type);
+    result = expr::value(result_array);
+
+    // Deref temps
+    Z3_func_interp_dec_ref(d_ctx, value_fun_interp);
+
+    assert(false);
+
+    break;
+  }
+  default:
+    assert(false);
+  }
+
+  return result;
+}
+
+
 expr::model::ref z3_internal::get_model(const std::set<expr::term_ref>& x_variables, const std::set<expr::term_ref>& T_variables, const std::set<expr::term_ref>& y_variables) {
   assert(d_last_check_status == Z3_L_TRUE);
   assert(x_variables.size() > 0 || y_variables.size() > 0);
@@ -944,34 +1039,7 @@ expr::model::ref z3_internal::get_model(const std::set<expr::term_ref>& x_variab
       Z3_inc_ref(d_ctx, value);
     }
 
-    expr::value var_value;
-    switch (d_tm.term_of(var_type).op()) {
-    case expr::TYPE_BOOL: {
-      var_value = expr::value(Z3_get_bool_value(d_ctx, value));
-      break;
-    }
-    case expr::TYPE_INTEGER: {
-      Z3_string value_string = Z3_get_numeral_string(d_ctx, value);
-      expr::rational q_value(value_string);
-      var_value = expr::value(q_value);
-      break;
-    }
-    case expr::TYPE_REAL: {
-      Z3_string value_string = Z3_get_numeral_string(d_ctx, value);
-      expr::rational q_value(value_string);
-      var_value = expr::value(q_value);
-      break;
-    }
-    case expr::TYPE_BITVECTOR: {
-      Z3_string value_string = Z3_get_numeral_string(d_ctx, value);
-      size_t bv_size = d_tm.get_bitvector_size(var);
-      expr::integer z_value(value_string, 10);
-      var_value = expr::value(expr::bitvector(bv_size, z_value));
-      break;
-    }
-    default:
-      assert(false);
-    }
+    expr::value var_value = to_value(z3_model, value, var_type);
 
     if (ok) {
       Z3_dec_ref(d_ctx, value);
