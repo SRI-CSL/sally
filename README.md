@@ -20,7 +20,7 @@ sudo apt-get install libgmp-dev
 sudo apt-get install libboost-program-options-dev libboost-iostreams-dev libboost-test-dev libboost-thread-dev libboost-system-dev
 sudo apt-get install default-jre
 ```
-In addition, Sally needs an SMT solver for reasoning about the systems. It currently supports [Yices2](http://yices.csl.sri.com/), [MathSAT5](http://mathsat.fbk.eu/), and [Z3](https://github.com/Z3Prover/z3). For best results we recommend using at least Yices2 and MathSAT5. 
+In addition, Sally needs an SMT solver for reasoning about the systems. It currently supports [Yices2](http://yices.csl.sri.com/) and [MathSAT5](http://mathsat.fbk.eu/). For best results we recommend using both Yices2 and MathSAT5. 
 
 ## How to Compile
 
@@ -42,9 +42,6 @@ cmake .. -DMATHSAT5_HOME=$MD
 make
 make check
 ```
-Similarly, to find Z3, you can set the Z3_HOME variable with cmake. Of course, 
-you can use, e.g., both Yices2 and MathSAT, by adding both options to 
-cmake as expected.
 
 To compile sally in debug mode then configure and build with
 ```bash
