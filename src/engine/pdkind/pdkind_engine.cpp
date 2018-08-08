@@ -548,6 +548,9 @@ const system::trace_helper* pdkind_engine::get_trace() {
     current_depth += cex_step;
   }
 
+  // Remove the solver
+  delete solver;
+
   return d_trace;
 }
 
