@@ -1,0 +1,52 @@
+(define-state-type
+   S
+   (
+     (p Int)
+     (p_del Int)
+     (p_nil Bool)
+     (x Int)
+     (x_del Int)
+     (x_nil Bool)
+     (y Int)
+     (y_del Int)
+     (y_nil Bool))
+   ())
+(define-transition-system
+   TS
+   S
+   (and
+      (= y x)
+      (= y_del x_del)
+      (= y_nil true)
+      (=
+         p
+         (+ 1 y))
+      (= p_del 0)
+      (=
+         p_nil
+         (or false y_nil))
+      (= 0 y_del)
+      (= x 1)
+      (= x_del 0)
+      (= x_nil false))
+   (and
+      (= next.y state.x)
+      (= next.y_del state.x_del)
+      (= next.y_nil state.x_nil)
+      (=
+         next.p
+         (+ 1 next.y))
+      (= next.p_del 0)
+      (=
+         next.p_nil
+         (or false next.y_nil))
+      (= 0 next.y_del)
+      (= next.x next.p)
+      (= next.x_del next.p_del)
+      (= next.x_nil next.p_nil)))
+(query
+   TS
+   (= x 1))
+(query
+   TS
+   (= x 2))

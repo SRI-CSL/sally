@@ -539,7 +539,7 @@ const system::trace_helper* pdkind_engine::get_trace() {
 
     // Get the model and add it to the trace
     model = solver->get_model();
-    d_trace->set_model(model, current_depth + 1, current_depth + cex_step);
+    d_trace->set_model(model, current_depth, current_depth + cex_step);
 
     // Done, pop the solver scope
     scope.pop();
