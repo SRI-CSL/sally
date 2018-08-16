@@ -81,6 +81,5 @@ add_library(parser
   sal/sal.cpp
   aiger/aiger.cpp
   aiger/aiger-1.9.4/aiger.c
-  command.cpp
   parser.cpp
 )

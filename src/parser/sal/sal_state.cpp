@@ -18,7 +18,7 @@
 
 #include "parser/sal/sal_state.h"
 #include "parser/parser.h"
-#include "parser/command.h"
+#include "command/command.h"
 
 #include "expr/term_manager.h"
 #include "expr/gc_relocator.h"
@@ -130,7 +130,7 @@ void sal_state::gc_collect(const gc_relocator& gc_reloc) {
   d_types.gc_relocate(gc_reloc);
 }
 
-command* sal_state::finalize() {
+cmd::command* sal_state::finalize() {
   return 0;
 }
 

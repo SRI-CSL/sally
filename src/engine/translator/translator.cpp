@@ -188,6 +188,17 @@ void translator::to_stream_nuxmv(std::ostream& out) const {
   tm().set_name_transformer(0);
 }
 
+static inline
+bool isalnum_not(char c) { return !isalnum(c); }
+
+static inline
+std::string escape_var_name(std::string name) {
+  if (find_if(name.begin(), name.end(), isalnum_not) != name.end()) {
+    name = "|" + name + "|";
+  }
+  return name;
+}
+
 void translator::to_stream_horn(std::ostream& out) const {
   // The state type
   const system::state_type* state_type = d_ts->get_state_type();
@@ -215,6 +226,8 @@ void translator::to_stream_horn(std::ostream& out) const {
   for (size_t i = 0; i < state_type_size; ++ i) {
     std::string id = tm().get_struct_type_field_id(state_type_term, i);
     expr::term_ref type = tm().get_struct_type_field_type(state_type_term, i);
+    std::string state_id = escape_var_name("state." + id);
+    std::string next_id = escape_var_name("next." + id);
     if (i) {
       out << " ";
       state_vars << " ";
@@ -223,11 +236,11 @@ void translator::to_stream_horn(std::ostream& out) const {
       quant_vars_state << " ";
     }
     out << type;
-    state_vars << "state." << id;
-    next_vars << "next." << id;
-    quant_vars_trans << "(state." << id << " " << type << ")";
-    quant_vars_state << "(state." << id << " " << type << ")";
-    quant_vars_trans << " (next." << id << " " << type << ")";
+    state_vars << state_id;
+    next_vars << next_id;
+    quant_vars_trans << "(" << state_id << " " << type << ")";
+    quant_vars_state << "(" << state_id << " " << type << ")";
+    quant_vars_trans << " (" << next_id << " " << type << ")";
   }
   out << ") Bool)" << std::endl;
   out << std::endl;
@@ -255,7 +268,7 @@ void translator::to_stream_horn(std::ostream& out) const {
 
   // The transition relation
   expr::term_ref T = d_ts->get_transition_relation();
-  out << ";; Transition relation state" << std::endl;
+  out << ";; Transition relation" << std::endl;
   out << "(assert" << std::endl;
   out << "  (forall (" << quant_vars_trans.str() << ")" << std::endl;
   out << "    (=> (and (invariant " << state_vars.str() << ")" << std::endl;
@@ -310,7 +323,7 @@ engine::result translator::query(const system::transition_system* ts, const syst
   return SILENT;
 }
 
-const system::state_trace* translator::get_trace() {
+const system::trace_helper* translator::get_trace() {
   throw exception("Not supported.");
 }
 

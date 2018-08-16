@@ -40,14 +40,8 @@ namespace kind {
  */
 class kind_engine : public engine {
 
-  /** SMT solver for proving (1) */
-  smt::solver* d_solver_1;
-
-  /** SMT solver for proving (2) */
-  smt::solver* d_solver_2;
-
   /** The trace we're building */
-  system::state_trace* d_trace;
+  system::trace_helper* d_trace;
 
   /** The invariant if proven */
   invariant d_invariant;
@@ -61,7 +55,7 @@ public:
   result query(const system::transition_system* ts, const system::state_formula* sf);
 
   /** Trace */
-  const system::state_trace* get_trace();
+  const system::trace_helper* get_trace();
 
   /** Invariant (not supported) */
   invariant get_invariant();

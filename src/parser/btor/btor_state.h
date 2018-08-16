@@ -24,7 +24,7 @@
 #include <antlr3.h>
 
 #include "system/context.h"
-#include "parser/command.h"
+#include "command/command.h"
 
 namespace sally {
 namespace parser {
@@ -112,7 +112,7 @@ public:
   void add_root(size_t id, size_t size, expr::term_ref t1);
 
   /** Returns the final parse command */
-  command* finalize() const;
+  cmd::command* finalize() const;
 
   /** Collect terms */
   void gc_collect(const expr::gc_relocator& gc_reloc);

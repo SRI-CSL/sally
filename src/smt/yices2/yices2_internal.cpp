@@ -18,6 +18,10 @@
 
 #ifdef WITH_YICES2
 
+#ifdef WITH_LIBPOLY
+#include "poly/rational.h"
+#include "poly/algebraic_number.h"
+#endif
 #include "smt/yices2/yices2_internal.h"
 #include "smt/yices2/yices2_term_cache.h"
 #include "utils/trace.h"
@@ -36,6 +40,15 @@ int yices2_internal::s_instances = 0;
 type_t yices2_internal::s_bool_type = NULL_TYPE;
 type_t yices2_internal::s_int_type = NULL_TYPE;
 type_t yices2_internal::s_real_type = NULL_TYPE;
+
+void yices2_internal::check_error(int ret, const char* error_msg) const {
+  if (ret < 0) {
+    std::stringstream ss;
+    char* error = yices_error_string();
+    ss << error_msg << ": " << error;
+    throw exception(ss.str());
+  }
+}
 
 yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
 : d_tm(tm)
@@ -64,15 +77,18 @@ yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
   d_bv1 = expr::term_ref_strong(d_tm, d_tm.mk_bitvector_constant(expr::bitvector(1, 1)));
 
   // The context
+  int32_t ret = 0; 
   if (opts.has_option("solver-logic")) {
     d_config = yices_new_config();
-    int32_t ret = yices_default_config_for_logic(d_config, opts.get_string("solver-logic").c_str());
-    if (ret < 0) {
-      std::stringstream ss;
-      char* error = yices_error_string();
-      ss << "Yices error (configuration creation): " << error;
-      throw exception(ss.str());
+    ret = yices_default_config_for_logic(d_config, opts.get_string("solver-logic").c_str());
+    check_error(ret, "Yices error (default configuration creation)");
+  }
+  if (opts.has_option("yices2-mcsat")) {
+    if (d_config == NULL) {
+      d_config = yices_new_config();
     }
+    ret = yices_set_config(d_config, "solver-type", "mcsat");
+    check_error(ret, "Yices error (mcsat option): ");
   }
   d_ctx = yices_new_context(d_config);
   if (d_ctx == 0) {
@@ -1097,6 +1113,8 @@ expr::model::ref yices2_internal::get_model() {
   assert(d_last_check_status == STATUS_SAT);
   assert(d_A_variables.size() > 0 || d_B_variables.size() > 0);
 
+  int32_t ret = 0;
+
   // Clear any data already there
   expr::model::ref m = new expr::model(d_tm, false);
 
@@ -1150,7 +1168,10 @@ expr::model::ref yices2_internal::get_model() {
     switch (d_tm.term_of(var_type).op()) {
     case expr::TYPE_BOOL: {
       int32_t value;
-      yices_get_bool_value(yices_model, yices_var, &value);
+      ret = yices_get_bool_value(yices_model, yices_var, &value);
+      if (ret < 0) {
+        throw exception("Error obtaining Bool value from Yices2 model.");
+      }
       var_value = expr::value(value);
       break;
     }
@@ -1158,7 +1179,10 @@ expr::model::ref yices2_internal::get_model() {
       // The integer mpz_t value
       mpz_t value;
       mpz_init(value);
-      yices_get_mpz_value(yices_model, yices_var, value);
+      ret = yices_get_mpz_value(yices_model, yices_var, value);
+      if (ret < 0) {
+        throw exception("Error obtaining integer value from Yices2 model.");
+      }
       expr::rational rational_value(value);
       var_value = expr::value(rational_value);
       // Clear the temps
@@ -1169,10 +1193,30 @@ expr::model::ref yices2_internal::get_model() {
       // The integer mpz_t value
       mpq_t value;
       mpq_init(value);
-      yices_get_mpq_value(yices_model, yices_var, value);
-      // Now, the rational
-      expr::rational rational_value(value);
-      var_value = expr::value(rational_value);
+      ret = yices_get_mpq_value(yices_model, yices_var, value);
+      // rational
+      if (ret == 0) {
+        expr::rational rational_value(value);
+        var_value = expr::value(rational_value);
+      } else {
+#ifdef WITH_LIBPOLY
+        lp_algebraic_number_t a;
+        lp_algebraic_number_construct_zero(&a);
+        ret = yices_get_algebraic_number_value(yices_model, yices_var, &a);
+        if (ret < 0) {
+          throw exception("Error obtaining real value from Yices2 model.");
+        }
+        // TODO: proper algebraic numbers
+        lp_rational_t a_q;
+        lp_rational_construct(&a_q);
+        lp_algebraic_number_to_rational(&a, &a_q);
+        var_value = expr::rational(&a_q);
+        lp_algebraic_number_destruct(&a);
+        lp_rational_destruct(&a_q);
+#else
+        throw exception("Error obtaining real value from Yices2 model.");
+#endif
+      }
       // Clear the temps
       mpq_clear(value);
       break;
@@ -1180,7 +1224,10 @@ expr::model::ref yices2_internal::get_model() {
     case expr::TYPE_BITVECTOR: {
       size_t size = d_tm.get_bitvector_type_size(var_type);
       int32_t* value = new int32_t[size];
-      yices_get_bv_value(yices_model, yices_var, value);
+      ret = yices_get_bv_value(yices_model, yices_var, value);
+      if (ret < 0) {
+        throw exception("Error obtaining bit-vector value from Yices2 model.");
+      }
       expr::bitvector bv = bitvector_from_int32(size, value);
       var_value = expr::value(bv);
       delete[] value;

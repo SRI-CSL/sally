@@ -18,11 +18,11 @@
 
 #include "smt/solver.h"
 #include "system/context.h"
-#include "system/state_trace.h"
 #include "engine/engine.h"
 #include "expr/term.h"
 
 #include <vector>
+#include "../../system/trace_helper.h"
 
 namespace sally {
 namespace bmc {
@@ -32,11 +32,8 @@ namespace bmc {
  */
 class bmc_engine : public engine {
 
-  /** SMT solver we're using */
-  smt::solver* d_solver;
-
   /** The trace we're building */
-  system::state_trace* d_trace;
+  system::trace_helper* d_trace;
 
 public:
 
@@ -47,7 +44,7 @@ public:
   result query(const system::transition_system* ts, const system::state_formula* sf);
 
   /** Trace */
-  const system::state_trace* get_trace();
+  const system::trace_helper* get_trace();
 
   /** Invariant (not supported) */
   invariant get_invariant();

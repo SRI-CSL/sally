@@ -20,7 +20,7 @@ sudo apt-get install libgmp-dev
 sudo apt-get install libboost-program-options-dev libboost-iostreams-dev libboost-test-dev libboost-thread-dev libboost-system-dev
 sudo apt-get install default-jre
 ```
-In addition, Sally needs an SMT solver for reasoning about the systems. It currently supports [Yices2](http://yices.csl.sri.com/) and [MathSAT5](http://mathsat.fbk.eu/), and for best results we recommend using both of them. 
+In addition, Sally needs an SMT solver for reasoning about the systems. It currently supports [Yices2](http://yices.csl.sri.com/) and [MathSAT5](http://mathsat.fbk.eu/). For best results we recommend using both Yices2 and MathSAT5. 
 
 ## How to Compile
 
@@ -42,8 +42,6 @@ cmake .. -DMATHSAT5_HOME=$MD
 make
 make check
 ```
-Of course, you can use both Yices2 and MathSAT by adding both options to 
-cmake as expected.
 
 if you have crab installed in the $MD directory, meaning that there
 are $MD/include/crab\_mcmt and $MD/lib directories with crab headers and
@@ -63,6 +61,11 @@ cmake .. -DCMAKE_BUILD_TYPE=Debug
 make
 make check
 ```
+
+In order to use the non-linear capabilities of Yices2 in Sally, the 
+version of Yices2 used mused be compiled with MCSAT enabled, and LibPoly 
+must be available. Similar to above, you can pass `-DLIBPOLY_HOME=$LPD` 
+to cmake if LibPoly is installed in a non-standard location. 
 
 ### Input Language
 
@@ -229,8 +232,8 @@ unknown
     
 * Checking the property with BMC with a bigger bound and showing any 
 counter-example traces
-> sally --engine bmc --bmc-max 20 --show-trace examples/example.mcmt
 ```bash
+> sally --engine bmc --bmc-max 20 --show-trace examples/example.mcmt
 unknown
 unknown
 unknown
@@ -260,13 +263,64 @@ invalid
 valid
 ```
     
-* Checking the properties with the ic3 engine using the combination of yices2
+* Checking the properties with the pdkind engine using the combination of yices2
   and MathSAT5 as the reasoning engine
 ```bash
-> sally --engine ic3 --solver y2m5 examples/example.mcmt 
+> sally --engine pdkind --solver y2m5 examples/example.mcmt 
 valid
 valid
 valid
 invalid
 valid
 ```
+
+* Checking nonlinear properties with Yices2 
+
+By relying on Yices2 with support for MCSAT, you can use Sally to reason 
+about (polynomial) non-linear systems using BMC and k-induction. The
+following example models two systems computing sums `S1 = 1 + 2 + ... + n` and
+`S2 = 1^2 + 2^2 + ... + n^2`, and asks whether `S1 = n*(n+1)/2` and 
+`S2 = n*(n+1)*(2n+1)/6`. 
+
+```lisp
+;; Maintain Sum and n
+(define-state-type ST ((Sum Real) (n Real)))
+;; Initial states: Sum = 0, n = 0
+(define-states Init ST (and (= Sum 0) (= n 0)))
+
+;; Transition: Sum += n; n ++;
+(define-transition Trans1 ST (and 
+  (= next.Sum (+ state.Sum state.n))
+  (= next.n (+ state.n 1))
+))   
+
+;; Transition system: Sum = 1 + 2 + ... + (n-1)
+(define-transition-system T1 ST Init Trans1)
+;; Sum = n*(n-1)/2
+(query T1 (= Sum (/ (* n (- n 1)) 2)))
+
+;; Transition: Sum += n^2; n ++;
+(define-transition Trans2 ST (and 
+    (= next.Sum (+ state.Sum (* state.n state.n)))
+    (= next.n (+ state.n 1))
+))   
+
+;; Transition system: Sum = 1^2 + 2^2 + ... + (n-1)^2
+(define-transition-system T2 ST Init Trans2)
+;; Sum = n*(n-1)/2
+(query T2 (= Sum (/ (* n (- n 1) (- (* 2 n) 1)) 6)))
+
+```
+
+We can prove these two properties with Sally by using Yices2 with MCSAT 
+as follows
+
+```bash
+> sally --engine kind --yices2-mcsat ../examples/example-nra.mcmt
+valid
+valid
+```
+
+
+  
+

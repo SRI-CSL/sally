@@ -24,7 +24,14 @@ options {
  
 @parser::includes {
   #include <string>
-  #include "parser/command.h"
+  #include "command/command.h"
+  #include "command/assume.h"
+  #include "command/declare_state_type.h"
+  #include "command/define_states.h"
+  #include "command/define_transition.h"
+  #include "command/define_transition_system.h"
+  #include "command/query.h"
+  #include "command/sequence.h" 
   #include "parser/mcmt/mcmt_state.h"
   using namespace sally;
 }
@@ -41,7 +48,7 @@ options {
 }
 
 /** Parses a command */
-command returns [parser::command* cmd = 0] 
+command returns [cmd::command* cmd = 0] 
   : (internal_command*) c = system_command { $cmd = c; }
   ;
 
@@ -51,7 +58,7 @@ internal_command
   ; 
 
 /** Parses a system definition command */  
-system_command returns [parser::command* cmd = 0] 
+system_command returns [cmd::command* cmd = 0] 
   : c = declare_state_type       { $cmd = c; }
   | c = define_states            { $cmd = c; }
   | c = define_transition        { $cmd = c; }
@@ -62,7 +69,7 @@ system_command returns [parser::command* cmd = 0]
   ;
   
 /** Declaration of a state type */
-declare_state_type returns [parser::command* cmd = 0]
+declare_state_type returns [cmd::command* cmd = 0]
 @declarations {
   std::string id;
   std::vector<std::string> state_vars;  
@@ -79,12 +86,12 @@ declare_state_type returns [parser::command* cmd = 0]
         variable_list[input_vars, input_types]? 
     ')' 
     {
-      $cmd = new parser::declare_state_type_command(id, STATE->mk_state_type(id, state_vars, state_types, input_vars, input_types));
+      $cmd = new cmd::declare_state_type(id, STATE->mk_state_type(id, state_vars, state_types, input_vars, input_types));
     }
   ; 
 
 /** Definition of a state set  */
-define_states returns [parser::command* cmd = 0]
+define_states returns [cmd::command* cmd = 0]
 @declarations {
   std::string id;
   std::string type_id;
@@ -96,13 +103,13 @@ define_states returns [parser::command* cmd = 0]
         	state_type = STATE->ctx().get_state_type(type_id); 
         }
         sf = state_formula[state_type] { 
-        	$cmd = new parser::define_states_command(id, sf); 
+        	$cmd = new cmd::define_states(id, sf); 
         }
     ')'
   ; 
 
 /** Definition of a transition  */
-define_transition returns [parser::command* cmd = 0]
+define_transition returns [cmd::command* cmd = 0]
 @declarations {
   std::string id;
   std::string type_id;  
@@ -114,13 +121,13 @@ define_transition returns [parser::command* cmd = 0]
           state_type = STATE->ctx().get_state_type(type_id); 
       }
       f = state_transition_formula[state_type] {
-          $cmd = new parser::define_transition_command(id, f); 
+          $cmd = new cmd::define_transition(id, f); 
       }
     ')'
   ; 
 
 /** Definition of a transition system  */
-define_transition_system returns [parser::command* cmd = 0]
+define_transition_system returns [cmd::command* cmd = 0]
 @declarations {
   std::string id;
   std::string type_id;  
@@ -135,13 +142,13 @@ define_transition_system returns [parser::command* cmd = 0]
       transition_relation = state_transition_formula[state_type]    
       {  
       	system::transition_system* T = new system::transition_system(state_type, initial_states, transition_relation); 
-        $cmd = new parser::define_transition_system_command(id, T);
+        $cmd = new cmd::define_transition_system(id, T);
       } 
     ')'
   ; 
 
 /** Assumptions  */
-assume returns [parser::command* cmd = 0]
+assume returns [cmd::command* cmd = 0]
 @declarations {
   std::string id;
   const system::state_type* state_type;
@@ -151,13 +158,13 @@ assume returns [parser::command* cmd = 0]
         state_type = STATE->ctx().get_transition_system(id)->get_state_type();
     }
     f = state_formula[state_type] { 
-    	$cmd = new parser::assume_command(STATE->ctx(), id, f);
+    	$cmd = new cmd::assume(STATE->ctx(), id, f);
     }
     ')'
   ; 
   
 /** Query  */
-query returns [parser::command* cmd = 0]
+query returns [cmd::command* cmd = 0]
 @declarations {
   std::string id;
   const system::state_type* state_type;
@@ -167,7 +174,7 @@ query returns [parser::command* cmd = 0]
         state_type = STATE->ctx().get_transition_system(id)->get_state_type();
     }
     f = state_formula[state_type] { 
-    	$cmd = new parser::query_command(STATE->ctx(), id, f);
+    	$cmd = new cmd::query(STATE->ctx(), id, f);
     }
     ')'
   ; 
@@ -251,7 +258,7 @@ term returns [expr::term_ref t = expr::term_ref()]
      expr::bitvector_extract extract(hi_value.get_unsigned(), lo_value.get_unsigned());
      t = STATE->tm().mk_bitvector_extract(s, extract);
     }
-  | '(' 'cond' { STATE->lsal_extensions() }?
+  | '(' 'cond' 
        ( '(' term_list[children] ')' )+
        '(' 'else' else_term = term ')'
        { 
@@ -350,7 +357,7 @@ term_op returns [expr::term_op op = expr::OP_LAST]
   | '=>'             { op = expr::TERM_IMPLIES; } 
   | 'xor'            { op = expr::TERM_XOR; }
   | 'ite'            { op = expr::TERM_ITE; }
-    // Equeality
+    // Equality
   | '='              { op = expr::TERM_EQ;  }
     // Arithmetic
   | '+'              { op = expr::TERM_ADD; }
@@ -420,7 +427,7 @@ type returns [expr::term_ref type]
        type = STATE->get_bitvector_type(int_value.get_unsigned());       
     }
   ;
-      
+
 /** Comments (skip) */
 COMMENT
   : ';' (~('\n' | '\r'))* { SKIP(); }
@@ -450,13 +457,13 @@ NUMERAL: DIGIT+;
 BIN_NUMERAL: '#b' ('0'|'1')+;
 
 /** Matches a binary numeral (sequence of digits) */
-HEX_NUMERAL: '#h' ('0'|'1')+;
+HEX_NUMERAL: '#x' HEX_DIGIT+;
 
 /** Matches a digit */
 fragment 
 DIGIT : '0'..'9';  
 
-/** MAthces a hexadecimal digit */
+/** Matches a hexadecimal digit */
 fragment 
 HEX_DIGIT : DIGIT | 'a'..'f' | 'A'..'F';
  

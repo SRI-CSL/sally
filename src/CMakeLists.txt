@@ -1,4 +1,4 @@
-set(sally_SRC_DIRS utils expr smt system parser engine ai)
+set(sally_SRC_DIRS utils expr smt system command parser ai engine)
 
 # Add all the subdirectories
 foreach(DIR ${sally_SRC_DIRS})
@@ -26,6 +26,9 @@ endforeach(DIR)
 target_link_libraries(sally ${sally_LIBS})
 if (YICES2_FOUND)
   target_link_libraries(sally ${YICES2_LIBRARY})
+endif()
+if (LIBPOLY_FOUND)
+  target_link_libraries(sally ${LIBPOLY_LIBRARY})
 endif()
 if (MATHSAT5_FOUND)
   target_link_libraries(sally ${MATHSAT5_LIBRARY})
@@ -59,7 +62,7 @@ foreach(FILE ${regressions})
     # Get the gold output
     file(READ "${FILE}.gold" GOLD_OUTPUT)
     # Set the output
-    set_tests_properties(${FILE} PROPERTIES PASS_REGULAR_EXPRESSION ${GOLD_OUTPUT})
+    set_tests_properties(${FILE} PROPERTIES PASS_REGULAR_EXPRESSION "${GOLD_OUTPUT}")
   endif()
   
 endforeach(FILE)
