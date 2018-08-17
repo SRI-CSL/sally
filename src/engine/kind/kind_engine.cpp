@@ -65,6 +65,7 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
 
   // The trace we are building
   d_trace = ts->get_trace_helper();
+  d_trace->clear_model();
 
   typedef std::vector<expr::term_ref> var_vec;
 

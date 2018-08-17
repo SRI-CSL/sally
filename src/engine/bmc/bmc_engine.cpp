@@ -42,6 +42,7 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
 
   // The trace we are using
   d_trace = ts->get_trace_helper();
+  d_trace->clear_model();
 
   // Initial states
   expr::term_ref initial_states = ts->get_initial_states();

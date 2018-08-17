@@ -89,6 +89,7 @@ void pdkind_engine::reset() {
   d_properties.clear();
   d_property_invalid = false;
   d_reachability.clear();
+  d_cex_manager.clear();
 }
 
 induction_obligation pdkind_engine::pop_induction_obligation() {
@@ -378,6 +379,7 @@ engine::result pdkind_engine::query(const system::transition_system* ts, const s
 
   // Make the trace
   d_trace = ts->get_trace_helper();
+  d_trace->clear_model();
 
   // Initialize the solvers
   if (d_smt) { delete d_smt; }
@@ -457,15 +459,12 @@ const system::trace_helper* pdkind_engine::get_trace() {
 
   size_t property_id = 0;
 
-  // Get the trace helper we are going to setup
-  system::trace_helper* trace_helper = d_transition_system->get_trace_helper();
-
   // Get the cex from the cex graph
   cex_manager::edge_vector cex_edges;
   expr::term_ref cex_start = d_cex_manager.get_full_cex(property_id, cex_edges);
   assert(!cex_start.is_null()); // Returns null if no path to property
 
-  // Compoute the size of the counter-example
+  // Computethe size of the counter-example
   size_t cex_length = 0;
   for (size_t i = 0; i < cex_edges.size(); ++ i) { cex_length += cex_edges[i].edge_length; }
 
@@ -474,10 +473,10 @@ const system::trace_helper* pdkind_engine::get_trace() {
 
   // Add all variables
   for (size_t k = 0; k <= cex_length; ++ k) {
-    const std::vector<expr::term_ref>& x = trace_helper->get_state_variables(k);
+    const std::vector<expr::term_ref>& x = d_trace->get_state_variables(k);
     solver->add_variables(x.begin(), x.end(), smt::solver::CLASS_A);
     if (k < cex_length) {
-      const std::vector<expr::term_ref>& i = trace_helper->get_input_variables(k);
+      const std::vector<expr::term_ref>& i = d_trace->get_input_variables(k);
       solver->add_variables(i.begin(), i.end(), smt::solver::CLASS_A);  
     }
   }
@@ -488,9 +487,9 @@ const system::trace_helper* pdkind_engine::get_trace() {
   // Get the initial model at s0 
   scope.push();
   expr::term_ref I = d_transition_system->get_initial_states(); 
-  I = trace_helper->get_state_formula(I, 0);
+  I = d_trace->get_state_formula(I, 0);
   solver->add(I, smt::solver::CLASS_A);
-  cex_start = trace_helper->get_state_formula(cex_start, 0);
+  cex_start = d_trace->get_state_formula(cex_start, 0);
   TRACE("pdkind::cex") << "Starting from " << cex_start << std::endl;
   solver->add(cex_start, smt::solver::CLASS_A);
   smt::solver::result res = solver->check();
@@ -498,6 +497,9 @@ const system::trace_helper* pdkind_engine::get_trace() {
   assert(res == smt::solver::SAT);
   expr::model::ref model = solver->get_model();
   scope.pop();
+
+  // Add model to trace
+  d_trace->set_model(model, 0, 0);
 
   // Construct the counter-example
   size_t current_depth = 0;
@@ -515,18 +517,18 @@ const system::trace_helper* pdkind_engine::get_trace() {
     scope.push();
 
     // Assert the previous model as the starting point
-    trace_helper->add_model_to_solver(model, current_depth, current_depth, solver, smt::solver::CLASS_A);
+    d_trace->add_model_to_solver(model, current_depth, current_depth, solver, smt::solver::CLASS_A);
 
     // Add the transition relation
     expr::term_ref T = d_transition_system->get_transition_relation(); 
     for (size_t k = current_depth; k < current_depth + cex_step; ++ k) {
-      expr::term_ref T_k = trace_helper->get_transition_formula(T, k);
+      expr::term_ref T_k = d_trace->get_transition_formula(T, k);
       solver->add(T_k, smt::solver::CLASS_A);
     }
 
     // Add the goal to reach 
     TRACE("pdkind::cex") << "cex_next = " << cex_next << std::endl;
-    cex_next = trace_helper->get_state_formula(cex_next, current_depth + cex_step);
+    cex_next = d_trace->get_state_formula(cex_next, current_depth + cex_step);
     TRACE("pdkind::cex") << "cex_next at " << current_depth + cex_step << " = " << cex_next << std::endl;
     solver->add(cex_next, smt::solver::CLASS_A);
 
@@ -537,7 +539,7 @@ const system::trace_helper* pdkind_engine::get_trace() {
 
     // Get the model and add it to the trace
     model = solver->get_model();
-    trace_helper->set_model(model, current_depth, current_depth + cex_step);
+    d_trace->set_model(model, current_depth, current_depth + cex_step);
 
     // Done, pop the solver scope
     scope.pop();
@@ -546,7 +548,10 @@ const system::trace_helper* pdkind_engine::get_trace() {
     current_depth += cex_step;
   }
 
-  return trace_helper;
+  // Remove the solver
+  delete solver;
+
+  return d_trace;
 }
 
 void pdkind_engine::gc_collect(const expr::gc_relocator& gc_reloc) {

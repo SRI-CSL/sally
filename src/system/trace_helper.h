@@ -101,6 +101,9 @@ public:
   /** Get the size of the trace */
   size_t size() const;
 
+  /** Clear the trace helper (remove all model information) */
+  void clear_model();
+
   /**
    * Get the state variables at k.
    */
