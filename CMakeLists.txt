@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.1)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 project(sally CXX C)
@@ -54,14 +54,14 @@ if (LIBPOLY_FOUND)
 endif()
 
 # Find Yices if LibPoly is there
-if (LIBPOLY_FOUND)
+#if (LIBPOLY_FOUND)
   SET(YICES2_HOME CACHE STRING "Yices2 installation directory")
   find_package(Yices2 2.6.0)
   if (YICES2_FOUND)
     add_definitions(-DWITH_YICES2)
     include_directories(${YICES2_INCLUDE_DIR}) 
   endif()
-endif()
+  #endif()
 
 # Find MathSAT5
 SET(MATHSAT5_HOME CACHE STRING "MathSAT5 installation directory")
@@ -78,6 +78,19 @@ endif()
 #  add_definitions(-DWITH_Z3)
 #  include_directories(${Z3_INCLUDE_DIR})
 #endif()
+
+#Find Opensmt2
+#TODO: ugly way until opensmt exports cmake package
+find_library(OPENSMT2_LIB NAMES opensmt2 libopensm2)
+if(OPENSMT2_LIB)
+ find_path(OPENSMT2_INCLUDE opensmt/opensmt2.h)
+ if(OPENSMT2_INCLUDE)
+     message("Opensmt found!")
+     set(OPENSMT2_FOUND TRUE)
+     add_definitions(-DWITH_OPENSMT2)
+     include_directories(${OPENSMT2_INCLUDE})
+ endif(OPENSMT2_INCLUDE)
+endif(OPENSMT2_LIB)
 
 # Make sure antlr C runtime is here
 include(ExternalProject) 

@@ -36,6 +36,14 @@ endif()
 if (Z3_FOUND)
   target_link_libraries(sally ${Z3_LIBRARY})
 endif()
+if (OPENSMT2_FOUND)
+    set_property(TARGET sally PROPERTY CXX_STANDARD 11)
+    set_property(TARGET smt PROPERTY CXX_STANDARD 11)
+    set_property(TARGET sally PROPERTY CXX_STANDARD_REQUIRED ON)
+    set_property(TARGET smt PROPERTY CXX_STANDARD_REQUIRED ON)
+  target_link_libraries(sally ${OPENSMT2_LIB})
+endif()
+
 target_link_libraries(sally ${Boost_LIBRARIES} ${GMP_LIBRARY})
 
 # Add tests
