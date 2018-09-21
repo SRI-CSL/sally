@@ -48,10 +48,10 @@ PTRef sally::smt::opensmt2_internal::sally_to_osmt(sally::expr::term_ref ref) {
     PTRef result = PTRef_Undef;
     switch(t_op) {
         case expr::VARIABLE:
-            std::cout << t << std::endl;
+//            std::cout << t << std::endl;
             result = [this,&t]() {
                 auto type = d_tm.term_of(t[0]).op();
-                std::cout << d_tm.term_of(t[0]) << std::endl;
+//                std::cout << d_tm.term_of(t[0]) << std::endl;
                 switch(type) {
                     case expr::TYPE_BOOL:
                         return get_logic().mkBoolVar(d_tm.get_variable_name(t).c_str());
