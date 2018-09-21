@@ -45,6 +45,11 @@ void opensmt2::add(expr::term_ref f, formula_class f_class) {
   d_internal->add(f, f_class);
 }
 
+void opensmt2::add_variable(expr::term_ref var, variable_class f_class) {
+  solver::add_variable(var, f_class);
+  d_internal->add_variable(var, f_class);
+}
+
 solver::result opensmt2::check() {
     TRACE("opensmt2") << "opensmt2[" << d_internal->instance() << "]: check()" << std::endl;
     return d_internal->check();
@@ -58,8 +63,7 @@ void opensmt2::check_model() {
 
 expr::model::ref opensmt2::get_model() const {
     TRACE("opensmt2") << "opensmt2[" << d_internal->instance() << "]: get_model()" << std::endl;
-//    return d_internal->get_model();
-    throw "Unsupported";
+    return d_internal->get_model();
 }
 
 void opensmt2::push() {
@@ -125,10 +129,7 @@ void opensmt2::gc() {
 //  d_internal->generalize(type, m, projection_out);
 //}
 //
-//void yices2::add_variable(expr::term_ref var, variable_class f_class) {
-//  solver::add_variable(var, f_class);
-//  d_internal->add_variable(var, f_class);
-//}
+
 //
 //void yices2::gc() {
 //  d_internal->gc();

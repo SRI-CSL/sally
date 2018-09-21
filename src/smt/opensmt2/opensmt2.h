@@ -41,40 +41,42 @@ public:
     virtual ~opensmt2();
 
     /** Features */
-    bool supports(feature f) const;
+    bool supports(feature f) const override;
 
     /** Add an assertion f to the solver */
-    void add(expr::term_ref f, formula_class f_class);
+    void add(expr::term_ref f, formula_class f_class) override;
+
+    void add_variable(expr::term_ref var, variable_class f_class) override;
 
     /** Check the assertions for satisfiability */
-    result check();
+    result check() override;
 
     /** Check the model (debug) */
-    void check_model();
+    void check_model() override;
 
     /** Get the model */
-    expr::model::ref get_model() const;
+    expr::model::ref get_model() const override;
 
     /** Push the solving context */
-    void push();
+    void push() override;
 
     /** Pop the solving context */
-    void pop();
+    void pop() override;
 
     /** Generalize the last sat result using quantifier elimination. */
-    void generalize(generalization_type type, std::vector<expr::term_ref>& out);
+    void generalize(generalization_type type, std::vector<expr::term_ref>& out) override;
 
     /** Interpolate the last UNSAT result */
-    void interpolate(std::vector<expr::term_ref>& out);
+    void interpolate(std::vector<expr::term_ref>& out) override;
 
     /** Unsat core of the last UNSAT result */
-    void get_unsat_core(std::vector<expr::term_ref>& out);
+    void get_unsat_core(std::vector<expr::term_ref>& out) override;
 
     /** Collect terms */
-    void gc_collect(const expr::gc_relocator& gc_reloc);
+    void gc_collect(const expr::gc_relocator& gc_reloc) override;
 
     /** Collect garbage */
-    void gc();
+    void gc() override;
 };
 
 }

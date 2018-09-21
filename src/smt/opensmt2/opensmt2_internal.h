@@ -44,6 +44,10 @@ public:
 
     void pop();
 
+    expr::model::ref get_model();
+
+    void add_variable(expr::term_ref var, solver::variable_class f_class);
+
 
 private:
     MainSolver & get_main_solver() { return osmt->getMainSolver(); }
@@ -59,6 +63,8 @@ private:
     size_t d_instance;
 
     sstat d_last_check_status;
+
+    std::vector<expr::term_ref> d_variables;
 
     expr::term_manager& d_tm;
 

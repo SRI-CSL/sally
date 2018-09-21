@@ -8,6 +8,13 @@
 
 #endif // WITH_OPENSMT2
 
+namespace{
+    template<typename C, typename E>
+    bool contains(const C& container, const E& element) {
+      return std::find(container.begin(), container.end(), element) != container.end();
+    }
+}
+
 sally::smt::opensmt2_internal::opensmt2_internal(sally::expr::term_manager & tm, const sally::options & opts) :
     d_tm{tm}
 {
@@ -152,4 +159,56 @@ PTRef sally::smt::opensmt2_internal::mk_osmt_term(sally::expr::term_op op, size_
             assert(false);
     }
     return PTRef_Undef;
+}
+
+sally::expr::model::ref sally::smt::opensmt2_internal::get_model() {
+    // Create new model
+    expr::model::ref m = new expr::model(d_tm, false);
+
+    // Get the model from mathsat
+    for (size_t i = 0; i < d_variables.size(); ++ i) {
+        expr::term_ref var = d_variables[i];
+        expr::term_ref var_type = d_tm.type_of(var);
+        expr::value var_value;
+
+        PTRef m_var = sally_to_osmt(var);
+        const char* val = get_main_solver().getValue(m_var).val;
+
+        switch (d_tm.term_of(var_type).op()) {
+            case expr::TYPE_BOOL: {
+              assert(strcmp(val, "true") == 0 || strcmp(val, "false") == 0);
+              var_value = expr::value(strcmp(val, "true") == 0);
+                break;
+            }
+            case expr::TYPE_INTEGER: {
+                throw "Not implemented yet";
+                break;
+            }
+            case expr::TYPE_REAL: {
+                mpq_t value;
+                mpq_init(value);
+                mpq_set_str(value, val, 10);
+                var_value = expr::value(expr::rational(value));
+                mpq_clear(value);
+                break;
+            }
+            case expr::TYPE_BITVECTOR: {
+                throw "Opensmt does not support bit-vectors";
+                break;
+            }
+            default:
+                assert(false);
+        }
+
+        // Add the association
+        m->set_variable_value(var, var_value);
+    }
+    return m;
+}
+
+void
+sally::smt::opensmt2_internal::add_variable(sally::expr::term_ref var, sally::smt::solver::variable_class f_class) {
+  assert(!contains(d_variables, var));
+  d_variables.push_back(var);
+
 }
