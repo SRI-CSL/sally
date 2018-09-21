@@ -66,6 +66,8 @@ public:
     /** Generalize the last sat result using quantifier elimination. */
     void generalize(generalization_type type, std::vector<expr::term_ref>& out) override;
 
+    void generalize(generalization_type type, expr::model::ref m, std::vector<expr::term_ref>& out) override;
+
     /** Interpolate the last UNSAT result */
     void interpolate(std::vector<expr::term_ref>& out) override;
 

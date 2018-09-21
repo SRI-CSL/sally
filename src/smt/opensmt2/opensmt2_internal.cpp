@@ -13,6 +13,18 @@ namespace{
     bool contains(const C& container, const E& element) {
       return std::find(container.begin(), container.end(), element) != container.end();
     }
+
+    std::string rational_to_string(sally::expr::rational const & r){
+      std::stringstream ss;
+      r.to_stream(ss);
+      std::string num = ss.str();
+      if (r.sgn() < 0){
+        num.erase(std::remove_if(num.begin(), num.end(), [](char c){
+          return isspace(c) || c == '(' || c == ')';
+        }), num.end());
+      }
+      return num;
+    }
 }
 
 sally::smt::opensmt2_internal::opensmt2_internal(sally::expr::term_manager & tm, const sally::options & opts) :
@@ -79,9 +91,8 @@ PTRef sally::smt::opensmt2_internal::sally_to_osmt(sally::expr::term_ref ref) {
             result = d_tm.get_boolean_constant(t) ? get_logic().getTerm_true() : get_logic().getTerm_false();
             break;
         case expr::CONST_RATIONAL: {
-            std::stringstream ss;
-            d_tm.get_rational_constant(t).to_stream(ss);
-            result = get_lralogic().mkConst(ss.str().c_str());
+            std::string num = rational_to_string(d_tm.get_rational_constant(t));
+            result = get_lralogic().mkConst(num.c_str());
             break;
         }
         case expr::TERM_ITE:
@@ -216,5 +227,30 @@ void
 sally::smt::opensmt2_internal::add_variable(sally::expr::term_ref var, sally::smt::solver::variable_class f_class) {
   assert(!contains(d_variables, var));
   d_variables.push_back(var);
+
+}
+
+void sally::smt::opensmt2_internal::generalize(sally::smt::solver::generalization_type type,
+                                               const set<sally::expr::term_ref> &vars_to_keep,
+                                               const set<sally::expr::term_ref> &vars_to_elim,
+                                               expr::model::ref m,
+                                               vector<sally::expr::term_ref> &out) {
+  std::set<expr::term_ref>::const_iterator it = vars_to_keep.begin(), it_end = vars_to_keep.end();
+  for (; it != it_end; ++it) {
+    // var = value
+    expr::term_ref var = *it;
+    assert(m->has_value(var));
+    expr::term_ref value = m->get_term_value(var).to_term(d_tm);
+
+    if (d_tm.type_of(var) == d_tm.boolean_type()) {
+      if (d_tm.get_boolean_constant(d_tm.term_of(value))) {
+        out.push_back(var);
+      } else {
+        out.push_back(d_tm.mk_term(expr::TERM_NOT, var));
+      }
+    } else {
+      out.push_back(d_tm.mk_term(expr::TERM_EQ, var, value));
+    }
+  }
 
 }

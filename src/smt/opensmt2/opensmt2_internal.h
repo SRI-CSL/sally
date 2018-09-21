@@ -49,6 +49,12 @@ public:
 
     void add_variable(expr::term_ref var, solver::variable_class f_class);
 
+    void generalize(solver::generalization_type type,
+        const std::set<expr::term_ref>& vars_to_keep,
+        const std::set<expr::term_ref>& vars_to_elim,
+        expr::model::ref m,
+        std::vector<expr::term_ref>& out);
+
 
 private:
     MainSolver & get_main_solver() { return osmt->getMainSolver(); }
