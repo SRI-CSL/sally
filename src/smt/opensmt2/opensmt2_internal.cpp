@@ -14,6 +14,9 @@ sally::smt::opensmt2_internal::opensmt2_internal(sally::expr::term_manager & tm,
     auto logic_str = opts.get_string("solver-logic");
     if (logic_str == "QF-LRA" || logic_str == "QF_LRA") {
         osmt = new Opensmt(qf_lra, "osmt_solver");
+        const char* msg;
+        osmt->getConfig().setOption(":time-queries", SMTOption{0}, msg);
+        assert(strcmp(msg, "ok") == 0);
     }
 }
 
