@@ -17,5 +17,6 @@ add_library(smt
   y2z3/y2z3.cpp
   opensmt2/opensmt2.cpp
   opensmt2/opensmt2_internal.cpp
+  opensmt2/opensmt2_term_cache.cpp
 )
 

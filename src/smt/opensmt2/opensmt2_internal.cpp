@@ -17,12 +17,16 @@ namespace{
 
 sally::smt::opensmt2_internal::opensmt2_internal(sally::expr::term_manager & tm, const sally::options & opts) :
     d_tm{tm}
+    , term_cache{}
 {
     auto logic_str = opts.get_string("solver-logic");
     if (logic_str == "QF-LRA" || logic_str == "QF_LRA") {
         osmt = new Opensmt(qf_lra, "osmt_solver");
         const char* msg;
-        osmt->getConfig().setOption(":time-queries", SMTOption{0}, msg);
+        bool res = osmt->getConfig().setOption(":time-queries", SMTOption{0}, msg);
+        assert(res);
+        assert(strcmp(msg, "ok") == 0);
+        res = osmt->getConfig().setOption(":verbosity", SMTOption{2}, msg);
         assert(strcmp(msg, "ok") == 0);
     }
 }
@@ -50,9 +54,10 @@ void sally::smt::opensmt2_internal::pop() {
 }
 
 PTRef sally::smt::opensmt2_internal::sally_to_osmt(sally::expr::term_ref ref) {
+  PTRef result = term_cache.get_term_cache(ref);
+  if (result != PTRef_Undef) { return result; }
     const expr::term& t = d_tm.term_of(ref);
     expr::term_op t_op = t.op();
-    PTRef result = PTRef_Undef;
     switch(t_op) {
         case expr::VARIABLE:
 //            std::cout << t << std::endl;
@@ -107,6 +112,7 @@ PTRef sally::smt::opensmt2_internal::sally_to_osmt(sally::expr::term_ref ref) {
         default:
             assert(false);
     }
+    term_cache.set_term_cache(ref, result);
     return result;
 }
 

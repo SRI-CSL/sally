@@ -23,6 +23,7 @@
 #include "expr/term_manager.h"
 #include "utils/options.h"
 #include "smt/solver.h"
+#include "opensmt2_term_cache.h"
 #include <opensmt/opensmt2.h>
 
 namespace sally {
@@ -69,6 +70,8 @@ private:
     expr::term_manager& d_tm;
 
     Opensmt * osmt;
+
+    opensmt2_term_cache term_cache;
 };
 
 }
