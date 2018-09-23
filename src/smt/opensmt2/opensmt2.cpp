@@ -104,7 +104,8 @@ bool opensmt2::supports(solver::feature f) const {
 }
 
 void opensmt2::interpolate(std::vector<expr::term_ref> & out) {
-    solver::interpolate(out);
+  TRACE("opensmt2") << "opensmt2[" << d_internal->instance() << "]: interpolating" << std::endl;
+  d_internal->interpolate(out);
 }
 
 void opensmt2::get_unsat_core(std::vector<expr::term_ref> & out) {

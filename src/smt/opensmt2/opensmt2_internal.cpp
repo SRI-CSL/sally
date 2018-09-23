@@ -27,30 +27,47 @@ namespace{
     }
 }
 
-sally::smt::opensmt2_internal::opensmt2_internal(sally::expr::term_manager & tm, const sally::options & opts) :
+unsigned int sally::smt::opensmt2_internal::instance_id = 0;
+
+sally::smt::opensmt2_internal::opensmt2_internal(sally::expr::term_manager &tm, const sally::options &opts) :
     d_tm{tm}
-    , term_cache{}
-{
-    auto logic_str = opts.get_string("solver-logic");
-    if (logic_str == "QF-LRA" || logic_str == "QF_LRA") {
-        osmt = new Opensmt(qf_lra, "osmt_solver");
-        const char* msg;
-        bool res = osmt->getConfig().setOption(":time-queries", SMTOption{0}, msg);
-        assert(res);
-        assert(strcmp(msg, "ok") == 0);
-        res = osmt->getConfig().setOption(":verbosity", SMTOption{2}, msg);
-        assert(strcmp(msg, "ok") == 0);
-    }
+    , d_instance{instance_id++}
+    , term_cache{} {
+  stacked_A_partitions.emplace_back();
+  auto logic_str = opts.get_string("solver-logic");
+  if (logic_str == "QF-LRA" || logic_str == "QF_LRA") {
+    osmt = new Opensmt(qf_lra, "osmt_solver");
+    const char *msg;
+    bool res = osmt->getConfig().setOption(":time-queries", SMTOption{0}, msg);
+    assert(res);
+    assert(strcmp(msg, "ok") == 0);
+    res = osmt->getConfig().setOption(":verbosity", SMTOption{2}, msg);
+    assert(strcmp(msg, "ok") == 0);
+//    res = osmt->getConfig().setOption(":dump-query", SMTOption(1), msg);
+//    res = osmt->getConfig().setOption(":dump-query-name", SMTOption("sally"), msg);
+  }
 }
 
 void sally::smt::opensmt2_internal::add(sally::expr::term_ref ref, sally::smt::solver::formula_class f_class) {
     PTRef ptref = sally_to_osmt(ref);
     char** msg = nullptr;
-    get_main_solver().insertFormula(ptref, msg);
+    get_main_solver().insertFormula(ptref, current_partition, msg);
+//    std::cout << "Assigning partition " << current_partition << " to fla:\n" << get_logic().printTerm(ptref) << '\n';
+    // A and T formula for A-part of interpolation problem; B formula form B-part
+    if(f_class == sally::smt::solver::CLASS_A || f_class == sally::smt::solver::CLASS_T) {
+      stacked_A_partitions[stack_level].push_back(current_partition);
+    }
+    ++current_partition;
+
 }
 
 sally::smt::solver::result sally::smt::opensmt2_internal::check() {
     auto res = get_main_solver().check();
+//    std::cout << "Solver " << instance() << " got result: " << [res](){
+//      if(res == s_True) return "SAT";
+//      if(res == s_False) return "UNSAT";
+//      return "UNKNOWN";
+//    }() << '\n';
     if (res == s_True) { return solver::SAT; }
     if (res == s_False) { return solver::UNSAT; }
     return solver::UNKNOWN;
@@ -58,11 +75,17 @@ sally::smt::solver::result sally::smt::opensmt2_internal::check() {
 
 void sally::smt::opensmt2_internal::push() {
     get_main_solver().push();
+    ++stack_level;
+    stacked_A_partitions.emplace_back();
 }
 
 void sally::smt::opensmt2_internal::pop() {
-    bool res = get_main_solver().pop();
-    assert(res);
+  bool res = get_main_solver().pop();
+  assert(res);
+  assert(stacked_A_partitions.size() == stack_level + 1); // we start at level 0
+  --stack_level;
+  assert(stack_level == 0); // TODO interpolation with incremental solving may not work properly
+  stacked_A_partitions.pop_back();
 }
 
 PTRef sally::smt::opensmt2_internal::sally_to_osmt(sally::expr::term_ref ref) {
@@ -178,6 +201,10 @@ PTRef sally::smt::opensmt2_internal::mk_osmt_term(sally::expr::term_op op, size_
     return PTRef_Undef;
 }
 
+sally::expr::term_ref sally::smt::opensmt2_internal::osmt_to_sally(PTRef ref) {
+  throw "Not implemented yet!";
+}
+
 sally::expr::model::ref sally::smt::opensmt2_internal::get_model() {
     // Create new model
     expr::model::ref m = new expr::model(d_tm, false);
@@ -253,4 +280,29 @@ void sally::smt::opensmt2_internal::generalize(sally::smt::solver::generalizatio
     }
   }
 
+}
+
+void sally::smt::opensmt2_internal::interpolate(vector<sally::expr::term_ref> &out) {
+  assert(get_main_solver().getStatus() == s_False);
+  std::vector<PTRef> itps;
+  auto & smt_solver = get_main_solver().getSMTSolver();
+  auto A_mask = get_A_mask();
+  smt_solver.createProofGraph();
+//  std::cout << "Interpolation mask is: " << A_mask.get_str() << '\n';
+  get_main_solver().getSMTSolver().getSingleInterpolant(itps, A_mask);
+  assert(itps.size() == 1);
+  smt_solver.deleteProofGraph();
+  PTRef itp = itps[0];
+//  std::cout << get_logic().printTerm(itp) << std::endl;
+  out.push_back(osmt_to_sally(itp));
+}
+
+ipartitions_t sally::smt::opensmt2_internal::get_A_mask() const {
+  ipartitions_t A_mask = 0;
+  for (auto const & stack_level_partitions : stacked_A_partitions) {
+    for (auto const & partition_idx : stack_level_partitions){
+      setbit(A_mask, partition_idx);
+    }
+  }
+  return A_mask;
 }

@@ -55,8 +55,11 @@ public:
         expr::model::ref m,
         std::vector<expr::term_ref>& out);
 
+    void interpolate(std::vector<expr::term_ref> & out);
+
 
 private:
+    static unsigned int instance_id;
     MainSolver & get_main_solver() { return osmt->getMainSolver(); }
 
     Logic & get_logic() { return osmt->getLogic(); }
@@ -65,19 +68,29 @@ private:
 
     PTRef sally_to_osmt(sally::expr::term_ref ref);
 
+    sally::expr::term_ref osmt_to_sally(PTRef ref);
+
     PTRef mk_osmt_term(expr::term_op op, size_t n, std::vector<PTRef> children);
-
-    size_t d_instance;
-
-    sstat d_last_check_status;
 
     std::vector<expr::term_ref> d_variables;
 
     expr::term_manager& d_tm;
 
+    size_t d_instance;
+
+    sstat d_last_check_status;
+
     Opensmt * osmt;
 
     opensmt2_term_cache term_cache;
+
+    unsigned int stack_level = 0;
+
+    std::vector<std::vector<unsigned int>> stacked_A_partitions;
+
+    unsigned int current_partition = 0;
+
+    ipartitions_t get_A_mask() const;
 };
 
 }
