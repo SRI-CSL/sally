@@ -202,7 +202,93 @@ PTRef sally::smt::opensmt2_internal::mk_osmt_term(sally::expr::term_op op, size_
 }
 
 sally::expr::term_ref sally::smt::opensmt2_internal::osmt_to_sally(PTRef ref) {
-  throw "Not implemented yet!";
+  expr::term_ref result;
+
+  // Check the cache
+  result = term_cache.get_osmt_term_cache(ref);
+  if (!result.is_null()) {
+    return result;
+  }
+
+  auto &logic = get_logic();
+  auto &lralogic = get_lralogic();
+  if (logic.isTrue(ref)) {
+    result = d_tm.mk_boolean_constant(true);
+  } else if (logic.isFalse(ref)) {
+    result = d_tm.mk_boolean_constant(false);
+  } else if (lralogic.isConstant(ref)) {
+    auto real = lralogic.getNumConst(ref);
+    auto str_representation = real.get_str();
+    mpq_t number;
+    mpq_init(number);
+    mpq_set_str(number, str_representation.c_str(), 10);
+    expr::rational rational(number);
+    result = d_tm.mk_rational_constant(rational);
+    mpq_clear(number);
+  } else if (logic.isAnd(ref)) {
+    auto const &pterm = logic.getPterm(ref);
+    std::vector<expr::term_ref> children;
+    for (size_t i = 0; i < pterm.size(); ++i) {
+      children.push_back(osmt_to_sally(pterm[i]));
+    }
+    result = d_tm.mk_and(children);
+  } else if (logic.isOr(ref)) {
+    auto const &pterm = logic.getPterm(ref);
+    std::vector<expr::term_ref> children;
+    for (size_t i = 0; i < pterm.size(); ++i) {
+      children.push_back(osmt_to_sally(pterm[i]));
+    }
+    result = d_tm.mk_or(children);
+  } else if (logic.isNot(ref)) {
+    auto const &pterm = logic.getPterm(ref);
+    assert(pterm.size() == 1);
+    result = d_tm.mk_term(expr::TERM_NOT, osmt_to_sally(pterm[0]));
+  } else if (logic.isIff(ref)) {
+    assert(logic.getPterm(ref).size() == 2);
+    auto const &child1 = logic.getPterm(ref)[0];
+    auto const &child2 = logic.getPterm(ref)[1];
+    result = d_tm.mk_term(expr::TERM_EQ, osmt_to_sally(child1), osmt_to_sally(child2));
+  } else if (logic.isIte(ref)) {
+    assert(logic.getPterm(ref).size() == 3);
+    auto const &child1 = logic.getPterm(ref)[0];
+    auto const &child2 = logic.getPterm(ref)[1];
+    auto const &child3 = logic.getPterm(ref)[2];
+    result = d_tm.mk_term(expr::TERM_ITE, osmt_to_sally(child1), osmt_to_sally(child2), osmt_to_sally(child3));
+  } else if (lralogic.isEquality(ref)) {
+    assert(logic.getPterm(ref).size() == 2);
+    auto const &child1 = logic.getPterm(ref)[0];
+    auto const &child2 = logic.getPterm(ref)[1];
+    result = d_tm.mk_term(expr::TERM_EQ, osmt_to_sally(child1), osmt_to_sally(child2));
+  } else if (lralogic.isNumLeq(ref)) {
+    assert(logic.getPterm(ref).size() == 2);
+    auto const &child1 = logic.getPterm(ref)[0];
+    auto const &child2 = logic.getPterm(ref)[1];
+    result = d_tm.mk_term(expr::TERM_LEQ, osmt_to_sally(child1), osmt_to_sally(child2));
+  } else if (lralogic.isNumPlus(ref)) {
+    auto const &pterm = logic.getPterm(ref);
+    std::vector<expr::term_ref> children;
+    for (size_t i = 0; i < pterm.size(); ++i) {
+      children.push_back(osmt_to_sally(pterm[i]));
+    }
+    result = d_tm.mk_term(expr::TERM_ADD, children);
+  } else if (lralogic.isNumTimes(ref)) {
+    auto const &pterm = logic.getPterm(ref);
+    std::vector<expr::term_ref> children;
+    for (size_t i = 0; i < pterm.size(); ++i) {
+      children.push_back(osmt_to_sally(pterm[i]));
+    }
+    result = d_tm.mk_term(expr::TERM_MUL, children);
+  } else { assert(false); }
+
+  // At this point we need to be non-null
+  if (result.is_null()) {
+    throw exception("OpenSMT error (term creation)");
+  }
+
+  // Set the cache ref -> result
+  term_cache.set_osmt_term_cache(ref, result);
+
+  return result;
 }
 
 sally::expr::model::ref sally::smt::opensmt2_internal::get_model() {
