@@ -109,6 +109,9 @@ PTRef sally::smt::opensmt2_internal::sally_to_osmt(sally::expr::term_ref ref) {
                 }
                 return PTRef_Undef;
             }();
+            assert(result != PTRef_Undef);
+            // for the variables we need to remember both ways of translation
+            term_cache.set_osmt_term_cache(result, ref);
             break;
         case expr::CONST_BOOL:
             result = d_tm.get_boolean_constant(t) ? get_logic().getTerm_true() : get_logic().getTerm_false();
