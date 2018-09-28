@@ -15,15 +15,7 @@ namespace{
     }
 
     std::string rational_to_string(sally::expr::rational const & r){
-      std::stringstream ss;
-      r.to_stream(ss);
-      std::string num = ss.str();
-      if (r.sgn() < 0){
-        num.erase(std::remove_if(num.begin(), num.end(), [](char c){
-          return isspace(c) || c == '(' || c == ')';
-        }), num.end());
-      }
-      return num;
+      return r.mpq().get_str();
     }
 }
 
