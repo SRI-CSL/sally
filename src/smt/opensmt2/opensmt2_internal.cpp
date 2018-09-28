@@ -38,8 +38,8 @@ sally::smt::opensmt2_internal::opensmt2_internal(sally::expr::term_manager &tm, 
     (void) res;
     assert(res);
     assert(strcmp(msg, "ok") == 0);
-    res = osmt->getConfig().setOption(":verbosity", SMTOption{2}, msg);
-    assert(strcmp(msg, "ok") == 0);
+//    res = osmt->getConfig().setOption(":verbosity", SMTOption{2}, msg);
+//    assert(strcmp(msg, "ok") == 0);
 //    res = osmt->getConfig().setOption(":dump-query", SMTOption(1), msg);
 //    res = osmt->getConfig().setOption(":dump-query-name", SMTOption("sally"), msg);
   }
