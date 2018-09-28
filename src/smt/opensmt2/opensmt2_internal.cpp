@@ -6,7 +6,10 @@
 
 #include "opensmt2_internal.h"
 
-#endif // WITH_OPENSMT2
+#include <string>
+#include <algorithm>
+
+#include "expr/rational.h"
 
 namespace{
     template<typename C, typename E>
@@ -31,6 +34,7 @@ sally::smt::opensmt2_internal::opensmt2_internal(sally::expr::term_manager &tm, 
     osmt = new Opensmt(qf_lra, "osmt_solver");
     const char *msg;
     bool res = osmt->getConfig().setOption(":time-queries", SMTOption{0}, msg);
+    (void) res;
     assert(res);
     assert(strcmp(msg, "ok") == 0);
     res = osmt->getConfig().setOption(":verbosity", SMTOption{2}, msg);
@@ -73,6 +77,7 @@ void sally::smt::opensmt2_internal::push() {
 
 void sally::smt::opensmt2_internal::pop() {
   bool res = get_main_solver().pop();
+  (void) res;
   assert(res);
   assert(stacked_A_partitions.size() == stack_level + 1); // we start at level 0
   --stack_level;
@@ -223,14 +228,14 @@ sally::expr::term_ref sally::smt::opensmt2_internal::osmt_to_sally(PTRef ref) {
   } else if (logic.isAnd(ref)) {
     auto const &pterm = logic.getPterm(ref);
     std::vector<expr::term_ref> children;
-    for (size_t i = 0; i < pterm.size(); ++i) {
+    for (int i = 0; i < pterm.size(); ++i) {
       children.push_back(osmt_to_sally(pterm[i]));
     }
     result = d_tm.mk_and(children);
   } else if (logic.isOr(ref)) {
     auto const &pterm = logic.getPterm(ref);
     std::vector<expr::term_ref> children;
-    for (size_t i = 0; i < pterm.size(); ++i) {
+    for (int i = 0; i < pterm.size(); ++i) {
       children.push_back(osmt_to_sally(pterm[i]));
     }
     result = d_tm.mk_or(children);
@@ -262,14 +267,14 @@ sally::expr::term_ref sally::smt::opensmt2_internal::osmt_to_sally(PTRef ref) {
   } else if (lralogic.isNumPlus(ref)) {
     auto const &pterm = logic.getPterm(ref);
     std::vector<expr::term_ref> children;
-    for (size_t i = 0; i < pterm.size(); ++i) {
+    for (int i = 0; i < pterm.size(); ++i) {
       children.push_back(osmt_to_sally(pterm[i]));
     }
     result = d_tm.mk_term(expr::TERM_ADD, children);
   } else if (lralogic.isNumTimes(ref)) {
     auto const &pterm = logic.getPterm(ref);
     std::vector<expr::term_ref> children;
-    for (size_t i = 0; i < pterm.size(); ++i) {
+    for (int i = 0; i < pterm.size(); ++i) {
       children.push_back(osmt_to_sally(pterm[i]));
     }
     result = d_tm.mk_term(expr::TERM_MUL, children);
@@ -387,3 +392,5 @@ ipartitions_t sally::smt::opensmt2_internal::get_A_mask() const {
   }
   return A_mask;
 }
+
+#endif // WITH_OPENSMT2

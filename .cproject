@@ -66,6 +66,8 @@
                                     <listOptionValue builtIn="false" value="WITH_MATHSAT5=1"/>
                                     									
                                     <listOptionValue builtIn="false" value="WITH_Z3=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="WITH_OPENSMT2=1"/>
                                     								
                                 </option>
                                 								
@@ -90,6 +92,8 @@
                                     <listOptionValue builtIn="false" value="WITH_MATHSAT5=1"/>
                                     									
                                     <listOptionValue builtIn="false" value="WITH_Z3=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="WITH_OPENSMT2=1"/>
                                     								
                                 </option>
                                 								
@@ -208,6 +212,8 @@
                                     <listOptionValue builtIn="false" value="WITH_YICES2=1"/>
                                     									
                                     <listOptionValue builtIn="false" value="WITH_MATHSAT5=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="WITH_OPENSMT2=1"/>
                                     								
                                 </option>
                                 								

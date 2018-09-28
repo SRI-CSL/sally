@@ -101,6 +101,7 @@ bool opensmt2::supports(solver::feature f) const {
         case solver::feature::UNSAT_CORE:
             return false;
     }
+    return false; // Compile error otherwise
 }
 
 void opensmt2::interpolate(std::vector<expr::term_ref> & out) {

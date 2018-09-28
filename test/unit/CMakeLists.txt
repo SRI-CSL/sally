@@ -38,6 +38,13 @@ endif()
 if (Z3_FOUND)
   target_link_libraries(sally_test ${Z3_LIBRARY})
 endif()
+if (OPENSMT2_FOUND)
+  set_property(TARGET sally_test PROPERTY CXX_STANDARD 11)
+  set_property(TARGET sally_test PROPERTY CXX_STANDARD_REQUIRED ON)
+  target_link_libraries(sally_test ${OPENSMT2_LIB})
+  target_compile_definitions(sally_test PUBLIC -DPRODUCE_PROOF)
+endif()
+
 target_link_libraries(sally_test ${GMP_LIBRARY})
 
 # Add the test
