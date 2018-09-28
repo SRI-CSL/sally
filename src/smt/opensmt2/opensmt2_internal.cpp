@@ -182,8 +182,9 @@ PTRef sally::smt::opensmt2_internal::mk_osmt_term(sally::expr::term_op op, size_
         case expr::TERM_ADD:
             return get_lralogic().mkNumPlus(children);
         case expr::TERM_SUB:
-            assert(n == 2);
-            return get_lralogic().mkNumMinus(children[0], children[1]);
+            assert(n == 2 || n == 1);
+            return n == 1 ? (get_lralogic().mkNumNeg(children[0])) :
+                  get_lralogic().mkNumMinus(children[0], children[1]);
         case expr::TERM_MUL:
             return get_lralogic().mkNumTimes(children);
         case expr::TERM_DIV:
