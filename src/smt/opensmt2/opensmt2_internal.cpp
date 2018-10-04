@@ -40,8 +40,14 @@ sally::smt::opensmt2_internal::opensmt2_internal(sally::expr::term_manager &tm, 
     assert(strcmp(msg, "ok") == 0);
 //    res = osmt->getConfig().setOption(":verbosity", SMTOption{2}, msg);
 //    assert(strcmp(msg, "ok") == 0);
-    res = osmt->getConfig().setOption(":dump-query", SMTOption(1), msg);
-    res = osmt->getConfig().setOption(":dump-query-name", SMTOption("sally"), msg);
+//    res = osmt->getConfig().setOption(":dump-query", SMTOption(1), msg);
+//    res = osmt->getConfig().setOption(":dump-query-name", SMTOption("sally"), msg);
+
+    const std::string itp_option = "opensmt2-itp";
+    if (opts.has_option(itp_option)) {
+      ItpAlgorithm itp {opts.get_int(itp_option)};
+      osmt->getConfig().setLRAInterpolationAlgorithm(itp);
+    }
   }
 }
 
