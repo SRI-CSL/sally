@@ -42,16 +42,16 @@ namespace smt {
 
 size_t y2o2::s_instance = 0;
 
-//class mathsat_constructor : public solver_constructor {
-//  expr::term_manager& d_tm;
-//  const options& d_opts;
-//  utils::statistics& d_stats;
-//public:
-//  mathsat_constructor(expr::term_manager& tm, const options& opts, utils::statistics& stats)
-//  : d_tm(tm), d_opts(opts), d_stats(stats) {}
-//  ~mathsat_constructor() {};
-//  solver* mk_solver() { return factory::mk_solver("mathsat5", d_tm, d_opts, d_stats); }
-//};
+class opensmt_constructor : public solver_constructor {
+  expr::term_manager& d_tm;
+  const options& d_opts;
+  utils::statistics& d_stats;
+public:
+  opensmt_constructor(expr::term_manager& tm, const options& opts, utils::statistics& stats)
+  : d_tm(tm), d_opts(opts), d_stats(stats) {}
+  ~opensmt_constructor() {};
+  solver* mk_solver() { return factory::mk_solver("opensmt2", d_tm, d_opts, d_stats); }
+};
 
 y2o2::y2o2(expr::term_manager& tm, const options& opts, utils::statistics& stats)
 : solver("y2o2", tm, opts, stats)
@@ -59,7 +59,8 @@ y2o2::y2o2(expr::term_manager& tm, const options& opts, utils::statistics& stats
 , d_last_yices2_result(UNKNOWN)
 {
   d_yices2 = factory::mk_solver("yices2", tm, opts, stats);
-  d_opensmt2 = new delayed_wrapper("opensmt2_delayed", tm, opts, stats, factory::mk_solver("opensmt2", tm, opts, stats));
+//  d_opensmt2 = new delayed_wrapper("opensmt2_delayed", tm, opts, stats, factory::mk_solver("opensmt2", tm, opts, stats));
+  d_opensmt2 = new incremental_wrapper("opensmt2_incremental_wrapper", tm, opts, stats, new opensmt_constructor(tm, opts, stats));
   s_instance ++;
 }
 

@@ -40,15 +40,15 @@ sally::smt::opensmt2_internal::opensmt2_internal(sally::expr::term_manager &tm, 
     assert(strcmp(msg, "ok") == 0);
 //    res = osmt->getConfig().setOption(":verbosity", SMTOption{2}, msg);
 //    assert(strcmp(msg, "ok") == 0);
-//    res = osmt->getConfig().setOption(":dump-query", SMTOption(1), msg);
-//    res = osmt->getConfig().setOption(":dump-query-name", SMTOption("sally"), msg);
+    res = osmt->getConfig().setOption(":dump-query", SMTOption(1), msg);
+    res = osmt->getConfig().setOption(":dump-query-name", SMTOption("sally"), msg);
   }
 }
 
 void sally::smt::opensmt2_internal::add(sally::expr::term_ref ref, sally::smt::solver::formula_class f_class) {
 
-  TRACE("opensmt") << "add: " << ref << std::endl;
-  TRACE("opensmt") << "class = " << f_class << std::endl;
+  TRACE("opensmt2") << "add: " << ref << std::endl;
+  TRACE("opensmt2") << "class = " << f_class << std::endl;
 
   PTRef ptref = sally_to_osmt(ref);
     char** msg = nullptr;
