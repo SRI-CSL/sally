@@ -93,6 +93,7 @@ expr::model::ref y2o2::get_model() const {
 
 void y2o2::push() {
   TRACE("y2o2") << "y2o2[" << s_instance << "]: push()" << std::endl;
+  assert(d_last_yices2_result != UNSAT);
   d_yices2->push();
   d_opensmt2->push();
   d_last_opensmt2_result = UNKNOWN;

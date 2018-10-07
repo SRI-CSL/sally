@@ -22,7 +22,6 @@
 #include "smt/opensmt2/opensmt2_internal.h"
 
 #include "utils/trace.h"
-#include "opensmt2.h"
 
 
 #define unused_var(x) { (void) x; }

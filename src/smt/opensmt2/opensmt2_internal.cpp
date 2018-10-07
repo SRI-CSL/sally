@@ -59,7 +59,7 @@ void sally::smt::opensmt2_internal::add(sally::expr::term_ref ref, sally::smt::s
   PTRef ptref = sally_to_osmt(ref);
     char** msg = nullptr;
 
-    get_main_solver().insertFormula(ptref, current_partition, msg);
+    get_main_solver().insertFormula(ptref, msg);
 //    std::cout << "Assigning partition " << current_partition << " to fla:\n" << get_logic().printTerm(ptref) << '\n';
     // A and T formula for A-part of interpolation problem; B formula form B-part
     if(f_class == sally::smt::solver::CLASS_A || f_class == sally::smt::solver::CLASS_T) {
