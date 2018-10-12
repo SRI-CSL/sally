@@ -34,6 +34,10 @@ public:
     /** Constructor */
     opensmt2_internal(expr::term_manager & tm, const options & opts);
 
+    ~opensmt2_internal() {
+      delete osmt;
+    }
+
     void add(expr::term_ref ref, solver::formula_class f_class);
 
     /** Returns the instance id */
