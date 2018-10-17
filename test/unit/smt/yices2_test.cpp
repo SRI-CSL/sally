@@ -34,6 +34,7 @@ public:
     cout << set_tm(tm);
     cerr << set_tm(tm);
     output::trace_tag_enable("yices2");
+    output::trace_tag_enable("yices2::gen");
   }
 
   ~term_manager_with_yices_test_fixture() {

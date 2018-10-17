@@ -21,6 +21,7 @@
 #ifdef WITH_YICES2
 
 #include "smt/solver.h"
+#include "expr/model.h"
 
 namespace sally {
 namespace smt {
@@ -44,14 +45,7 @@ public:
   ~yices2();
 
   /** Features */
-  bool supports(feature f) const {
-    switch (f) {
-    case GENERALIZATION:
-      return true;
-    default:
-      return false;
-    }
-  }
+  bool supports(feature f) const;
 
   /** Add an assertion f to the solver */
   void add(expr::term_ref f, formula_class f_class);
@@ -61,6 +55,9 @@ public:
 
   /** Check the assertions for satisfiability */
   result check();
+
+  /** Check the assertions for satisfiability modulo the model */
+  result check(expr::model::ref m);
 
   /** Get the model */
   expr::model::ref get_model() const;

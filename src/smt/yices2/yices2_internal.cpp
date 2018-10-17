@@ -50,12 +50,17 @@ void yices2_internal::check_error(int ret, const char* error_msg) const {
   }
 }
 
+bool yices2_internal::is_mcsat() {
+  return d_is_mcsat;
+}
+
 yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
 : d_tm(tm)
 , d_conversion_cache(0)
 , d_last_check_status(STATUS_UNKNOWN)
 , d_config(NULL)
 , d_instance(s_instances)
+, d_is_mcsat(false)
 {
   // Initialize
   if (s_instances == 0) {
@@ -89,6 +94,7 @@ yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
     }
     ret = yices_set_config(d_config, "solver-type", "mcsat");
     check_error(ret, "Yices error (mcsat option): ");
+    d_is_mcsat = true;
   }
   d_ctx = yices_new_context(d_config);
   if (d_ctx == 0) {
@@ -1030,6 +1036,36 @@ solver::result yices2_internal::check() {
   return solver::UNKNOWN;
 }
 
+solver::result yices2_internal::check(expr::model::ref m) {
+
+  // Get the yices model in B variables
+  model_t* mdl = get_yices_model(m, false, false, true);
+  uint32_t n = d_B_variables_yices.size();
+  term_t* t = &d_B_variables_yices[0];
+
+  d_last_check_status = yices_check_context_with_model(d_ctx, 0, mdl, n, t);
+
+  switch (d_last_check_status) {
+  case STATUS_SAT:
+    return solver::SAT;
+  case STATUS_UNSAT:
+    return solver::UNSAT;
+  case STATUS_UNKNOWN:
+    return solver::UNKNOWN;
+  default: {
+    std::stringstream ss;
+    char* error = yices_error_string();
+    ss << "Yices error (check): " << error;
+    throw exception(ss.str());
+  }
+  }
+
+  yices_free_model(mdl);
+
+  return solver::UNKNOWN;
+}
+
+
 static
 expr::bitvector bitvector_from_int32(size_t size, int32_t* value) {
   char* value_str = new char[size+1];
@@ -1042,38 +1078,17 @@ expr::bitvector bitvector_from_int32(size_t size, int32_t* value) {
   return bv;
 }
 
-model_t* yices2_internal::get_yices_model(expr::model::ref m) {
+model_t* yices2_internal::get_yices_model(expr::model::ref m, bool class_A, bool class_T, bool class_B) {
 
   // Get the variables
   std::vector<expr::term_ref> variables;
-  bool class_A_used = false;
-  bool class_B_used = false;
-  bool class_T_used = false;
-  for (size_t i = 0; i < d_assertion_classes.size(); ++ i) {
-    switch (d_assertion_classes[i]) {
-    case solver::CLASS_A:
-      class_A_used = true;
-      break;
-    case solver::CLASS_B:
-      class_B_used = true;
-      break;
-    case solver::CLASS_T:
-      class_A_used = true;
-      class_B_used = true;
-      class_T_used = true;
-      break;
-    default:
-      assert(false);
-    }
-  }
-
-  if (class_A_used) {
+  if (class_A) {
     variables.insert(variables.end(), d_A_variables.begin(), d_A_variables.end());
   }
-  if (class_B_used) {
+  if (class_B) {
     variables.insert(variables.end(), d_B_variables.begin(), d_B_variables.end());
   }
-  if (class_T_used) {
+  if (class_T) {
     variables.insert(variables.end(), d_T_variables.begin(), d_T_variables.end());
   }
 
@@ -1082,24 +1097,34 @@ model_t* yices2_internal::get_yices_model(expr::model::ref m) {
   term_t* yices_values = (term_t*) malloc(sizeof(term_t)*n);
 
   size_t i;
-  for (i = 0; i < variables.size(); ++ i) {
-    yices_variables[i] = to_yices2_term(variables[i]);
-    expr::value value = m->get_variable_value(variables[i]);
+  for (i = 0, n = 0; i < variables.size(); ++ i) {
+    expr::term_ref x = variables[i];
+    if (!m->has_value(x)) { continue; }
+    yices_variables[n] = to_yices2_term(x);
+    expr::value value = m->get_variable_value(x);
     if (value.is_bool()) {
       // Boolean value
-      yices_values[i] = value.get_bool() ? yices_true() : yices_false();
+      yices_values[n] = value.get_bool() ? yices_true() : yices_false();
     } else if (value.is_rational()) {
       // Rational value
-      yices_values[i] = yices_mpq(value.get_rational().mpq().get_mpq_t());
+      yices_values[n] = yices_mpq(value.get_rational().mpq().get_mpq_t());
     } else if (value.is_bitvector()) {
       // Bit-vector value
-      yices_values[i] = yices_bvconst_mpz(value.get_bitvector().size(), value.get_bitvector().mpz().get_mpz_t());
+      yices_values[n] = yices_bvconst_mpz(value.get_bitvector().size(), value.get_bitvector().mpz().get_mpz_t());
     } else {
       assert(false);
     }
+    // New one
+    n ++;
   }
 
   model_t* yices_model = yices_model_from_map(n, yices_variables, yices_values);
+  if (yices_model == NULL) {
+    std::stringstream ss;
+    char* error = yices_error_string();
+    ss << "Yices error (model): " << error;
+    throw exception(ss.str());
+  }
 
   free(yices_variables);
   free(yices_values);
@@ -1362,7 +1387,7 @@ void yices2_internal::generalize(smt::solver::generalization_type type, expr::mo
   }
 
   // Get yices model from model
-  model_t* yices_model = get_yices_model(m);
+  model_t* yices_model = get_yices_model(m, true, true, true);
 
   if (output::trace_tag_is_enabled("yices2::gen")) {
     std::cerr << "assertions:" << std::endl;
@@ -1454,7 +1479,7 @@ void yices2_internal::add_variable(expr::term_ref var, smt::solver::variable_cla
   }
 
   // Convert to yices2 early
-  to_yices2_term(var);
+  term_t var_yices = to_yices2_term(var);
 
   switch (f_class) {
   case smt::solver::CLASS_A:
@@ -1463,6 +1488,7 @@ void yices2_internal::add_variable(expr::term_ref var, smt::solver::variable_cla
     break;
   case smt::solver::CLASS_B:
     d_B_variables.push_back(var);
+    d_B_variables_yices.push_back(var_yices);
     d_B_variables_set.insert(var);
     break;
   case smt::solver::CLASS_T:

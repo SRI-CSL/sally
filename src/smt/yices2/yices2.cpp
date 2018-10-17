@@ -66,6 +66,12 @@ solver::result yices2::check() {
   return d_internal->check();
 }
 
+solver::result yices2::check(expr::model::ref m) {
+  TRACE("yices2") << "yices2[" << d_internal->instance() << "]: check()" << std::endl;
+  return d_internal->check(m);
+}
+
+
 expr::model::ref yices2::get_model() const {
   TRACE("yices2") << "yices2[" << d_internal->instance() << "]: get_model()" << std::endl;
   return d_internal->get_model();
@@ -106,6 +112,17 @@ void yices2::gc() {
 void yices2::gc_collect(const expr::gc_relocator& gc_reloc) {
   solver::gc_collect(gc_reloc);
   d_internal->gc_collect(gc_reloc);
+}
+
+bool yices2::supports(feature f) const {
+  switch (f) {
+  case GENERALIZATION:
+    return true;
+  case MODEL_ASSUMPTION:
+    return d_internal->is_mcsat();
+  default:
+    return false;
+  }
 }
 
 }

@@ -72,6 +72,7 @@ class yices2_internal {
 
   /** B variables */
   std::vector<expr::term_ref> d_B_variables;
+  std::vector<term_t> d_B_variables_yices;
   std::set<expr::term_ref> d_B_variables_set;
 
   /** T variables */
@@ -96,6 +97,9 @@ class yices2_internal {
   /** The instance */
   size_t d_instance;
 
+  /** Is this an MCSAT solver */
+  bool d_is_mcsat;
+
   /** Print the EFSMT to output */
   void efsmt_to_stream(std::ostream& out, const term_vector_t* G_y, const term_t* assertions, size_t assertions_size,
       const std::vector<expr::term_ref>& exists_vars,
@@ -112,6 +116,9 @@ public:
 
   /** Destroy yices instance */
   ~yices2_internal();
+
+  /** Check if it's an MCSAT solver */
+  bool is_mcsat();
 
   /** Get the yices version of the term */
   term_t to_yices2_term(expr::term_ref ref);
@@ -143,11 +150,14 @@ public:
   /** Check satisfiability */
   solver::result check();
 
+  /** Check satisfiability given the model */
+  solver::result check(expr::model::ref m);
+
   /** Returns the model */
   expr::model::ref get_model();
 
   /** Returns yices model from sally model */
-  model_t* get_yices_model(expr::model::ref m);
+  model_t* get_yices_model(expr::model::ref m, bool class_A, bool class_T, bool class_B);
 
   /** Push the context */
   void push();

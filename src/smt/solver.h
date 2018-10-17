@@ -44,8 +44,8 @@ struct solver_context {
 /**
  * SMT solver interface for solving queries.
  *
- * Formulas being solved are of the form (A(a, t) and T(a, b, t) and B(b, t)). When
- * generalizing we eliminate the variables b, t. When intepolating we eliminate
+ * Formulas being solved are of the form (A(a, t) and T(a, t, b) and B(t, b)). When
+ * generalizing we eliminate the variables b, t. When interpolating we eliminate
  * the variables a, t.
  */
 class solver : public expr::gc_participant {
@@ -105,10 +105,11 @@ public:
     GENERALIZATION,
     INTERPOLATION,
     UNSAT_CORE,
+    MODEL_ASSUMPTION,
   };
 
   /**
-   * Add a variable and mark it as belongint to a particular class. This is
+   * Add a variable and mark it as belonging to a particular class. This is
    * context-independent so it stays after a pop. If you overload this to keep
    * track of variable additions, call solver::add_variable manually.
    */
@@ -163,6 +164,17 @@ public:
   /** Check for satisfiability */
   virtual
   result check() = 0;
+
+  /**
+   * Check for satisfiability under the given model.
+   *
+   * When checking F(x, t, y) = A(x, t) and T(x, t, y) and B(t, y) we check satisfiability
+   * of F(x, t, y) and t, y = m(t, y).
+   */
+  virtual
+  result check(expr::model::ref m) {
+    throw exception("check() with model not supported by solver " + d_name);
+  }
 
   /** Check the model if the formula is SAT (for debug purposes only) */
   virtual
