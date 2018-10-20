@@ -38,10 +38,13 @@ sally::smt::opensmt2_internal::opensmt2_internal(sally::expr::term_manager &tm, 
     (void) res;
     assert(res);
     assert(strcmp(msg, "ok") == 0);
+    osmt->getConfig().simplify_interpolant = 1;
+//    osmt->getConfig().sat_theory_propagation = 0;
 //    res = osmt->getConfig().setOption(":verbosity", SMTOption{2}, msg);
 //    assert(strcmp(msg, "ok") == 0);
 //    res = osmt->getConfig().setOption(":dump-query", SMTOption(1), msg);
 //    res = osmt->getConfig().setOption(":dump-query-name", SMTOption("sally"), msg);
+
 
     const std::string itp_option = "opensmt2-itp";
     if (opts.has_option(itp_option)) {
