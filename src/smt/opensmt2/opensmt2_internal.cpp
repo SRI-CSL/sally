@@ -174,6 +174,13 @@ PTRef sally::smt::opensmt2_internal::mk_osmt_term(sally::expr::term_op op, size_
             return get_logic().mkIte(children[0], children[1], children[2]);
         case expr::TERM_EQ:
             assert(n == 2);
+            if (get_lralogic().getSortRef(children[0]) == get_lralogic().getSort_num()){
+              assert(get_lralogic().getSortRef(children[1]) == get_lralogic().getSort_num());
+              return logic.mkAnd(
+                get_lralogic().mkNumLeq(children[0], children[1]),
+                get_lralogic().mkNumLeq(children[1], children[0])
+                );
+            }
             return logic.mkEq(children[0], children[1]);
         case expr::TERM_AND:
             return logic.mkAnd(children);
