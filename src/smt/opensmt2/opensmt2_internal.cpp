@@ -165,7 +165,7 @@ PTRef sally::smt::opensmt2_internal::sally_to_osmt(sally::expr::term_ref ref) {
     return result;
 }
 
-PTRef sally::smt::opensmt2_internal::mk_osmt_term(sally::expr::term_op op, size_t n, std::vector<PTRef> children) {
+PTRef sally::smt::opensmt2_internal::mk_osmt_term(sally::expr::term_op op, size_t n, const vector<PTRef> &children) {
     assert(n == children.size());
     auto & logic = get_logic();
     switch(op){

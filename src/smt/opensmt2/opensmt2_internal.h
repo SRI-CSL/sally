@@ -74,7 +74,7 @@ private:
 
     sally::expr::term_ref osmt_to_sally(PTRef ref);
 
-    PTRef mk_osmt_term(expr::term_op op, size_t n, std::vector<PTRef> children);
+    PTRef mk_osmt_term(expr::term_op op, size_t n, const vector<PTRef> &children);
 
     std::vector<expr::term_ref> d_variables;
 
