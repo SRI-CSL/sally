@@ -56,6 +56,11 @@ public:
   explicit rational(const char* s): d_gmp_rat(s, 10) { d_gmp_rat.canonicalize(); }
   /** Construct from string representation */
   explicit rational(std::string s): d_gmp_rat(s, 10) { d_gmp_rat.canonicalize(); }
+  /** Construct from string representation "1" "2" = 1.2 = 3/2 */
+  rational(std::string integer_part, std::string fractional_part)
+  : d_gmp_rat(integer(integer_part + fractional_part, 10).mpz(), integer(10).pow(fractional_part.size()).mpz())
+  { d_gmp_rat.canonicalize(); }
+
   /** Cosntruct from constant integer or rational term */
   rational(const term_manager& tm, term_ref t);
 
@@ -118,6 +123,12 @@ public:
 
   /** Negate, i.e. -Q */
   rational negate() const;
+
+  /** Get floor */
+  rational floor() const;
+
+  /** Get ceiling */
+  rational ceiling() const;
 
   /** Get a simple value in (a, b) */
   static

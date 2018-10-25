@@ -35,7 +35,7 @@ void type_computation_visitor::error(term_ref t_ref, std::string message) const 
     output::set_term_manager(ss, tm);
   }
   ss << "Can't typecheck " << t_ref;
-  if (message.length() > 0) { ss << "(" << message << ")"; }
+  if (message.length() > 0) { ss << " (" << message << ")"; }
   ss << ".";
   throw exception(ss.str());
 }
@@ -449,6 +449,36 @@ void type_computation_visitor::visit(term_ref t_ref) {
       d_ok = base_type_of(t[0]) == d_tm.real_type() && base_type_of(t[1]) == d_tm.real_type();
       if (d_ok) t_type = d_tm.boolean_type();
       else error_message << "children must be real or integer";
+    }
+    break;
+  case TERM_IS_INT:
+    if (t.size() != 1) {
+      d_ok = false;
+      error_message << "must have 1 child";
+    } else {
+      d_ok = base_type_of(t[0]) == d_tm.real_type();
+      if (d_ok) t_type = d_tm.boolean_type();
+      else error_message << "child must be real";
+    }
+    break;
+  case TERM_TO_INT:
+    if (t.size() != 1) {
+      d_ok = false;
+      error_message << "must have 1 child";
+    } else {
+      d_ok = type_of(t[0]) == d_tm.real_type();
+      if (d_ok) t_type = d_tm.integer_type();
+      else error_message << "child must be real";
+    }
+    break;
+  case TERM_TO_REAL:
+    if (t.size() != 1) {
+      d_ok = false;
+      error_message << "must have 1 child";
+    } else {
+      d_ok = type_of(t[0]) == d_tm.integer_type();
+      if (d_ok) t_type = d_tm.real_type();
+      else error_message << "child must be integer";
     }
     break;
   case TERM_DIV:

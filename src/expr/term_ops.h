@@ -78,6 +78,9 @@ enum term_op {
   TERM_LT,
   TERM_GEQ,
   TERM_GT,
+  TERM_TO_INT,
+  TERM_TO_REAL,
+  TERM_IS_INT,
 
   // Bit-vector terms
   CONST_BITVECTOR,

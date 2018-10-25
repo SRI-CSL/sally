@@ -174,6 +174,18 @@ term_t yices2_internal::mk_yices2_term(expr::term_op op, size_t n, term_t* child
     assert(n == 2);
     result = yices_arith_gt_atom(children[0], children[1]);
     break;
+  case expr::TERM_TO_INT:
+    assert(n == 1);
+    result = yices_floor(children[0]);
+    break;
+  case expr::TERM_TO_REAL:
+    assert(n == 1);
+    result = children[0];
+    break;
+  case expr::TERM_IS_INT:
+    assert(n == 1);
+    result = yices_is_int_atom(children[0]);
+    break;
   case expr::TERM_EQ:
     assert(n == 2);
     result = yices_eq(children[0], children[1]);
@@ -438,6 +450,9 @@ public:
     case expr::TERM_LT:
     case expr::TERM_GEQ:
     case expr::TERM_GT:
+    case expr::TERM_TO_INT:
+    case expr::TERM_TO_REAL:
+    case expr::TERM_IS_INT:
     case expr::TERM_BV_ADD:
     case expr::TERM_BV_SUB:
     case expr::TERM_BV_MUL:
