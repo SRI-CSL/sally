@@ -14,6 +14,16 @@ add_library(smt
   z3/z3.cpp
   z3/z3_internal.cpp
   z3/z3_common.cpp
-  y2z3/y2z3.cpp 
+  y2z3/y2z3.cpp
+  dreal/dreal.cpp
+  dreal/dreal_term.cpp  
+  dreal/dreal_internal.cpp
+  dreal/dreal_term_cache.cpp
 )
+
+# For dreal
+add_definitions(-std=c++14)
+# For ibex (used by dreal)
+add_definitions(-Wno-unused-variable)
+add_definitions(-Wno-overloaded-virtual)  
 

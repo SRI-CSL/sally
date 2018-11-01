@@ -5,6 +5,11 @@ foreach(DIR ${sally_SRC_DIRS})
   add_subdirectory(${DIR})
 endforeach(DIR)
 
+if (DREAL_FOUND)
+  # It must be added before add_executable
+  link_directories(${DREAL_LIBRARY_DIRS})
+endif()
+
 # Add the executable
 add_executable(sally sally.cpp)
 if (SALLY_STATIC_BUILD)
@@ -36,6 +41,10 @@ endif()
 if (Z3_FOUND)
   target_link_libraries(sally ${Z3_LIBRARY})
 endif()
+if (DREAL_FOUND)
+  target_link_libraries(sally ${DREAL_LIBRARIES})
+endif()
+
 target_link_libraries(sally ${Boost_LIBRARIES} ${GMP_LIBRARY})
 
 # Add tests
