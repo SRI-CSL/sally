@@ -20,10 +20,12 @@ endif(APPLE)
 
 if(UNIX AND NOT APPLE)
   file(GLOB DREAL_PKG_CONFIG_PATH "/opt/dreal/*/lib/pkgconfig")
-  # The result of file-glob is sorted lexicographically. We pick the
-  # last element (-1) to pick the latest.
-  list(GET DREAL_PKG_CONFIG_PATH -1 DREAL_PKG_CONFIG_PATH)
-  set(ENV{PKG_CONFIG_PATH} "${DREAL_PKG_CONFIG_PATH}:/opt/libibex/2.7.2/share/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+  if (DREAL_PKG_CONFIG_PATH)
+    # The result of file-glob is sorted lexicographically. We pick the
+    # last element (-1) to pick the latest.
+    list(GET DREAL_PKG_CONFIG_PATH -1 DREAL_PKG_CONFIG_PATH)
+    set(ENV{PKG_CONFIG_PATH} "${DREAL_PKG_CONFIG_PATH}:/opt/libibex/2.7.2/share/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+  endif()
 endif(UNIX AND NOT APPLE)
 
 find_package(PkgConfig)
