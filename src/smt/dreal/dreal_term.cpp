@@ -20,6 +20,7 @@
 
 #include "smt/dreal/dreal_term.h"
 #include "utils/exception.h"
+#include "utils/hash.h"
 #include "dreal/symbolic/prefix_printer.h"
 
 using namespace dreal;
@@ -152,18 +153,12 @@ std::string dreal_term::to_smtlib2() const {
   } 
 }
   
-template <class T>
-inline void hash_combine(std::size_t& seed, const T& v) {
-    std::hash<T> hasher;
-    seed ^= hasher(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
-}
-  
 size_t dreal_term::get_hash() const {
-  std::size_t r = 0;
-  hash_combine(r, d_type);
-  hash_combine(r, d_e);
-  hash_combine(r, d_f);
-  return r;
+  utils::sequence_hash hash;
+  hash.add(d_type);
+  hash.add(d_e.get_hash());
+  hash.add(d_f.get_hash());
+  return hash.get();
 }
 
 /*
