@@ -349,7 +349,7 @@ void dreal_internal::add(expr::term_ref ref, solver::formula_class f_class) {
 
   // Assert to dreal
   dreal_term dreal_t = to_dreal_term(ref);
-  assert(dreal_t.is_formula_term());
+  assert(dreal_t.is_formula());
   Formula f = dreal_t.formula();
   d_assertions_dreal.push_back(f);
   const Variables& vars = f.GetFreeVariables();
@@ -453,7 +453,7 @@ bool dreal_internal::get_dreal_model(const Box& model) {
 }
   
 expr::model::ref dreal_internal::get_model() {
-  assert(d_last_check_status == STATUS_SAT);
+  assert(d_last_check_status == solver::SAT);
   assert(d_A_variables.size() > 0 || d_B_variables.size() > 0);
   assert(!d_last_model.empty());
   
