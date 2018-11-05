@@ -22,8 +22,11 @@ add_library(smt
 )
 
 # For dreal
-add_definitions(-std=c++14)
-# For ibex (used by dreal)
-add_definitions(-Wno-unused-variable)
-add_definitions(-Wno-overloaded-virtual)  
+set_source_files_properties(
+  dreal/dreal.cpp dreal/dreal_term.cpp dreal/dreal_internal.cpp dreal/dreal_term_cache.cpp
+  PROPERTIES 
+    LANGUAGE CXX
+    COMPILE_FLAGS "-Wno-unused-variable -Wno-overloaded-virtual -Wno-unknown-pragmas -Wno-int-in-bool-context -Wno-deprecated -std=c++14"
+)
+
 

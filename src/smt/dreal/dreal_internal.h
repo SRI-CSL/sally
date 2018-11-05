@@ -68,8 +68,6 @@ class dreal_internal {
   std::vector<expr::term_ref> d_T_variables;
   std::set<expr::term_ref> d_T_variables_set;
 
-  typedef dreal_term_cache dreal_term_cache;
-  
   /** Dreal term conversion cache */
   dreal_term_cache* d_conversion_cache;
 
