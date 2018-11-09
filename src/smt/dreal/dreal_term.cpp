@@ -356,6 +356,11 @@ dreal_term dreal_term::dreal_ite(dreal_term cond, dreal_term e1, dreal_term e2) 
     throw exception("Dreal error (cannot create ite operator)");
   }
 }
+
+std::ostream& operator<<(std::ostream& out, const dreal_term& t) {
+  out << t.to_string();
+  return out;
+}
   
 }
 }

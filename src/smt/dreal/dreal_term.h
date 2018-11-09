@@ -144,6 +144,7 @@ namespace smt {
     size_t operator()(dreal_term t) const { return t.get_hash(); }    
   };
 
+  std::ostream& operator<<(std::ostream& out, const dreal_term& t);
   
 }
 }
