@@ -47,6 +47,9 @@ class dreal_internal {
   /** All assertions we have in context (strong)  */
   std::vector<expr::term_ref_strong> d_assertions;
 
+  /** Free variables from d_assertions */
+  std::set<::dreal::Variable> d_assertion_vars;
+  
   /** dreal assertions, for debug purposes */
   std::vector<::dreal::Formula> d_assertions_dreal;
   
@@ -73,7 +76,7 @@ class dreal_internal {
 
   /** Last check return */
   solver::result d_last_check_status;
-
+    
   /** Last dreal model */
   typedef expr::term_ref_map<double> dreal_model_t;  
   dreal_model_t d_last_model;

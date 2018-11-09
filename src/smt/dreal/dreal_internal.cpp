@@ -356,6 +356,7 @@ void dreal_internal::add(expr::term_ref ref, solver::formula_class f_class) {
   for (Variables::const_iterator it = vars.begin(), et = vars.end(); it!=et; ++it) {
     const Variable& v = *it;
     d_ctx->DeclareVariable(v);
+    d_assertion_vars.insert(v);
   }
   d_ctx->Assert(f);
   d_last_check_status = solver::UNKNOWN;
@@ -456,7 +457,7 @@ expr::model::ref dreal_internal::get_model() {
   assert(d_last_check_status == solver::SAT);
   assert(d_A_variables.size() > 0 || d_B_variables.size() > 0);
   assert(!d_last_model.empty());
-  
+
   // Clear any data already there
   expr::model::ref m = new expr::model(d_tm, false);
   for(dreal_model_t::iterator it = d_last_model.begin(), et = d_last_model.end(); it!=et; ++it) {
@@ -472,7 +473,19 @@ expr::model::ref dreal_internal::get_model() {
       } else if (dreal_value == 1) {
 	var_value = expr::value(1);
       } else {
-	throw exception("Dreal error (unexpected boolean value in the model)");
+	// If a boolean variable is declared but not used in any
+	// formula then dreal will produce a default value for it that
+	// it might not be 0 or 1.
+	assert(dreal_var.is_variable());
+	if (d_assertion_vars.count(dreal_var.variable()) <= 0) {
+	  // We use 0 as default value
+	  var_value = expr::value(0);
+	} else {
+	  std::stringstream ss;
+	  ss << "Dreal error (unexpected boolean value " << dreal_var << "="<< dreal_value
+	     << " in the model)";
+	  throw exception(ss.str());
+	}
       }
     }
       break;
@@ -628,7 +641,6 @@ void dreal_internal::dreal_to_smtlib2(std::ostream& out) {
   
   out << "(check-sat)" << std::endl;
 }
-
   
 }
 }
