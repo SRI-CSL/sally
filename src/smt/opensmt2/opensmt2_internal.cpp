@@ -38,7 +38,7 @@ sally::smt::opensmt2_internal::opensmt2_internal(sally::expr::term_manager &tm, 
     (void) res;
     assert(res);
     assert(strcmp(msg, "ok") == 0);
-    osmt->getConfig().simplify_interpolant = 2;
+    osmt->getConfig().simplify_interpolant = 3;
 //    osmt->getConfig().sat_theory_propagation = 0;
 //    res = osmt->getConfig().setOption(":verbosity", SMTOption{2}, msg);
 //    assert(strcmp(msg, "ok") == 0);
