@@ -38,7 +38,6 @@ sally::smt::opensmt2_internal::opensmt2_internal(sally::expr::term_manager &tm, 
     (void) res;
     assert(res);
     assert(strcmp(msg, "ok") == 0);
-    osmt->getConfig().simplify_interpolant = 3;
 //    osmt->getConfig().sat_theory_propagation = 0;
 //    res = osmt->getConfig().setOption(":verbosity", SMTOption{2}, msg);
 //    assert(strcmp(msg, "ok") == 0);
@@ -50,6 +49,15 @@ sally::smt::opensmt2_internal::opensmt2_internal(sally::expr::term_manager &tm, 
       ItpAlgorithm itp {opts.get_int(itp_option)};
       osmt->getConfig().setLRAInterpolationAlgorithm(itp);
     }
+    if (opts.has_option("opensmt2-random_seed")) {
+      osmt->getConfig().setRandomSeed(opts.get_int("opensmt2-random_seed"));
+    }
+    if (opts.has_option("opensmt2-simplify_itp")) {
+      osmt->getConfig().simplify_interpolant = opts.get_int("opensmt2-simplify_itp");
+    }
+  }
+  else {
+    throw sally::exception{"OpenSMT currently supports only logic QF_LRA!"};
   }
 }
 

@@ -29,11 +29,12 @@ namespace smt {
 
 struct opensmt2_info {
 
-  static void setup_options(boost::program_options::options_description& options) {
+  static void setup_options(boost::program_options::options_description &options) {
     using namespace boost::program_options;
     options.add_options()
-        ("opensmt2-itp", value<int>(), "Choose interpolation algorithm")
-        ;
+      ("opensmt2-itp", value<int>(), "Choose interpolation algorithm\n0 - Farkas primal \n2 - Farkas dual \n4 - Decomposed Farkas primal \n5 - Decomposed Farkas dual")
+      ("opensmt2-random_seed", value<int>(), "Set random seed")
+      ("opensmt2-simplify_itp", value<int>(), "Set level of post-processing of interpolants");
   }
 
   static std::string get_id() {
