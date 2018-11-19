@@ -349,8 +349,8 @@ void dreal_internal::add(expr::term_ref ref, solver::formula_class f_class) {
 
   // Assert to dreal
   dreal_term dreal_t = to_dreal_term(ref);
-  assert(dreal_t.is_formula());
-  Formula f = dreal_t.formula();
+  assert(dreal_t.is_formula() || dreal_t.is_variable());
+  Formula f = dreal_t.is_formula() ? dreal_t.formula() : Formula(dreal_t.variable());
   d_assertions_dreal.push_back(f);
   const Variables& vars = f.GetFreeVariables();
   for (Variables::const_iterator it = vars.begin(), et = vars.end(); it!=et; ++it) {
