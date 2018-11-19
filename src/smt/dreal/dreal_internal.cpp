@@ -411,7 +411,7 @@ bool dreal_internal::get_dreal_model(const Box& model) {
     variables.insert(variables.end(), d_T_variables.begin(), d_T_variables.end());
   }
 
-  assert(!variables.empty());
+//  assert(!variables.empty());
   
   // See which variables we have to reason about
   d_last_model.clear();
