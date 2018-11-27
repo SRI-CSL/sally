@@ -374,7 +374,7 @@ solver::result dreal_internal::check() {
   } else {
     d_last_check_status = solver::UNSAT;    
   }
-  
+
   return d_last_check_status;
 }
 
@@ -444,7 +444,7 @@ bool dreal_internal::get_dreal_model(const Box& model) {
   return true;
   
   NO_MODEL_FOUND:
-  std::cerr << "Warning: dreal produced a model but at lease one variable was mapped "
+  std::cerr << "Warning: dreal produced a model but at least one variable was mapped "
 	    << "to an interval that cannot be approximated to a single value with precision "
 	    << d_ctx->config().precision() << "." << std::endl
 	    << "delta-sat with delta =  " << d_ctx->config().precision() << std::endl
