@@ -33,6 +33,9 @@ struct dreal_info {
     options.add_options()
       ("dreal-precision", value<double>(), "Precision (default = 0.001)")
       ;
+    options.add_options()
+      ("dreal-polytope", "Use polytope contractor")
+      ;
   }
 
   static std::string get_id() {

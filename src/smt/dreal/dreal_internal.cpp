@@ -69,6 +69,10 @@ dreal_internal::dreal_internal(expr::term_manager& tm, const options& opts)
       d_config->mutable_precision() = prec;
     }
   }
+
+  if (opts.has_option("dreal-polytope")) {
+    d_config->mutable_use_polytope() = true;
+  }
   
   // The contex
   d_ctx = new Context {*d_config};
