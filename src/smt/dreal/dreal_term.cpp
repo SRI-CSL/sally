@@ -32,10 +32,16 @@ dreal_term::dreal_term()
   : d_type(dreal_term::type_t::NULL_TERM)
 {}
 
-dreal_term::dreal_term(std::string name, Variable::Type type)
-  : d_type(dreal_term::type_t::EXPRESSION)
-  , d_e(Variable(name, type))
-{}
+dreal_term::dreal_term(std::string name, Variable::Type type) {
+  if (type == Variable::Type::BOOLEAN) {
+    d_type = dreal_term::type_t::FORMULA;
+    d_f = Formula(Variable(name, type)); 
+  } else {
+    assert (type == Variable::Type::INTEGER || type == Variable::Type::CONTINUOUS);
+    d_type = dreal_term::type_t::EXPRESSION;
+    d_e = Expression(Variable(name, type));
+  }
+}
 
 dreal_term::dreal_term(bool b)
   : d_type(dreal_term::type_t::FORMULA)
@@ -78,6 +84,7 @@ bool dreal_term::is_expression() const {
 }
 
 bool dreal_term::is_expression_variable() const {
+  // integer or real variable
   return is_expression() && is_variable();  
 }
   
@@ -86,6 +93,7 @@ bool dreal_term::is_formula() const {
 }
 
 bool dreal_term::is_formula_variable() const {
+  // boolean variable
   return is_formula() && is_variable();  
 }
   
@@ -168,12 +176,6 @@ size_t dreal_term::get_hash() const {
 dreal_term dreal_term::dreal_and(dreal_term t1, dreal_term t2) {
   if (t1.is_formula() && t2.is_formula()) {
     return dreal_term(t1.formula() && t2.formula());
-  } else if (t1.is_formula() && t2.is_variable()) {
-    return dreal_term(t1.formula() && t2.variable()); 
-  } else if (t1.is_variable() && t2.is_formula()) {
-    return dreal_term(t1.variable() && t2.formula());     
-  } else if (t1.is_variable() && t2.is_variable()) {
-    return dreal_term(t1.variable() && t2.variable());
   } else {
     throw exception("Dreal error (cannot create and term)");    
   }
@@ -182,12 +184,6 @@ dreal_term dreal_term::dreal_and(dreal_term t1, dreal_term t2) {
 dreal_term dreal_term::dreal_or(dreal_term t1, dreal_term t2) {
   if (t1.is_formula() && t2.is_formula()) {
     return dreal_term(t1.formula() || t2.formula());
-  } else if (t1.is_formula() && t2.is_variable()) {
-    return dreal_term(t1.formula() || t2.variable()); 
-  } else if (t1.is_variable() && t2.is_formula()) {
-    return dreal_term(t1.variable() || t2.formula());     
-  } else if (t1.is_variable() && t2.is_variable()) {
-    return dreal_term(t1.variable() || t2.variable());
   } else {
     throw exception("Dreal error (cannot create or term)");    
   }
@@ -214,27 +210,24 @@ dreal_term dreal_term::dreal_or(std::vector<dreal_term>& children) {
 dreal_term dreal_term::dreal_not(dreal_term t) {
   if (t.is_formula()) {
     return dreal_term(!t.formula());
-  } else if (t.is_variable()) {
-    return dreal_term(!t.variable());
   } else {
-    throw exception("Dreal error (cannot create negation term)");
+    throw exception("Dreal error (cannot create not term)");
   }
 }
 
-dreal_term dreal_term::dreal_eq(dreal_term e1, dreal_term e2){
-  if (e1.is_expression() && e2.is_expression()) {
-    return dreal_term(e1.expression() == e2.expression());
+dreal_term dreal_term::dreal_eq(dreal_term t1, dreal_term t2){
+  // use == for expressions and iff for formulas
+  if (t1.is_expression() && t2.is_expression()) {
+    return dreal_term(t1.expression() == t2.expression()); 
+  } else if (t1.is_formula() && t2.is_formula()) {
+    return dreal_term(iff(t1.formula(), t2.formula()));
   } else {
-    throw exception("Dreal error (cannot create = operator)");          
+    throw exception("Dreal error (cannot create equal operator)");              
   }
 }
   
-dreal_term dreal_term::dreal_not_eq(dreal_term e1, dreal_term e2) {
-  if (e1.is_expression() && e2.is_expression()) {
-    return dreal_term(e1.expression() != e2.expression());
-  } else {
-    throw exception("Dreal error (cannot create != operator)");          
-  }
+dreal_term dreal_term::dreal_not_eq(dreal_term t1, dreal_term t2) {
+  return dreal_not(dreal_eq(t1, t2));
 }
   
 dreal_term dreal_term::dreal_lt(dreal_term e1, dreal_term e2) {
@@ -272,12 +265,6 @@ dreal_term dreal_term::dreal_geq(dreal_term e1, dreal_term e2) {
 dreal_term dreal_term::dreal_add(dreal_term e1, dreal_term e2) {
   if (e1.is_expression() && e2.is_expression()) {
     return dreal_term(e1.expression() + e2.expression());
-  } else if (e1.is_variable() && e2.is_expression()) {
-    return dreal_term(e1.variable()   + e2.expression());
-  } else if (e1.is_expression() && e2.is_variable()) {
-    return dreal_term(e1.expression() + e2.variable());
-  } else if (e1.is_variable() && e2.is_variable()) {
-    return dreal_term(e1.variable()   + e2.variable());
   } else {
     throw exception("Dreal error (cannot create + operator)");          
   }
@@ -294,12 +281,6 @@ dreal_term dreal_term::dreal_add(std::vector<dreal_term>& children) {
 dreal_term dreal_term::dreal_sub(dreal_term e1, dreal_term e2) {
   if (e1.is_expression() && e2.is_expression()) {
     return dreal_term(e1.expression() - e2.expression());
-  } else if (e1.is_variable() && e2.is_expression()) {
-    return dreal_term(e1.variable()   - e2.expression());
-  } else if (e1.is_expression() && e2.is_variable()) {
-    return dreal_term(e1.expression() - e2.variable());
-  } else if (e1.is_variable() && e2.is_variable()) {
-    return dreal_term(e1.variable()   - e2.variable());
   } else {
     throw exception("Dreal error (cannot create - operator)");          
   }
@@ -316,12 +297,6 @@ dreal_term dreal_term::dreal_sub(dreal_term e) {
 dreal_term dreal_term::dreal_mul(dreal_term e1, dreal_term e2) {
   if (e1.is_expression() && e2.is_expression()) {
     return dreal_term(e1.expression() * e2.expression());
-  } else if (e1.is_variable() && e2.is_expression()) {
-    return dreal_term(e1.variable()   * e2.expression());
-  } else if (e1.is_expression() && e2.is_variable()) {
-    return dreal_term(e1.expression() * e2.variable());
-  } else if (e1.is_variable() && e2.is_variable()) {
-    return dreal_term(e1.variable()   * e2.variable());
   } else {
     throw exception("Dreal error (cannot create * operator)");          
   }
@@ -338,20 +313,19 @@ dreal_term dreal_term::dreal_mul(std::vector<dreal_term>& children) {
 dreal_term dreal_term::dreal_div(dreal_term e1, dreal_term e2) {
   if (e1.is_expression() && e2.is_expression()) {
     return dreal_term(e1.expression() / e2.expression());
-  } else if (e1.is_variable() && e2.is_expression()) {
-    return dreal_term(e1.variable()   / e2.expression());
-  } else if (e1.is_expression() && e2.is_variable()) {
-    return dreal_term(e1.expression() / e2.variable());
-  } else if (e1.is_variable() && e2.is_variable()) {
-    return dreal_term(e1.variable()   / e2.variable());
   } else {
     throw exception("Dreal error (cannot create / operator)");          
   }
 }
 
-dreal_term dreal_term::dreal_ite(dreal_term cond, dreal_term e1, dreal_term e2) {
-  if (cond.is_formula() && e1.is_expression() && e2.is_expression()) {
-    return dreal_term(if_then_else(cond.formula(), e1.expression(), e2.expression()));
+dreal_term dreal_term::dreal_ite(dreal_term cond, dreal_term t1, dreal_term t2) {
+  if (cond.is_formula() && t1.is_expression() && t2.is_expression()) {
+    return dreal_term(if_then_else(cond.formula(), t1.expression(), t2.expression()));
+  } else if (cond.is_formula() && t1.is_formula() && t2.is_formula()) {
+    // the parser accepts ite with t1 and t2 being formula but
+    // `if_then_else` only accepts expressions.
+    return dreal_term(dreal_and(dreal_or(dreal_not(cond), t1),
+				dreal_or(cond, t2)));
   } else {
     throw exception("Dreal error (cannot create ite operator)");
   }
