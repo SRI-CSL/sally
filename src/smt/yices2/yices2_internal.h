@@ -169,6 +169,11 @@ public:
 
   /** Collect garbage */
   void gc();
+
+  /** Wrap yices_error_string cleanly */
+  static std::string yices_error(void);
+  
+
 };
 
 

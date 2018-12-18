@@ -41,11 +41,18 @@ type_t yices2_internal::s_bool_type = NULL_TYPE;
 type_t yices2_internal::s_int_type = NULL_TYPE;
 type_t yices2_internal::s_real_type = NULL_TYPE;
 
+std::string  yices2_internal::yices_error(void) {
+  char* yerror = yices_error_string();
+  std::string retval(yerror);
+  yices_free_string(yerror);
+  return retval;
+}
+
+  
 void yices2_internal::check_error(int ret, const char* error_msg) const {
   if (ret < 0) {
     std::stringstream ss;
-    char* error = yices_error_string();
-    ss << error_msg << ": " << error;
+    ss << error_msg << ": " << yices_error();
     throw exception(ss.str());
   }
 }
@@ -93,8 +100,7 @@ yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
   d_ctx = yices_new_context(d_config);
   if (d_ctx == 0) {
     std::stringstream ss;
-    char* error = yices_error_string();
-    ss << "Yices error (context creation): " << error;
+    ss << "Yices error (context creation): " << yices_error();
     throw exception(ss.str());
   }
 }
@@ -315,8 +321,7 @@ term_t yices2_internal::mk_yices2_term(expr::term_op op, size_t n, term_t* child
 
   if (result < 0) {
     std::stringstream ss;
-    char* error = yices_error_string();
-    ss << "Yices error (term creation): " << error << " for op " << op << " and terms";
+    ss << "Yices error (term creation): " << yices_error() << " for op " << op << " and terms";
     for (size_t i = 0; i < n; ++ i) {
       char* str = yices_term_to_string(children[i], UINT32_MAX, UINT32_MAX, 0);
       if (i) { ss << ", "; }
@@ -356,8 +361,7 @@ type_t yices2_internal::to_yices2_type(expr::term_ref ref) {
 
   if (result < 0) {
     std::stringstream ss;
-    char* error = yices_error_string();
-    ss << "Yices error (term creation): " << error;
+    ss << "Yices error (term creation): " << yices_error();
     throw exception(ss.str());
   }
 
@@ -502,8 +506,7 @@ public:
 
     if (result < 0) {
       std::stringstream ss;
-      char* error = yices_error_string();
-      ss << "Yices error (term creation): " << error;
+      ss << "Yices error (term creation): " << yices2_internal::yices_error();
       throw exception(ss.str());
     }
 
@@ -984,8 +987,7 @@ public:
     // At this point we need to be non-null
     if (result.is_null()) {
       std::stringstream ss;
-      char* error = yices_error_string();
-      ss << "Yices error (term creation): " << error;
+      ss << "Yices error (term creation): " << yices2_internal::yices_error();
       throw exception(ss.str());
     }
 
@@ -1018,8 +1020,7 @@ void yices2_internal::add(expr::term_ref ref, solver::formula_class f_class) {
   int ret = yices_assert_formula(d_ctx, yices_term);
   if (ret < 0) {
     std::stringstream ss;
-    char* error = yices_error_string();
-    ss << "Yices error (add): " << error;
+    ss << "Yices error (add): " << yices_error();
     throw exception(ss.str());
   }
 }
@@ -1036,8 +1037,7 @@ solver::result yices2_internal::check() {
     return solver::UNKNOWN;
   default: {
     std::stringstream ss;
-    char* error = yices_error_string();
-    ss << "Yices error (check): " << error;
+    ss << "Yices error (check): " << yices_error();
     throw exception(ss.str());
   }
   }
@@ -1266,9 +1266,7 @@ void yices2_internal::push() {
   int ret = yices_push(d_ctx);
   if (ret < 0) {
     std::stringstream ss;
-    char* error = yices_error_string();
-    ss << "Yices error (push): " << error;
-    yices_free_string(error);
+    ss << "Yices error (push): " << yices_error();
     throw exception(ss.str());
   }
   d_assertions_size.push_back(d_assertions.size());
@@ -1278,8 +1276,7 @@ void yices2_internal::pop() {
   int ret = yices_pop(d_ctx);
   if (ret < 0) {
     std::stringstream ss;
-    char* error = yices_error_string();
-    ss << "Yices error (pop): " << error;
+    ss << "Yices error (pop): " << yices_error();
     throw exception(ss.str());
   }
   size_t size = d_assertions_size.back();
@@ -1400,8 +1397,7 @@ void yices2_internal::generalize(smt::solver::generalization_type type, expr::mo
   int32_t ret = yices_generalize_model_array(yices_model, assertions_size, assertions, variables_size, variables, YICES_GEN_DEFAULT, &G_y);
   if (ret < 0) {
     std::stringstream ss;
-    char* error = yices_error_string();
-    ss << "Yices error (generalization): " << error;
+    ss << "Yices error (generalization): " << yices_error();
     throw exception(ss.str());
   }
 
