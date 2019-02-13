@@ -39,7 +39,7 @@ class dreal_internal {
   expr::term_manager& d_tm;
 
   /** Number of dreal instances */
-  static int s_instances;
+  static size_t s_instances;
 
   /** The dreal context */
   ::dreal::Context *d_ctx;

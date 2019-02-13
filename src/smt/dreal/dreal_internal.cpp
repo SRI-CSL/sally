@@ -33,7 +33,7 @@ using namespace dreal;
 namespace sally {
 namespace smt {
 
-int dreal_internal::s_instances = 0;
+size_t dreal_internal::s_instances = 0;
 
 dreal_internal::dreal_internal(expr::term_manager& tm, const options& opts)
   : d_tm(tm)
@@ -44,10 +44,9 @@ dreal_internal::dreal_internal(expr::term_manager& tm, const options& opts)
   , d_instance(s_instances)
 {
   // Initialize
-  if (s_instances == 0) {
-    TRACE("dreal") << "dreal: first instance." << std::endl;
-  }
-  s_instances ++;
+  TRACE("dreal") << "dreal: created dreal[" << s_instances << "]." << std::endl;      
+	  
+  s_instances++;
   d_conversion_cache = dreal_term_cache::get_cache(d_tm);
 
   // The config
@@ -74,7 +73,7 @@ dreal_internal::dreal_internal(expr::term_manager& tm, const options& opts)
     d_config->mutable_use_polytope() = true;
   }
   
-  // The contex
+  // The context
   d_ctx = new Context {*d_config};
   if (!d_ctx) {
     throw exception("Dreal error (context creation)");
@@ -97,10 +96,10 @@ dreal_internal::~dreal_internal() {
   // Cleanup if the last one
   s_instances--;
   if (s_instances == 0) {
-    TRACE("dreal") << "dreal: last instance removed." << std::endl;
     // Clear the cache
     d_conversion_cache->clear();
   }
+  TRACE("dreal") << "dreal: removed dreal[" << s_instances << "]." << std::endl;    
 }
 
 dreal_term dreal_internal::mk_dreal_term(expr::term_op op, std::vector<dreal_term>& children) {
@@ -353,8 +352,8 @@ void dreal_internal::add(expr::term_ref ref, solver::formula_class f_class) {
 
   // Assert to dreal
   dreal_term dreal_t = to_dreal_term(ref);
-  assert(dreal_t.is_formula() || dreal_t.is_variable());
-  Formula f = dreal_t.is_formula() ? dreal_t.formula() : Formula(dreal_t.variable());
+  assert(dreal_t.is_formula());
+  Formula f = dreal_t.formula();
   d_assertions_dreal.push_back(f);
   const Variables& vars = f.GetFreeVariables();
   for (Variables::const_iterator it = vars.begin(), et = vars.end(); it!=et; ++it) {
@@ -362,6 +361,7 @@ void dreal_internal::add(expr::term_ref ref, solver::formula_class f_class) {
     d_ctx->DeclareVariable(v);
     d_assertion_vars.insert(v);
   }
+  TRACE("dreal") << dreal_t.to_smtlib2() << std::endl;
   d_ctx->Assert(f);
   d_last_check_status = solver::UNKNOWN;
 }
@@ -548,7 +548,6 @@ void dreal_internal::gc() {
 
 
 void dreal_internal::add_variable(expr::term_ref var, smt::solver::variable_class f_class) {
-
   switch (f_class) {
   case smt::solver::CLASS_A:
     assert(d_A_variables_set.find(var) == d_A_variables_set.end());
