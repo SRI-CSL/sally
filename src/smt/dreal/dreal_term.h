@@ -78,10 +78,10 @@ namespace smt {
     bool is_formula_variable() const;
     
     /** Returns the expression inside */
-    ::dreal::Expression& expression();
+    const ::dreal::Expression& expression() const;
     
     /** Returns the formula inside */
-    ::dreal::Formula& formula();
+    const ::dreal::Formula& formula() const;
 
     /** Returns the variable inside */
     const ::dreal::Variable& variable() const;
@@ -91,7 +91,7 @@ namespace smt {
 
     /** Returns hash of term */
     size_t get_hash() const;
-
+    
     /** Returns term as a string */
     std::string to_string() const;
 
@@ -99,11 +99,11 @@ namespace smt {
     std::string to_smtlib2() const;
     
     /** Return the conjunction of all terms */
-    static dreal_term dreal_and(std::vector<dreal_term>& children);
+    static dreal_term dreal_and(const std::vector<dreal_term>& children);
     static dreal_term dreal_and(dreal_term f1, dreal_term f2);    
 
     /** Return the disjunction of all terms */
-    static dreal_term dreal_or(std::vector<dreal_term>& children);
+    static dreal_term dreal_or(const std::vector<dreal_term>& children);
     static dreal_term dreal_or(dreal_term f1, dreal_term f2);        
 
     /** Return the negation of t */
@@ -122,11 +122,11 @@ namespace smt {
 
     /** Create an arithmetic operator from terms */    
     static dreal_term dreal_add(dreal_term e1, dreal_term e2);
-    static dreal_term dreal_add(std::vector<dreal_term>& children);    
+    static dreal_term dreal_add(const std::vector<dreal_term>& children);    
     static dreal_term dreal_sub(dreal_term e1, dreal_term e2);
     static dreal_term dreal_sub(dreal_term e); //unary minus operator    
     static dreal_term dreal_mul(dreal_term e1, dreal_term e2);
-    static dreal_term dreal_mul(std::vector<dreal_term>& children);        
+    static dreal_term dreal_mul(const std::vector<dreal_term>& children);        
     static dreal_term dreal_div(dreal_term e1, dreal_term e2);
 
     /** TODO: dreal also supports operators such as log, abs, exp,
@@ -141,7 +141,7 @@ namespace smt {
 
   /** Dreal term hash. */
   struct dreal_hasher {
-    size_t operator()(dreal_term t) const { return t.get_hash(); }    
+    size_t operator()(const dreal_term& t) const { return t.get_hash(); }    
   };
 
   std::ostream& operator<<(std::ostream& out, const dreal_term& t);

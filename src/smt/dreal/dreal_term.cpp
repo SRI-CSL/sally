@@ -55,14 +55,15 @@ dreal_term::dreal_term(double v)
   
 dreal_term::dreal_term(Expression e)
   : d_type(dreal_term::type_t::EXPRESSION)
-  , d_e(std::move(e))
+  , d_e(e)
 {}
 
 dreal_term::dreal_term(Formula f)
   : d_type(dreal_term::type_t::FORMULA)
-  , d_f(std::move(f))
+  , d_f(f)
 {}
-  
+
+
 dreal_term::type_t dreal_term::get_type() const {
   return d_type;
 }
@@ -97,14 +98,14 @@ bool dreal_term::is_formula_variable() const {
   return is_formula() && is_variable();  
 }
   
-Expression& dreal_term::expression() {
+const Expression& dreal_term::expression() const {
   if (get_type() != dreal_term::type_t::EXPRESSION) {
     throw exception("Dreal error (this term is not an expression)");      
   }
   return d_e;
 }
-     
-Formula& dreal_term::formula() {
+
+const Formula& dreal_term::formula() const {
   if (get_type() != dreal_term::type_t::FORMULA) {
     throw exception("Dreal error (this term is not a formula)");      
   }
@@ -122,7 +123,7 @@ const Variable& dreal_term::variable() const {
 }
   
 bool dreal_term::operator==(const dreal_term& o) const {
-  bool res =false;  
+  bool res = false;  
   if (d_type == o.d_type) {
     switch(d_type) {
     case type_t::NULL_TERM:
@@ -162,11 +163,21 @@ std::string dreal_term::to_smtlib2() const {
 }
   
 size_t dreal_term::get_hash() const {
-  utils::sequence_hash hash;
-  hash.add(d_type);
-  hash.add(d_e.get_hash());
-  hash.add(d_f.get_hash());
-  return hash.get();
+  // utils::sequence_hash hash;
+  // hash.add(d_type);
+  // hash.add(d_e.get_hash());
+  // hash.add(d_f.get_hash());
+  // return hash.get();
+    
+  if (is_expression()) {
+    return d_e.get_hash();
+  } else if (is_formula()) {
+    return d_f.get_hash();
+  } else {
+    std::stringstream ss;
+    ss << "Dreal error (cannot hash null term)";
+    throw exception(ss.str());      
+  }
 }
 
 /*
@@ -189,7 +200,7 @@ dreal_term dreal_term::dreal_or(dreal_term t1, dreal_term t2) {
   }
 }
 
-dreal_term dreal_term::dreal_and(std::vector<dreal_term>& children) {
+dreal_term dreal_term::dreal_and(const std::vector<dreal_term>& children) {
   dreal_term res(Formula::True()); // this will be simplified by dreal
   for(unsigned i=0, e=children.size(); i<e; ++i) {
     res = dreal_and(res, children[i]);
@@ -198,7 +209,7 @@ dreal_term dreal_term::dreal_and(std::vector<dreal_term>& children) {
 }
 
   
-dreal_term dreal_term::dreal_or(std::vector<dreal_term>& children) {
+dreal_term dreal_term::dreal_or(const std::vector<dreal_term>& children) {
   dreal_term res(Formula::False()); // this will be simplified by dreal
   for(unsigned i=0, e=children.size(); i<e; ++i) {
     res = dreal_or(res, children[i]);
@@ -216,11 +227,10 @@ dreal_term dreal_term::dreal_not(dreal_term t) {
 }
 
 dreal_term dreal_term::dreal_eq(dreal_term t1, dreal_term t2){
-  // use == for expressions and iff for formulas
   if (t1.is_expression() && t2.is_expression()) {
     return dreal_term(t1.expression() == t2.expression()); 
   } else if (t1.is_formula() && t2.is_formula()) {
-    return dreal_term(iff(t1.formula(), t2.formula()));
+    return dreal_term(t1.formula() == t2.formula());
   } else {
     throw exception("Dreal error (cannot create equal operator)");              
   }
@@ -270,7 +280,7 @@ dreal_term dreal_term::dreal_add(dreal_term e1, dreal_term e2) {
   }
 }
 
-dreal_term dreal_term::dreal_add(std::vector<dreal_term>& children) {
+dreal_term dreal_term::dreal_add(const std::vector<dreal_term>& children) {
   dreal_term res(Expression::Zero()); // it will be simplified by dreal
   for (unsigned i=0, e=children.size(); i<e; ++i) {
     res = dreal_add(res, children[i]);
@@ -302,7 +312,7 @@ dreal_term dreal_term::dreal_mul(dreal_term e1, dreal_term e2) {
   }
 }
 
-dreal_term dreal_term::dreal_mul(std::vector<dreal_term>& children) {
+dreal_term dreal_term::dreal_mul(const std::vector<dreal_term>& children) {
   dreal_term res(Expression::One()); // it will be simplified by dreal
   for (unsigned i=0, e=children.size(); i<e; ++i) {
     res = dreal_mul(res, children[i]);
