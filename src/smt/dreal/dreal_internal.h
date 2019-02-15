@@ -96,7 +96,7 @@ class dreal_internal {
   
  public:
 
-  /** Construct an instance of dreal with the given temr manager and options */
+  /** Construct an instance of dreal with the given term manager and options */
   dreal_internal(expr::term_manager& tm, const options& opts);
 
   /** Destroy dreal instance */

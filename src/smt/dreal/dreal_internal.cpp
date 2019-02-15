@@ -423,28 +423,42 @@ bool dreal_internal::get_dreal_model(const Box& model) {
     expr::term_ref var = variables[i];
     dreal_term dreal_var = to_dreal_term(var);
     assert(dreal_var.is_variable());
-    
-    const ibex::Interval& iv = model[dreal_var.variable()];
-    if (iv.is_unbounded()) {
-      goto NO_MODEL_FOUND;
-    }
 
-    double value;
-    
-    // if (iv.lb() != iv.ub()) {
-    //   goto NO_MODEL_FOUND;
-    // } else {
-    //   value = iv.lb();
-    // }
-    
-    double dist = (iv.lb() > iv.ub() ? iv.lb() - iv.ub(): iv.ub() - iv.lb());
-    if (dist > d_ctx->config().precision()) {
-      goto NO_MODEL_FOUND;
+    const Variable &x = dreal_var.variable();
+    /*
+     * BD: added this check to make sure x is defined in the dreal model
+     * before we ask for its interval value. Otherwise, the query
+     *   iv = model[x]
+     * has bizarre side-effects on the dreal model and context.
+     */
+    if (model.has_variable(x)) {
+      const ibex::Interval& iv = model[x];
+
+      if (iv.is_unbounded()) {
+	goto NO_MODEL_FOUND;
+      }
+
+      double value;
+
+      // if (iv.lb() != iv.ub()) {
+      //   goto NO_MODEL_FOUND;
+      // } else {
+      //   value = iv.lb();
+      // }
+
+      double dist = (iv.lb() > iv.ub() ? iv.lb() - iv.ub(): iv.ub() - iv.lb());
+      if (dist > d_ctx->config().precision()) {
+	goto NO_MODEL_FOUND;
+      } else {
+	value = iv.mid();
+      }
+      d_last_model[var] = value;
     } else {
-      value = iv.mid();
+      // var isn't defined in the dreal mode
+      d_last_model[var] = 0.0;
     }
-    d_last_model[var] = value;
   }
+
   return true;
   
   NO_MODEL_FOUND:
