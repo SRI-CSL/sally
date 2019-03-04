@@ -98,8 +98,8 @@ yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
   }
   bool use_dpllt = mode == "dpllt" || mode == "hybrid";
   bool use_mcsat = mode == "mcsat" || mode == "hybrid";
-  if (!use_dpllt || !use_mcsat) {
-    throw exception("yices2-mode must be one of dpllt, mcsat, or hybrid");
+  if (!use_dpllt && !use_mcsat) {
+    throw exception("yices2-mode must be one of dpllt, mcsat, or hybrid (got " + mode + ")");
   }
 
   if (use_dpllt) {
