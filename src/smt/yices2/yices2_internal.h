@@ -54,8 +54,21 @@ class yices2_internal {
   /** Yices real type */
   static type_t s_real_type;
 
-  /** The yices context */
-  context_t *d_ctx;
+  /** Yices context (dpllt) */
+  context_t *d_ctx_dpllt;
+
+  /** Yices context (dpllt) */
+  context_t *d_ctx_mcsat;
+
+  /** Is dpllt incomplete */
+  bool d_dpllt_incomplete;
+
+  /** Is mcsat incomplete */
+  bool d_mcsat_incomplete;
+
+  /** Remember incompleteness across push/pop */
+  std::vector<bool> d_dpllt_incomplete_log;
+  std::vector<bool> d_mcsat_incomplete_log;
 
   /** All assertions we have in context (strong)  */
   std::vector<expr::term_ref_strong> d_assertions;
@@ -87,11 +100,15 @@ class yices2_internal {
   /** Bitvector 0 */
   expr::term_ref_strong d_bv0;
 
-  /** Last check return */
-  smt_status_t d_last_check_status;
+  /** Last check return (dpllt) */
+  smt_status_t d_last_check_status_dpllt;
+  /** Last check return (mcsat) */
+  smt_status_t d_last_check_status_mcsat;
 
-  /** The yices config */
-  ctx_config_t* d_config;
+  /** Yices config (dpllt) */
+  ctx_config_t* d_config_dpllt;
+  /** Yices config (mcsat) */
+  ctx_config_t* d_config_mcsat;
 
   /** The instance */
   size_t d_instance;
@@ -107,7 +124,7 @@ class yices2_internal {
 
 public:
 
-  /** Construct an instance of yices with the given temr manager and options */
+  /** Construct an instance of yices with the given term manager and options */
   yices2_internal(expr::term_manager& tm, const options& opts);
 
   /** Destroy yices instance */

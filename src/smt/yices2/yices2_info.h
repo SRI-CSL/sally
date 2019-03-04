@@ -32,7 +32,7 @@ struct yices2_info {
   static void setup_options(boost::program_options::options_description& options) {
     using namespace boost::program_options;
     options.add_options()
-        ("yices2-mcsat", "Use the MCSAT solver.")
+        ("yices2-mode", value<std::string>()->default_value("hybrid"), "Mode of Yices2 to use (dpllt, mcsat, hybrid).")
         ;
   }
 
