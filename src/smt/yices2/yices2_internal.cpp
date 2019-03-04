@@ -59,9 +59,15 @@ void yices2_internal::check_error(int ret, const char* error_msg) const {
 
 yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
 : d_tm(tm)
+, d_ctx_dpllt(NULL)
+, d_ctx_mcsat(NULL)
+, d_dpllt_incomplete(false)
+, d_mcsat_incomplete(false)
 , d_conversion_cache(0)
-, d_last_check_status(STATUS_UNKNOWN)
-, d_config(NULL)
+, d_last_check_status_dpllt(STATUS_UNKNOWN)
+, d_last_check_status_mcsat(STATUS_UNKNOWN)
+, d_config_dpllt(NULL)
+, d_config_mcsat(NULL)
 , d_instance(s_instances)
 {
   // Initialize
@@ -85,34 +91,59 @@ yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
 
   // The context
   int32_t ret = 0; 
-  if (opts.has_option("solver-logic")) {
-    d_config = yices_new_config();
-    ret = yices_default_config_for_logic(d_config, opts.get_string("solver-logic").c_str());
-    check_error(ret, "Yices error (default configuration creation)");
+
+  std::string mode = "hybrid";
+  if (opts.has_option("yices2-mode")) {
+    mode = opts.get_string("yices2-mode");
   }
-  if (opts.has_option("yices2-mcsat")) {
-    if (d_config == NULL) {
-      d_config = yices_new_config();
+  bool use_dpllt = mode == "dpllt" || mode == "hybrid";
+  bool use_mcsat = mode == "mcsat" || mode == "hybrid";
+  if (!use_dpllt && !use_mcsat) {
+    throw exception("yices2-mode must be one of dpllt, mcsat, or hybrid (got " + mode + ")");
+  }
+
+  if (use_dpllt) {
+    d_config_dpllt = yices_new_config();
+    if (opts.has_option("solver-logic")) {
+      ret = yices_default_config_for_logic(d_config_dpllt, opts.get_string("solver-logic").c_str());
+      check_error(ret, "Yices error (default configuration creation)");
     }
-    ret = yices_set_config(d_config, "solver-type", "mcsat");
-    check_error(ret, "Yices error (mcsat option): ");
+    d_ctx_dpllt = yices_new_context(d_config_dpllt);
+    if (d_ctx_dpllt == 0) {
+      std::stringstream ss;
+      ss << "Yices error (context creation): " << yices_error();
+      throw exception(ss.str());
+    }
   }
-  d_ctx = yices_new_context(d_config);
-  if (d_ctx == 0) {
-    std::stringstream ss;
-    ss << "Yices error (context creation): " << yices_error();
-    throw exception(ss.str());
+  if (use_mcsat) {
+    d_config_mcsat = yices_new_config();
+    ret = yices_set_config(d_config_mcsat, "solver-type", "mcsat");
+    check_error(ret, "Yices error (mcsat option): ");
+    d_ctx_mcsat = yices_new_context(d_config_mcsat);
+    if (d_ctx_mcsat == 0) {
+      std::stringstream ss;
+      ss << "Yices error (context creation): " << yices_error();
+      throw exception(ss.str());
+    }
   }
 }
 
 yices2_internal::~yices2_internal() {
 
   // The context
-  yices_free_context(d_ctx);
+  if (d_ctx_dpllt) {
+    yices_free_context(d_ctx_dpllt);
+  }
+  if (d_ctx_mcsat) {
+    yices_free_context(d_ctx_mcsat);
+  }
 
   // The config
-  if (d_config) {
-    yices_free_config(d_config);
+  if (d_config_dpllt) {
+    yices_free_config(d_config_dpllt);
+  }
+  if (d_config_mcsat) {
+    yices_free_config(d_config_mcsat);
   }
 
   // Cleanup if the last one
@@ -1007,6 +1038,9 @@ expr::term_ref yices2_internal::to_term(term_t yices_term) {
 }
 
 void yices2_internal::add(expr::term_ref ref, solver::formula_class f_class) {
+  int ret_dpllt = 0;
+  int ret_mcsat = 0;
+
   // Remember the assertions
   expr::term_ref_strong ref_strong(d_tm, ref);
   d_assertions.push_back(ref_strong);
@@ -1017,29 +1051,82 @@ void yices2_internal::add(expr::term_ref ref, solver::formula_class f_class) {
   if (output::trace_tag_is_enabled("yices2")) {
     yices_pp_term(stderr, yices_term, 80, 100, 0);
   }
-  int ret = yices_assert_formula(d_ctx, yices_term);
-  if (ret < 0) {
-    std::stringstream ss;
-    ss << "Yices error (add): " << yices_error();
-    throw exception(ss.str());
+
+  if (d_ctx_dpllt) {
+    ret_dpllt = yices_assert_formula(d_ctx_dpllt, yices_term);
+    if (ret_dpllt < 0) {
+      error_code_t error = yices_error_code();
+      if (error == CTX_NONLINEAR_ARITH_NOT_SUPPORTED) {
+        // Unsupported -> incomplete
+        yices_clear_error();
+        d_dpllt_incomplete = true;
+      } else {
+        check_error(ret_dpllt, "Yices error (add)");
+      }
+    }
+  }
+  if (d_ctx_mcsat) {
+    ret_mcsat = yices_assert_formula(d_ctx_mcsat, yices_term);
+    if (ret_mcsat < 0) {
+      error_code_t error = yices_error_code();
+      if (error == MCSAT_ERROR_UNSUPPORTED_THEORY) {
+        // Unsupported -> incomplete
+        yices_clear_error();
+        d_mcsat_incomplete = true;
+      } else {
+        check_error(ret_mcsat, "Yices error (add)");
+      }
+    }
   }
 }
 
 solver::result yices2_internal::check() {
-  d_last_check_status = yices_check_context(d_ctx, 0);
 
-  switch (d_last_check_status) {
-  case STATUS_SAT:
-    return solver::SAT;
-  case STATUS_UNSAT:
-    return solver::UNSAT;
-  case STATUS_UNKNOWN:
-    return solver::UNKNOWN;
-  default: {
-    std::stringstream ss;
-    ss << "Yices error (check): " << yices_error();
-    throw exception(ss.str());
+  smt_status_t result;
+
+  // Call DPLL(T) first, then MCSAT if unsupported
+  if (d_ctx_dpllt) {
+    result = d_last_check_status_dpllt = yices_check_context(d_ctx_dpllt, 0);
+    d_last_check_status_mcsat = STATUS_UNKNOWN;
+    switch (result) {
+    case STATUS_SAT:
+      if (!d_dpllt_incomplete) {
+        return solver::SAT;
+      } else {
+        d_last_check_status_dpllt = STATUS_UNKNOWN;
+        break; // Do MCSAT
+      }
+    case STATUS_UNSAT:
+      return solver::UNSAT;
+    case STATUS_UNKNOWN:
+      break; // Do MCSAT
+    default: {
+      std::stringstream ss;
+      ss << "Yices error (check): " << yices_error();
+      throw exception(ss.str());
+    }
+    }
   }
+  if (d_ctx_mcsat) {
+    result = d_last_check_status_mcsat = yices_check_context(d_ctx_mcsat, 0);
+    switch (result) {
+    case STATUS_SAT:
+      if (!d_mcsat_incomplete) {
+        return solver::SAT;
+      } else {
+        d_last_check_status_mcsat = STATUS_UNKNOWN;
+        break; // Nobody knows
+      }
+    case STATUS_UNSAT:
+      return solver::UNSAT;
+    case STATUS_UNKNOWN:
+      return solver::UNKNOWN;
+    default: {
+      std::stringstream ss;
+      ss << "Yices error (check): " << yices_error();
+      throw exception(ss.str());
+    }
+    }
   }
 
   return solver::UNKNOWN;
@@ -1125,7 +1212,7 @@ model_t* yices2_internal::get_yices_model(expr::model::ref m) {
 
 
 expr::model::ref yices2_internal::get_model() {
-  assert(d_last_check_status == STATUS_SAT);
+  assert(d_last_check_status_dpllt == STATUS_SAT || d_last_check_status_mcsat == STATUS_SAT);
   assert(d_A_variables.size() > 0 || d_B_variables.size() > 0);
 
   int32_t ret = 0;
@@ -1134,7 +1221,9 @@ expr::model::ref yices2_internal::get_model() {
   expr::model::ref m = new expr::model(d_tm, false);
 
   // Get the model from yices
-  model_t* yices_model = yices_get_model(d_ctx, true);
+  model_t* yices_model =  (d_last_check_status_dpllt == STATUS_SAT) ?
+      yices_get_model(d_ctx_dpllt, true) :
+      yices_get_model(d_ctx_mcsat, true) ;
 
   if (output::trace_tag_is_enabled("yices2::model")) {
     yices_pp_model(stderr, yices_model, 80, 100000, 0);
@@ -1184,9 +1273,7 @@ expr::model::ref yices2_internal::get_model() {
     case expr::TYPE_BOOL: {
       int32_t value;
       ret = yices_get_bool_value(yices_model, yices_var, &value);
-      if (ret < 0) {
-        throw exception("Error obtaining Bool value from Yices2 model.");
-      }
+      check_error(ret, "Error obtaining Bool value from Yices2 model.");
       var_value = expr::value(value);
       break;
     }
@@ -1195,9 +1282,7 @@ expr::model::ref yices2_internal::get_model() {
       mpz_t value;
       mpz_init(value);
       ret = yices_get_mpz_value(yices_model, yices_var, value);
-      if (ret < 0) {
-        throw exception("Error obtaining integer value from Yices2 model.");
-      }
+      check_error(ret, "Error obtaining integer value from Yices2 model.");
       expr::rational rational_value(value);
       var_value = expr::value(rational_value);
       // Clear the temps
@@ -1240,9 +1325,7 @@ expr::model::ref yices2_internal::get_model() {
       size_t size = d_tm.get_bitvector_type_size(var_type);
       int32_t* value = new int32_t[size];
       ret = yices_get_bv_value(yices_model, yices_var, value);
-      if (ret < 0) {
-        throw exception("Error obtaining bit-vector value from Yices2 model.");
-      }
+      check_error(ret, "Error obtaining bit-vector value from Yices2 model.");
       expr::bitvector bv = bitvector_from_int32(size, value);
       var_value = expr::value(bv);
       delete[] value;
@@ -1263,21 +1346,29 @@ expr::model::ref yices2_internal::get_model() {
 }
 
 void yices2_internal::push() {
-  int ret = yices_push(d_ctx);
-  if (ret < 0) {
-    std::stringstream ss;
-    ss << "Yices error (push): " << yices_error();
-    throw exception(ss.str());
+  int ret = 0;
+  if (d_ctx_dpllt) {
+    ret = yices_push(d_ctx_dpllt);
+    check_error(ret, "Yices error (push)");
+  }
+  if (d_ctx_mcsat) {
+    ret = yices_push(d_ctx_mcsat);
+    check_error(ret, "Yices error (push)");
   }
   d_assertions_size.push_back(d_assertions.size());
+  d_dpllt_incomplete_log.push_back(d_dpllt_incomplete);
+  d_mcsat_incomplete_log.push_back(d_mcsat_incomplete);
 }
 
 void yices2_internal::pop() {
-  int ret = yices_pop(d_ctx);
-  if (ret < 0) {
-    std::stringstream ss;
-    ss << "Yices error (pop): " << yices_error();
-    throw exception(ss.str());
+  int ret = 0;
+  if (d_ctx_dpllt) {
+    ret = yices_pop(d_ctx_dpllt);
+    check_error(ret, "Yices error (pop)");
+  }
+  if (d_ctx_mcsat) {
+    ret = yices_pop(d_ctx_mcsat);
+    check_error(ret, "Yices error (pop)");
   }
   size_t size = d_assertions_size.back();
   d_assertions_size.pop_back();
@@ -1285,6 +1376,10 @@ void yices2_internal::pop() {
     d_assertions.pop_back();
     d_assertion_classes.pop_back();
   }
+  d_dpllt_incomplete = d_dpllt_incomplete_log.back();
+  d_dpllt_incomplete_log.pop_back();
+  d_mcsat_incomplete = d_mcsat_incomplete_log.back();
+  d_mcsat_incomplete_log.pop_back();
 }
 
 void yices2_internal::generalize(smt::solver::generalization_type type, std::vector<expr::term_ref>& projection_out) {
