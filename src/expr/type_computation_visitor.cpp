@@ -1013,14 +1013,14 @@ void type_computation_visitor::visit(term_ref t_ref) {
   TRACE("types") << "compute_type::visit(" << t_ref << ") => " << t_type << std::endl;
 
   assert(!d_ok || !t_type.is_null());
-  assert(!d_tm.is_type(t) || d_tm.is_primitive_type(t) || !t_base_type.is_null());
+  assert(!d_tm.is_type(t_ref) || d_tm.is_primitive_type(t_ref) || !t_base_type.is_null());
 
   if (!d_ok) {
     error(t_ref, error_message.str());
   } else {
     assert(d_type_cache.find(t_ref) == d_type_cache.end());
     d_type_cache[t_ref] = t_type;
-    if (d_tm.is_type(t) && !d_tm.is_primitive_type(t)) {
+    if (d_tm.is_type(t_ref) && !d_tm.is_primitive_type(t_ref)) {
       d_base_type_cache[t_ref] = t_base_type;
     }
   }
