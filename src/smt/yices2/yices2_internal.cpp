@@ -108,6 +108,10 @@ yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
       ret = yices_default_config_for_logic(d_config_dpllt, opts.get_string("solver-logic").c_str());
       check_error(ret, "Yices error (default configuration creation)");
     }
+    if (opts.has_option("yices2-trace-tags")) {
+      ret = yices_set_config(d_config_dpllt, "trace", opts.get_string("yices2-trace-tags").c_str());
+      check_error(ret, "Yices error (mcsat option)");
+    }
     d_ctx_dpllt = yices_new_context(d_config_dpllt);
     if (d_ctx_dpllt == 0) {
       std::stringstream ss;
@@ -117,8 +121,12 @@ yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
   }
   if (use_mcsat) {
     d_config_mcsat = yices_new_config();
+    if (opts.has_option("yices2-trace-tags")) {
+      ret = yices_set_config(d_config_mcsat, "trace", opts.get_string("yices2-trace-tags").c_str());
+      check_error(ret, "Yices error (mcsat option)");
+    }
     ret = yices_set_config(d_config_mcsat, "solver-type", "mcsat");
-    check_error(ret, "Yices error (mcsat option): ");
+    check_error(ret, "Yices error (mcsat option)");
     d_ctx_mcsat = yices_new_context(d_config_mcsat);
     if (d_ctx_mcsat == 0) {
       std::stringstream ss;

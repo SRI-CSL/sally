@@ -33,6 +33,7 @@ struct yices2_info {
     using namespace boost::program_options;
     options.add_options()
         ("yices2-mode", value<std::string>()->default_value("hybrid"), "Mode of Yices2 to use (dpllt, mcsat, hybrid).")
+        ("yices2-trace-tags", value<std::string>(), "Comma separated to pass to (debug version of) Yices2.")
         ;
   }
 
