@@ -22,8 +22,18 @@
 #include "expr/term_map.h"
 #include "command/command.h"
 
+#include <unordered_map>
+
 namespace sally {
 namespace parser {
+
+struct substituition {
+  expr::term_manager::substitution_map mapping;
+
+  void add(expr::term_ref original, expr::term_ref substituted) {
+    mapping.insert(std::make_pair(original, substituted));
+  }
+};
 
 class chc_system {
 
@@ -31,9 +41,12 @@ class chc_system {
 
   typedef std::vector<expr::term_ref> term_vec;
   typedef expr::term_ref_hash_map<term_vec> predicate_to_rules_map;
+  typedef expr::term_ref_hash_map<term_vec> prediate_to_normalized_args_map;
 
   /** Map from predicates to all the rules */
   predicate_to_rules_map d_rules;
+
+  prediate_to_normalized_args_map d_normalized;
 
 public:
 
@@ -45,6 +58,24 @@ public:
 
   /** Returns the command corresponding to the CHC system */
   cmd::command* to_commands();
+
+private:
+
+  bool is_transition_system() const;
+
+  size_t get_number_of_predicates() const;
+
+  substituition normalize_head(expr::term_ref &head);
+
+  void normalize_tail(expr::term_ref &tail, const substituition &sub);
+
+  expr::term_ref get_predicate(expr::term_ref head) const;
+
+  term_vec get_arguments(expr::term_ref head) const;
+
+  cmd::command* to_transition_system() const;
+
+
 };
 
 }
