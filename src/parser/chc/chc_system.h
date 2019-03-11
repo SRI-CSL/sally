@@ -33,6 +33,8 @@ struct substituition {
   void add(expr::term_ref original, expr::term_ref substituted) {
     mapping.insert(std::make_pair(original, substituted));
   }
+
+  void clear() { mapping.clear(); }
 };
 
 class chc_system {
@@ -72,6 +74,8 @@ private:
   expr::term_ref get_predicate(expr::term_ref head) const;
 
   term_vec get_arguments(expr::term_ref head) const;
+
+  term_vec remove_predicate_and_extract_vars(expr::term_ref& tail, expr::term_ref predicate) const;
 
   cmd::command* to_transition_system() const;
 
