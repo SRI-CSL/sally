@@ -86,6 +86,27 @@ void rational::to_stream(std::ostream& out) const {
   }
 }
 
+// Simply method to create rationals also from numbers with decimal point. TODO: write tests
+expr::rational decimal2rational(std::string decimal) {
+//  std::cout << decimal << std::endl;
+  size_t pos = decimal.find('.');
+  assert(pos != std::string::npos);
+  if (pos == std::string::npos) {
+    return expr::rational(decimal);
+  }
+  assert(pos < decimal.size());
+  size_t len_after_point = decimal.size() - pos - 1;
+  decimal.erase(pos, 1);
+  decimal.push_back('/');
+  decimal.push_back('1');
+  for (size_t i = 0; i < len_after_point; ++i) {
+    decimal.push_back('0');
+  }
+  expr::rational res(decimal);
+//  std::cout << res << std::endl;
+  return res;
+}
+
 std::ostream& operator << (std::ostream& out, const rational& q) {
   q.to_stream(out);
   return out;

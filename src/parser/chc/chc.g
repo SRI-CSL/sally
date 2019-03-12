@@ -177,6 +177,10 @@ decimal_constant returns [expr::term_ref t = expr::term_ref()]
      expr::rational value(STATE->token_text($NUMERAL));
      t = STATE->tm().mk_rational_constant(value);
     }
+  | DECIMAL {
+      expr::rational value = expr::decimal2rational(STATE->token_text($DECIMAL));
+      t = STATE->tm().mk_rational_constant(value);
+    }
   ; 
 
 bitvector_constant returns [expr::term_ref t = expr::term_ref()]
@@ -307,6 +311,9 @@ ALPHA : 'a'..'z' | 'A'..'Z';
 
 /** Matches a numeral (sequence of digits) */
 NUMERAL: DIGIT+;
+
+/** Matches numbers with a decimal point*/
+DECIMAL: DIGIT+ '.' DIGIT+;
 
 /** Matches a binary numeral (sequence of digits) */
 BIN_NUMERAL: '#b' ('0'|'1')+;
