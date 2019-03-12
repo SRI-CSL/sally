@@ -279,6 +279,8 @@ type returns [expr::term_ref type]
        expr::integer int_value(STATE->token_text(size), 10);
        type = STATE->get_bitvector_type(int_value.get_unsigned());       
     }
+  | // Bool
+    'Bool' { type = STATE->get_type("Bool"); }
   ;
 
 /** Comments (skip) */
