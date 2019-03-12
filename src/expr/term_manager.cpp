@@ -78,6 +78,8 @@ term_ref term_manager::mk_term(term_op op, const std::vector<term_ref>& children
   term_ref result;
   if (children.size() == 2) {
     result = mk_term(op, children[0], children[1]);
+  } else if (children.size() == 1 && (op == term_op::TERM_AND || op == term_op::TERM_OR)) {
+    result = children[0];
   } else {
     result = d_tm->mk_term(op, children.begin(), children.end());
   }
