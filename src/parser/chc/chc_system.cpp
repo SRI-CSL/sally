@@ -200,12 +200,13 @@ cmd::command *chc_system::to_transition_system() const {
   }
   init_fla = tm.substitute(init_fla, sub.mapping);
   assert(st->is_state_formula(init_fla));
-  std::cout << init_fla << std::endl;
+//  std::cout << init_fla << std::endl;
   system::state_formula* init_states = new system::state_formula(tm, st, init_fla);
 
 
   // make the transition relation
   term_ref transition_fla = transition_rule.second;
+//  std::cout << "Original transition_fla" << transition_fla << std::endl;
   auto predicate = get_predicate(transition_rule.first);
   auto & state_next = st->get_variables(system::state_type::STATE_NEXT);
   sub.clear();
@@ -214,6 +215,7 @@ cmd::command *chc_system::to_transition_system() const {
     sub.add(vars[i], state_next[i]);
   }
   transition_fla = tm.substitute(transition_fla, sub.mapping);
+//  std::cout << "After first substituition" << transition_fla << std::endl;
   // remove the predicate, and substitute its variable
   auto extracted_vars = remove_predicate_and_extract_vars(transition_fla, predicate);
   // TODO: check that all variables are different
@@ -223,6 +225,7 @@ cmd::command *chc_system::to_transition_system() const {
     sub.add(extracted_vars[i], state_current[i]);
   }
   transition_fla = tm.substitute(transition_fla, sub.mapping);
+//  std::cout << "After second substituition" << transition_fla << std::endl;
   assert(st->is_transition_formula(transition_fla));
   system::transition_formula* transition_relation = nullptr;
   transition_relation = new system::transition_formula(tm, st, transition_fla);
@@ -232,9 +235,9 @@ cmd::command *chc_system::to_transition_system() const {
 
   // create query formula;
   expr::term_ref query_fla = query_rule.second;
-  std::cout << query_fla << std::endl;
+//  std::cout << query_fla << std::endl;
   extracted_vars = remove_predicate_and_extract_vars(query_fla, predicate);
-  std::cout << query_fla << std::endl;
+//  std::cout << query_fla << std::endl;
   // TODO: check that all variables are different
   sub.clear();
   assert(extracted_vars.size() == state_current.size());
@@ -242,9 +245,9 @@ cmd::command *chc_system::to_transition_system() const {
     sub.add(extracted_vars[i], state_current[i]);
   }
   query_fla = tm.substitute(query_fla, sub.mapping);
-  std::cout << query_fla << std::endl;
+//  std::cout << query_fla << std::endl;
   query_fla = tm.mk_not(query_fla);
-  std::cout << query_fla << std::endl;
+//  std::cout << query_fla << std::endl;
   assert(st->is_state_formula(query_fla));
   system::state_formula* query = new system::state_formula(tm, st, query_fla);
   cmd_seq->push_back(new cmd::query(ctx, system_id, query));
