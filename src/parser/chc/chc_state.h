@@ -59,6 +59,9 @@ class chc_state {
   /** Symbol table for predicates */
   utils::symbol_table<expr::term_ref_strong> d_functions;
 
+  /** MB: Not sure why I need this, but for now I do*/
+  bool d_finalized;
+
 public:
 
   /** Construct the parser state */

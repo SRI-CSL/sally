@@ -38,6 +38,7 @@ chc_state::chc_state(const system::context& context)
 , d_variables("local vars")
 , d_types("types")
 , d_functions("predicates")
+, d_finalized(false)
 {
   // Add the basic types
   term_manager& tm = context.tm();
@@ -140,6 +141,8 @@ void chc_state::assert_chc(expr::term_ref head, expr::term_ref tail) {
 }
 
 cmd::command* chc_state::finalize() {
+  if (d_finalized) { return 0; }
+  d_finalized = true;
   return d_system.to_commands();
 }
 

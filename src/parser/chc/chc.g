@@ -287,6 +287,11 @@ type returns [expr::term_ref type]
     'Bool' { type = STATE->get_type("Bool"); }
   ;
 
+/** exit (skip for now) */
+EXIT
+  : '(' 'exit' ')' { SKIP(); }
+  ;
+
 /** Comments (skip) */
 COMMENT
   : ';' (~('\n' | '\r'))* { SKIP(); }
