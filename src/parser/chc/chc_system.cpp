@@ -102,7 +102,7 @@ substituition chc_system::normalize_head(term_ref &head) {
   auto it = d_normalized.find(predicate);
   if ( it == d_normalized.end()) {
     term_vec fresh_vars;
-    for (int i = 0; i < vars.size(); ++i) {
+    for (size_t i = 0; i < vars.size(); ++i) {
       std::string fresh_name = tm.get_fresh_variable_name();
       term_ref type = tm.term_of(vars[i])[0];
       fresh_vars.push_back(tm.mk_variable(fresh_name, type));
@@ -113,7 +113,7 @@ substituition chc_system::normalize_head(term_ref &head) {
 
   // create substituition
   assert(vars.size() == it->second.size());
-  for (int i = 0; i < vars.size(); ++i) {
+  for (size_t i = 0; i < vars.size(); ++i) {
     sub.add(vars[i], it->second[i]);
 //    std::cout << vars[i] << ' ' << it->second[i] << std::endl;
   }
@@ -136,7 +136,7 @@ expr::term_ref chc_system::get_predicate(expr::term_ref head) const {
 chc_system::term_vec chc_system::get_arguments(expr::term_ref head) const {
   std::vector<term_ref> args;
   const term& term = this->ctx.tm().term_of(head);
-  for(int i = 1; i < term.size(); ++i) {
+  for(size_t i = 1; i < term.size(); ++i) {
     args.push_back(term.child(i));
   }
   return args;
@@ -236,7 +236,7 @@ cmd::command *chc_system::to_transition_system() const {
   auto & state_current = st->get_variables(system::state_type::STATE_CURRENT);
   substituition sub;
   assert(vars.size() + additional_vars.size() == state_current.size());
-  for (int i = 0; i < vars.size(); ++i ) {
+  for (size_t i = 0; i < vars.size(); ++i ) {
     sub.add(vars[i], state_current[i]);
   }
   init_fla = tm.substitute(init_fla, sub.mapping);
@@ -249,7 +249,7 @@ cmd::command *chc_system::to_transition_system() const {
   auto & state_next = st->get_variables(system::state_type::STATE_NEXT);
   sub.clear();
   assert(vars.size() + additional_vars.size() == state_next.size());
-  for (int i = 0; i < vars.size(); ++i ) {
+  for (size_t i = 0; i < vars.size(); ++i ) {
     sub.add(vars[i], state_next[i]);
   }
   {
@@ -265,7 +265,7 @@ cmd::command *chc_system::to_transition_system() const {
   // TODO: check that all variables are different
   sub.clear();
   assert(trans_input_vars.size() + additional_vars.size() == state_current.size());
-  for (int i = 0; i < trans_input_vars.size(); ++i ) {
+  for (size_t i = 0; i < trans_input_vars.size(); ++i ) {
     sub.add(trans_input_vars[i], state_current[i]);
   }
   transition_fla = tm.substitute(transition_fla, sub.mapping);
@@ -285,7 +285,7 @@ cmd::command *chc_system::to_transition_system() const {
   // TODO: check that all variables are different
   sub.clear();
   assert(extracted_vars.size() + additional_vars.size() == state_current.size());
-  for (int i = 0; i < extracted_vars.size(); ++i ) {
+  for (size_t i = 0; i < extracted_vars.size(); ++i ) {
     sub.add(extracted_vars[i], state_current[i]);
   }
   query_fla = tm.substitute(query_fla, sub.mapping);
@@ -307,7 +307,7 @@ chc_system::term_vec chc_system::remove_predicate_and_extract_vars(expr::term_re
   assert(it != args.end());
   term_vec predicate_vars;
   const term &tail_predicate = tm.term_of(*it);
-  for(int k = 1; k < tail_predicate.size(); ++k) {
+  for(size_t k = 1; k < tail_predicate.size(); ++k) {
     predicate_vars.push_back(tail_predicate.child(k));
   }
   args.erase(it);
