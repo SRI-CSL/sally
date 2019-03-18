@@ -26,6 +26,7 @@
 #include "command/sequence.h"
 
 #include <iostream>
+#include <algorithm>
 
 using namespace sally::expr;
 
@@ -176,10 +177,50 @@ cmd::command *chc_system::to_transition_system() const {
   }
 
   cmd::sequence* cmd_seq = new cmd::sequence();
+
+  /*
+  The steps for the translation:
+  1. Define state variables: Variables of the predicate, plus additional variables in the body of transition fla
+  2. Renaming:
+    a) Init formula to state variables
+    b) Input vars of transition to state variables
+    c) Output vars of transition to next-state vars
+    d) Additional variables of transition to next-state vars
+   */
+
+  // setup
+  term_ref transition_fla = transition_rule.second;
+  auto predicate = get_predicate(transition_rule.first);
+
+  // Identify the various classes of variables
+  // "vars" already contains the variables from predicate of Init and from output predicate of Trans
+  // get the input variables of transition
+  auto trans_input_vars = remove_predicate_and_extract_vars(transition_fla, predicate);
+  // now the transition formula does not contain the predicate anymore
+  // get the additional variables
+  std::set<term_ref> additional_vars;
+  {
+
+    tm.get_variables(transition_fla, additional_vars);
+    std::for_each(trans_input_vars.begin(), trans_input_vars.end(),
+      [&](term_ref var){ assert(additional_vars.count(var) > 0); additional_vars.erase(var); });
+    std::for_each(vars.begin(), vars.end(),
+                  [&](term_ref var){ assert(additional_vars.count(var) > 0); additional_vars.erase(var); });
+  }
+
   // make state type
   std::vector<std::string> state_vars;
   term_vec state_types;
+  // first the vars of the predicate
   for (auto var : vars) {
+    state_vars.push_back(tm.get_variable_name(var));
+    state_types.push_back(tm.term_of(var)[0]);
+  }
+  // then the additional vars
+  for (auto var : additional_vars) {
+//    std::cout << var << '\n';
+//    std::cout << tm.get_variable_name(var) << '\n';
+//    std::cout << tm.term_of(var)[0] << std::endl;
     state_vars.push_back(tm.get_variable_name(var));
     state_types.push_back(tm.term_of(var)[0]);
   }
@@ -194,7 +235,7 @@ cmd::command *chc_system::to_transition_system() const {
   term_ref init_fla = init_rule.second;
   auto & state_current = st->get_variables(system::state_type::STATE_CURRENT);
   substituition sub;
-  assert(vars.size() == state_current.size());
+  assert(vars.size() + additional_vars.size() == state_current.size());
   for (int i = 0; i < vars.size(); ++i ) {
     sub.add(vars[i], state_current[i]);
   }
@@ -205,24 +246,27 @@ cmd::command *chc_system::to_transition_system() const {
 
 
   // make the transition relation
-  term_ref transition_fla = transition_rule.second;
-//  std::cout << "Original transition_fla" << transition_fla << std::endl;
-  auto predicate = get_predicate(transition_rule.first);
   auto & state_next = st->get_variables(system::state_type::STATE_NEXT);
   sub.clear();
-  assert(vars.size() == state_next.size());
+  assert(vars.size() + additional_vars.size() == state_next.size());
   for (int i = 0; i < vars.size(); ++i ) {
     sub.add(vars[i], state_next[i]);
+  }
+  {
+    int i = vars.size();
+    auto it = additional_vars.begin();
+    for (; it != additional_vars.end(); ++it, ++i) {
+      sub.add(*it, state_next[i]);
+    }
   }
   transition_fla = tm.substitute(transition_fla, sub.mapping);
 //  std::cout << "After first substituition" << transition_fla << std::endl;
   // remove the predicate, and substitute its variable
-  auto extracted_vars = remove_predicate_and_extract_vars(transition_fla, predicate);
   // TODO: check that all variables are different
   sub.clear();
-  assert(extracted_vars.size() == state_current.size());
-  for (int i = 0; i < extracted_vars.size(); ++i ) {
-    sub.add(extracted_vars[i], state_current[i]);
+  assert(trans_input_vars.size() + additional_vars.size() == state_current.size());
+  for (int i = 0; i < trans_input_vars.size(); ++i ) {
+    sub.add(trans_input_vars[i], state_current[i]);
   }
   transition_fla = tm.substitute(transition_fla, sub.mapping);
 //  std::cout << "After second substituition" << transition_fla << std::endl;
@@ -236,11 +280,11 @@ cmd::command *chc_system::to_transition_system() const {
   // create query formula;
   expr::term_ref query_fla = query_rule.second;
 //  std::cout << query_fla << std::endl;
-  extracted_vars = remove_predicate_and_extract_vars(query_fla, predicate);
+  auto extracted_vars = remove_predicate_and_extract_vars(query_fla, predicate);
 //  std::cout << query_fla << std::endl;
   // TODO: check that all variables are different
   sub.clear();
-  assert(extracted_vars.size() == state_current.size());
+  assert(extracted_vars.size() + additional_vars.size() == state_current.size());
   for (int i = 0; i < extracted_vars.size(); ++i ) {
     sub.add(extracted_vars[i], state_current[i]);
   }
