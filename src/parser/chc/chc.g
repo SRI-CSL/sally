@@ -307,7 +307,16 @@ BV_NUMERAL: 'bv' DIGIT+;
 
 /** Matches a symbol. */
 SYMBOL
-  : (ALPHA | ('|' (~'|')* '|')) (ALPHA | ('|' (~'|')* '|') | DIGIT | '_' | '@' | '.' | '!' | '%' )* 
+  : ALPHA (ALPHA | DIGIT | SYMBOL_CHARS)* 
+  | SYMBOL_CHARS (ALPHA | DIGIT | SYMBOL_CHARS)+
+  | '|' (~'|')* '|'
+  ;
+
+fragment
+SYMBOL_CHARS
+  : '~' | '!' | '@' | '$' | '%' | '^' 
+  | '&' | '*' | '_' | '-' | '+' | '=' 
+  | '<' | '>' | '.' | '?' | '/'
   ;
 
 /** Matches a letter. */
