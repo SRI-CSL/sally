@@ -1,0 +1,12 @@
+(define-state-type
+   S
+   ((x Int))
+   ((i Int)))
+(define-transition-system
+   TS
+   S
+   (= x 0)
+   (= next.x (+ state.x 1)))
+(query
+   TS
+   (< x 10))

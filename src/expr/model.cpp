@@ -318,6 +318,15 @@ public:
     case TERM_GT:
       v = (children_values[0].get_rational() > children_values[1].get_rational() ? d_true : d_false);
       break;
+    case TERM_TO_INT:
+      v = value(children_values[0].get_rational().floor());
+      break;
+    case TERM_TO_REAL:
+      v = children_values[0];
+      break;
+    case TERM_IS_INT:
+      v = children_values[0].get_rational().is_integer() ? d_true : d_false;
+      break;
 
     // Bit-vector terms
     case CONST_BITVECTOR:

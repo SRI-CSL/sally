@@ -39,6 +39,11 @@ size_t trace_helper::size() const {
   return d_state_variables_structs.size();
 }
 
+void trace_helper::clear_model() {
+  d_model_size = 0;
+  d_model = new expr::model(tm(), false);
+}
+
 expr::term_manager& trace_helper::tm() const {
   return d_state_type->tm();
 }

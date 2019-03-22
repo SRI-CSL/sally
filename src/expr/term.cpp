@@ -102,6 +102,9 @@ void term::mk_let_cache(term_manager& tm, expr_let_cache& let_cache, std::vector
   case TERM_LT:
   case TERM_GEQ:
   case TERM_GT:
+  case TERM_TO_INT:
+  case TERM_TO_REAL:
+  case TERM_IS_INT:
   case TERM_BV_ADD:
   case TERM_BV_MUL:
   case TERM_BV_XOR:
@@ -216,9 +219,14 @@ std::string get_smt_keyword(term_op op) {
     return ">=";
   case TERM_GT:
     return ">";
+  case TERM_TO_INT:
+    return "to_int";
+  case TERM_TO_REAL:
+    return "to_real";
+  case TERM_IS_INT:
+    return "is_int";
   case TERM_ITE:
     return "ite";
-
   case TERM_BV_ADD:
     return "bvadd";
   case TERM_BV_SUB:
@@ -456,6 +464,9 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
   case TERM_LT:
   case TERM_GEQ:
   case TERM_GT:
+  case TERM_TO_INT:
+  case TERM_TO_REAL:
+  case TERM_IS_INT:
   case TERM_BV_MUL:
   case TERM_BV_XOR:
   case TERM_BV_SHL:

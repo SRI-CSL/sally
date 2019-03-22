@@ -498,7 +498,6 @@ term_ref term_manager::mk_struct_type(const std::vector<std::string>& names, con
     type_argumens.push_back(mk_string_constant(names[i]));
     type_argumens.push_back(types[i]);
   }
-
   term_ref result = mk_term(TYPE_STRUCT, type_argumens);
   d_tm->typecheck(result);
   return result;

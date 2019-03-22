@@ -613,7 +613,7 @@ msat_term mathsat5_internal::to_mathsat5_term(expr::term_ref ref) {
     break;
   }
   default:
-    assert(false);
+    throw exception("Mathsat error (unsupported term type): ") << t_op;
   }
 
   if (MSAT_ERROR_TERM(result)) {
