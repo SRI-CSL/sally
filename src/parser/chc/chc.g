@@ -70,19 +70,29 @@ chc_declare_fun
   ;
 
 chc_assert 
-  : { STATE->push_scope(); }
+ : { STATE->push_scope(); }
     '(' 'assert' 
         '(' 'forall' 
             '(' chc_assert_variable+ ')'
-            '(' '=>' tail = term head = term ')'
+            impl = chc_implication
         ')'
     ')'
     { 
       STATE->pop_scope();
-      STATE->assert_chc(head, tail); 
+      STATE->assert_chc(impl.first, impl.second); 
     }
   | term
   ;     
+
+chc_implication returns [std::pair<expr::term_ref, expr::term_ref> impl]
+  : '(' '=>' tail = term head = term ')' { impl.first = head; impl.second = tail; }
+  | '(' 'let'
+       { STATE->push_scope(); } 
+       let_assignments
+       let_impl = chc_implication { impl = let_impl; }
+       { STATE->pop_scope(); }
+    ')' 
+  |  ;
 
 chc_assert_variable returns [expr::term_ref t = expr::term_ref()]
 @declarations{
@@ -116,7 +126,7 @@ term returns [expr::term_ref t = expr::term_ref()]
      ')'   
      { t = STATE->tm().mk_term(op, children); }
   | '(' 
-       '(_' 'extract' high = NUMERAL low = NUMERAL ')'
+       '(' UNDERSCORE 'extract' high = NUMERAL low = NUMERAL ')'
        s = term
     ')' 
     {
@@ -144,7 +154,7 @@ let_assignment
         { STATE->set_variable(id, t); }
     ')'
   ;  
-  
+
 /** 
  * A symbol. Returns it in the id string. 
  * We check whether it has been declared = true/false.
@@ -198,7 +208,7 @@ bitvector_constant returns [expr::term_ref t = expr::term_ref()]
      expr::bitvector value(bin_number.size(), int_value);
      t = STATE->tm().mk_bitvector_constant(value);
     }
-  | '(_' v = BV_NUMERAL s = NUMERAL ')' {
+  | '(' UNDERSCORE v = BV_NUMERAL s = NUMERAL ')' {
      expr::integer int_value(STATE->token_text(v).substr(2), 10);
      expr::integer size_value(STATE->token_text(s), 10);
      expr::bitvector value(size_value.get_unsigned(), int_value);
@@ -279,7 +289,7 @@ type returns [expr::term_ref type]
   : // Primitive types
     symbol[type_id, parser::CHC_TYPE, true] { type = STATE->get_type(type_id); }  
   | // Bitvector types 
-    '(_' 'BitVec' size = NUMERAL ')' { 
+    '(' UNDERSCORE 'BitVec' size = NUMERAL ')' { 
        expr::integer int_value(STATE->token_text(size), 10);
        type = STATE->get_bitvector_type(int_value.get_unsigned());       
     }
@@ -318,6 +328,8 @@ SYMBOL_CHARS
   | '&' | '*' | '_' | '-' | '+' | '=' 
   | '<' | '>' | '.' | '?' | '/'
   ;
+
+UNDERSCORE : '_';
 
 /** Matches a letter. */
 fragment
