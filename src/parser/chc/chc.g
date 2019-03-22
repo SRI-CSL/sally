@@ -309,7 +309,7 @@ BV_NUMERAL: 'bv' DIGIT+;
 SYMBOL
   : ALPHA (ALPHA | DIGIT | SYMBOL_CHARS)* 
   | SYMBOL_CHARS (ALPHA | DIGIT | SYMBOL_CHARS)+
-  | '|' (~'|')* '|'
+  | '|' (~'|')+ '|'
   ;
 
 fragment
