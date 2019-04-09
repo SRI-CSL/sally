@@ -310,7 +310,8 @@ term_list[std::vector<expr::term_ref>& out]
   
 constant returns [expr::term_ref t = expr::term_ref()] 
   : bc = bool_constant     { t = bc; } 
-  | dc = decimal_constant  { t = dc; } 
+  | dc = integer_constant  { t = dc; }
+  | fc = decimal_constant { t = fc; }
   | bvc = bitvector_constant { t = bvc; }
   ; 
 
@@ -319,12 +320,19 @@ bool_constant returns [expr::term_ref t = expr::term_ref()]
   | 'false'  { t = STATE->tm().mk_boolean_constant(false); }
   ;
   
-decimal_constant returns [expr::term_ref t = expr::term_ref()]
+integer_constant returns [expr::term_ref t = expr::term_ref()]
   : NUMERAL { 
      expr::rational value(STATE->token_text($NUMERAL));
      t = STATE->tm().mk_rational_constant(value);
     }
   ; 
+
+decimal_constant returns [expr::term_ref t = expr::term_ref()]
+  : a = NUMERAL '.' b = NUMERAL {
+    expr::rational value(STATE->token_text(a), STATE->token_text(b));
+    t = STATE->tm().mk_rational_constant(value);
+    }
+  ;
 
 bitvector_constant returns [expr::term_ref t = expr::term_ref()]
   : HEX_NUMERAL {
@@ -368,6 +376,9 @@ term_op returns [expr::term_op op = expr::OP_LAST]
   | '>='             { op = expr::TERM_GEQ; }
   | '<'              { op = expr::TERM_LT; }
   | '<='             { op = expr::TERM_LEQ; }
+  | 'to_int'         { op = expr::TERM_TO_INT; }
+  | 'to_real'        { op = expr::TERM_TO_REAL; }
+  | 'is_int'         { op = expr::TERM_IS_INT; }
     // Bitvectors
   | 'bvadd' { op = expr::TERM_BV_ADD; }
   | 'bvsub' { op = expr::TERM_BV_SUB; }

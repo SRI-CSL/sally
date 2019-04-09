@@ -11,9 +11,9 @@ else()
 endif()
 
 if (MATHSAT5_HOME)
-  find_library(MATHSAT5_LIBRARY mathsat PATHS "${MATHSAT5_HOME}/lib")
+  find_library(MATHSAT5_LIBRARY libmathsat.a mathsat PATHS "${MATHSAT5_HOME}/lib")
 else() 
-  find_library(MATHSAT5_LIBRARY mathsat)
+  find_library(MATHSAT5_LIBRARY libmathsat.a mathsat)
 endif()
 
 # If library found, check the version

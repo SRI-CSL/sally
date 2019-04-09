@@ -17,6 +17,7 @@
  */
 
 #include "expr/integer.h"
+#include "expr/rational.h"
 #include "utils/output.h"
 #include "expr/term_manager.h"
 
@@ -25,6 +26,20 @@
 
 namespace sally {
 namespace expr {
+
+integer::integer(const rational& q, bool round_up)
+: d_gmp_int(0)
+{
+  if (round_up) {
+    mpz_fdiv_q(d_gmp_int.get_mpz_t(),
+        q.mpq().get_num_mpz_t(),
+        q.mpq().get_den_mpz_t());
+  } else {
+    mpz_cdiv_q(d_gmp_int.get_mpz_t(),
+        q.mpq().get_num_mpz_t(),
+        q.mpq().get_den_mpz_t());
+  }
+}
 
 void integer::to_stream(std::ostream& out) const {
   output::language lang = output::get_output_language(out);

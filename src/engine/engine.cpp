@@ -17,6 +17,7 @@
  */
 
 #include "engine/engine.h"
+#include "utils/output.h"
 
 #include <iostream>
 
@@ -37,11 +38,23 @@ expr::term_manager& engine::tm() const {
 
 std::ostream& operator << (std::ostream& out, engine::result result) {
 
+  output::language lang = output::get_output_language(out);
+
   switch (result) {
   case engine::VALID:
-    out << "valid"; break;
+    if (lang == output::HORN) {
+      out << "sat";
+    } else {
+      out << "valid";
+    }
+    break;
   case engine::INVALID:
-    out << "invalid"; break;
+    if (lang == output::HORN) {
+      out << "unsat";
+    } else {
+      out << "invalid";
+    }
+    break;
   case engine::UNKNOWN:
     out << "unknown"; break;
   case engine::INTERRUPTED:

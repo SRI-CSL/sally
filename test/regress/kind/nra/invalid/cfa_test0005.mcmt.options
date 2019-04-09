@@ -1,2 +1,2 @@
---engine kind --yices2-mcsat --lsal-extensions --kind-max 17
+--engine kind --lsal-extensions --kind-max 17
 

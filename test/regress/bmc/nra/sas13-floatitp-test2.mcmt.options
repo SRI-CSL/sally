@@ -1,1 +1,1 @@
---engine bmc --lsal-extensions --yices2-mcsat --bmc-max 11
+--engine bmc --lsal-extensions --bmc-max 11

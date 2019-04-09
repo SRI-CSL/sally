@@ -29,6 +29,8 @@ namespace expr {
 class term_ref;
 class term_manager;
 
+class rational;
+
 class integer {
 
 protected:
@@ -52,6 +54,8 @@ public:
   integer(const char* s, size_t base): d_gmp_int(s, base) {}
   /** Construct from string representation */
   integer(std::string s, size_t base): d_gmp_int(s, base) {}
+  /** Construct from rational: round_up ? ceil : floor */
+  integer(const rational& q, bool round_up = false);
 
   // Arithmetic
 

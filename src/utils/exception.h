@@ -45,8 +45,10 @@ public:
 
   /** Create an exception with the given message */
   exception(std::string msg)
-  : d_msg(msg)
-  {}
+  : d_msg()
+  {
+    d_msg << msg;
+  }
 
   /** Create an exception and set it up with the given term manager */
   exception(expr::term_manager* tm);

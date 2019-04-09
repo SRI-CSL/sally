@@ -108,7 +108,7 @@ public:
   };
 
   /**
-   * Add a variable and mark it as belongint to a particular class. This is
+   * Add a variable and mark it as belonging to a particular class. This is
    * context-independent so it stays after a pop. If you overload this to keep
    * track of variable additions, call solver::add_variable manually.
    */

@@ -1,1 +1,1 @@
---engine kind --yices2-mcsat --lsal-extensions
+--engine kind --lsal-extensions

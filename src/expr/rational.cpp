@@ -104,6 +104,14 @@ rational rational::negate() const {
   return rational(-d_gmp_rat);
 }
 
+rational rational::floor() const {
+  return rational(integer(*this, false), integer(1));
+}
+
+rational rational::ceiling() const {
+  return rational(integer(*this, true), integer(1));
+}
+
 int rational::sgn() const {
   return mpq_sgn(d_gmp_rat.get_mpq_t());
 }
