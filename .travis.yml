@@ -24,17 +24,22 @@ addons:
     sources:
       - boost-latest
     packages:
+      - bison
+      - flex
       - libgmp-dev
       - libboost-program-options1.55-dev 
       - libboost-iostreams1.55-dev
       - libboost-test1.55-dev
       - libboost-thread1.55-dev
       - libboost-system1.55-dev
+      - libreadline-dev
       - default-jre
       - gperf
+      - zlib1g-dev
 
 install:
   - bash contrib/install_yices2.sh
+  - bash contrib/install_opensmt2.sh
   - if [[ $ENABLE_COVERAGE == ON ]]; then 
       pip install --user cpp-coveralls;
     fi
