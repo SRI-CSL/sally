@@ -23,9 +23,11 @@ addons:
     update: true
     sources:
       - boost-latest
+      - ubuntu-toolchain-r-test
     packages:
       - bison
       - flex
+      - g++-5
       - libgmp-dev
       - libboost-program-options1.55-dev 
       - libboost-iostreams1.55-dev
@@ -36,7 +38,11 @@ addons:
       - default-jre
       - gperf
       - zlib1g-dev
+      - g++-5
 
+before_install:
+  - CC=gcc-5 && CXX=g++-5
+    
 install:
   - bash contrib/install_yices2.sh
   - bash contrib/install_opensmt2.sh
