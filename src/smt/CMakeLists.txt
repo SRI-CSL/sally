@@ -21,3 +21,11 @@ add_library(smt
   y2o2/y2o2.cpp
 )
 
+if (OPENSMT2_FOUND)
+  set_source_files_properties(
+    opensmt2/opensmt2.cpp opensmt2/opensmt2_internal.cpp opensmt2/opensmt2_term_cache.cpp
+    PROPERTIES 
+      LANGUAGE CXX
+      COMPILE_FLAGS "-std=c++11 -DPRODUCE_PROOF" 
+  )
+endif()

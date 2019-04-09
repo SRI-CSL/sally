@@ -45,12 +45,7 @@ public:
 
   /** Features */
   bool supports(feature f) const {
-    switch (f) {
-    case INTERPOLATION:
-      return true;
-    default:
-      return false;
-    }
+    return false;
   }
 
   /** Add an assertion f to the solver */
@@ -70,9 +65,6 @@ public:
 
   /** Pop the solving context */
   void pop();
-
-  /** Interpolate the last UNSAT result */
-  void interpolate(std::vector<expr::term_ref>& out);
 
   /** Term collection */
   void gc_collect(const expr::gc_relocator& gc_reloc);

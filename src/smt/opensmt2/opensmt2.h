@@ -27,58 +27,59 @@ namespace smt {
 
 class opensmt2_internal;
 
-class opensmt2 : public solver {
+class opensmt2: public solver {
 
-    /** Internal opensmt data */
-    opensmt2_internal* d_internal;
+  /** Internal opensmt data */
+  opensmt2_internal* d_internal;
 
 public:
 
-    /** Constructor */
-    opensmt2(expr::term_manager& tm, const options& opts, utils::statistics& stats);
+  /** Constructor */
+  opensmt2(expr::term_manager& tm, const options& opts,
+      utils::statistics& stats);
 
-    /** Destructor */
-    virtual ~opensmt2();
+  /** Destructor */
+  virtual ~opensmt2();
 
-    /** Features */
-    bool supports(feature f) const override;
+  /** Features */
+  bool supports(feature f) const;
 
-    /** Add an assertion f to the solver */
-    void add(expr::term_ref f, formula_class f_class) override;
+  /** Add an assertion f to the solver */
+  void add(expr::term_ref f, formula_class f_class);
 
-    void add_variable(expr::term_ref var, variable_class f_class) override;
+  void add_variable(expr::term_ref var, variable_class f_class);
 
-    /** Check the assertions for satisfiability */
-    result check() override;
+  /** Check the assertions for satisfiability */
+  result check();
 
-    /** Check the model (debug) */
-    void check_model() override;
+  /** Check the model (debug) */
+  void check_model();
 
-    /** Get the model */
-    expr::model::ref get_model() const override;
+  /** Get the model */
+  expr::model::ref get_model() const;
 
-    /** Push the solving context */
-    void push() override;
+  /** Push the solving context */
+  void push();
 
-    /** Pop the solving context */
-    void pop() override;
+  /** Pop the solving context */
+  void pop();
 
-    /** Generalize the last sat result using quantifier elimination. */
-    void generalize(generalization_type type, std::vector<expr::term_ref>& out) override;
+  /** Generalize the last sat result using quantifier elimination. */
+  void generalize(generalization_type type, std::vector<expr::term_ref>& out);
 
-    void generalize(generalization_type type, expr::model::ref m, std::vector<expr::term_ref>& out) override;
+  void generalize(generalization_type type, expr::model::ref m, std::vector<expr::term_ref>& out);
 
-    /** Interpolate the last UNSAT result */
-    void interpolate(std::vector<expr::term_ref>& out) override;
+  /** Interpolate the last UNSAT result */
+  void interpolate(std::vector<expr::term_ref>& out);
 
-    /** Unsat core of the last UNSAT result */
-    void get_unsat_core(std::vector<expr::term_ref>& out) override;
+  /** Unsat core of the last UNSAT result */
+  void get_unsat_core(std::vector<expr::term_ref>& out);
 
-    /** Collect terms */
-    void gc_collect(const expr::gc_relocator& gc_reloc) override;
+  /** Collect terms */
+  void gc_collect(const expr::gc_relocator& gc_reloc);
 
-    /** Collect garbage */
-    void gc() override;
+  /** Collect garbage */
+  void gc();
 };
 
 }

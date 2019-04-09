@@ -1,8 +1,3 @@
-//
-// Created by Martin Blicha on 28.09.18.
-//
-
-#include "y2o2.h"
 /**
  * This file is part of sally.
  * Copyright (C) 2015 SRI International.
@@ -21,8 +16,14 @@
  * along with sally.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+//
+// Created by Martin Blicha on 28.09.18.
+//
+
 #ifdef WITH_YICES2
 #ifdef WITH_OPENSMT2
+
+#include "y2o2.h"
 
 #include <iostream>
 
@@ -30,8 +31,6 @@
 #include "expr/term_manager.h"
 #include "expr/rational.h"
 #include "smt/y2o2/y2o2.h"
-#include "smt/yices2/yices2.h"
-#include "smt/opensmt2/opensmt2.h"
 #include "utils/trace.h"
 #include "smt/incremental_wrapper.h"
 #include "smt/delayed_wrapper.h"

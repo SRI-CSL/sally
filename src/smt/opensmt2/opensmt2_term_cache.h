@@ -18,15 +18,12 @@ namespace smt {
 
 
 class opensmt2_term_cache {
-//    expr::term_manager& d_tm;
 
   using term_to_opensmt_cache = expr::term_ref_map<PTRef>;
   using opensmt_to_terms_cache = std::unordered_map<PTRef, expr::term_ref, PTRefHash>;
 
   term_to_opensmt_cache cache;
   opensmt_to_terms_cache cache2;
-
-
 
 public:
 
