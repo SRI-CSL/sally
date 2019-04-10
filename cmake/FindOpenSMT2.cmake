@@ -19,7 +19,7 @@ endif()
 # If library found, check the version supports interpolation
 if (OPENSMT2_INCLUDE_DIR AND OPENSMT2_LIBRARY)
 
-	# Check version from char *msat_get_version(void)
+  # Try to compile with interpolation 
   file(WRITE "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/src.cpp" "
     #include <opensmt/opensmt2.h>
     int main() {
@@ -44,8 +44,8 @@ if (OPENSMT2_INCLUDE_DIR AND OPENSMT2_LIBRARY)
     LINK_LIBRARIES ${OPENSMT2_LIBRARY} gmp
   )  
 
-	if (NOT VERSION_TEST_COMPILED)
-  	unset(OPENSMT2_INCLUDE_DIR CACHE)
+  if (NOT VERSION_TEST_COMPILED)
+    unset(OPENSMT2_INCLUDE_DIR CACHE)
     unset(OPENSMT2_LIBRARY CACHE)
   elseif (NOT ("${VERSION_TEST_EXITCODE}" EQUAL 0))
     unset(OPENSMT2_INCLUDE_DIR CACHE)
