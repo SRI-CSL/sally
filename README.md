@@ -305,7 +305,7 @@ We can prove these two properties with Sally by using Yices2 with MCSAT
 as follows
 
 ```bash
-> sally --engine kind --yices2-mcsat ../examples/example-nra.mcmt
+> sally --engine kind ../examples/example-nra.mcmt
 valid
 valid
 ```
