@@ -35,6 +35,7 @@ addons:
 
 install:
   - bash contrib/install_yices2.sh
+  - bash contrib/install_dreal4.sh
   - if [[ $ENABLE_COVERAGE == ON ]]; then 
       pip install --user cpp-coveralls;
     fi
