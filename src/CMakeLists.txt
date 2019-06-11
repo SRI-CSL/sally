@@ -63,6 +63,13 @@ foreach(FILE ${regressions})
   string(REGEX REPLACE "(\r?\n)+$" "" ALL_OPTIONS "${ALL_OPTIONS}")
   # Turn the options into a list 
   separate_arguments(ALL_OPTIONS)
+
+  # Don't run tests that require a solver not supported 
+  list (FIND ALL_OPTIONS "--solver=dreal" FIND_INDEX)
+  if ((NOT DREAL_FOUND) AND (FIND_INDEX GREATER -1))
+    continue()
+  endif()
+
   # Add the test with the options and the file
   add_test(${FILE} sally ${ALL_OPTIONS} ${FILE})
   
