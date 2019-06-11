@@ -1,0 +1,11 @@
+(define-state-type ST ((P Real) (x Real) (n Real)))
+(define-states Init ST (and (= P 1) (= n 0)))
+(define-transition Trans ST 
+  (and 
+    (= next.P (* state.P state.x))
+    (= next.n (+ state.n 1))
+    (= next.x state.x)
+  )
+)   
+(define-transition-system T ST Init Trans)
+(query T (not (and (= n 2) (= P 2))))

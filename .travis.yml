@@ -2,7 +2,8 @@ language: cpp
 
 notifications:
   slack: sriformalmethods:wSnZggI8D3mxI5uqDsElZbV2
-  
+
+dist: xenial  
 sudo: true
 
 compiler:
@@ -21,20 +22,19 @@ env:
 addons:
   apt:
     update: true
-    sources:
-      - boost-latest
     packages:
       - libgmp-dev
-      - libboost-program-options1.55-dev 
-      - libboost-iostreams1.55-dev
-      - libboost-test1.55-dev
-      - libboost-thread1.55-dev
-      - libboost-system1.55-dev
+      - libboost-program-options-dev 
+      - libboost-iostreams-dev
+      - libboost-test-dev
+      - libboost-thread-dev
+      - libboost-system-dev
       - default-jre
       - gperf
 
 install:
   - bash contrib/install_yices2.sh
+  - bash contrib/install_dreal4.sh
   - if [[ $ENABLE_COVERAGE == ON ]]; then 
       pip install --user cpp-coveralls;
     fi

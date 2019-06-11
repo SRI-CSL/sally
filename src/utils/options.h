@@ -63,6 +63,9 @@ public:
   /** Get the value of the int option opt */
   void set_int(std::string opt, int value);
 
+  /** Get the value of the double option opt */
+  double get_double(std::string opt) const;
+  
   /** Get the value of the bool option opt */
   bool get_bool(std::string opt) const;
 

@@ -66,5 +66,9 @@ bool options::get_bool(std::string opt) const {
   return d_options->count(opt) > 0;
 }
 
+double options::get_double(std::string opt) const {
+  return d_options->at(opt).as<double>();
+}
+  
 }
 

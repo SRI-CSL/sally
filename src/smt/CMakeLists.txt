@@ -14,6 +14,21 @@ add_library(smt
   z3/z3.cpp
   z3/z3_internal.cpp
   z3/z3_common.cpp
-  y2z3/y2z3.cpp 
+  y2z3/y2z3.cpp
+  dreal/dreal.cpp
+  dreal/dreal_term.cpp  
+  dreal/dreal_internal.cpp
+  dreal/dreal_term_cache.cpp
 )
+
+# For dreal
+if (DREAL_FOUND)
+set_source_files_properties(
+  dreal/dreal.cpp dreal/dreal_term.cpp dreal/dreal_internal.cpp dreal/dreal_term_cache.cpp
+  PROPERTIES 
+    LANGUAGE CXX
+    COMPILE_FLAGS "-Wno-unused-variable -Wno-overloaded-virtual -Wno-unknown-pragmas -Wno-int-in-bool-context -Wno-deprecated -Wno-unknown-warning-option -std=c++14"
+)
+endif()
+
 
