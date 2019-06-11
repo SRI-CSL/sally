@@ -36,16 +36,16 @@ namespace smt {
 size_t dreal_internal::s_instances = 0;
 
 dreal_internal::dreal_internal(expr::term_manager& tm, const options& opts)
-  : d_tm(tm)
-  , d_ctx(NULL)
-  , d_conversion_cache(0)
-  , d_last_check_status(solver::result::UNKNOWN)
-  , d_config(NULL)
-  , d_instance(s_instances)
+: d_tm(tm)
+, d_ctx(NULL)
+, d_conversion_cache(0)
+, d_last_check_status(solver::result::UNKNOWN)
+, d_config(NULL)
+, d_instance(s_instances)
 {
   // Initialize
   TRACE("dreal") << "dreal: created dreal[" << s_instances << "]." << std::endl;      
-	  
+
   s_instances++;
   d_conversion_cache = dreal_term_cache::get_cache(d_tm);
 
@@ -63,7 +63,7 @@ dreal_internal::dreal_internal(expr::term_manager& tm, const options& opts)
       // If no valid conversion could be performed, the function
       // returns zero (0.0).
       TRACE("dreal") << "dreal: it could not convert " << opts.get_string("dreal-precision")
-		     << " to a double";
+                     << " to a double";
     } else {
       d_config->mutable_precision() = prec;
     }
@@ -110,7 +110,7 @@ dreal_term dreal_internal::mk_dreal_term(expr::term_op op, std::vector<dreal_ter
     result = dreal_term::dreal_and(children);
     break;
   case expr::TERM_OR:
-    result = dreal_term::dreal_or(children);	
+    result = dreal_term::dreal_or(children);
     break;
   case expr::TERM_NOT:
     assert(n == 1);
@@ -203,7 +203,7 @@ class to_dreal_visitor {
 public:
 
   to_dreal_visitor(expr::term_manager& tm, dreal_internal& dreal,
-		   dreal_term_cache& cache)
+                   dreal_term_cache& cache)
   : d_tm(tm)
   , d_dreal(dreal)
   , d_conversion_cache(cache)
@@ -252,18 +252,18 @@ public:
 
         switch (t_op) {
         case expr::VARIABLE: {
-	  result = dreal_term(d_tm.get_variable_name(t), d_dreal.to_dreal_type(t[0]));
+          result = dreal_term(d_tm.get_variable_name(t), d_dreal.to_dreal_type(t[0]));
           break;
-	}
-	case expr::CONST_BOOL: {
-	  result = dreal_term(d_tm.get_boolean_constant(t));
+        }
+        case expr::CONST_BOOL: {
+          result = dreal_term(d_tm.get_boolean_constant(t));
           break;
-	}
+        }
         case expr::CONST_RATIONAL: {
-	  double d = mpq_get_d(d_tm.get_rational_constant(t).mpq().get_mpq_t());
-	  result = dreal_term(d);
+          double d = mpq_get_d(d_tm.get_rational_constant(t).mpq().get_mpq_t());
+          result = dreal_term(d);
           break;
-	}
+        }
         case expr::TERM_ITE:
         case expr::TERM_EQ:
         case expr::TERM_AND:
@@ -282,15 +282,15 @@ public:
         {
           size_t size = t.size();
           assert(size > 0);
-	  std::vector<dreal_term> children;
-	  children.reserve(size);
+          std::vector<dreal_term> children;
+          children.reserve(size);
           for (size_t i = 0; i < size; ++ i) {
             children.push_back(d_conversion_cache.get_term_cache(t[i]));
           }
           result = d_dreal.mk_dreal_term(t.op(), children);
           break;
         }
-        case expr::CONST_BITVECTOR:	  
+        case expr::CONST_BITVECTOR:
         case expr::TERM_BV_ADD:
         case expr::TERM_BV_SUB:
         case expr::TERM_BV_MUL:
@@ -318,7 +318,7 @@ public:
         case expr::TERM_BV_SGEQ:
         case expr::TERM_BV_UGT:
         case expr::TERM_BV_SGT:
-	case expr::TERM_BV_EXTRACT:
+        case expr::TERM_BV_EXTRACT:
         default:
           assert(false);
         }
@@ -327,8 +327,8 @@ public:
           std::stringstream ss;
           ss << "Dreal error (term creation): could not convert " << ref;
           throw exception(ss.str());
-	}
-	
+        }
+
         // Set the cache ref -> result
         d_conversion_cache.set_term_cache(ref, result);
   }
@@ -367,7 +367,7 @@ void dreal_internal::add(expr::term_ref ref, solver::formula_class f_class) {
 }
 
 solver::result dreal_internal::check() {
-  if (std::experimental::optional<Box> res = d_ctx->CheckSat()) {
+  if (optional<Box> res = d_ctx->CheckSat()) {
     // If sat then dreal returns a mapping from a variable to an interval.
     // We return sat only if all intervals are singleton
     if (get_dreal_model(*res)) {
@@ -435,7 +435,7 @@ bool dreal_internal::get_dreal_model(const Box& model) {
       const ibex::Interval& iv = model[x];
 
       if (iv.is_unbounded()) {
-	goto NO_MODEL_FOUND;
+        goto NO_MODEL_FOUND;
       }
 
       double value;
@@ -448,9 +448,9 @@ bool dreal_internal::get_dreal_model(const Box& model) {
 
       double dist = (iv.lb() > iv.ub() ? iv.lb() - iv.ub(): iv.ub() - iv.lb());
       if (dist > d_ctx->config().precision()) {
-	goto NO_MODEL_FOUND;
+        goto NO_MODEL_FOUND;
       } else {
-	value = iv.mid();
+        value = iv.mid();
       }
       d_last_model[var] = value;
     } else {
@@ -463,10 +463,10 @@ bool dreal_internal::get_dreal_model(const Box& model) {
   
   NO_MODEL_FOUND:
   std::cerr << "Warning: dreal produced a model but at least one variable was mapped "
-	    << "to an interval that cannot be approximated to a single value with precision "
-	    << d_ctx->config().precision() << "." << std::endl
-	    << "delta-sat with delta =  " << d_ctx->config().precision() << std::endl
-	    << model << std::endl;
+            << "to an interval that cannot be approximated to a single value with precision "
+            << d_ctx->config().precision() << "." << std::endl
+            << "delta-sat with delta =  " << d_ctx->config().precision() << std::endl
+            << model << std::endl;
   d_last_model.clear();  
   return false;
 }
@@ -487,23 +487,23 @@ expr::model::ref dreal_internal::get_model() {
     switch (d_tm.term_of(var_type).op()) {
     case expr::TYPE_BOOL: {
       if (dreal_value == 0) {
-	var_value = expr::value(0);
+        var_value = expr::value(0);
       } else if (dreal_value == 1) {
-	var_value = expr::value(1);
+        var_value = expr::value(1);
       } else {
-	// If a boolean variable is declared but not used in any
-	// formula then dreal will produce a default value for it that
-	// it might not be 0 or 1.
-	assert(dreal_var.is_variable());
-	if (d_assertion_vars.count(dreal_var.variable()) <= 0) {
-	  // We use 0 as default value
-	  var_value = expr::value(0);
-	} else {
-	  std::stringstream ss;
-	  ss << "Dreal error (unexpected boolean value " << dreal_var << "="<< dreal_value
-	     << " in the model)";
-	  throw exception(ss.str());
-	}
+        // If a boolean variable is declared but not used in any
+        // formula then dreal will produce a default value for it that
+        // it might not be 0 or 1.
+        assert(dreal_var.is_variable());
+        if (d_assertion_vars.count(dreal_var.variable()) <= 0) {
+          // We use 0 as default value
+          var_value = expr::value(0);
+        } else {
+          std::stringstream ss;
+          ss << "Dreal error (unexpected boolean value " << dreal_var << "="<< dreal_value
+             << " in the model)";
+          throw exception(ss.str());
+        }
       }
     }
       break;
@@ -646,7 +646,7 @@ void dreal_internal::dreal_to_smtlib2(std::ostream& out) {
     expr::term_ref variable = variables[i];
     dreal_term dreal_var = to_dreal_term(variable);
     out << "(declare-fun " << dreal_var.to_string() << " () "
-	<< d_tm.type_of(variable) << ")" << std::endl;
+        << d_tm.type_of(variable) << ")" << std::endl;
   }
 
   out << std::endl;

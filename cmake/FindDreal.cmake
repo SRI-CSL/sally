@@ -1,9 +1,5 @@
 # From https://github.com/dreal/dreal-cmake-example-project/blob/master/cmake/modules/FindDreal.cmake
 
-# cmake assumes that dreal can be found by pkg-config. If pkg-config
-# cannot find dreal then you will need to add the path directory where
-# dreal was installed in the environment variable PKG_CONFIG_PATH.
-
 # This sets the following variables:
 # DREAL_FOUND - True if dReal was found.
 # DREAL_VERSION - dReal Version
@@ -12,21 +8,31 @@
 # DREAL_LIBRARIES - dReal library names.
 # DREAL_DEFINITIONS - Compiler flags for dReal.
 
+# ===========
+#    IBEX
+# ===========
 if(APPLE)
-  set(ENV{PKG_CONFIG_PATH} "/usr/local/opt/ibex@2.7.2/share/pkgconfig:$ENV{PKG_CONFIG_PATH}")
-  # TODO(soonho): remove this line when the transition is completed.
-  set(ENV{PKG_CONFIG_PATH} "/usr/local/opt/ibex@2.6.5/share/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+  set(IBEX_SEARCH_PATH "/usr/local/opt/ibex*/share/pkgconfig")
 endif(APPLE)
+if(UNIX AND NOT APPLE)
+  set(IBEX_SEARCH_PATH "/opt/libibex/*/share/pkgconfig")
+endif()
+file(GLOB IBEX_PKG_CONFIG_PATH "${IBEX_SEARCH_PATH}")
+# The result of file-glob is sorted lexicographically. We pick the
+# last element (-1) to pick the latest.
+list(GET IBEX_PKG_CONFIG_PATH -1 IBEX_PKG_CONFIG_PATH)
+set(ENV{PKG_CONFIG_PATH} "${IBEX_PKG_CONFIG_PATH}:$ENV{PKG_CONFIG_PATH}")
 
+# ===========
+#    dReal
+# ===========
 if(UNIX AND NOT APPLE)
   file(GLOB DREAL_PKG_CONFIG_PATH "/opt/dreal/*/lib/pkgconfig")
-  if (DREAL_PKG_CONFIG_PATH)
-    # The result of file-glob is sorted lexicographically. We pick the
-    # last element (-1) to pick the latest.
-    list(GET DREAL_PKG_CONFIG_PATH -1 DREAL_PKG_CONFIG_PATH)
-    set(ENV{PKG_CONFIG_PATH} "${DREAL_PKG_CONFIG_PATH}:/opt/libibex/2.7.2/share/pkgconfig:$ENV{PKG_CONFIG_PATH}")
-  endif()
-endif(UNIX AND NOT APPLE)
+  # The result of file-glob is sorted lexicographically. We pick the
+  # last element (-1) to pick the latest.
+  list(GET DREAL_PKG_CONFIG_PATH -1 DREAL_PKG_CONFIG_PATH)
+  set(ENV{PKG_CONFIG_PATH} "${DREAL_PKG_CONFIG_PATH}:$ENV{PKG_CONFIG_PATH}")
+endif()
 
 find_package(PkgConfig)
 pkg_check_modules(DREAL dreal)
@@ -38,5 +44,3 @@ find_package_handle_standard_args(DREAL
   FOUND_VAR DREAL_FOUND
   REQUIRED_VARS DREAL_INCLUDE_DIRS DREAL_LIBRARIES DREAL_DEFINITIONS
   VERSION_VAR DREAL_VERSION)
-
-mark_as_advanced(DREAL_LIBRARIES DREAL_INCLUDE_DIRS)
