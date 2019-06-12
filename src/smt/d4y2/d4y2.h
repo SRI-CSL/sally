@@ -76,18 +76,6 @@ public:
   /** Pop the solving context */
   void pop();
 
-  /** Generalize the last call to check assuming the result was SAT. */
-  void generalize(generalization_type type, std::vector<expr::term_ref>& out);
-
-  /** Generalize the model */
-  void generalize(generalization_type type, expr::model::ref m, std::vector<expr::term_ref>& projection_out);
-
-  /** Interpolate the last UNSAT result */
-  void interpolate(std::vector<expr::term_ref>& out);
-
-  /** Unsat core of the last UNSAT result */
-  void get_unsat_core(std::vector<expr::term_ref>& out);
-
   /** Term collection (nothing to do) */
   void gc_collect(const expr::gc_relocator& gc_reloc);
 
