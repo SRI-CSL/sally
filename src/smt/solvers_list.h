@@ -29,6 +29,7 @@
 #include "smt/y2z3/y2z3_info.h"
 #include "smt/generic/generic_solver_info.h"
 #include "smt/dreal/dreal_info.h"
+#include "smt/d4y2/d4y2_info.h"
 
 sally::smt::solver_data::solver_data() {
 #ifdef WITH_YICES2
@@ -54,6 +55,11 @@ sally::smt::solver_data::solver_data() {
 #ifdef WITH_DREAL
   add_module_info<dreal_info>();
 #endif   
+#ifdef WITH_YICES2
+#ifdef WITH_DREAL
+  add_module_info<d4y2_info>();
+#endif
+#endif
 }
 
 std::string sally::smt::factory::get_default_solver_id() {

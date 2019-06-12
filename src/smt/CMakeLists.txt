@@ -19,6 +19,7 @@ add_library(smt
   dreal/dreal_term.cpp  
   dreal/dreal_internal.cpp
   dreal/dreal_term_cache.cpp
+  d4y2/d4y2.cpp
 )
 
 # For dreal
