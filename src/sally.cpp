@@ -141,6 +141,9 @@ int main(int argc, char* argv[]) {
   } catch (sally::exception& e) {
     cerr << e << endl;
     exit(1);
+  } catch (const char* s) {
+    cerr << s << endl;
+    exit(1);
   } catch (...) {
     cerr << "Unexpected error!" << endl;
     exit(1);

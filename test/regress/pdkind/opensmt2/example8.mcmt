@@ -1,0 +1,25 @@
+;; State type
+(define-state-type state_type ((x Real)))
+
+;; Initial states (a state formula over state_type)
+(define-states initial_states state_type 
+  (= x 0)
+)
+
+;; One transition 
+(define-transition transition state_type
+  ;; Implicit variables next, state of state_type
+  (= next.x (- state.x))
+)
+
+;; The system
+(define-transition-system T 
+  state_type
+  initial_states
+  transition
+)
+
+;; Query (any state formula over state_type)
+(query T (>= x 0))
+
+

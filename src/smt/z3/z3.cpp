@@ -81,11 +81,6 @@ void z3::pop() {
   d_internal->pop();
 }
 
-void z3::interpolate(std::vector<expr::term_ref>& out) {
-  TRACE("z3") << "z3[" << d_internal->instance() << "]: interpolating" << std::endl;
-  d_internal->interpolate(out);
-}
-
 void z3::add_variable(expr::term_ref var, variable_class f_class) {
   solver::add_variable(var, f_class);
   d_internal->add_variable(var, f_class);

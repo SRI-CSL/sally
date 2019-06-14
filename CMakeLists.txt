@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.1)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 project(sally CXX C)
@@ -82,12 +82,20 @@ if (DREAL_FOUND)
 endif()
 
 # Find Z3
-#SET(Z3_HOME CACHE STRING "Z3 installation directory")
-#find_package(Z3 4.4.1)
-#if (Z3_FOUND)
-#  add_definitions(-DWITH_Z3)
-#  include_directories(${Z3_INCLUDE_DIR})
-#endif()
+SET(Z3_HOME CACHE STRING "Z3 installation directory")
+find_package(Z3 4.8)
+if (Z3_FOUND)
+  add_definitions(-DWITH_Z3)
+  include_directories(${Z3_INCLUDE_DIR})
+endif()
+
+# Find OpenSMT2
+SET(OPENSMT2_HOME CACHE STRING "OpenSMT2 installation directory")
+find_package(OpenSMT2)
+if (OPENSMT2_FOUND)
+  add_definitions(-DWITH_OPENSMT2)
+  include_directories(${OPENSMT2_INCLUDE_DIR})
+endif()
 
 # Make sure antlr C runtime is here
 include(ExternalProject) 

@@ -19,6 +19,7 @@
 #pragma once
 
 #include <iosfwd>
+#include <cstddef>
 #include <gmpxx.h>
 
 #include "utils/hash.h"

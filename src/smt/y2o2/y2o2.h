@@ -1,3 +1,11 @@
+//
+// Created by Martin Blicha on 28.09.18.
+//
+
+#ifndef SALLY_Y2O2_H
+#define SALLY_Y2O2_H
+
+
 /**
  * This file is part of sally.
  * Copyright (C) 2015 SRI International.
@@ -18,40 +26,46 @@
 
 #pragma once
 
-#ifdef WITH_Z3
+#ifdef WITH_YICES2
+#ifdef WITH_OPENSMT2
 
 #include "smt/solver.h"
 
 namespace sally {
 namespace smt {
 
-class z3_internal;
-
 /**
- * Yices SMT solver.
+ * Combination solver: Yices for generalization, MathSAT5 for interpolation.
+ * Note that all checks are done twice, so expect penalty.
  */
-class z3 : public solver {
+class y2o2 : public solver {
 
-  /** Internal z3 data */
-  z3_internal* d_internal;
+  solver* d_yices2;
+  solver* d_opensmt2;
+
+  static size_t s_instance;
+
+  /** Last result of mathsat */
+  result d_last_opensmt2_result;
+
+  /* Last result of yices */
+  result d_last_yices2_result;
 
 public:
 
   /** Constructor */
-  z3(expr::term_manager& tm, const options& opts, utils::statistics& stats);
+  y2o2(expr::term_manager& tm, const options& opts, utils::statistics& stats);
 
   /** Destructor */
-  ~z3();
+  ~y2o2();
 
   /** Features */
-  bool supports(feature f) const {
-    return false;
-  }
+  bool supports(feature f) const;
 
   /** Add an assertion f to the solver */
   void add(expr::term_ref f, formula_class f_class);
 
-  /** Add an variable */
+  /** Add a variable */
   void add_variable(expr::term_ref var, variable_class f_class);
 
   /** Check the assertions for satisfiability */
@@ -66,7 +80,19 @@ public:
   /** Pop the solving context */
   void pop();
 
-  /** Term collection */
+  /** Generalize the last call to check assuming the result was SAT. */
+  void generalize(generalization_type type, std::vector<expr::term_ref>& out);
+
+  /** Generalize the model */
+  void generalize(generalization_type type, expr::model::ref m, std::vector<expr::term_ref>& projection_out);
+
+  /** Interpolate the last UNSAT result */
+  void interpolate(std::vector<expr::term_ref>& out);
+
+  /** Unsat core of the last UNSAT result */
+  void get_unsat_core(std::vector<expr::term_ref>& out);
+
+  /** Term collection (nothing to do) */
   void gc_collect(const expr::gc_relocator& gc_reloc);
 
   /** Collect garbage */
@@ -77,3 +103,8 @@ public:
 }
 
 #endif
+#endif
+
+
+
+#endif //SALLY_Y2O2_H
