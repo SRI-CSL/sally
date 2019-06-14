@@ -27,22 +27,16 @@ addons:
     packages:
       - bison
       - flex
-      - g++-5
       - libgmp-dev
-      - libboost-program-options1.55-dev 
-      - libboost-iostreams1.55-dev
-      - libboost-test1.55-dev
-      - libboost-thread1.55-dev
-      - libboost-system1.55-dev
+      - libboost-program-options-dev
+      - libboost-iostreams-dev
+      - libboost-test-dev
+      - libboost-thread-dev
+      - libboost-system-dev
       - libreadline-dev
       - default-jre
       - gperf
-      - zlib1g-dev
-      - g++-5
 
-before_install:
-  - CC=gcc-5 && CXX=g++-5
-    
 install:
   - bash contrib/install_yices2.sh
   - bash contrib/install_opensmt2.sh

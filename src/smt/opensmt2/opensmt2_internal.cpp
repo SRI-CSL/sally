@@ -26,9 +26,9 @@ namespace{
 unsigned int sally::smt::opensmt2_internal::instance_id = 0;
 
 sally::smt::opensmt2_internal::opensmt2_internal(sally::expr::term_manager &tm, const sally::options &opts)
-: d_tm{tm}
-, d_instance{instance_id++}
-, term_cache{}
+: d_tm(tm)
+, d_instance(instance_id++)
+, term_cache()
 {
   stacked_A_partitions.emplace_back();
   auto logic_str = opts.get_string("solver-logic");
