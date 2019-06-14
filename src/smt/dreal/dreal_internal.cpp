@@ -22,8 +22,12 @@
 #include "smt/dreal/dreal_term_cache.h"
 #include "utils/trace.h"
 #include "expr/gc_relocator.h"
+#include "expr/term.h"
+#include "expr/term_manager.h"
 #include "expr/term_visitor.h"
 #include "utils/output.h"
+
+#include <ibex.h>
 
 #include <iostream>
 #include <fstream>
@@ -370,7 +374,7 @@ solver::result dreal_internal::check() {
   if (optional<Box> res = d_ctx->CheckSat()) {
     // If sat then dreal returns a mapping from a variable to an interval.
     // We return sat only if all intervals are singleton
-    if (get_dreal_model(*res)) {
+    if (save_dreal_model(*res)) {
       d_last_check_status = solver::SAT;
     } else {
       d_last_check_status = solver::UNKNOWN;
@@ -382,12 +386,11 @@ solver::result dreal_internal::check() {
   return d_last_check_status;
 }
 
-bool dreal_internal::get_dreal_model(const Box& model) {
-  std::vector<expr::term_ref> variables;
+void dreal_internal::get_used_variables(std::vector<expr::term_ref>& variables) const {
   bool class_A_used = false;
   bool class_B_used = false;
   bool class_T_used = false;
-  for (size_t i = 0; i < d_assertion_classes.size(); ++ i) {
+  for (size_t i = 0; i < d_assertion_classes.size(); ++i) {
     switch (d_assertion_classes[i]) {
     case solver::CLASS_A:
       class_A_used = true;
@@ -414,17 +417,35 @@ bool dreal_internal::get_dreal_model(const Box& model) {
   if (class_T_used) {
     variables.insert(variables.end(), d_T_variables.begin(), d_T_variables.end());
   }
+}
 
-//  assert(!variables.empty());
-  
+bool dreal_internal::check_model() const {
+  for (size_t i = 0; i < d_assertions.size(); ++ i) {
+    expr::term_ref f = d_assertions[i];
+    if (!d_last_model->is_true(f)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+
+bool dreal_internal::save_dreal_model(const Box& model) {
+
   // See which variables we have to reason about
-  d_last_model.clear();
+  std::vector<expr::term_ref> variables;
+  get_used_variables(variables);
+  
+  // Get the model for each variable
+  term_to_double_map simple_model;
   for (size_t i = 0; i < variables.size(); ++ i) {
     expr::term_ref var = variables[i];
     dreal_term dreal_var = to_dreal_term(var);
     assert(dreal_var.is_variable());
 
     const Variable &x = dreal_var.variable();
+    double x_value = 0.0;
+
     /*
      * BD: added this check to make sure x is defined in the dreal model
      * before we ask for its interval value. Otherwise, the query
@@ -433,107 +454,76 @@ bool dreal_internal::get_dreal_model(const Box& model) {
      */
     if (model.has_variable(x)) {
       const ibex::Interval& iv = model[x];
-
-      if (iv.is_unbounded()) {
-        goto NO_MODEL_FOUND;
-      }
-
-      double value;
-
-      // if (iv.lb() != iv.ub()) {
-      //   goto NO_MODEL_FOUND;
-      // } else {
-      //   value = iv.lb();
-      // }
-
-      double dist = (iv.lb() > iv.ub() ? iv.lb() - iv.ub(): iv.ub() - iv.lb());
-      if (dist > d_ctx->config().precision()) {
-        goto NO_MODEL_FOUND;
-      } else {
-        value = iv.mid();
-      }
-      d_last_model[var] = value;
-    } else {
-      // var isn't defined in the dreal mode
-      d_last_model[var] = 0.0;
+      x_value = iv.mid();
     }
+
+    // Set the value
+    simple_model[var] = x_value;
   }
 
-  return true;
-  
-  NO_MODEL_FOUND:
-  std::cerr << "Warning: dreal produced a model but at least one variable was mapped "
-            << "to an interval that cannot be approximated to a single value with precision "
-            << d_ctx->config().precision() << "." << std::endl
-            << "delta-sat with delta =  " << d_ctx->config().precision() << std::endl
-            << model << std::endl;
-  d_last_model.clear();  
-  return false;
+  // Convert the model to Sally model
+  d_last_model = get_model_from_simple_model(simple_model);
+
+  // Check if the model
+  return check_model();
 }
   
 expr::model::ref dreal_internal::get_model() {
-  assert(d_last_check_status == solver::SAT);
-  assert(d_A_variables.size() > 0 || d_B_variables.size() > 0);
-  assert(!d_last_model.empty());
+  return d_last_model;
+}
 
-  // Clear any data already there
+expr::model::ref dreal_internal::get_model_from_simple_model(const term_to_double_map& simple_model) {
+
+  // Empty model
   expr::model::ref m = new expr::model(d_tm, false);
-  for(dreal_model_t::iterator it = d_last_model.begin(), et = d_last_model.end(); it!=et; ++it) {
-    expr::term_ref var = it->first;
-    double dreal_value = it->second;
-    dreal_term dreal_var = to_dreal_term(var);
-    expr::term_ref var_type = d_tm.type_of(var);
-    expr::value var_value;
-    switch (d_tm.term_of(var_type).op()) {
-    case expr::TYPE_BOOL: {
-      if (dreal_value == 0) {
-        var_value = expr::value(0);
-      } else if (dreal_value == 1) {
-        var_value = expr::value(1);
+
+  term_to_double_map::const_iterator it = simple_model.begin();
+
+  for(; it != simple_model.end(); ++it) {
+
+    expr::term_ref x = it->first;
+    double x_dreal_value = it->second;
+    dreal_term x_dreal = to_dreal_term(x);
+    expr::value x_value;
+
+    expr::term_ref x_type = d_tm.type_of(x);
+    expr::term_op x_type_op = d_tm.term_of(x_type).op();
+
+    switch (x_type_op) {
+    case expr::TYPE_BOOL:
+      if (x_dreal_value == 0) {
+        x_value = expr::value(0);
       } else {
-        // If a boolean variable is declared but not used in any
-        // formula then dreal will produce a default value for it that
-        // it might not be 0 or 1.
-        assert(dreal_var.is_variable());
-        if (d_assertion_vars.count(dreal_var.variable()) <= 0) {
-          // We use 0 as default value
-          var_value = expr::value(0);
-        } else {
-          std::stringstream ss;
-          ss << "Dreal error (unexpected boolean value " << dreal_var << "="<< dreal_value
-             << " in the model)";
-          throw exception(ss.str());
-        }
+        x_value = expr::value(1);
       }
-    }
       break;
     case expr::TYPE_REAL: {
       // The real mpq_t value
       mpq_t value;
       mpq_init(value);
-      mpq_set_d(value, dreal_value);
+      mpq_set_d(value, x_dreal_value);
       expr::rational rational_value(value);
-      var_value = expr::value(rational_value);
+      x_value = expr::value(rational_value);
       // Clear the temps
       mpq_clear(value);
-    }
       break;
+    }
     case expr::TYPE_INTEGER: {
       // The integer mpz_t value
       mpz_t value;
       mpz_init(value);
-      mpz_set_d(value, dreal_value);
+      mpz_set_d(value, x_dreal_value);
       expr::rational rational_value(value);
-      var_value = expr::value(rational_value);
+      x_value = expr::value(rational_value);
       // Clear the temps
       mpz_clear(value);
-    }
       break;
+    }
     default:;;
       throw exception("Dreal error (unexpected model value)");      
     }
     // Add the association
-    m->set_variable_value(var, var_value);
+    m->set_variable_value(x, x_value);
   }
   
   return m;

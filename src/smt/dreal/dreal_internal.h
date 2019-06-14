@@ -76,10 +76,9 @@ class dreal_internal {
 
   /** Last check return */
   solver::result d_last_check_status;
-    
-  /** Last dreal model */
-  typedef expr::term_ref_map<double> dreal_model_t;  
-  dreal_model_t d_last_model;
+
+  /** Last model dreal provided */
+  expr::model::ref d_last_model;
   
   /** The dreal config */
   ::dreal::Config* d_config;
@@ -87,9 +86,22 @@ class dreal_internal {
   /** The instance */
   size_t d_instance;
 
-  /** Return true if a dreal model was extracted. If yes, the model is
-      stored in d_last_model */
-  bool get_dreal_model(const ::dreal::Box& model);
+  /** Get variables used in assertions */
+  void get_used_variables(std::vector<expr::term_ref>& variables) const;
+
+  typedef expr::term_ref_map<double> term_to_double_map;
+
+  /** Construct Sally model from the simple model */
+  expr::model::ref get_model_from_simple_model(const term_to_double_map& simple_model);
+
+  /**
+   * Get model from dreal and put it into d_last_model. Returns true if
+   * The model satisfies the assertions.
+   */
+  bool save_dreal_model(const ::dreal::Box& model);
+
+  /** Check if the model is correct */
+  bool check_model() const;
 
   /** Output solver assertions in smt2lib format*/
   void dreal_to_smtlib2(std::ostream& out);

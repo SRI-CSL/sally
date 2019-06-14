@@ -41,7 +41,7 @@ d4y2::d4y2(expr::term_manager& tm, const options& opts, utils::statistics& stats
 , d_last_dreal4_result(UNKNOWN)
 , d_last_yices2_result(UNKNOWN)
 {
-  d_dreal4 = factory::mk_solver("dreal4", tm, opts, stats);
+  d_dreal4 = factory::mk_solver("dreal", tm, opts, stats);
   d_yices2 = new delayed_wrapper("yices2_delayed", tm, opts, stats, factory::mk_solver("yices2", tm, opts, stats));
   s_instance ++;
 }
