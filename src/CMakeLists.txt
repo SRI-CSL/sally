@@ -74,7 +74,7 @@ foreach(FILE ${regressions})
   endif()
 
   # Don't run tests that require a solver not supported 
-  list (FIND ALL_OPTIONS "--solver=y2o2" FIND_INDEX)
+  list (FIND ALL_OPTIONS "y2o2" FIND_INDEX)
   if (((NOT OPENSMT2_FOUND) OR (NOT YICES2_FOUND)) AND (FIND_INDEX GREATER -1))
     continue()
   endif()
