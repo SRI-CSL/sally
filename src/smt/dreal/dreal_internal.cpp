@@ -363,7 +363,7 @@ void dreal_internal::add(expr::term_ref ref, solver::formula_class f_class) {
   for (Variables::const_iterator it = vars.begin(), et = vars.end(); it!=et; ++it) {
     const Variable& v = *it;
     d_ctx->DeclareVariable(v);
-    d_assertion_vars.insert(v);
+    d_assertion_vars_dreal.insert(v);
   }
   TRACE("dreal") << dreal_t.to_smtlib2() << std::endl;
   d_ctx->Assert(f);
@@ -386,39 +386,6 @@ solver::result dreal_internal::check() {
   return d_last_check_status;
 }
 
-void dreal_internal::get_used_variables(std::vector<expr::term_ref>& variables) const {
-  bool class_A_used = false;
-  bool class_B_used = false;
-  bool class_T_used = false;
-  for (size_t i = 0; i < d_assertion_classes.size(); ++i) {
-    switch (d_assertion_classes[i]) {
-    case solver::CLASS_A:
-      class_A_used = true;
-      break;
-    case solver::CLASS_B:
-      class_B_used = true;
-      break;
-    case solver::CLASS_T:
-      class_A_used = true;
-      class_B_used = true;
-      class_T_used = true;
-      break;
-    default:
-      assert(false);
-    }
-  }
-
-  if (class_A_used) {
-    variables.insert(variables.end(), d_A_variables.begin(), d_A_variables.end());
-  }
-  if (class_B_used) {
-    variables.insert(variables.end(), d_B_variables.begin(), d_B_variables.end());
-  }
-  if (class_T_used) {
-    variables.insert(variables.end(), d_T_variables.begin(), d_T_variables.end());
-  }
-}
-
 bool dreal_internal::check_model() const {
   for (size_t i = 0; i < d_assertions.size(); ++ i) {
     expr::term_ref f = d_assertions[i];
@@ -429,17 +396,13 @@ bool dreal_internal::check_model() const {
   return true;
 }
 
-
 bool dreal_internal::save_dreal_model(const Box& model) {
 
-  // See which variables we have to reason about
-  std::vector<expr::term_ref> variables;
-  get_used_variables(variables);
-  
   // Get the model for each variable
   term_to_double_map simple_model;
-  for (size_t i = 0; i < variables.size(); ++ i) {
-    expr::term_ref var = variables[i];
+
+  for (size_t i = 0; i < d_variables.size(); ++ i) {
+    expr::term_ref var = d_variables[i];
     dreal_term dreal_var = to_dreal_term(var);
     assert(dreal_var.is_variable());
 
@@ -552,46 +515,15 @@ void dreal_internal::gc() {
 
 
 void dreal_internal::add_variable(expr::term_ref var, smt::solver::variable_class f_class) {
-  switch (f_class) {
-  case smt::solver::CLASS_A:
-    assert(d_A_variables_set.find(var) == d_A_variables_set.end());
-    break;
-  case smt::solver::CLASS_B:
-    assert(d_B_variables_set.find(var) == d_B_variables_set.end());
-    break;
-  case smt::solver::CLASS_T:
-    assert(d_T_variables_set.find(var) == d_T_variables_set.end());
-    break;
-  default:
-    assert(false);
-  }
-
+  // Remember the variables
+  d_variables.push_back(var);
   // Convert to dreal early
   to_dreal_term(var);
-
-  switch (f_class) {
-  case smt::solver::CLASS_A:
-    d_A_variables.push_back(var);
-    d_A_variables_set.insert(var);
-    break;
-  case smt::solver::CLASS_B:
-    d_B_variables.push_back(var);
-    d_B_variables_set.insert(var);
-    break;
-  case smt::solver::CLASS_T:
-    d_T_variables.push_back(var);
-    d_T_variables_set.insert(var);
-    break;
-  default:
-    assert(false);
-  }
 }
 
 void dreal_internal::gc_collect(const expr::gc_relocator& gc_reloc) {
   gc_reloc.reloc(d_assertions);
-  gc_reloc.reloc(d_A_variables);
-  gc_reloc.reloc(d_B_variables);
-  gc_reloc.reloc(d_T_variables);
+  gc_reloc.reloc(d_variables);
 }
 
 void dreal_internal::dreal_to_smtlib2(std::ostream& out) {
@@ -622,17 +554,7 @@ void dreal_internal::dreal_to_smtlib2(std::ostream& out) {
     }
   }
 
-  if (class_A_used) {
-    variables.insert(variables.end(), d_A_variables.begin(), d_A_variables.end());
-  }
-  if (class_B_used) {
-    variables.insert(variables.end(), d_B_variables.begin(), d_B_variables.end());
-  }
-  if (class_T_used) {
-    variables.insert(variables.end(), d_T_variables.begin(), d_T_variables.end());
-  }
-  
-  for (size_t i = 0; i < variables.size(); ++ i) {
+  for (size_t i = 0; i < d_variables.size(); ++ i) {
     expr::term_ref variable = variables[i];
     dreal_term dreal_var = to_dreal_term(variable);
     out << "(declare-fun " << dreal_var.to_string() << " () "

@@ -50,6 +50,11 @@ BOOST_AUTO_TEST_CASE(dreal_basic_asserts) {
   term_ref x = tm.mk_variable("x", tm.real_type());
   term_ref y = tm.mk_variable("y", tm.real_type());
   term_ref b = tm.mk_variable("b", tm.boolean_type());
+
+  dreal->add_variable(x, smt::solver::CLASS_A);
+  dreal->add_variable(y, smt::solver::CLASS_A);
+  dreal->add_variable(b, smt::solver::CLASS_A);
+
   term_ref zero = tm.mk_rational_constant(rational());
 
   term_ref sum = tm.mk_term(TERM_ADD, x, y);
@@ -58,6 +63,7 @@ BOOST_AUTO_TEST_CASE(dreal_basic_asserts) {
   term_ref leq = tm.mk_term(TERM_LEQ, sum, zero);
 
   term_ref f = tm.mk_term(TERM_AND, b, leq);
+
 
   cout << "Adding: " << f << endl;
   dreal->add(f, smt::solver::CLASS_A);

@@ -48,7 +48,7 @@ class dreal_internal {
   std::vector<expr::term_ref_strong> d_assertions;
 
   /** Free variables from d_assertions */
-  std::set<::dreal::Variable> d_assertion_vars;
+  std::set<::dreal::Variable> d_assertion_vars_dreal;
   
   /** dreal assertions, for debug purposes */
   std::vector<::dreal::Formula> d_assertions_dreal;
@@ -59,17 +59,8 @@ class dreal_internal {
   /** The assertions size per push/pop */
   std::vector<size_t> d_assertions_size;
 
-  /** A variables */
-  std::vector<expr::term_ref> d_A_variables;
-  std::set<expr::term_ref> d_A_variables_set;
-
-  /** B variables */
-  std::vector<expr::term_ref> d_B_variables;
-  std::set<expr::term_ref> d_B_variables_set;
-
-  /** T variables */
-  std::vector<expr::term_ref> d_T_variables;
-  std::set<expr::term_ref> d_T_variables_set;
+  /** All variables */
+  std::vector<expr::term_ref> d_variables;
 
   /** Dreal term conversion cache */
   dreal_term_cache* d_conversion_cache;
