@@ -73,6 +73,12 @@ foreach(FILE ${regressions})
     continue()
   endif()
 
+  # Don't run tests that require a solver not supported 
+  list (FIND ALL_OPTIONS "--solver=y2o2" FIND_INDEX)
+  if (((NOT OPENSMT2_FOUND) OR (NOT YICES2_FOUND)) AND (FIND_INDEX GREATER -1))
+    continue()
+  endif()
+
   # Add the test with the options and the file
   add_test(${FILE} sally ${ALL_OPTIONS} ${FILE})
   
