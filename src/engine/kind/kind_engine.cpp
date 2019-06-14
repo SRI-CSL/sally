@@ -169,10 +169,9 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
       // See what happened
       switch (r_2) {
       case smt::solver::SAT:
+      case smt::solver::UNKNOWN:
         // Couldn't prove it, continue
         break;
-      case smt::solver::UNKNOWN:
-        return UNKNOWN;
       case smt::solver::UNSAT:
         // Proved it, done
         d_invariant = invariant(property, k);

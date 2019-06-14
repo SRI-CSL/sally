@@ -1,2 +1,2 @@
---engine bmc --solver=dreal --dreal-precision=0.001 --show-trace
+--engine bmc --solver dreal --dreal-precision=0.001 --show-trace
 

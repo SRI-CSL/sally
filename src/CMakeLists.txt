@@ -68,8 +68,14 @@ foreach(FILE ${regressions})
   separate_arguments(ALL_OPTIONS)
 
   # Don't run tests that require a solver not supported 
-  list (FIND ALL_OPTIONS "--solver=dreal" FIND_INDEX)
+  list (FIND ALL_OPTIONS "dreal" FIND_INDEX)
   if ((NOT DREAL_FOUND) AND (FIND_INDEX GREATER -1))
+    continue()
+  endif()
+
+  # Don't run tests that require a solver not supported 
+  list (FIND ALL_OPTIONS "d4y2" FIND_INDEX)
+  if (((NOT DREAL_FOUND) OR (NOT YICES2_FOUND)) AND (FIND_INDEX GREATER -1))
     continue()
   endif()
 
