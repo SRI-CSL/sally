@@ -22,9 +22,6 @@ env:
 addons:
   apt:
     update: true
-    sources:
-      - boost-latest
-      - ubuntu-toolchain-r-test
     packages:
       - bison
       - flex
