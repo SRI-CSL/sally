@@ -35,7 +35,7 @@ public:
     opensmt2_internal(expr::term_manager & tm, const options & opts);
 
     ~opensmt2_internal() {
-      delete osmt;
+      delete d_osmt;
     }
 
     void add(expr::term_ref ref, solver::formula_class f_class);
@@ -53,22 +53,18 @@ public:
 
     void add_variable(expr::term_ref var, solver::variable_class f_class);
 
-    void generalize(solver::generalization_type type,
-        const std::set<expr::term_ref>& vars_to_keep,
-        const std::set<expr::term_ref>& vars_to_elim,
-        expr::model::ref m,
-        std::vector<expr::term_ref>& out);
-
     void interpolate(std::vector<expr::term_ref> & out);
 
 
 private:
-    static unsigned int instance_id;
-    MainSolver & get_main_solver() { return osmt->getMainSolver(); }
 
-    Logic & get_logic() { return osmt->getLogic(); }
+    static unsigned int s_instance_id;
 
-    LRALogic & get_lralogic() { return osmt->getLRALogic(); }
+    MainSolver & get_main_solver() { return d_osmt->getMainSolver(); }
+
+    Logic & get_logic() { return d_osmt->getLogic(); }
+
+    LRALogic & get_lralogic() { return d_osmt->getLRALogic(); }
 
     PTRef sally_to_osmt(sally::expr::term_ref ref);
 
@@ -84,15 +80,15 @@ private:
 
     sstat d_last_check_status;
 
-    Opensmt * osmt;
+    Opensmt * d_osmt;
 
-    opensmt2_term_cache term_cache;
+    opensmt2_term_cache d_term_cache;
 
-    unsigned int stack_level = 0;
+    unsigned int d_stack_level = 0;
 
-    std::vector<std::vector<unsigned int>> stacked_A_partitions;
+    std::vector<std::vector<unsigned int>> d_stacked_A_partitions;
 
-    unsigned int current_partition = 0;
+    unsigned int d_current_partition = 0;
 
     ipartitions_t get_A_mask() const;
 };

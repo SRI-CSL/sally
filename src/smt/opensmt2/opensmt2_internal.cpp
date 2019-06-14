@@ -23,43 +23,46 @@ namespace{
     }
 }
 
-unsigned int sally::smt::opensmt2_internal::instance_id = 0;
+unsigned int sally::smt::opensmt2_internal::s_instance_id = 0;
 
 sally::smt::opensmt2_internal::opensmt2_internal(sally::expr::term_manager &tm, const sally::options &opts)
 : d_tm(tm)
-, d_instance(instance_id++)
-, term_cache()
+, d_instance(s_instance_id++)
+, d_term_cache()
 {
-  stacked_A_partitions.emplace_back();
-  auto logic_str = opts.get_string("solver-logic");
+  d_stacked_A_partitions.emplace_back();
 
-  if (logic_str == "QF_LRA") {
-    osmt = new Opensmt(qf_lra, "osmt_solver");
-    const char *msg;
-    bool res = osmt->getConfig().setOption(":time-queries", SMTOption{0}, msg);
-    (void) res;
-    assert(res);
-    assert(strcmp(msg, "ok") == 0);
+  if (opts.has_option("solver-logic")) {
+    auto logic_str = opts.get_string("solver-logic");
+    if (logic_str == "QF_LRA") {
+      d_osmt = new Opensmt(qf_lra, "osmt_solver");
+      const char *msg;
+      bool res = d_osmt->getConfig().setOption(":time-queries", SMTOption{0}, msg);
+      (void) res;
+      assert(res);
+      assert(strcmp(msg, "ok") == 0);
 //    osmt->getConfig().sat_theory_propagation = 0;
 //    res = osmt->getConfig().setOption(":verbosity", SMTOption{2}, msg);
 //    assert(strcmp(msg, "ok") == 0);
 //    res = osmt->getConfig().setOption(":dump-query", SMTOption(1), msg);
 //    res = osmt->getConfig().setOption(":dump-query-name", SMTOption("sally"), msg);
 
-    const std::string itp_option = "opensmt2-itp";
-    if (opts.has_option(itp_option)) {
-      ItpAlgorithm itp {opts.get_int(itp_option)};
-      osmt->getConfig().setLRAInterpolationAlgorithm(itp);
+      const std::string itp_option = "opensmt2-itp";
+      if (opts.has_option(itp_option)) {
+        ItpAlgorithm itp {opts.get_int(itp_option)};
+        d_osmt->getConfig().setLRAInterpolationAlgorithm(itp);
+      }
+      if (opts.has_option("opensmt2-random_seed")) {
+        d_osmt->getConfig().setRandomSeed(opts.get_int("opensmt2-random_seed"));
+      }
+      if (opts.has_option("opensmt2-simplify_itp")) {
+        d_osmt->getConfig().simplify_interpolant = opts.get_int("opensmt2-simplify_itp");
+      }
+    } else {
+      throw sally::exception("OpenSMT currently supports only logic QF_LRA!");
     }
-    if (opts.has_option("opensmt2-random_seed")) {
-      osmt->getConfig().setRandomSeed(opts.get_int("opensmt2-random_seed"));
-    }
-    if (opts.has_option("opensmt2-simplify_itp")) {
-      osmt->getConfig().simplify_interpolant = opts.get_int("opensmt2-simplify_itp");
-    }
-  }
-  else {
-    throw sally::exception{"OpenSMT currently supports only logic QF_LRA!"};
+  } else {
+    throw sally::exception("OpenSMT currently supports only logic QF_LRA, set with --solver-logic QF_LRA.");
   }
 }
 
@@ -75,9 +78,9 @@ void sally::smt::opensmt2_internal::add(sally::expr::term_ref ref, sally::smt::s
 //    std::cout << "Assigning partition " << current_partition << " to fla:\n" << get_logic().printTerm(ptref) << '\n';
     // A and T formula for A-part of interpolation problem; B formula form B-part
     if(f_class == sally::smt::solver::CLASS_A || f_class == sally::smt::solver::CLASS_T) {
-      stacked_A_partitions[stack_level].push_back(current_partition);
+      d_stacked_A_partitions[d_stack_level].push_back(d_current_partition);
     }
-    ++current_partition;
+    ++d_current_partition;
 
 }
 
@@ -95,22 +98,22 @@ sally::smt::solver::result sally::smt::opensmt2_internal::check() {
 
 void sally::smt::opensmt2_internal::push() {
     get_main_solver().push();
-    ++stack_level;
-    stacked_A_partitions.emplace_back();
+    ++d_stack_level;
+    d_stacked_A_partitions.emplace_back();
 }
 
 void sally::smt::opensmt2_internal::pop() {
   bool res = get_main_solver().pop();
   (void) res;
   assert(res);
-  assert(stacked_A_partitions.size() == stack_level + 1); // we start at level 0
-  --stack_level;
-  assert(stack_level == 0); // TODO interpolation with incremental solving may not work properly
-  stacked_A_partitions.pop_back();
+  assert(d_stacked_A_partitions.size() == d_stack_level + 1); // we start at level 0
+  --d_stack_level;
+  assert(d_stack_level == 0); // TODO interpolation with incremental solving may not work properly
+  d_stacked_A_partitions.pop_back();
 }
 
 PTRef sally::smt::opensmt2_internal::sally_to_osmt(sally::expr::term_ref ref) {
-  PTRef result = term_cache.get_term_cache(ref);
+  PTRef result = d_term_cache.get_term_cache(ref);
   if (result != PTRef_Undef) { return result; }
     const expr::term& t = d_tm.term_of(ref);
     expr::term_op t_op = t.op();
@@ -132,7 +135,7 @@ PTRef sally::smt::opensmt2_internal::sally_to_osmt(sally::expr::term_ref ref) {
             }();
             assert(result != PTRef_Undef);
             // for the variables we need to remember both ways of translation
-            term_cache.set_osmt_term_cache(result, ref);
+            d_term_cache.set_osmt_term_cache(result, ref);
             break;
         case expr::CONST_BOOL:
             result = d_tm.get_boolean_constant(t) ? get_logic().getTerm_true() : get_logic().getTerm_false();
@@ -170,7 +173,7 @@ PTRef sally::smt::opensmt2_internal::sally_to_osmt(sally::expr::term_ref ref) {
         default:
             assert(false);
     }
-    term_cache.set_term_cache(ref, result);
+    d_term_cache.set_term_cache(ref, result);
     return result;
 }
 
@@ -237,7 +240,7 @@ sally::expr::term_ref sally::smt::opensmt2_internal::osmt_to_sally(PTRef ref) {
   expr::term_ref result;
 
   // Check the cache
-  result = term_cache.get_osmt_term_cache(ref);
+  result = d_term_cache.get_osmt_term_cache(ref);
   if (!result.is_null()) {
     return result;
   }
@@ -318,7 +321,7 @@ sally::expr::term_ref sally::smt::opensmt2_internal::osmt_to_sally(PTRef ref) {
   }
 
   // Set the cache ref -> result
-  term_cache.set_osmt_term_cache(ref, result);
+  d_term_cache.set_osmt_term_cache(ref, result);
 
   return result;
 }
@@ -375,31 +378,6 @@ sally::smt::opensmt2_internal::add_variable(sally::expr::term_ref var, sally::sm
 
 }
 
-void sally::smt::opensmt2_internal::generalize(sally::smt::solver::generalization_type type,
-                                               const set<sally::expr::term_ref> &vars_to_keep,
-                                               const set<sally::expr::term_ref> &vars_to_elim,
-                                               expr::model::ref m,
-                                               vector<sally::expr::term_ref> &out) {
-  std::set<expr::term_ref>::const_iterator it = vars_to_keep.begin(), it_end = vars_to_keep.end();
-  for (; it != it_end; ++it) {
-    // var = value
-    expr::term_ref var = *it;
-    assert(m->has_value(var));
-    expr::term_ref value = m->get_term_value(var).to_term(d_tm);
-
-    if (d_tm.type_of(var) == d_tm.boolean_type()) {
-      if (d_tm.get_boolean_constant(d_tm.term_of(value))) {
-        out.push_back(var);
-      } else {
-        out.push_back(d_tm.mk_term(expr::TERM_NOT, var));
-      }
-    } else {
-      out.push_back(d_tm.mk_term(expr::TERM_EQ, var, value));
-    }
-  }
-
-}
-
 void sally::smt::opensmt2_internal::interpolate(vector<sally::expr::term_ref> &out) {
   assert(get_main_solver().getStatus() == s_False);
   std::vector<PTRef> itps;
@@ -417,7 +395,7 @@ void sally::smt::opensmt2_internal::interpolate(vector<sally::expr::term_ref> &o
 
 ipartitions_t sally::smt::opensmt2_internal::get_A_mask() const {
   ipartitions_t A_mask = 0;
-  for (auto const & stack_level_partitions : stacked_A_partitions) {
+  for (auto const & stack_level_partitions : d_stacked_A_partitions) {
     for (auto const & partition_idx : stack_level_partitions){
       setbit(A_mask, partition_idx);
     }

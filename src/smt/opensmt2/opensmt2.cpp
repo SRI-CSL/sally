@@ -74,29 +74,11 @@ void opensmt2::pop() {
   d_internal->pop();
 }
 
-/** Interpolate the last sat result (trivial) */
-void opensmt2::generalize(generalization_type type, std::vector<expr::term_ref>& out) {
-  generalize(type, get_model(), out);
-}
-
-void opensmt2::generalize(generalization_type type, expr::model::ref m, std::vector<expr::term_ref>& out) {
-  TRACE("opensmt2")<< "opensmt2[" << d_internal->instance() << "]: generalizing" << std::endl;
-  switch (type) {
-    case GENERALIZE_FORWARD:
-    d_internal->generalize(type, d_B_variables, d_A_variables, m, out);
-    break;
-    case GENERALIZE_BACKWARD:
-    d_internal->generalize(type, d_A_variables, d_B_variables, m, out);
-  }
-}
-
 bool opensmt2::supports(solver::feature f) const {
   switch (f) {
   case solver::feature::INTERPOLATION:
     return true;
-  case solver::feature::GENERALIZATION:
-    return true;
-  case solver::feature::UNSAT_CORE:
+  default:
     return false;
   }
   return false; // Compile error otherwise
