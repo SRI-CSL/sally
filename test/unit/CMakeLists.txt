@@ -1,6 +1,11 @@
 # Find the Boost unit test library
 find_package(Boost 1.36.0 COMPONENTS unit_test_framework iostreams program_options REQUIRED)
 
+if (DREAL_FOUND)
+  # It must be added before add_executable
+  link_directories(${DREAL_LIBRARY_DIRS})
+endif()
+
 # The binary
 ADD_DEFINITIONS(-DBOOST_TEST_DYN_LINK) 
 add_executable(sally_test test_runner.cpp)
@@ -40,6 +45,9 @@ if (Z3_FOUND)
 endif()
 if (OPENSMT2_FOUND)
   target_link_libraries(sally_test ${OPENSMT2_LIBRARY})
+endif()
+if (DREAL_FOUND)
+  target_link_libraries(sally_test ${DREAL_LIBRARIES})
 endif()
 
 target_link_libraries(sally_test ${GMP_LIBRARY})

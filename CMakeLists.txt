@@ -71,6 +71,16 @@ if (MATHSAT5_FOUND)
   include_directories(${MATHSAT5_INCLUDE_DIR})
 endif()
 
+# Find DREAL
+SET(DREAL_HOME CACHE STRING "DReal installation directory")
+find_package(Dreal)
+if (DREAL_FOUND)
+  add_definitions(-DWITH_DREAL)
+  #add_definitions(${DREAL_DEFINITIONS})
+  include_directories(${DREAL_INCLUDE_DIRS})
+  #message(STATUS "Dreal definitions: ${DREAL_DEFINITIONS}")
+endif()
+
 # Find Z3
 SET(Z3_HOME CACHE STRING "Z3 installation directory")
 find_package(Z3 4.8)
