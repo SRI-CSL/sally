@@ -23,17 +23,21 @@ addons:
   apt:
     update: true
     packages:
+      - bison
+      - flex
       - libgmp-dev
       - libboost-program-options-dev 
       - libboost-iostreams-dev
       - libboost-test-dev
       - libboost-thread-dev
       - libboost-system-dev
+      - libreadline-dev
       - default-jre
       - gperf
 
 install:
   - bash contrib/install_yices2.sh
+  - bash contrib/install_opensmt2.sh
   - bash contrib/install_dreal4.sh
   - if [[ $ENABLE_COVERAGE == ON ]]; then 
       pip install --user cpp-coveralls;

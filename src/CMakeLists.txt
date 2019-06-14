@@ -41,6 +41,9 @@ endif()
 if (Z3_FOUND)
   target_link_libraries(sally ${Z3_LIBRARY})
 endif()
+if (OPENSMT2_FOUND)
+  target_link_libraries(sally ${OPENSMT2_LIBRARY})
+endif()
 if (DREAL_FOUND)
   target_link_libraries(sally ${DREAL_LIBRARIES})
 endif()
@@ -67,6 +70,12 @@ foreach(FILE ${regressions})
   # Don't run tests that require a solver not supported 
   list (FIND ALL_OPTIONS "--solver=dreal" FIND_INDEX)
   if ((NOT DREAL_FOUND) AND (FIND_INDEX GREATER -1))
+    continue()
+  endif()
+
+  # Don't run tests that require a solver not supported 
+  list (FIND ALL_OPTIONS "y2o2" FIND_INDEX)
+  if (((NOT OPENSMT2_FOUND) OR (NOT YICES2_FOUND)) AND (FIND_INDEX GREATER -1))
     continue()
   endif()
 

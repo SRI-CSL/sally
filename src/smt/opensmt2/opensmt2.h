@@ -18,44 +18,42 @@
 
 #pragma once
 
-#ifdef WITH_Z3
+#ifdef WITH_OPENSMT2
 
 #include "smt/solver.h"
 
 namespace sally {
 namespace smt {
 
-class z3_internal;
+class opensmt2_internal;
 
-/**
- * Yices SMT solver.
- */
-class z3 : public solver {
+class opensmt2: public solver {
 
-  /** Internal z3 data */
-  z3_internal* d_internal;
+  /** Internal opensmt data */
+  opensmt2_internal* d_internal;
 
 public:
 
   /** Constructor */
-  z3(expr::term_manager& tm, const options& opts, utils::statistics& stats);
+  opensmt2(expr::term_manager& tm, const options& opts,
+      utils::statistics& stats);
 
   /** Destructor */
-  ~z3();
+  virtual ~opensmt2();
 
   /** Features */
-  bool supports(feature f) const {
-    return false;
-  }
+  bool supports(feature f) const;
 
   /** Add an assertion f to the solver */
   void add(expr::term_ref f, formula_class f_class);
 
-  /** Add an variable */
   void add_variable(expr::term_ref var, variable_class f_class);
 
   /** Check the assertions for satisfiability */
   result check();
+
+  /** Check the model (debug) */
+  void check_model();
 
   /** Get the model */
   expr::model::ref get_model() const;
@@ -66,7 +64,13 @@ public:
   /** Pop the solving context */
   void pop();
 
-  /** Term collection */
+  /** Interpolate the last UNSAT result */
+  void interpolate(std::vector<expr::term_ref>& out);
+
+  /** Unsat core of the last UNSAT result */
+  void get_unsat_core(std::vector<expr::term_ref>& out);
+
+  /** Collect terms */
   void gc_collect(const expr::gc_relocator& gc_reloc);
 
   /** Collect garbage */
@@ -76,4 +80,5 @@ public:
 }
 }
 
-#endif
+#endif // WITH_OPENSMT2
+

@@ -20,7 +20,6 @@
 
 #include "smt/z3/z3_internal.h"
 #include "z3_common.h"
-#include "z3_interp.h"
 #include "utils/trace.h"
 #include "expr/gc_relocator.h"
 #include "utils/output.h"
@@ -1051,90 +1050,6 @@ void z3_internal::add_variable(expr::term_ref var, smt::solver::variable_class f
     break;
   default:
     assert(false);
-  }
-}
-
-void z3_internal::interpolate(std::vector<expr::term_ref>& out) {
-
-  assert(d_assertions.size() == d_assertion_classes.size());
-  assert(d_last_check_status == Z3_L_FALSE);
-
-  std::vector<Z3_ast> to_decref;
-
-  Z3_ast proof = Z3_solver_get_proof(d_ctx, d_solver);
-  Z3_inc_ref(d_ctx, proof);
-  to_decref.push_back(proof);
-
-  // Collect the pattern formulas
-  std::vector<Z3_ast> A_formulas;
-  std::vector<Z3_ast> B_formulas;
-  for (size_t i = 0; i < d_assertions.size(); ++ i) {
-    switch (d_assertion_classes[i]) {
-    case solver::CLASS_A:
-    case solver::CLASS_T: {
-      A_formulas.push_back(to_z3_term(d_assertions[i]));
-      break;
-    }
-    case solver::CLASS_B: {
-      B_formulas.push_back(to_z3_term(d_assertions[i]));
-      break;
-    }
-    default:
-      break;
-    }
-  }
-
-  // Make the pattern
-  Z3_ast A_conj;
-  assert(A_formulas.size() > 0);
-  if (A_formulas.size() > 1) {
-    A_conj = Z3_mk_and(d_ctx, A_formulas.size(), &A_formulas[0]);
-    Z3_inc_ref(d_ctx, A_conj);
-    to_decref.push_back(A_conj);
-  } else {
-    A_conj = A_formulas[0];
-  }
-
-  Z3_ast B_conj;
-  assert(B_formulas.size() > 0);
-  if (B_formulas.size() > 1) {
-    B_conj = Z3_mk_and(d_ctx, B_formulas.size(), &B_formulas[0]);
-    Z3_inc_ref(d_ctx, B_conj);
-    to_decref.push_back(B_conj);
-  } else {
-    B_conj = B_formulas[0];
-  }
-
-  A_conj = Z3_mk_interpolant(d_ctx, A_conj);
-  Z3_inc_ref(d_ctx, A_conj);
-  to_decref.push_back(A_conj);
-
-  Z3_ast F_args[2] = { A_conj, B_conj };
-  Z3_ast F = Z3_mk_and(d_ctx, 2, F_args);
-  Z3_inc_ref(d_ctx, F);
-  to_decref.push_back(F);
-
-  // Get the interpolant
-  Z3_ast_vector interpolant = Z3_get_interpolant(d_ctx, proof, F, d_params);
-  Z3_error_code error = Z3_get_error_code(d_ctx);
-  if (error != Z3_OK) {
-    std::stringstream ss;
-    Z3_string msg = Z3_get_error_msg(d_ctx, error);
-    ss << "Z3 error (interpolant): " << msg << ".";
-    throw exception(ss.str());
-  }
-  Z3_ast_vector_inc_ref(d_ctx, interpolant);
-  unsigned size = Z3_ast_vector_size(d_ctx, interpolant);
-  for (unsigned i = 0; i < size; ++ i) {
-    Z3_ast I_i_z3 = Z3_ast_vector_get(d_ctx, interpolant, i);
-    expr::term_ref I_i = to_term(I_i_z3);
-    out.push_back(I_i);
-  }
-  Z3_ast_vector_dec_ref(d_ctx, interpolant);
-
-  // Decref
-  for (size_t i = 0; i < to_decref.size(); ++ i) {
-    Z3_dec_ref(d_ctx, to_decref[i]);
   }
 }
 

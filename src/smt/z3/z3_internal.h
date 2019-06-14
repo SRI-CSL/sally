@@ -115,7 +115,6 @@ public:
   /** Make a term given z3 operator and children */
   expr::term_ref mk_term(Z3_decl_kind kind, const std::vector<expr::term_ref>& children);
 
-
   /** Add an assertion to yices */
   void add(expr::term_ref ref, solver::formula_class f_class);
 
@@ -136,9 +135,6 @@ public:
 
   /** Pop the context */
   void pop();
-
-  /** Return the interpolant */
-  void interpolate(std::vector<expr::term_ref>& out);
 
   /** Returns the instance id */
   size_t instance() const { return d_instance; }
