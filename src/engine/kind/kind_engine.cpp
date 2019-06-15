@@ -162,7 +162,7 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
     if (check_consecution) {
       solver2->push();
       solver2->add(property_not_k, smt::solver::CLASS_A);
-      smt::solver::result r_2 = solver2->check();
+      smt::solver::result r_2 = solver2->check_relaxed();
 
       MSG(1) << "K-Induction: got " << r_2 << std::endl;
 

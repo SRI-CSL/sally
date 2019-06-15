@@ -164,6 +164,12 @@ public:
   virtual
   result check() = 0;
 
+  /** Check for satisfiability, but it's OK to return unknown */
+  virtual
+  result check_relaxed() {
+    return check();
+  }
+
   /** Check the model if the formula is SAT (for debug purposes only) */
   virtual
   void check_model() {

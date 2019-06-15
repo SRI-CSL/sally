@@ -72,6 +72,13 @@ solver::result d4y2::check() {
   }
 }
 
+solver::result d4y2::check_relaxed() {
+  TRACE("d4y2") << "d4y2[" << s_instance << "]: check_relaxed()" << std::endl;
+  d_last_dreal4_result = d_dreal4->check();
+  d_last_yices2_result = UNKNOWN;
+  return d_last_dreal4_result;
+}
+
 expr::model::ref d4y2::get_model() const {
   TRACE("d4y2") << "d4y2[" << s_instance << "]: get_model()" << std::endl;
   if (d_last_dreal4_result == SAT) {

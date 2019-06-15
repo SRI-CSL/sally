@@ -67,6 +67,9 @@ public:
   /** Check the assertions for satisfiability */
   result check();
 
+  /** Check the assertions for satisfiability, allow unknown */
+  result check_relaxed();
+
   /** Get the model */
   expr::model::ref get_model() const;
 

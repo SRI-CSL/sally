@@ -126,6 +126,9 @@ class dreal_internal {
   /** Check satisfiability */
   solver::result check();
 
+  /** Check satisfiability */
+  solver::result check_relaxed();
+
   /** Returns the model */
   expr::model::ref get_model();
 
