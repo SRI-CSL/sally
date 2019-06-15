@@ -532,30 +532,8 @@ void dreal_internal::dreal_to_smtlib2(std::ostream& out) {
   out << "(set-info :smt-lib-version 2.0)" << std::endl;
   out << std::endl;
 
-  std::vector<expr::term_ref> variables;
-  bool class_A_used = false;
-  bool class_B_used = false;
-  bool class_T_used = false;
-  for (size_t i = 0; i < d_assertion_classes.size(); ++ i) {
-    switch (d_assertion_classes[i]) {
-    case solver::CLASS_A:
-      class_A_used = true;
-      break;
-    case solver::CLASS_B:
-      class_B_used = true;
-      break;
-    case solver::CLASS_T:
-      class_A_used = true;
-      class_B_used = true;
-      class_T_used = true;
-      break;
-    default:
-      assert(false);
-    }
-  }
-
   for (size_t i = 0; i < d_variables.size(); ++ i) {
-    expr::term_ref variable = variables[i];
+    expr::term_ref variable = d_variables[i];
     dreal_term dreal_var = to_dreal_term(variable);
     out << "(declare-fun " << dreal_var.to_string() << " () "
         << d_tm.type_of(variable) << ")" << std::endl;
