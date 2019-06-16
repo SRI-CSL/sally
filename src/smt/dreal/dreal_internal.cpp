@@ -27,6 +27,11 @@
 #include "expr/term_visitor.h"
 #include "utils/output.h"
 
+#ifdef WITH_LIBPOLY
+#include "poly/rational.h"
+#include "poly/interval.h"
+#endif
+
 #include <ibex.h>
 
 #include <iostream>
@@ -399,7 +404,7 @@ bool dreal_internal::check_model() const {
 bool dreal_internal::save_dreal_model(const Box& model) {
 
   // Get the model for each variable
-  term_to_double_map simple_model;
+  term_to_rational_map simple_model;
 
   for (size_t i = 0; i < d_variables.size(); ++ i) {
     expr::term_ref var = d_variables[i];
@@ -407,7 +412,7 @@ bool dreal_internal::save_dreal_model(const Box& model) {
     assert(dreal_var.is_variable());
 
     const Variable &x = dreal_var.variable();
-    double x_value = 0.0;
+    expr::rational x_value;
 
     /*
      * BD: added this check to make sure x is defined in the dreal model
@@ -417,18 +422,62 @@ bool dreal_internal::save_dreal_model(const Box& model) {
      */
     if (model.has_variable(x)) {
       const ibex::Interval& iv = model[x];
-      if (iv.is_unbounded()) {
-        // mid() returns -MAXREAL/+MAXREAL instead of something useful
-        if (iv.lb() != NEG_INFINITY) {
-          x_value = iv.lb();
-        } else if (iv.ub() != POS_INFINITY) {
-          x_value = iv.ub();
-        } else {
-          assert(false);
-        }
+#ifdef WITH_LIBPOLY
+      double lb = iv.lb();
+      double ub = iv.ub();
+
+      expr::rational lb_rat(lb);
+      expr::rational ub_rat(ub);
+      assert(lb_rat <= ub_rat);
+      bool strict = lb_rat < ub_rat;
+
+      lp_value_t lb_lp;
+      if (lb == NEG_INFINITY) {
+        lp_value_construct(&lb_lp, LP_VALUE_MINUS_INFINITY, 0);
       } else {
-        x_value = iv.mid();
+        lp_value_construct(&lb_lp, LP_VALUE_RATIONAL, lb_rat.mpq().__get_mp());
       }
+
+      lp_value_t ub_lp;
+      if (ub == POS_INFINITY) {
+        lp_value_construct(&ub_lp, LP_VALUE_PLUS_INFINITY, 0);
+      } else {
+        lp_value_construct(&ub_lp, LP_VALUE_RATIONAL, ub_rat.mpq().__get_mp());
+      }
+
+      lp_interval_t iv_lp;
+      lp_interval_construct(&iv_lp, &lb_lp, strict ? 1 : 0, &ub_lp, strict ? 1 : 0);
+
+      lp_value_t x_value_lp;
+      lp_value_construct_none(&x_value_lp);
+      lp_interval_pick_value(&iv_lp, &x_value_lp);
+
+      lp_rational_t x_value_rational;
+      switch (x_value_lp.type) {
+      case LP_VALUE_DYADIC_RATIONAL:
+        lp_rational_construct_from_dyadic(&x_value_rational, &x_value_lp.value.dy_q);
+        break;
+      case LP_VALUE_RATIONAL:
+        lp_rational_construct_copy(&x_value_rational, &x_value_lp.value.q);
+        break;
+      case LP_VALUE_INTEGER:
+        lp_rational_construct_from_integer(&x_value_rational, &x_value_lp.value.z);
+        break;
+      default:
+        assert(false);
+      }
+
+      x_value = expr::rational(&x_value_rational);
+
+      lp_rational_destruct(&x_value_rational);
+      lp_interval_destruct(&iv_lp);
+      lp_value_destruct(&x_value_lp);
+      lp_value_destruct(&ub_lp);
+      lp_value_destruct(&lb_lp);
+
+#else
+      x_value = expr::rational(iv.mid());
+#endif
     }
 
     // Set the value
@@ -437,6 +486,7 @@ bool dreal_internal::save_dreal_model(const Box& model) {
 
   // Convert the model to Sally model
   d_last_model = get_model_from_simple_model(simple_model);
+  TRACE("dreal::model") << *d_last_model << std::endl;
 
   // Check if the model
   return check_model();
@@ -446,17 +496,17 @@ expr::model::ref dreal_internal::get_model() {
   return d_last_model;
 }
 
-expr::model::ref dreal_internal::get_model_from_simple_model(const term_to_double_map& simple_model) {
+expr::model::ref dreal_internal::get_model_from_simple_model(const term_to_rational_map& simple_model) {
 
   // Empty model
   expr::model::ref m = new expr::model(d_tm, false);
 
-  term_to_double_map::const_iterator it = simple_model.begin();
+  term_to_rational_map::const_iterator it = simple_model.begin();
 
   for(; it != simple_model.end(); ++it) {
 
     expr::term_ref x = it->first;
-    double x_dreal_value = it->second;
+    expr::rational x_dreal_value = it->second;
     dreal_term x_dreal = to_dreal_term(x);
     expr::value x_value;
 
@@ -465,34 +515,18 @@ expr::model::ref dreal_internal::get_model_from_simple_model(const term_to_doubl
 
     switch (x_type_op) {
     case expr::TYPE_BOOL:
-      if (x_dreal_value == 0) {
-        x_value = expr::value(0);
+      if (x_dreal_value.sgn() == 0) {
+        x_value = expr::value(false);
       } else {
-        x_value = expr::value(1);
+        x_value = expr::value(true);
       }
       break;
-    case expr::TYPE_REAL: {
-      // The real mpq_t value
-      mpq_t value;
-      mpq_init(value);
-      mpq_set_d(value, x_dreal_value);
-      expr::rational rational_value(value);
-      x_value = expr::value(rational_value);
-      // Clear the temps
-      mpq_clear(value);
+    case expr::TYPE_REAL:
+      x_value = expr::value(x_dreal_value);
       break;
-    }
-    case expr::TYPE_INTEGER: {
-      // The integer mpz_t value
-      mpz_t value;
-      mpz_init(value);
-      mpz_set_d(value, x_dreal_value);
-      expr::rational rational_value(value);
-      x_value = expr::value(rational_value);
-      // Clear the temps
-      mpz_clear(value);
+    case expr::TYPE_INTEGER:
+      x_value = expr::value(x_dreal_value);
       break;
-    }
     default:;;
       throw exception("Dreal error (unexpected model value)");      
     }

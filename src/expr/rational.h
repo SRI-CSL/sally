@@ -53,6 +53,8 @@ public:
   rational(const integer& p, const integer& q): d_gmp_rat(p.mpz(), q.mpz()) { d_gmp_rat.canonicalize(); }
   /** Construct p/q */
   rational(long p, unsigned long q) : d_gmp_rat(p, q) { d_gmp_rat.canonicalize(); }
+  /** Construct form float */
+  explicit rational(double q): d_gmp_rat(q) { d_gmp_rat.canonicalize(); }
   /** Construct from string representation */
   explicit rational(const char* s): d_gmp_rat(s, 10) { d_gmp_rat.canonicalize(); }
   /** Construct from string representation */

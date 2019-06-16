@@ -80,10 +80,10 @@ class dreal_internal {
   /** Get variables used in assertions */
   void get_used_variables(std::vector<expr::term_ref>& variables) const;
 
-  typedef expr::term_ref_map<double> term_to_double_map;
+  typedef expr::term_ref_map<expr::rational> term_to_rational_map;
 
   /** Construct Sally model from the simple model */
-  expr::model::ref get_model_from_simple_model(const term_to_double_map& simple_model);
+  expr::model::ref get_model_from_simple_model(const term_to_rational_map& simple_model);
 
   /**
    * Get model from dreal and put it into d_last_model. Returns true if

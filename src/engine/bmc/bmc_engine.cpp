@@ -91,9 +91,8 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
         d_trace->set_model(m, 0, k);
         return INVALID;
       }
-      case smt::solver::UNKNOWN:
-        return UNKNOWN;
       case smt::solver::UNSAT:
+      case smt::solver::UNKNOWN:
         // No counterexample found, continue
         break;
       default:
