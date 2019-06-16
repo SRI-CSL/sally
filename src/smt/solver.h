@@ -270,6 +270,14 @@ public:
   expr::term_ref interpolate();
 
   /**
+   * Set a hint for the solver to search close by.
+   */
+  virtual
+  void set_hint(expr::model::ref m) {
+    // By default do nothing
+  }
+
+  /**
    * Collect any garbage.
    */
   virtual

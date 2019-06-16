@@ -1152,10 +1152,7 @@ expr::bitvector bitvector_from_int32(size_t size, int32_t* value) {
   return bv;
 }
 
-model_t* yices2_internal::get_yices_model(expr::model::ref m) {
-
-  // Get the variables
-  std::vector<expr::term_ref> variables;
+void yices2_internal::get_variables(std::vector<expr::term_ref>& variables) {
   bool class_A_used = false;
   bool class_B_used = false;
   bool class_T_used = false;
@@ -1186,6 +1183,13 @@ model_t* yices2_internal::get_yices_model(expr::model::ref m) {
   if (class_T_used) {
     variables.insert(variables.end(), d_T_variables.begin(), d_T_variables.end());
   }
+}
+
+model_t* yices2_internal::get_yices_model(expr::model::ref m) {
+
+  // Get the variables
+  std::vector<expr::term_ref> variables;
+  get_variables(variables);
 
   uint32_t n = variables.size();
   term_t* yices_variables = (term_t*) malloc(sizeof(term_t)*n);
@@ -1216,8 +1220,6 @@ model_t* yices2_internal::get_yices_model(expr::model::ref m) {
 
   return yices_model;
 }
-
-
 
 expr::model::ref yices2_internal::get_model() {
   assert(d_last_check_status_dpllt == STATUS_SAT || d_last_check_status_mcsat == STATUS_SAT);
@@ -1539,6 +1541,17 @@ void yices2_internal::generalize(smt::solver::generalization_type type, expr::mo
   delete[] variables;
   delete[] assertions;
   yices_free_model(yices_model);
+}
+
+void yices2_internal::set_hint(expr::model::ref m) {
+  if (d_ctx_mcsat) {
+    // Get the yices model
+    model_t* m_y = get_yices_model(m);
+    // Give yices the model as hint
+    yices_set_model_hint(d_ctx_mcsat, m_y);
+    // Free the model
+    yices_free_model(m_y);
+  }
 }
 
 void yices2_internal::gc() {

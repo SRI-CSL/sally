@@ -99,6 +99,11 @@ void yices2::add_variable(expr::term_ref var, variable_class f_class) {
   d_internal->add_variable(var, f_class);
 }
 
+void yices2::set_hint(expr::model::ref m) {
+  d_internal->set_hint(m);
+}
+
+
 void yices2::gc() {
   d_internal->gc();
 }

@@ -122,6 +122,9 @@ class yices2_internal {
   /** Check the error */
   void check_error(int ret, const char* error_msg) const;
 
+  /** Get the variables used in assertions */
+  void get_variables(std::vector<expr::term_ref>& variables);
+
 public:
 
   /** Construct an instance of yices with the given term manager and options */
@@ -177,6 +180,9 @@ public:
 
   /** Return the generalization */
   void generalize(smt::solver::generalization_type type, expr::model::ref, std::vector<expr::term_ref>& projection_out);
+
+  /** Set the model hint */
+  void set_hint(expr::model::ref m);
 
   /** Returns the instance id */
   size_t instance() const { return d_instance; }

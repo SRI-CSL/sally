@@ -32,6 +32,8 @@ struct d4y2_info {
 
   static void setup_options(boost::program_options::options_description& options) {
     using namespace boost::program_options;
+    options.add_options()
+          ("d4y2-model-as-hint", "Use the dReal model as hint for Yices2 if Dreal is not certain.");
   }
 
   static std::string get_id() {

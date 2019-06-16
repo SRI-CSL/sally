@@ -417,7 +417,18 @@ bool dreal_internal::save_dreal_model(const Box& model) {
      */
     if (model.has_variable(x)) {
       const ibex::Interval& iv = model[x];
-      x_value = iv.mid();
+      if (iv.is_unbounded()) {
+        // mid() returns -MAXREAL/+MAXREAL instead of something useful
+        if (iv.lb() != NEG_INFINITY) {
+          x_value = iv.lb();
+        } else if (iv.ub() != POS_INFINITY) {
+          x_value = iv.ub();
+        } else {
+          assert(false);
+        }
+      } else {
+        x_value = iv.mid();
+      }
     }
 
     // Set the value

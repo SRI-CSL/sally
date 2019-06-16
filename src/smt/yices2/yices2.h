@@ -21,6 +21,7 @@
 #ifdef WITH_YICES2
 
 #include "smt/solver.h"
+#include "expr/model.h"
 
 namespace sally {
 namespace smt {
@@ -80,6 +81,9 @@ public:
    * Generalize the given model.
    */
   void generalize(generalization_type type, expr::model::ref m, std::vector<expr::term_ref>& projection_out);
+
+  /** Set the hint */
+  void set_hint(expr::model::ref m);
 
   /** Term collection */
   void gc_collect(const expr::gc_relocator& gc_reloc);
