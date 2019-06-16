@@ -446,7 +446,7 @@ bool dreal_internal::save_dreal_model(const Box& model) {
       }
 
       lp_interval_t iv_lp;
-      lp_interval_construct(&iv_lp, &lb_lp, strict ? 1 : 0, &ub_lp, strict ? 1 : 0);
+      lp_interval_construct(&iv_lp, &lb_lp, strict, &ub_lp, strict);
 
       lp_value_t x_value_lp;
       lp_value_construct_none(&x_value_lp);
@@ -515,7 +515,7 @@ expr::model::ref dreal_internal::get_model_from_simple_model(const term_to_ratio
 
     switch (x_type_op) {
     case expr::TYPE_BOOL:
-      if (x_dreal_value.sgn() == 0) {
+      if (x_dreal_value == expr::rational(0, 1)) {
         x_value = expr::value(false);
       } else {
         x_value = expr::value(true);
@@ -527,7 +527,7 @@ expr::model::ref dreal_internal::get_model_from_simple_model(const term_to_ratio
     case expr::TYPE_INTEGER:
       x_value = expr::value(x_dreal_value);
       break;
-    default:;;
+    default:
       throw exception("Dreal error (unexpected model value)");      
     }
     // Add the association
