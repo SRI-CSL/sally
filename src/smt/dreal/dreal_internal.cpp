@@ -165,6 +165,10 @@ dreal_term dreal_internal::mk_dreal_term(expr::term_op op, std::vector<dreal_ter
     assert(n == 3);
     result = dreal_term::dreal_ite(children[0], children[1], children[2]);
     break;
+  case expr::TERM_TO_REAL:
+    assert(n == 1);
+    result = children[0];
+    break;
   case expr::TERM_XOR:
   default:
     assert(false);
@@ -268,6 +272,7 @@ public:
           result = dreal_term(d);
           break;
         }
+        case expr::TERM_TO_REAL:
         case expr::TERM_ITE:
         case expr::TERM_EQ:
         case expr::TERM_AND:
