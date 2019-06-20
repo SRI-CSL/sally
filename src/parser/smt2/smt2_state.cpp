@@ -177,7 +177,7 @@ cmd::command* smt2_state::mk_smt2_system() {
   result->push_back(ts_define);
 
   // Make the property
-  system::state_formula* property_f = new system::state_formula(tm(), state_type, tm().mk_boolean_constant(true));
+  system::state_formula* property_f = new system::state_formula(tm(), state_type, tm().mk_boolean_constant(false));
   cmd::command* query = new cmd::query(d_context, "ts", property_f);
   result->push_back(query);
 
