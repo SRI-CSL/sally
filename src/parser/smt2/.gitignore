@@ -1,0 +1,5 @@
+smt2Lexer.c
+smt2Lexer.h
+smt2Parser.c
+smt2Parser.h
+smt2.tokens
