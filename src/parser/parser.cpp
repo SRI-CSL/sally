@@ -16,15 +16,19 @@
  * along with sally.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "parser/parser.h"
-#include "parser/antlr_parser.h"
+#include "parser.h"
+#include "antlr_parser.h"
 
-#include "parser/mcmt/mcmt.h"
-#include "parser/btor/btor.h"
-#include "parser/sal/sal.h"
-#include "parser/aiger/aiger.h"
+#include "mcmt/mcmt.h"
+#include "smt2/smt2.h"
+#include "btor/btor.h"
+#include "sal/sal.h"
+#include "aiger/aiger.h"
+
+#include "expr/term_manager.h"
 
 #include <iostream>
+#include <string>
 
 namespace sally {
 namespace parser {
@@ -87,6 +91,9 @@ parser::parser(const system::context& ctx, input_language lang, const char* file
   case INPUT_MCMT:
     d_internal = new_mcmt_parser(ctx, filename);
     break;
+  case INPUT_SMT2:
+    d_internal = new_smt2_parser(ctx, filename);
+    break;
   case INPUT_BTOR:
     d_internal = new_btor_parser(ctx, filename);
     break;
@@ -129,6 +136,9 @@ input_language parser::guess_language(std::string filename) {
     std::string extension = filename.substr(index + 1);
     if (extension == "btor") {
       return INPUT_BTOR;
+    }
+    if (extension == "smt2") {
+      return INPUT_SMT2;
     }
     if (extension == "sal") {
       return INPUT_SAL;
