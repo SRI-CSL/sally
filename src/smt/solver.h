@@ -170,6 +170,12 @@ public:
     return check();
   }
 
+  /** Check if the solver is in a consistent state (i.e., not trivially inconsistent) */
+  virtual
+  bool is_consistent() {
+    return true;
+  }
+
   /** Check the model if the formula is SAT (for debug purposes only) */
   virtual
   void check_model() {

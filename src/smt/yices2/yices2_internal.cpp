@@ -1140,6 +1140,22 @@ solver::result yices2_internal::check() {
   return solver::UNKNOWN;
 }
 
+bool yices2_internal::is_consistent() {
+  if (d_ctx_dpllt) {
+    smt_status_t status = yices_context_status(d_ctx_dpllt);
+    if (status == STATUS_UNSAT) {
+      return false;
+    }
+  }
+  if (d_ctx_dpllt) {
+    smt_status_t status = yices_context_status(d_ctx_mcsat);
+    if (status == STATUS_UNSAT) {
+      return false;
+    }
+  }
+  return true;
+}
+
 static
 expr::bitvector bitvector_from_int32(size_t size, int32_t* value) {
   char* value_str = new char[size+1];

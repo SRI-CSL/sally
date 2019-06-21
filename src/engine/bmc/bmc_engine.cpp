@@ -60,6 +60,9 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
   size_t bmc_min = ctx().get_options().get_unsigned("bmc-min");
   size_t bmc_max = ctx().get_options().get_unsigned("bmc-max");
 
+  // Did we get an unknown result
+  bool unknown = false;
+
   // BMC loop
   for (size_t k = 0; k <= bmc_max; ++ k) {
   
@@ -77,6 +80,15 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
         }
       }
 
+      if (!d_solver->is_consistent()) {
+        // Inconsistent unrolling, property trivially valid
+        if (unknown) {
+          return UNKNOWN;
+        } else {
+          return VALID;
+        }
+      }
+
       d_solver->push();
       expr::term_ref property_not = tm().mk_term(expr::TERM_NOT, property);
       d_solver->add(d_trace->get_state_formula(property_not, k), smt::solver::CLASS_A);
@@ -91,8 +103,9 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
         d_trace->set_model(m, 0, k);
         return INVALID;
       }
-      case smt::solver::UNSAT:
       case smt::solver::UNKNOWN:
+        unknown = true;
+      case smt::solver::UNSAT:
         // No counterexample found, continue
         break;
       default:
