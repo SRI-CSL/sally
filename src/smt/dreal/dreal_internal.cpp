@@ -51,6 +51,7 @@ dreal_internal::dreal_internal(expr::term_manager& tm, const options& opts)
 , d_last_check_status(solver::result::UNKNOWN)
 , d_config(NULL)
 , d_instance(s_instances)
+, d_options(opts)
 {
   // Initialize
   TRACE("dreal") << "dreal: created dreal[" << s_instances << "]." << std::endl;      
@@ -64,19 +65,12 @@ dreal_internal::dreal_internal(expr::term_manager& tm, const options& opts)
     throw exception("Dreal error (config creation)");
   }
 
+  // some basic options
+  d_config->mutable_produce_models() = true;
+
   //default precision
-  double prec = 0.001;
-  if (opts.has_option("dreal-precision")) {
-    prec = opts.get_double("dreal-precision");
-    if (prec == 0.0) {
-      // If no valid conversion could be performed, the function
-      // returns zero (0.0).
-      TRACE("dreal") << "dreal: it could not convert " << opts.get_string("dreal-precision")
-                     << " to a double";
-    } else {
-      d_config->mutable_precision() = prec;
-    }
-  }
+  double prec = opts.get_double("dreal-precision");
+  d_config->mutable_precision() = prec;
 
   if (opts.has_option("dreal-polytope")) {
     d_config->mutable_use_polytope() = true;
@@ -357,7 +351,6 @@ void dreal_internal::add(expr::term_ref ref, solver::formula_class f_class) {
   // Remember the assertions
   expr::term_ref_strong ref_strong(d_tm, ref);
   d_assertions.push_back(ref_strong);
-  d_assertion_classes.push_back(f_class);
 
   // Assert to dreal
   dreal_term dreal_t = to_dreal_term(ref);
@@ -376,6 +369,44 @@ void dreal_internal::add(expr::term_ref ref, solver::formula_class f_class) {
 }
 
 solver::result dreal_internal::check() {
+
+  // Set bounds if needed
+  if (d_options.has_option("dreal-bound")) {
+    double bound = d_options.get_double("dreal-bound");
+    expr::rational bound_rat(bound);
+    expr::rational bound_rat_neg(-bound);
+    expr::term_ref bound_term = d_tm.mk_rational_constant(bound_rat);
+    expr::term_ref bound_term_neg = d_tm.mk_rational_constant(bound_rat_neg);
+
+    // Do an intermediate check with the bounds
+    push();
+
+    for (size_t i = 0; i < d_variables.size(); ++ i) {
+      expr::term_ref x = d_variables[i];
+      expr::term_ref leq = d_tm.mk_term(expr::TERM_LEQ, x, bound_term);
+      expr::term_ref geq = d_tm.mk_term(expr::TERM_GEQ, x, bound_term_neg);
+      add(leq, smt::solver::CLASS_A);
+      add(geq, smt::solver::CLASS_A);
+    }
+
+    // Save the result and model and pop
+    optional<Box> res = d_ctx->CheckSat();
+    pop();
+
+    // If we got a model check the result and use it
+    if (res) {
+      if (save_dreal_model(*res)) {
+         d_last_check_status = solver::SAT;
+      } else {
+        d_last_check_status = solver::UNKNOWN;
+      }
+      return d_last_check_status;
+    } else {
+      // Unsat we don't know because we added manual bounds, continue with
+      // a regular check
+    }
+  }
+
   if (optional<Box> res = d_ctx->CheckSat()) {
     // If sat then dreal returns a mapping from a variable to an interval.
     // We return sat only if all intervals are singleton
@@ -451,6 +482,10 @@ bool dreal_internal::save_dreal_model(const Box& model) {
       lp_value_t x_value_lp;
       lp_value_construct_none(&x_value_lp);
       lp_interval_pick_value(&iv_lp, &x_value_lp);
+
+//      std::cerr << x << ": [" << lb << " " << ub << "]";
+//      lp_value_print(&x_value_lp, stderr);
+//      std::cerr << std::endl;
 
       lp_rational_t x_value_rational;
       switch (x_value_lp.type) {
@@ -548,7 +583,6 @@ void dreal_internal::pop() {
   d_assertions_size.pop_back();
   while (d_assertions.size() > size) {
     d_assertions.pop_back();
-    d_assertion_classes.pop_back();
     d_assertions_dreal.pop_back();
   }
   d_last_check_status = solver::result::UNKNOWN;

@@ -53,9 +53,6 @@ class dreal_internal {
   /** dreal assertions, for debug purposes */
   std::vector<::dreal::Formula> d_assertions_dreal;
   
-  /** The assertion classes */
-  std::vector<solver::formula_class> d_assertion_classes;
-
   /** The assertions size per push/pop */
   std::vector<size_t> d_assertions_size;
 
@@ -77,10 +74,14 @@ class dreal_internal {
   /** The instance */
   size_t d_instance;
 
+  /** Sally options */
+  const options& d_options;
+
   /** Get variables used in assertions */
   void get_used_variables(std::vector<expr::term_ref>& variables) const;
 
   typedef expr::term_ref_map<expr::rational> term_to_rational_map;
+
 
   /** Construct Sally model from the simple model */
   expr::model::ref get_model_from_simple_model(const term_to_rational_map& simple_model);
