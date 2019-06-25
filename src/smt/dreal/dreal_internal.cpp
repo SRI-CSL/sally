@@ -213,20 +213,57 @@ class to_dreal_visitor {
   expr::term_manager& d_tm;
   dreal_internal& d_dreal;
   dreal_term_cache& d_conversion_cache;
+  std::vector<dreal_term> d_extra_assertions;
+  std::vector<dreal_term> d_extra_variables;
+
+  bool d_subexpr_to_vars;
+
+  bool convert_to_variable(const expr::term_op op, const std::vector<dreal_term>& children) {
+
+    if (!d_subexpr_to_vars) {
+      return false;
+    }
+
+    size_t constant_count = 0;
+    for (size_t i = 0; i < children.size(); ++ i){
+      if (!children[i].is_expression()) { continue; }
+      if (::is_constant(children[i].expression())) { constant_count ++; }
+      else if (::is_real_constant(children[i].expression())) { constant_count ++; }
+    }
+
+    switch (op) {
+      case expr::TERM_MUL:
+        // Linear mult don't simplify
+        if (children.size() - constant_count == 1) {
+          return false;
+        }
+        return true;
+      default:
+        return false;
+    }
+    return false;
+  }
 
 public:
 
   to_dreal_visitor(expr::term_manager& tm, dreal_internal& dreal,
-                   dreal_term_cache& cache)
+                   dreal_term_cache& cache, bool subexpr_to_vars)
   : d_tm(tm)
   , d_dreal(dreal)
   , d_conversion_cache(cache)
+  , d_subexpr_to_vars(subexpr_to_vars)
   {}
 
   // Non-null terms are good
   bool is_good_term(expr::term_ref t) const {
     return !t.is_null();
   }
+
+  bool has_extra_assertions() const { return d_extra_assertions.size() > 0; }
+  bool has_extra_variables() const { return d_extra_variables.size() > 0; }
+
+  const std::vector<dreal_term>& get_extra_assertions() const { return d_extra_assertions; }
+  const std::vector<dreal_term>& get_extra_variables() const { return d_extra_variables; }
 
   // Get the children of t
   void get_children(expr::term_ref t, std::vector<expr::term_ref>& children) {
@@ -274,6 +311,8 @@ public:
       break;
     }
     case expr::CONST_RATIONAL: {
+      // We parse rationals (/ a b) as division
+      // TODO: Actual floating point constants should be convertible?
       double d = mpq_get_d(d_tm.get_rational_constant(t).mpq().get_mpq_t());
       result = dreal_term(d);
       break;
@@ -302,6 +341,19 @@ public:
         children.push_back(d_conversion_cache.get_term_cache(t[i]));
       }
       result = d_dreal.mk_dreal_term(t.op(), children);
+
+      if (convert_to_variable(t.op(), children)) {
+        static int tmp = 0;
+        std::stringstream ss;
+        ss << "__tmp" << (tmp ++);
+        expr::term_ref type = d_tm.type_of(t);
+        dreal_term tmp_var(ss.str(), d_dreal.to_dreal_type(type));
+        dreal_term eq = dreal_term::dreal_eq(tmp_var, result);
+        d_extra_variables.push_back(tmp_var);
+        d_extra_assertions.push_back(eq);
+        result = tmp_var;
+      }
+
       break;
     }
     case expr::CONST_BITVECTOR:
@@ -349,12 +401,36 @@ public:
 };
 
 dreal_term dreal_internal::to_dreal_term(expr::term_ref ref) {
-  to_dreal_visitor visitor(d_tm, *this, *d_conversion_cache);
+  to_dreal_visitor visitor(d_tm, *this, *d_conversion_cache, d_options.has_option("dreal-subexpr-to-vars"));
   expr::term_visit_topological<to_dreal_visitor, expr::term_ref, expr::term_ref_hasher>
     topological_visit(visitor);
   topological_visit.run(ref);
   dreal_term result = d_conversion_cache->get_term_cache(ref);
   assert(!result.is_null_term());
+
+  if (visitor.has_extra_variables()) {
+    const std::vector<dreal_term>& variables = visitor.get_extra_variables();
+    for (size_t i = 0; i < variables.size(); ++ i) {
+      dreal_term var = variables[i];
+      d_ctx->DeclareVariable(var.variable(), false);
+      if (d_ctx_bounded) {
+        d_ctx_bounded->DeclareVariable(var.variable(), false);
+      }
+    }
+  }
+
+  if (visitor.has_extra_assertions()) {
+    const std::vector<dreal_term>& assertions = visitor.get_extra_assertions();
+    for (size_t i = 0; i < assertions.size(); ++ i) {
+      dreal_term assertion = assertions[i];
+      TRACE("dreal") << assertion.to_smtlib2() << std::endl;
+      d_ctx->Assert(assertion.formula());
+      if (d_ctx_bounded) {
+        d_ctx_bounded->Assert(assertion.formula());
+      }
+    }
+  }
+
   return result;
 }
 
@@ -378,9 +454,10 @@ void dreal_internal::add(expr::term_ref ref, solver::formula_class f_class) {
 
 solver::result dreal_internal::check() {
 
+
   // Set bounds if needed
   if (d_ctx_bounded) {
-    TRACE("dreal") << "dreal[" << instance() << "]: bounded check" << std::endl;
+    TRACE("dreal") << "dreal[" << instance() << "]: bounded check, precision = " << d_ctx_bounded->config().precision() << std::endl;
     optional<Box> res = d_ctx_bounded->CheckSat();
     // If we got a model check the result and use it
     if (res) {

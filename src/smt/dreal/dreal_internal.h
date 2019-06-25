@@ -98,6 +98,9 @@ class dreal_internal {
   /** Output solver assertions in smt2lib format*/
   void dreal_to_smtlib2(std::ostream& out);
   
+  /** Extra assertions if needed */
+  std::vector<dreal_term> d_extraAssertions;
+
  public:
 
   /** Construct an instance of dreal with the given term manager and options */

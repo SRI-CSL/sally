@@ -79,7 +79,7 @@ bool dreal_term::is_variable() const {
   default: return ::is_variable(d_f);
   }
 }
-  
+
 bool dreal_term::is_expression() const {
   return d_type == dreal_term::type_t::EXPRESSION;  
 }

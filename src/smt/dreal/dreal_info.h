@@ -34,6 +34,7 @@ struct dreal_info {
       ("dreal-precision", value<double>()->default_value(0.001), "Precision for Dreal")
       ("dreal-polytope", "Use polytope contractor")
       ("dreal-bound", value<double>(), "Bound all variables to [-B, B]")
+      ("dreal-subexpr-to-vars", "Convert some subexpressions to variables.")
       ;
   }
 
