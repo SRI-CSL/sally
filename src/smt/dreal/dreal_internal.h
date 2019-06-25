@@ -44,11 +44,11 @@ class dreal_internal {
   /** The dreal context */
   ::dreal::Context *d_ctx;
 
+  /** The bounded dreal context */
+  ::dreal::Context *d_ctx_bounded;
+
   /** All assertions we have in context (strong)  */
   std::vector<expr::term_ref_strong> d_assertions;
-
-  /** Free variables from d_assertions */
-  std::set<::dreal::Variable> d_assertion_vars_dreal;
   
   /** dreal assertions, for debug purposes */
   std::vector<::dreal::Formula> d_assertions_dreal;
