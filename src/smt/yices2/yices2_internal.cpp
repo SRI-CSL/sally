@@ -1560,14 +1560,15 @@ void yices2_internal::generalize(smt::solver::generalization_type type, expr::mo
 }
 
 void yices2_internal::set_hint(expr::model::ref m) {
-  if (d_ctx_mcsat) {
-    // Get the yices model
-    model_t* m_y = get_yices_model(m);
-    // Give yices the model as hint
-    yices_set_model_hint(d_ctx_mcsat, m_y);
-    // Free the model
-    yices_free_model(m_y);
-  }
+  throw exception("set_hint: unsupported yet.");
+//  if (d_ctx_mcsat) {
+//    // Get the yices model
+//    model_t* m_y = get_yices_model(m);
+//    // Give yices the model as hint
+//    yices_set_model_hint(d_ctx_mcsat, m_y);
+//    // Free the model
+//    yices_free_model(m_y);
+//  }
 }
 
 void yices2_internal::gc() {

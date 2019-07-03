@@ -69,8 +69,11 @@ dreal_internal::dreal_internal(expr::term_manager& tm, const options& opts)
   // some basic options
   d_config->mutable_produce_models() = true;
 
-  //default precision
-  double prec = opts.get_double("dreal-precision");
+  //default precision (only has default from command line)
+  double prec = 0.0001;
+  if (opts.has_option("dreal-precision")) {
+    prec = opts.get_double("dreal-precision");
+  }
   d_config->mutable_precision() = prec;
 
   if (opts.has_option("dreal-polytope")) {
@@ -458,7 +461,6 @@ void dreal_internal::add(expr::term_ref ref, solver::formula_class f_class) {
 
 solver::result dreal_internal::check() {
 
-
   // Set bounds if needed
   if (d_ctx_bounded) {
     TRACE("dreal") << "dreal[" << instance() << "]: bounded check, precision = " << d_ctx_bounded->config().precision() << std::endl;
@@ -481,6 +483,7 @@ solver::result dreal_internal::check() {
   }
 
   if (optional<Box> res = d_ctx->CheckSat()) {
+    TRACE("dreal") << "dreal[" << instance() << "]: checking model" << std::endl;
     // If sat then dreal returns a mapping from a variable to an interval.
     // We return sat only if all intervals are singleton
     if (save_dreal_model(*res)) {

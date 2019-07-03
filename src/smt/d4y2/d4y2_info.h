@@ -33,7 +33,7 @@ struct d4y2_info {
   static void setup_options(boost::program_options::options_description& options) {
     using namespace boost::program_options;
     options.add_options()
-          ("d4y2-model-as-hint", "Use the dReal model as hint for Yices2 if Dreal is not certain.")
+          // ("d4y2-model-as-hint", "Use the dReal model as hint for Yices2 if Dreal is not certain.")
           ("d4y2-relaxed-check", "Allow relaxed check, i.e. not call Yices2 in relaxed checking mode.");
   }
 
