@@ -20,8 +20,10 @@ endif()
 file(GLOB IBEX_PKG_CONFIG_PATH "${IBEX_SEARCH_PATH}")
 # The result of file-glob is sorted lexicographically. We pick the
 # last element (-1) to pick the latest.
-list(GET IBEX_PKG_CONFIG_PATH -1 IBEX_PKG_CONFIG_PATH)
-set(ENV{PKG_CONFIG_PATH} "${IBEX_PKG_CONFIG_PATH}:$ENV{PKG_CONFIG_PATH}")
+if (IBEX_PKG_CONFIG_PATH)
+  list(GET IBEX_PKG_CONFIG_PATH -1 IBEX_PKG_CONFIG_PATH)
+  set(ENV{PKG_CONFIG_PATH} "${IBEX_PKG_CONFIG_PATH}:$ENV{PKG_CONFIG_PATH}")
+endif()
 
 # ===========
 #    dReal
