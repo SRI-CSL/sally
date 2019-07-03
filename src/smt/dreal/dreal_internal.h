@@ -44,18 +44,15 @@ class dreal_internal {
   /** The dreal context */
   ::dreal::Context *d_ctx;
 
+  /** The bounded dreal context */
+  ::dreal::Context *d_ctx_bounded;
+
   /** All assertions we have in context (strong)  */
   std::vector<expr::term_ref_strong> d_assertions;
-
-  /** Free variables from d_assertions */
-  std::set<::dreal::Variable> d_assertion_vars_dreal;
   
   /** dreal assertions, for debug purposes */
   std::vector<::dreal::Formula> d_assertions_dreal;
   
-  /** The assertion classes */
-  std::vector<solver::formula_class> d_assertion_classes;
-
   /** The assertions size per push/pop */
   std::vector<size_t> d_assertions_size;
 
@@ -77,10 +74,14 @@ class dreal_internal {
   /** The instance */
   size_t d_instance;
 
+  /** Sally options */
+  const options& d_options;
+
   /** Get variables used in assertions */
   void get_used_variables(std::vector<expr::term_ref>& variables) const;
 
   typedef expr::term_ref_map<expr::rational> term_to_rational_map;
+
 
   /** Construct Sally model from the simple model */
   expr::model::ref get_model_from_simple_model(const term_to_rational_map& simple_model);
@@ -97,6 +98,9 @@ class dreal_internal {
   /** Output solver assertions in smt2lib format*/
   void dreal_to_smtlib2(std::ostream& out);
   
+  /** Extra assertions if needed */
+  std::vector<dreal_term> d_extraAssertions;
+
  public:
 
   /** Construct an instance of dreal with the given term manager and options */

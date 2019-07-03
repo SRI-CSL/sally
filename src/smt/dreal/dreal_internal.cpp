@@ -46,11 +46,13 @@ size_t dreal_internal::s_instances = 0;
 
 dreal_internal::dreal_internal(expr::term_manager& tm, const options& opts)
 : d_tm(tm)
-, d_ctx(NULL)
+, d_ctx(0)
+, d_ctx_bounded(0)
 , d_conversion_cache(0)
 , d_last_check_status(solver::result::UNKNOWN)
-, d_config(NULL)
+, d_config(0)
 , d_instance(s_instances)
+, d_options(opts)
 {
   // Initialize
   TRACE("dreal") << "dreal: created dreal[" << s_instances << "]." << std::endl;      
@@ -64,19 +66,12 @@ dreal_internal::dreal_internal(expr::term_manager& tm, const options& opts)
     throw exception("Dreal error (config creation)");
   }
 
+  // some basic options
+  d_config->mutable_produce_models() = true;
+
   //default precision
-  double prec = 0.001;
-  if (opts.has_option("dreal-precision")) {
-    prec = opts.get_double("dreal-precision");
-    if (prec == 0.0) {
-      // If no valid conversion could be performed, the function
-      // returns zero (0.0).
-      TRACE("dreal") << "dreal: it could not convert " << opts.get_string("dreal-precision")
-                     << " to a double";
-    } else {
-      d_config->mutable_precision() = prec;
-    }
-  }
+  double prec = opts.get_double("dreal-precision");
+  d_config->mutable_precision() = prec;
 
   if (opts.has_option("dreal-polytope")) {
     d_config->mutable_use_polytope() = true;
@@ -86,6 +81,12 @@ dreal_internal::dreal_internal(expr::term_manager& tm, const options& opts)
   d_ctx = new Context {*d_config};
   if (!d_ctx) {
     throw exception("Dreal error (context creation)");
+  }
+  if (d_options.has_option("dreal-bound")) {
+    d_ctx_bounded = new Context {*d_config};
+    if (!d_ctx_bounded) {
+      throw exception("Dreal error (context creation)");
+    }
   }
 }
 
@@ -100,6 +101,10 @@ dreal_internal::~dreal_internal() {
   if (d_ctx) {
     d_ctx->Exit();
     delete d_ctx;
+  }
+  if (d_ctx_bounded) {
+    d_ctx_bounded->Exit();
+    delete d_ctx_bounded;
   }
 
   // Cleanup if the last one
@@ -212,20 +217,57 @@ class to_dreal_visitor {
   expr::term_manager& d_tm;
   dreal_internal& d_dreal;
   dreal_term_cache& d_conversion_cache;
+  std::vector<dreal_term> d_extra_assertions;
+  std::vector<dreal_term> d_extra_variables;
+
+  bool d_subexpr_to_vars;
+
+  bool convert_to_variable(const expr::term_op op, const std::vector<dreal_term>& children) {
+
+    if (!d_subexpr_to_vars) {
+      return false;
+    }
+
+    size_t constant_count = 0;
+    for (size_t i = 0; i < children.size(); ++ i){
+      if (!children[i].is_expression()) { continue; }
+      if (::is_constant(children[i].expression())) { constant_count ++; }
+      else if (::is_real_constant(children[i].expression())) { constant_count ++; }
+    }
+
+    switch (op) {
+      case expr::TERM_MUL:
+        // Linear mult don't simplify
+        if (children.size() - constant_count == 1) {
+          return false;
+        }
+        return true;
+      default:
+        return false;
+    }
+    return false;
+  }
 
 public:
 
   to_dreal_visitor(expr::term_manager& tm, dreal_internal& dreal,
-                   dreal_term_cache& cache)
+                   dreal_term_cache& cache, bool subexpr_to_vars)
   : d_tm(tm)
   , d_dreal(dreal)
   , d_conversion_cache(cache)
+  , d_subexpr_to_vars(subexpr_to_vars)
   {}
 
   // Non-null terms are good
   bool is_good_term(expr::term_ref t) const {
     return !t.is_null();
   }
+
+  bool has_extra_assertions() const { return d_extra_assertions.size() > 0; }
+  bool has_extra_variables() const { return d_extra_variables.size() > 0; }
+
+  const std::vector<dreal_term>& get_extra_assertions() const { return d_extra_assertions; }
+  const std::vector<dreal_term>& get_extra_variables() const { return d_extra_variables; }
 
   // Get the children of t
   void get_children(expr::term_ref t, std::vector<expr::term_ref>& children) {
@@ -254,107 +296,145 @@ public:
   }
 
   void visit(expr::term_ref ref) {
-        // At this point all the children are in the conversion cache
-        dreal_term result;
+    // At this point all the children are in the conversion cache
+    dreal_term result;
 
-        TRACE("dreal:to_dreal") << "convert::visit(" << ref << ")" << std::endl;
+    TRACE("dreal:to_dreal") << "convert::visit(" << ref << ")" << std::endl;
 
-        // The term
-        const expr::term& t = d_tm.term_of(ref);
-        expr::term_op t_op = t.op();
+    // The term
+    const expr::term& t = d_tm.term_of(ref);
+    expr::term_op t_op = t.op();
 
-        switch (t_op) {
-        case expr::VARIABLE: {
-          result = dreal_term(d_tm.get_variable_name(t), d_dreal.to_dreal_type(t[0]));
-          break;
-        }
-        case expr::CONST_BOOL: {
-          result = dreal_term(d_tm.get_boolean_constant(t));
-          break;
-        }
-        case expr::CONST_RATIONAL: {
-          double d = mpq_get_d(d_tm.get_rational_constant(t).mpq().get_mpq_t());
-          result = dreal_term(d);
-          break;
-        }
-        case expr::TERM_TO_REAL:
-        case expr::TERM_ITE:
-        case expr::TERM_EQ:
-        case expr::TERM_AND:
-        case expr::TERM_OR:
-        case expr::TERM_NOT:
-        case expr::TERM_IMPLIES:
-        case expr::TERM_XOR:
-        case expr::TERM_ADD:
-        case expr::TERM_SUB:
-        case expr::TERM_MUL:
-        case expr::TERM_DIV:
-        case expr::TERM_LEQ:
-        case expr::TERM_LT:
-        case expr::TERM_GEQ:
-        case expr::TERM_GT:
-        {
-          size_t size = t.size();
-          assert(size > 0);
-          std::vector<dreal_term> children;
-          children.reserve(size);
-          for (size_t i = 0; i < size; ++ i) {
-            children.push_back(d_conversion_cache.get_term_cache(t[i]));
-          }
-          result = d_dreal.mk_dreal_term(t.op(), children);
-          break;
-        }
-        case expr::CONST_BITVECTOR:
-        case expr::TERM_BV_ADD:
-        case expr::TERM_BV_SUB:
-        case expr::TERM_BV_MUL:
-        case expr::TERM_BV_UDIV: 
-        case expr::TERM_BV_SDIV:
-        case expr::TERM_BV_UREM:
-        case expr::TERM_BV_SREM:
-        case expr::TERM_BV_SMOD:
-        case expr::TERM_BV_XOR:
-        case expr::TERM_BV_SHL:
-        case expr::TERM_BV_LSHR:
-        case expr::TERM_BV_ASHR:
-        case expr::TERM_BV_NOT:
-        case expr::TERM_BV_AND:
-        case expr::TERM_BV_OR:
-        case expr::TERM_BV_NAND:
-        case expr::TERM_BV_NOR:
-        case expr::TERM_BV_XNOR:
-        case expr::TERM_BV_CONCAT:
-        case expr::TERM_BV_ULEQ:
-        case expr::TERM_BV_SLEQ:
-        case expr::TERM_BV_ULT:
-        case expr::TERM_BV_SLT:
-        case expr::TERM_BV_UGEQ:
-        case expr::TERM_BV_SGEQ:
-        case expr::TERM_BV_UGT:
-        case expr::TERM_BV_SGT:
-        case expr::TERM_BV_EXTRACT:
-        default:
-          assert(false);
-        }
+    switch (t_op) {
+    case expr::VARIABLE: {
+      result = dreal_term(d_tm.get_variable_name(t), d_dreal.to_dreal_type(t[0]));
+      break;
+    }
+    case expr::CONST_BOOL: {
+      result = dreal_term(d_tm.get_boolean_constant(t));
+      break;
+    }
+    case expr::CONST_RATIONAL: {
+      // We parse rationals (/ a b) as division
+      // TODO: Actual floating point constants should be convertible?
+      double d = mpq_get_d(d_tm.get_rational_constant(t).mpq().get_mpq_t());
+      result = dreal_term(d);
+      break;
+    }
+    case expr::TERM_ITE:
+    case expr::TERM_EQ:
+    case expr::TERM_AND:
+    case expr::TERM_OR:
+    case expr::TERM_NOT:
+    case expr::TERM_IMPLIES:
+    case expr::TERM_XOR:
+    case expr::TERM_ADD:
+    case expr::TERM_SUB:
+    case expr::TERM_MUL:
+    case expr::TERM_DIV:
+    case expr::TERM_LEQ:
+    case expr::TERM_LT:
+    case expr::TERM_GEQ:
+    case expr::TERM_GT:
+    {
+      size_t size = t.size();
+      assert(size > 0);
+      std::vector<dreal_term> children;
+      children.reserve(size);
+      for (size_t i = 0; i < size; ++ i) {
+        children.push_back(d_conversion_cache.get_term_cache(t[i]));
+      }
+      result = d_dreal.mk_dreal_term(t.op(), children);
 
-        if (result.is_null_term()) {
-          std::stringstream ss;
-          ss << "Dreal error (term creation): could not convert " << ref;
-          throw exception(ss.str());
-        }
+      if (convert_to_variable(t.op(), children)) {
+        static int tmp = 0;
+        std::stringstream ss;
+        ss << "__tmp" << (tmp ++);
+        expr::term_ref type = d_tm.type_of(t);
+        dreal_term tmp_var(ss.str(), d_dreal.to_dreal_type(type));
+        dreal_term eq = dreal_term::dreal_eq(tmp_var, result);
+        d_extra_variables.push_back(tmp_var);
+        d_extra_assertions.push_back(eq);
+        result = tmp_var;
+      }
 
-        // Set the cache ref -> result
-        d_conversion_cache.set_term_cache(ref, result);
+      break;
+    }
+    case expr::CONST_BITVECTOR:
+    case expr::TERM_BV_ADD:
+    case expr::TERM_BV_SUB:
+    case expr::TERM_BV_MUL:
+    case expr::TERM_BV_UDIV:
+    case expr::TERM_BV_SDIV:
+    case expr::TERM_BV_UREM:
+    case expr::TERM_BV_SREM:
+    case expr::TERM_BV_SMOD:
+    case expr::TERM_BV_XOR:
+    case expr::TERM_BV_SHL:
+    case expr::TERM_BV_LSHR:
+    case expr::TERM_BV_ASHR:
+    case expr::TERM_BV_NOT:
+    case expr::TERM_BV_AND:
+    case expr::TERM_BV_OR:
+    case expr::TERM_BV_NAND:
+    case expr::TERM_BV_NOR:
+    case expr::TERM_BV_XNOR:
+    case expr::TERM_BV_CONCAT:
+    case expr::TERM_BV_ULEQ:
+    case expr::TERM_BV_SLEQ:
+    case expr::TERM_BV_ULT:
+    case expr::TERM_BV_SLT:
+    case expr::TERM_BV_UGEQ:
+    case expr::TERM_BV_SGEQ:
+    case expr::TERM_BV_UGT:
+    case expr::TERM_BV_SGT:
+    case expr::TERM_BV_EXTRACT:
+    default:
+      assert(false);
+    }
+
+    if (result.is_null_term()) {
+      std::stringstream ss;
+      ss << "Dreal error (term creation): could not convert " << ref;
+      throw exception(ss.str());
+    }
+
+    // Set the cache ref -> result
+    d_conversion_cache.set_term_cache(ref, result);
   }
 };
 
 dreal_term dreal_internal::to_dreal_term(expr::term_ref ref) {
-  to_dreal_visitor visitor(d_tm, *this, *d_conversion_cache);
+  to_dreal_visitor visitor(d_tm, *this, *d_conversion_cache, d_options.has_option("dreal-subexpr-to-vars"));
   expr::term_visit_topological<to_dreal_visitor, expr::term_ref, expr::term_ref_hasher>
     topological_visit(visitor);
   topological_visit.run(ref);
   dreal_term result = d_conversion_cache->get_term_cache(ref);
   assert(!result.is_null_term());
+
+  if (visitor.has_extra_variables()) {
+    const std::vector<dreal_term>& variables = visitor.get_extra_variables();
+    for (size_t i = 0; i < variables.size(); ++ i) {
+      dreal_term var = variables[i];
+      d_ctx->DeclareVariable(var.variable(), false);
+      if (d_ctx_bounded) {
+        d_ctx_bounded->DeclareVariable(var.variable(), false);
+      }
+    }
+  }
+
+  if (visitor.has_extra_assertions()) {
+    const std::vector<dreal_term>& assertions = visitor.get_extra_assertions();
+    for (size_t i = 0; i < assertions.size(); ++ i) {
+      dreal_term assertion = assertions[i];
+      TRACE("dreal") << assertion.to_smtlib2() << std::endl;
+      d_ctx->Assert(assertion.formula());
+      if (d_ctx_bounded) {
+        d_ctx_bounded->Assert(assertion.formula());
+      }
+    }
+  }
+
   return result;
 }
 
@@ -362,25 +442,44 @@ void dreal_internal::add(expr::term_ref ref, solver::formula_class f_class) {
   // Remember the assertions
   expr::term_ref_strong ref_strong(d_tm, ref);
   d_assertions.push_back(ref_strong);
-  d_assertion_classes.push_back(f_class);
 
   // Assert to dreal
   dreal_term dreal_t = to_dreal_term(ref);
   assert(dreal_t.is_formula());
   Formula f = dreal_t.formula();
   d_assertions_dreal.push_back(f);
-  const Variables& vars = f.GetFreeVariables();
-  for (Variables::const_iterator it = vars.begin(), et = vars.end(); it!=et; ++it) {
-    const Variable& v = *it;
-    d_ctx->DeclareVariable(v);
-    d_assertion_vars_dreal.insert(v);
-  }
   TRACE("dreal") << dreal_t.to_smtlib2() << std::endl;
   d_ctx->Assert(f);
+  if (d_ctx_bounded) {
+    d_ctx_bounded->Assert(f);
+  }
   d_last_check_status = solver::UNKNOWN;
 }
 
 solver::result dreal_internal::check() {
+
+
+  // Set bounds if needed
+  if (d_ctx_bounded) {
+    TRACE("dreal") << "dreal[" << instance() << "]: bounded check, precision = " << d_ctx_bounded->config().precision() << std::endl;
+    optional<Box> res = d_ctx_bounded->CheckSat();
+    // If we got a model check the result and use it
+    if (res) {
+      TRACE("dreal") << "dreal[" << instance() << "]: seems sat" << std::endl;
+      if (save_dreal_model(*res)) {
+         d_last_check_status = solver::SAT;
+      } else {
+        d_last_check_status = solver::UNKNOWN;
+      }
+      TRACE("dreal") << "dreal[" << instance() << "]: bounded check: " << d_last_check_status << std::endl;
+      return d_last_check_status;
+    } else {
+      // Unsat we don't know because we added manual bounds, continue with
+      // a regular check
+      TRACE("dreal") << "dreal[" << instance() << "]: bounded check: " << d_last_check_status << std::endl;
+    }
+  }
+
   if (optional<Box> res = d_ctx->CheckSat()) {
     // If sat then dreal returns a mapping from a variable to an interval.
     // We return sat only if all intervals are singleton
@@ -544,16 +643,21 @@ expr::model::ref dreal_internal::get_model_from_simple_model(const term_to_ratio
 
 void dreal_internal::push() {
   d_ctx->Push(1);
+  if (d_ctx_bounded) {
+    d_ctx_bounded->Push(1);
+  }
   d_assertions_size.push_back(d_assertions.size());
 }
 
 void dreal_internal::pop() {
   d_ctx->Pop(1);
+  if (d_ctx_bounded) {
+    d_ctx_bounded->Pop(1);
+  }
   size_t size = d_assertions_size.back();
   d_assertions_size.pop_back();
   while (d_assertions.size() > size) {
     d_assertions.pop_back();
-    d_assertion_classes.pop_back();
     d_assertions_dreal.pop_back();
   }
   d_last_check_status = solver::result::UNKNOWN;
@@ -567,8 +671,15 @@ void dreal_internal::gc() {
 void dreal_internal::add_variable(expr::term_ref var, smt::solver::variable_class f_class) {
   // Remember the variables
   d_variables.push_back(var);
-  // Convert to dreal early
-  to_dreal_term(var);
+  // Declare in dreal
+  dreal_term dreal_var = to_dreal_term(var);
+  d_ctx->DeclareVariable(dreal_var.variable(), true);
+  if (d_ctx_bounded) {
+    double bound = d_options.get_double("dreal-bound");
+    dreal_term upper_bound(bound);
+    dreal_term lower_bound(-bound);
+    d_ctx_bounded->DeclareVariable(dreal_var.variable(), lower_bound.expression(), upper_bound.expression(), true);
+  }
 }
 
 void dreal_internal::gc_collect(const expr::gc_relocator& gc_reloc) {

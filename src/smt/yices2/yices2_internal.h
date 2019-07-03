@@ -163,6 +163,9 @@ public:
   /** Check satisfiability */
   solver::result check();
 
+  /** Is the state consistent */
+  bool is_consistent();
+
   /** Returns the model */
   expr::model::ref get_model();
 

@@ -63,6 +63,9 @@ public:
   /** Check the assertions for satisfiability */
   result check();
 
+  /** Consistent? */
+  bool is_consistent();
+
   /** Get the model */
   expr::model::ref get_model() const;
 

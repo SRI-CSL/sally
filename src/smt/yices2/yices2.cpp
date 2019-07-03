@@ -66,6 +66,11 @@ solver::result yices2::check() {
   return d_internal->check();
 }
 
+bool yices2::is_consistent() {
+  TRACE("yices2") << "yices2[" << d_internal->instance() << "]: is_consistent()" << std::endl;
+  return d_internal->is_consistent();
+}
+
 expr::model::ref yices2::get_model() const {
   TRACE("yices2") << "yices2[" << d_internal->instance() << "]: get_model()" << std::endl;
   return d_internal->get_model();

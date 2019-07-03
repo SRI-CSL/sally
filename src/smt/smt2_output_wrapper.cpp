@@ -33,7 +33,7 @@ smt2_output_wrapper::smt2_output_wrapper(expr::term_manager& tm, const options& 
   // Setup the stream
   output::set_output_language(d_output, output::MCMT);
   output::set_term_manager(d_output, &d_tm);
-  output::set_use_lets(d_output, true);
+  output::set_use_lets(d_output, !opts.has_option("no-lets"));
 
   // Models by default
   d_output << "(set-option :produce-models true)" << std::endl;
