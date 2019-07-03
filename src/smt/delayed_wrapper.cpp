@@ -41,8 +41,7 @@ void delayed_wrapper::add(expr::term_ref f, formula_class f_class) {
   d_assertions.push_back(assertion(f, f_class));
 }
 
-solver::result delayed_wrapper::check() {
-
+void delayed_wrapper::flush() {
   for (; d_index < d_assertions.size(); ++ d_index) {
     if (d_scope < d_assertions_size.size() && d_index == d_assertions_size[d_scope]) {
       d_scope ++;
@@ -50,7 +49,10 @@ solver::result delayed_wrapper::check() {
     }
     d_solver->add(d_assertions[d_index].f, d_assertions[d_index].f_class);
   }
+}
 
+solver::result delayed_wrapper::check() {
+  flush();
   return d_solver->check();
 }
 
@@ -104,6 +106,10 @@ void delayed_wrapper::gc_collect(const expr::gc_relocator& gc_reloc) {
   solver::gc_collect(gc_reloc);
 }
 
+void delayed_wrapper::set_hint(expr::model::ref m) {
+  flush();
+  d_solver->set_hint(m);
+}
 
 }
 }

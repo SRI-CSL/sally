@@ -62,21 +62,36 @@ void d4y2::add(expr::term_ref f, formula_class f_class) {
 
 solver::result d4y2::check() {
   TRACE("d4y2") << "d4y2[" << s_instance << "]: check()" << std::endl;
+  TRACE("d4y2") << "d4y2[" << s_instance << "]: running dreal" << std::endl;
   d_last_dreal4_result = d_dreal4->check();
+  TRACE("d4y2") << "d4y2[" << s_instance << "]: dreal says " << d_last_dreal4_result << std::endl;
   if (d_last_dreal4_result != UNKNOWN) {
     d_last_yices2_result = UNKNOWN;
     return d_last_dreal4_result;
   } else {
+    if (d_opts.get_bool("d4y2-model-as-hint")) {
+      expr::model::ref dreal_model = d_dreal4->get_model();
+      TRACE("d4y2::hint") << "d4y2[" << s_instance << "]: setting hint:" << *dreal_model << std::endl;
+      if (dreal_model) {
+        d_yices2->set_hint(dreal_model);
+      }
+    }
+    TRACE("d4y2") << "d4y2[" << s_instance << "]: running yices" << std::endl;
     d_last_yices2_result = d_yices2->check();
+    TRACE("d4y2") << "d4y2[" << s_instance << "]: yices says " << d_last_yices2_result << std::endl;
     return d_last_yices2_result;
   }
 }
 
 solver::result d4y2::check_relaxed() {
   TRACE("d4y2") << "d4y2[" << s_instance << "]: check_relaxed()" << std::endl;
-  d_last_dreal4_result = d_dreal4->check();
-  d_last_yices2_result = UNKNOWN;
-  return d_last_dreal4_result;
+  if (d_opts.get_bool("d4y2-relaxed-check")) {
+    d_last_dreal4_result = d_dreal4->check();
+    d_last_yices2_result = UNKNOWN;
+    return d_last_dreal4_result;
+  } else {
+    return check();
+  }
 }
 
 expr::model::ref d4y2::get_model() const {

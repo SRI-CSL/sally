@@ -53,6 +53,9 @@ class delayed_wrapper : public solver {
   /** The scope we last processed */
   size_t d_scope;
 
+  /** Flush the assertions */
+  void flush();
+
 public:
 
   /** Takes over the solver and will destruct it on destruction */
@@ -70,6 +73,7 @@ public:
   void interpolate(std::vector<expr::term_ref>& out);
   void get_unsat_core(std::vector<expr::term_ref>& out);
   void add_variable(expr::term_ref var, variable_class f_class);
+  void set_hint(expr::model::ref m);
   void gc_collect(const expr::gc_relocator& gc_reloc);
 };
 

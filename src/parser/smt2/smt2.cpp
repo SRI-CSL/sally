@@ -16,16 +16,41 @@
  * along with sally.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include "parser/smt2/smt2.h"
 
-#include "system/context.h"
-#include "parser/parser.h"
-#include "parser/antlr_parser.h"
+#include "parser/smt2/smt2_state.h"
+#include "parser/smt2/smt2Lexer.h"
+#include "parser/smt2/smt2Parser.h"
 
 namespace sally {
 namespace parser {
 
-internal_parser_interface* new_mcmt_parser(const system::context& ctx, const char* filename);
+template<>
+struct antlr_parser_traits<INPUT_SMT2> {
+
+  typedef psmt2Lexer pLangLexer;
+  typedef psmt2Parser pLangParser;
+
+  typedef smt2_state langState;
+
+  static
+  psmt2Lexer newLexer(pANTLR3_INPUT_STREAM instream) {
+    return smt2LexerNew(instream);
+  }
+
+  static
+  psmt2Parser newParser(pANTLR3_COMMON_TOKEN_STREAM instream) {
+    return smt2ParserNew(instream);
+  }
+};
+
+internal_parser_interface* new_smt2_parser(const system::context& ctx, const char* filename) {
+  return new antlr_parser<INPUT_SMT2>(ctx, filename);
+}
+
 
 }
 }
+
+
+

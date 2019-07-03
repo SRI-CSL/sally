@@ -31,10 +31,10 @@ struct dreal_info {
   static void setup_options(boost::program_options::options_description& options) {
     using namespace boost::program_options;
     options.add_options()
-      ("dreal-precision", value<double>(), "Precision (default = 0.001)")
-      ;
-    options.add_options()
+      ("dreal-precision", value<double>()->default_value(0.001), "Precision for Dreal")
       ("dreal-polytope", "Use polytope contractor")
+      ("dreal-bound", value<double>(), "Bound all variables to [-B, B]")
+      ("dreal-subexpr-to-vars", "Convert some subexpressions to variables.")
       ;
   }
 

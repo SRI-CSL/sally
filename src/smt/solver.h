@@ -170,6 +170,12 @@ public:
     return check();
   }
 
+  /** Check if the solver is in a consistent state (i.e., not trivially inconsistent) */
+  virtual
+  bool is_consistent() {
+    return true;
+  }
+
   /** Check the model if the formula is SAT (for debug purposes only) */
   virtual
   void check_model() {
@@ -268,6 +274,14 @@ public:
    * Same as above, but returns a single expressions.
    */
   expr::term_ref interpolate();
+
+  /**
+   * Set a hint for the solver to search close by.
+   */
+  virtual
+  void set_hint(expr::model::ref m) {
+    // By default do nothing
+  }
 
   /**
    * Collect any garbage.

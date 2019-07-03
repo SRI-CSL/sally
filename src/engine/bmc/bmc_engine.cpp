@@ -60,6 +60,9 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
   size_t bmc_min = ctx().get_options().get_unsigned("bmc-min");
   size_t bmc_max = ctx().get_options().get_unsigned("bmc-max");
 
+  // Did we get an unknown result
+  bool unknown = false;
+
   // BMC loop
   for (size_t k = 0; k <= bmc_max; ++ k) {
   
@@ -74,6 +77,15 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
           std::stringstream ss;
           ss << "Error: System in deadlock at step " << k << ".";
           throw exception(ss.str());
+        }
+      }
+
+      if (!d_solver->is_consistent()) {
+        // Inconsistent unrolling, property trivially valid
+        if (unknown) {
+          return UNKNOWN;
+        } else {
+          return VALID;
         }
       }
 
@@ -92,7 +104,7 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
         return INVALID;
       }
       case smt::solver::UNKNOWN:
-        return UNKNOWN;
+        unknown = true;
       case smt::solver::UNSAT:
         // No counterexample found, continue
         break;
