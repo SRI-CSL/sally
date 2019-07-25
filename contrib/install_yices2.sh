@@ -4,6 +4,7 @@ set -e
 # libpoly
 pushd .
 git clone https://github.com/SRI-CSL/libpoly.git
+mkdir -p libpoly/build
 cd libpoly/build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 make
