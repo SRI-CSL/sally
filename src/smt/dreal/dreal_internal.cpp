@@ -464,7 +464,7 @@ solver::result dreal_internal::check() {
   // Set bounds if needed
   if (d_ctx_bounded) {
     TRACE("dreal") << "dreal[" << instance() << "]: bounded check, precision = " << d_ctx_bounded->config().precision() << std::endl;
-    optional<Box> res = d_ctx_bounded->CheckSat();
+    std::experimental::optional<Box> res = d_ctx_bounded->CheckSat();
     // If we got a model check the result and use it
     if (res) {
       TRACE("dreal") << "dreal[" << instance() << "]: seems sat" << std::endl;
@@ -482,7 +482,7 @@ solver::result dreal_internal::check() {
     }
   }
 
-  if (optional<Box> res = d_ctx->CheckSat()) {
+  if (std::experimental::optional<Box> res = d_ctx->CheckSat()) {
     TRACE("dreal") << "dreal[" << instance() << "]: checking model" << std::endl;
     // If sat then dreal returns a mapping from a variable to an interval.
     // We return sat only if all intervals are singleton
