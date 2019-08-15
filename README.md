@@ -53,10 +53,10 @@ cmake .. -DMATHSAT5_HOME=$MD
 make
 make check
 ```
-You can also use YICES2_HOME, OPENSMT2_HOME.
+You can also set YICES2_HOME, OPENSMT2_HOME, or DREAL_HOME.
 
 
-To compile sally in debug mode then configure and build with
+To compile sally in debug mode, configure and build with
 ```bash
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Debug
@@ -64,10 +64,11 @@ make
 make check
 ```
 
-In order to use the non-linear capabilities of Yices2 in Sally, the 
-version of Yices2 used mused be compiled with MCSAT enabled, and LibPoly 
-must be available. Similar to above, you can pass `-DLIBPOLY_HOME=$LPD` 
-to cmake if LibPoly is installed in a non-standard location. 
+In order to use the non-linear capabilities of Yices2 in Sally, you
+must use a version of Yices2 compiled with MCSAT support, and
+[LibPoly](https://github.com/SRI-CSL/libpoly) must be
+installed on your system. As above, you can pass `-DLIBPOLY_HOME=$LPD` to
+cmake if LibPoly is installed in a non-standard location.
 
 
 ## Input Language
