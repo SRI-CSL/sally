@@ -6,9 +6,7 @@
 
 Sally is a model checker for infinite state systems described as transition 
 systems. It is research software under development so the features and the 
-input language may change rapidly.   
-
-The project is supported by NASA contract NNX14AI05A.
+input language may change rapidly.
 
 ## Prerequisites
 
@@ -322,6 +320,7 @@ valid
 valid
 ```
 
-
+## Acknowledgments
   
+Sally's development has been funded by the National Science Foundation, the National Aeronautics and Space Administration, and the Defense Advanced Research Projects Agency.
 
