@@ -29,21 +29,18 @@ MathSAT5 or OpenSMT2 (or both).
 
 ## How to Compile
 
-By default, you can configure and build Sally with:
+You can configure and build Sally with:
 ```bash
 cd build
 cmake ..
 make
-```
-then you can run tests with:
-```
 make check
 ```
-This ``cmake`` command will search for the necessary libraries and for the backend
+The ``cmake`` command will search for the necessary libraries and for the backend
 SMT solvers installed on your system.
 
 If a solver is installed in a non-standard
-location and ``cmake`` does not find it, you can give extra options. For example,
+location, and ``cmake`` does not find it, you can give extra options. For example,
 if MathSAT5 is installed in the $MD directory, meaning that there are 
 $MD/include and $MD/lib directories with MathSAT5 headers and libraries, then 
 configure and build with
@@ -56,7 +53,7 @@ make check
 You can also set YICES2_HOME, OPENSMT2_HOME, or DREAL_HOME.
 
 
-To compile sally in debug mode, configure and build with
+To compile Sally in debug mode, build with
 ```bash
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Debug
