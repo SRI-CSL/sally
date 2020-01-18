@@ -11,6 +11,18 @@ make
 sudo make install
 popd 
 
+# CUDD
+pushd .
+git clone https://github.com/ivmai/cudd.git
+cd cudd
+git checkout tags/cudd-3.0.0
+autoreconf -fi
+./configure --enable-shared
+make
+sudo make install
+popd
+
+
 # yices2
 pushd .
 git clone https://github.com/SRI-CSL/yices2.git
