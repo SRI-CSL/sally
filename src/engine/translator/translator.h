@@ -16,6 +16,8 @@
  * along with sally.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#pragma once
+
 #include "system/context.h"
 #include "engine/engine.h"
 #include "expr/term.h"

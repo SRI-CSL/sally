@@ -160,8 +160,8 @@ std::ostream& get_msg_stream(bool show_time) {
   if (show_time) {
     time_t now = time(0);
     struct tm tstruct;
+    localtime_r(&now, &tstruct);
     char buf[80];
-    tstruct = *localtime(&now);
     strftime(buf, sizeof(buf), "[%Y-%m-%d.%X] ", &tstruct);
     *result << buf;
   }

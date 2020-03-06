@@ -16,6 +16,8 @@
  * along with sally.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#pragma once
+
 #include "parser/parser.h"
 
 namespace sally {
