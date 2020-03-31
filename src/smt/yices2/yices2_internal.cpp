@@ -1147,7 +1147,7 @@ bool yices2_internal::is_consistent() {
       return false;
     }
   }
-  if (d_ctx_dpllt) {
+  if (d_ctx_mcsat) {
     smt_status_t status = yices_context_status(d_ctx_mcsat);
     if (status == STATUS_UNSAT) {
       return false;
