@@ -58,8 +58,8 @@ y2o2::y2o2(expr::term_manager& tm, const options& opts, utils::statistics& stats
 , d_last_yices2_result(UNKNOWN)
 {
   d_yices2 = factory::mk_solver("yices2", tm, opts, stats);
-//  d_opensmt2 = new delayed_wrapper("opensmt2_delayed", tm, opts, stats, factory::mk_solver("opensmt2", tm, opts, stats));
-  d_opensmt2 = new incremental_wrapper("opensmt2_incremental_wrapper", tm, opts, stats, new opensmt_constructor(tm, opts, stats));
+  d_opensmt2 = new delayed_wrapper("opensmt2_delayed", tm, opts, stats, factory::mk_solver("opensmt2", tm, opts, stats));
+//  d_opensmt2 = new incremental_wrapper("opensmt2_incremental_wrapper", tm, opts, stats, new opensmt_constructor(tm, opts, stats));
   s_instance ++;
 }
 

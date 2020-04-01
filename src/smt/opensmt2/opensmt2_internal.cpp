@@ -110,7 +110,6 @@ void sally::smt::opensmt2_internal::pop() {
   assert(res);
   assert(d_stacked_A_partitions.size() == d_stack_level + 1); // we start at level 0
   --d_stack_level;
-  assert(d_stack_level == 0); // TODO interpolation with incremental solving may not work properly
   d_stacked_A_partitions.pop_back();
 }
 
