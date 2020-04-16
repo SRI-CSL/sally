@@ -44,7 +44,7 @@ pkg_check_modules(DREAL dreal)
 set(DREAL_DEFINITIONS ${DREAL_CFLAGS_OTHER})
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(DREAL
+find_package_handle_standard_args(Dreal
   FOUND_VAR DREAL_FOUND
   REQUIRED_VARS DREAL_INCLUDE_DIRS DREAL_LIBRARIES DREAL_DEFINITIONS
   VERSION_VAR DREAL_VERSION)
