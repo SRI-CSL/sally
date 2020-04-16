@@ -16,11 +16,14 @@ else()
   find_library(MATHSAT5_LIBRARY libmathsat.a mathsat)
 endif()
 
+message(STATUS ${MATHSAT5_INCLUDE_DIR})
+message(STATUS ${MATHSAT5_LIBRARY})
+
 # If library found, check the version
 if (MATHSAT5_INCLUDE_DIR AND MATHSAT5_LIBRARY AND MathSAT5_FIND_VERSION)
 
 	# Check version from char *msat_get_version(void)
-  file(WRITE "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/src.cpp" "
+  file(WRITE "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/mathsat.cpp" "
     #include <stdio.h>
     #include \"mathsat.h\"
 
@@ -33,21 +36,25 @@ if (MATHSAT5_INCLUDE_DIR AND MATHSAT5_LIBRARY AND MathSAT5_FIND_VERSION)
   ")
 
   # We need to compile as:
-  # gcc -I${MATHSAT5_INCLUDE_DIR} version_test.cpp ${MATHSAT5_LIBRARY} -lgmp
+  # gcc -I${MATHSAT5_INCLUDE_DIR} -I${GMP_INCLUDE} version_test.cpp ${MATHSAT5_LIBRARY} ${GMP_LIBRARY}
 
   # Run the test program 
   try_run(
     VERSION_TEST_EXITCODE 
     VERSION_TEST_COMPILED
     ${CMAKE_BINARY_DIR} 
-    ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/src.cpp
+    ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/mathsat.cpp
     COMPILE_DEFINITIONS
       -I"${MATHSAT5_INCLUDE_DIR}"
-      LINK_LIBRARIES ${MATHSAT5_LIBRARY} gmp
+      -I"${GMP_INCLUDE}"
+    LINK_LIBRARIES
+      ${MATHSAT5_LIBRARY} ${GMP_LIBRARY}
     CMAKE_FLAGS
       -DCMAKE_SKIP_RPATH:BOOL=${CMAKE_SKIP_RPATH}       
-    RUN_OUTPUT_VARIABLE 
+    RUN_OUTPUT_VARIABLE
       VERSION_TEST_RUN_OUTPUT
+    COMPILE_OUTPUT_VARIABLE
+      VERSION_TEST_COMPILE_OUTPUT
   )  
 
 	if (NOT VERSION_TEST_COMPILED)

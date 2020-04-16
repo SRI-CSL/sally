@@ -25,21 +25,21 @@ add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND})
 find_package(Boost 1.53.0 COMPONENTS program_options iostreams thread system REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 
-# Come settings based on word size
+# Some settings based on word size
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(ANTLR_CONFIG_FLAG "--enable-64bit")
 else (CMAKE_SIZEOF_VOID_P EQUAL 8) 
   set(ANTLR_CONFIG_FLAG "")
 endif (CMAKE_SIZEOF_VOID_P EQUAL 8)
 
-
 # Find the GMP number library
+find_path(GMP_INCLUDE NAMES gmp.h)
 if (SALLY_STATIC_BUILD)
   find_library(GMP_LIBRARY libgmp.a gmp)
 else()
   find_library(GMP_LIBRARY gmp)
 endif()
-if (GMP_LIBRARY)
+if (GMP_INCLUDE AND GMP_LIBRARY)
   message(STATUS "GMP library: " ${GMP_LIBRARY})
 else()
   message(FATAL_ERROR "Could not the GMP number library (sudo apt-get install libgmp-dev)")
