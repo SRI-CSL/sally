@@ -16,9 +16,6 @@ else()
   find_library(MATHSAT5_LIBRARY libmathsat.a mathsat)
 endif()
 
-message(STATUS ${MATHSAT5_INCLUDE_DIR})
-message(STATUS ${MATHSAT5_LIBRARY})
-
 # If library found, check the version
 if (MATHSAT5_INCLUDE_DIR AND MATHSAT5_LIBRARY AND MathSAT5_FIND_VERSION)
 
