@@ -76,6 +76,7 @@ class mathsat5_term_cache : public expr::gc_participant {
     typedef std::map<size_t, mathsat5_term_cache*> map_type;
     map_type map;
     ~tm_to_cache_map();
+    void clear();
   };
 
   /** Map from term managers to their term caches */
@@ -105,6 +106,10 @@ public:
   /** Get a cache associated with tm */
   static
   mathsat5_term_cache* get_cache(expr::term_manager& tm);
+
+  /** Clear all caches */
+  static
+  void clear_all();
 
   /** Clear the cache */
   void clear();

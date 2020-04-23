@@ -249,6 +249,9 @@ mathsat5_internal::~mathsat5_internal() {
   msat_destroy_config(d_cfg);
 
   s_instances--;
+  if (s_instances == 0) {
+    mathsat5_term_cache::clear_all();
+  }
 }
 
 msat_term mathsat5_internal::mk_mathsat5_term(expr::term_op op, size_t n, msat_term* children) {

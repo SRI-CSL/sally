@@ -56,10 +56,19 @@ mathsat5_term_cache::~mathsat5_term_cache() {
 mathsat5_term_cache::tm_to_cache_map mathsat5_term_cache::s_tm_to_cache_map;
 
 mathsat5_term_cache::tm_to_cache_map::~tm_to_cache_map() {
+  assert(map.size() == 0);
+}
+
+void mathsat5_term_cache::tm_to_cache_map::clear() {
   tm_to_cache_map::map_type::iterator it = s_tm_to_cache_map.map.begin();
   for (; it != s_tm_to_cache_map.map.end(); ++ it) {
     delete it->second;
   }
+  s_tm_to_cache_map.map.clear();
+}
+
+void mathsat5_term_cache::clear_all() {
+ s_tm_to_cache_map.clear();
 }
 
 void mathsat5_term_cache::set_term_cache(expr::term_ref t, msat_term t_msat) {
