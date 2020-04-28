@@ -20,7 +20,7 @@ endif()
 if (OPENSMT2_INCLUDE_DIR AND OPENSMT2_LIBRARY)
 
   # Try to compile with interpolation
-  file(WRITE "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/src.cpp" "
+  file(WRITE "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/opensmt2.cpp" "
     #include <opensmt/opensmt2.h>
     int main() {
       Opensmt* osmt = new Opensmt(qf_lra, \"osmt_solver\");
@@ -37,7 +37,7 @@ if (OPENSMT2_INCLUDE_DIR AND OPENSMT2_LIBRARY)
     VERSION_TEST_EXITCODE
     VERSION_TEST_COMPILED
       ${CMAKE_BINARY_DIR}
-      ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/src.cpp
+      ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/opensmt2.cpp
     COMPILE_DEFINITIONS
       -I"${OPENSMT2_INCLUDE_DIR}"
       -std=c++11

@@ -20,7 +20,7 @@ endif()
 if (Z3_INCLUDE_DIR AND Z3_LIBRARY AND Z3_FIND_VERSION)
 
   # Check version from char *msat_get_version(void)
-  file(WRITE "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/src.cpp" "
+  file(WRITE "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/z3.cpp" "
     #include <stdio.h>
     #include \"z3.h\"
 
@@ -37,7 +37,7 @@ if (Z3_INCLUDE_DIR AND Z3_LIBRARY AND Z3_FIND_VERSION)
     VERSION_TEST_EXITCODE
     VERSION_TEST_COMPILED
     ${CMAKE_BINARY_DIR}
-    ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/src.cpp
+    ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/z3.cpp
     COMPILE_DEFINITIONS
       -I"${Z3_INCLUDE_DIR}"
       LINK_LIBRARIES ${Z3_LIBRARY} ${GMP_LIBRARY}

@@ -19,7 +19,7 @@ endif()
 # If library found, check the version
 if (MATHSAT5_INCLUDE_DIR AND MATHSAT5_LIBRARY AND MathSAT5_FIND_VERSION)
 
-	# Check version from char *msat_get_version(void)
+  # Check version from char *msat_get_version(void)
   file(WRITE "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/mathsat.cpp" "
     #include <stdio.h>
     #include \"mathsat.h\"
@@ -54,8 +54,8 @@ if (MATHSAT5_INCLUDE_DIR AND MATHSAT5_LIBRARY AND MathSAT5_FIND_VERSION)
       VERSION_TEST_COMPILE_OUTPUT
   )  
 
-	if (NOT VERSION_TEST_COMPILED)
-  	unset(MATHSAT5_INCLUDE_DIR CACHE)
+  if (NOT VERSION_TEST_COMPILED)
+    unset(MATHSAT5_INCLUDE_DIR CACHE)
     unset(MATHSAT5_LIBRARY CACHE)
   elseif (NOT ("${VERSION_TEST_EXITCODE}" EQUAL 0))
     unset(MATHSAT5_INCLUDE_DIR CACHE)
