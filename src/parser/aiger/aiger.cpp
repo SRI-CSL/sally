@@ -255,13 +255,15 @@ aiger_parser::aiger_parser(const system::context& ctx, const char* filename)
   all_commands->push_back(define_system);
   
   // Get the properties
+  std::vector<system::state_formula*> queries;
   for (size_t i = 0; i < a->num_outputs; ++ i) {
     expr::term_ref bad_i = aiger_to_term(a->outputs[i].lit);
     expr::term_ref p_i = d_tm.mk_term(expr::TERM_NOT, bad_i);
     system::state_formula *p = new system::state_formula(d_tm, state_type, p_i);
-    cmd::command* query = new cmd::query(ctx, "system", p);
-    all_commands->push_back(query);
+    queries.push_back(p);
   }
+  cmd::command* query = new cmd::query(ctx, "system", queries);
+  all_commands->push_back(query);
 
   // Construct the final command
   d_command = all_commands;

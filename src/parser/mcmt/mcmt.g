@@ -19,9 +19,9 @@ grammar mcmt;
 
 options {
   // C output for antlr
-  language = 'C';  
+  language = 'C';
 }
- 
+
 @parser::includes {
   #include <string>
   #include "command/command.h"
@@ -31,7 +31,7 @@ options {
   #include "command/define_transition.h"
   #include "command/define_transition_system.h"
   #include "command/query.h"
-  #include "command/sequence.h" 
+  #include "command/sequence.h"
   #include "parser/mcmt/mcmt_state.h"
   using namespace sally;
 }
@@ -48,47 +48,47 @@ options {
 }
 
 /** Parses a command */
-command returns [cmd::command* cmd = 0] 
+command returns [cmd::command* cmd = 0]
   : (internal_command*) c = system_command { $cmd = c; }
   ;
 
 /** Parser an internal command */
 internal_command
   : define_constant
-  ; 
+  ;
 
-/** Parses a system definition command */  
-system_command returns [cmd::command* cmd = 0] 
+/** Parses a system definition command */
+system_command returns [cmd::command* cmd = 0]
   : c = declare_state_type       { $cmd = c; }
   | c = define_states            { $cmd = c; }
   | c = define_transition        { $cmd = c; }
   | c = define_transition_system { $cmd = c; }
-  | c = assume                   { $cmd = c; }                    
+  | c = assume                   { $cmd = c; }
   | c = query                    { $cmd = c; }
   | EOF { $cmd = 0; }
   ;
-  
+
 /** Declaration of a state type */
 declare_state_type returns [cmd::command* cmd = 0]
 @declarations {
   std::string id;
-  std::vector<std::string> state_vars;  
+  std::vector<std::string> state_vars;
   std::vector<expr::term_ref> state_types;
-  std::vector<std::string> input_vars;  
+  std::vector<std::string> input_vars;
   std::vector<expr::term_ref> input_types;
 }
-  : '(' 'define-state-type' 
+  : '(' 'define-state-type'
         // Name of the type
         symbol[id, parser::MCMT_STATE_TYPE, false]
-        // State variables  
+        // State variables
         variable_list[state_vars, state_types]
         // Input variables
-        variable_list[input_vars, input_types]? 
-    ')' 
+        variable_list[input_vars, input_types]?
+    ')'
     {
       $cmd = new cmd::declare_state_type(id, STATE->mk_state_type(id, state_vars, state_types, input_vars, input_types));
     }
-  ; 
+  ;
 
 /** Definition of a state set  */
 define_states returns [cmd::command* cmd = 0]
@@ -98,54 +98,54 @@ define_states returns [cmd::command* cmd = 0]
   const system::state_type* state_type;
 }
   : '(' 'define-states'
-        symbol[id, parser::MCMT_STATE_FORMULA, false]       
+        symbol[id, parser::MCMT_STATE_FORMULA, false]
         symbol[type_id, parser::MCMT_STATE_TYPE, true] {
-        	state_type = STATE->ctx().get_state_type(type_id); 
+        	state_type = STATE->ctx().get_state_type(type_id);
         }
-        sf = state_formula[state_type] { 
-        	$cmd = new cmd::define_states(id, sf); 
+        sf = state_formula[state_type] {
+        	$cmd = new cmd::define_states(id, sf);
         }
     ')'
-  ; 
+  ;
 
 /** Definition of a transition  */
 define_transition returns [cmd::command* cmd = 0]
 @declarations {
   std::string id;
-  std::string type_id;  
+  std::string type_id;
   const system::state_type* state_type;
 }
   : '(' 'define-transition'
       symbol[id, parser::MCMT_TRANSITION_FORMULA, false]
-      symbol[type_id, parser::MCMT_STATE_TYPE, true] { 
-          state_type = STATE->ctx().get_state_type(type_id); 
+      symbol[type_id, parser::MCMT_STATE_TYPE, true] {
+          state_type = STATE->ctx().get_state_type(type_id);
       }
       f = state_transition_formula[state_type] {
-          $cmd = new cmd::define_transition(id, f); 
+          $cmd = new cmd::define_transition(id, f);
       }
     ')'
-  ; 
+  ;
 
 /** Definition of a transition system  */
 define_transition_system returns [cmd::command* cmd = 0]
 @declarations {
   std::string id;
-  std::string type_id;  
+  std::string type_id;
   std::string initial_id;
   std::vector<std::string> transitions;
   const system::state_type* state_type;
 }
   : '(' 'define-transition-system'
-      symbol[id, parser::MCMT_TRANSITION_SYSTEM, false]                    
+      symbol[id, parser::MCMT_TRANSITION_SYSTEM, false]
       symbol[type_id, parser::MCMT_STATE_TYPE, true] { state_type = STATE->ctx().get_state_type(type_id); }
       initial_states = state_formula[state_type]
-      transition_relation = state_transition_formula[state_type]    
-      {  
-      	system::transition_system* T = new system::transition_system(state_type, initial_states, transition_relation); 
+      transition_relation = state_transition_formula[state_type]
+      {
+      	system::transition_system* T = new system::transition_system(state_type, initial_states, transition_relation);
         $cmd = new cmd::define_transition_system(id, T);
-      } 
+      }
     ')'
-  ; 
+  ;
 
 /** Assumptions  */
 assume returns [cmd::command* cmd = 0]
@@ -154,57 +154,59 @@ assume returns [cmd::command* cmd = 0]
   const system::state_type* state_type;
 }
   : '(' 'assume'
-    symbol[id, parser::MCMT_TRANSITION_SYSTEM, true] { 
+    symbol[id, parser::MCMT_TRANSITION_SYSTEM, true] {
         state_type = STATE->ctx().get_transition_system(id)->get_state_type();
     }
-    f = state_formula[state_type] { 
+    f = state_formula[state_type] {
     	$cmd = new cmd::assume(STATE->ctx(), id, f);
     }
     ')'
-  ; 
-  
+  ;
+
 /** Query  */
 query returns [cmd::command* cmd = 0]
 @declarations {
   std::string id;
+  std::vector<system::state_formula*> queries;
   const system::state_type* state_type;
 }
   : '(' 'query'
-    symbol[id, parser::MCMT_TRANSITION_SYSTEM, true] { 
+    symbol[id, parser::MCMT_TRANSITION_SYSTEM, true] {
         state_type = STATE->ctx().get_transition_system(id)->get_state_type();
     }
-    f = state_formula[state_type] { 
-    	$cmd = new cmd::query(STATE->ctx(), id, f);
+    ( f = state_formula[state_type] { queries.push_back(f); } )+
+    {
+      	$cmd = new cmd::query(STATE->ctx(), id, queries);
     }
     ')'
-  ; 
+  ;
 
 /** Parse a constant definition */
-define_constant 
+define_constant
 @declarations {
   std::string id;
 }
   : '(' 'define-constant'
-    symbol[id, parser::MCMT_VARIABLE, false] 
+    symbol[id, parser::MCMT_VARIABLE, false]
     c = term { STATE->set_variable(id, c); }
     ')'
-  ; 
+  ;
 
 /** A state formula */
 state_formula[const system::state_type* state_type] returns [system::state_formula* sf = 0]
 @declarations {
   std::string sf_id;
 }
-  : // Declare state variables 
-    { 
-        STATE->push_scope(); 
-        STATE->use_state_type(state_type, system::state_type::STATE_CURRENT, true); 
-    }      
+  : // Declare state variables
+    {
+        STATE->push_scope();
+        STATE->use_state_type(state_type, system::state_type::STATE_CURRENT, true);
+    }
     // Parse the actual formula
-    sf_term = term  
+    sf_term = term
     // Undeclare the variables and return the formula
-    { 
-   		STATE->pop_scope(); 
+    {
+   		STATE->pop_scope();
    		$sf = new system::state_formula(STATE->tm(),  state_type, sf_term);
     }
   ;
@@ -215,13 +217,13 @@ state_transition_formula[const system::state_type* state_type] returns [system::
 @declarations {
   std::string tf_id;
 }
-  : // Use the state type 
-    { 
+  : // Use the state type
+    {
         STATE->push_scope();
         STATE->use_state_type_and_transitions(state_type);
-    } 
-    // Parse the term 
-    tf_term = term 
+    }
+    // Parse the term
+    tf_term = term
     // Undeclare the variables and make the transition
     {
         STATE->pop_scope();
@@ -234,98 +236,98 @@ term returns [expr::term_ref t = expr::term_ref()]
 @declarations {
   std::string id;
   std::vector<expr::term_ref> children;
-} 
-  : symbol[id, parser::MCMT_VARIABLE, true] { t = STATE->get_variable(id); }                
+}
+  : symbol[id, parser::MCMT_VARIABLE, true] { t = STATE->get_variable(id); }
   | c = constant { t = c; }
   | '(' 'let'
-       { STATE->push_scope(); } 
-       let_assignments 
+       { STATE->push_scope(); }
+       let_assignments
        let_t = term { t = let_t; }
        { STATE->pop_scope(); }
-    ')' 
-  | '(' 
-        op = term_op 
-        term_list[children] 
-     ')'   
+    ')'
+  | '('
+        op = term_op
+        term_list[children]
+     ')'
      { t = STATE->tm().mk_term(op, children); }
-  | '(' 
+  | '('
        '(_' 'extract' high = NUMERAL low = NUMERAL ')'
        s = term
-    ')' 
+    ')'
     {
      expr::integer hi_value(STATE->token_text(high), 10);
      expr::integer lo_value(STATE->token_text(low), 10);
      expr::bitvector_extract extract(hi_value.get_unsigned(), lo_value.get_unsigned());
      t = STATE->tm().mk_bitvector_extract(s, extract);
     }
-  | '(' 'cond' 
+  | '(' 'cond'
        ( '(' term_list[children] ')' )+
        '(' 'else' else_term = term ')'
-       { 
+       {
        	 children.push_back(else_term);
        	 t = STATE->mk_cond(children);
        }
     ')'
-  | '(' '/=' { STATE->lsal_extensions() }? term_list[children] 
+  | '(' '/=' { STATE->lsal_extensions() }? term_list[children]
     {
   	  t = STATE->tm().mk_term(expr::TERM_EQ, children);
   	  t = STATE->tm().mk_term(expr::TERM_NOT, t);
-    }   
+    }
     ')'
-  ; 
-  
-let_assignments 
+  ;
+
+let_assignments
   : '(' let_assignment+ ')'
-  ; 
-  
-let_assignment 
+  ;
+
+let_assignment
 @declarations {
   std::string id;
 }
-  : '(' symbol[id, parser::MCMT_VARIABLE, false] 
-        t = term 
+  : '(' symbol[id, parser::MCMT_VARIABLE, false]
+        t = term
         { STATE->set_variable(id, t); }
     ')'
-  ;  
-  
-/** 
+  ;
+
+/**
  * A symbol. Returns it in the id string. If obj_type is not MCMT_OBJECT_LAST
  * we check whether it has been declared = true/false.
  */
-symbol[std::string& id, parser::mcmt_object obj_type, bool declared] 
+symbol[std::string& id, parser::mcmt_object obj_type, bool declared]
 @declarations {
   bool is_next = false;
 }
-  : SYMBOL ('\'' { STATE->lsal_extensions() }? { is_next = true; })? { 
+  : SYMBOL ('\'' { STATE->lsal_extensions() }? { is_next = true; })? {
   	    id = STATE->token_text($SYMBOL);
         if (is_next) { id = "next." + id; }
         id.erase(std::remove(id.begin(), id.end(), '|'), id.end());
         STATE->ensure_declared(id, obj_type, declared);
     }
   ;
-    
+
 term_list[std::vector<expr::term_ref>& out]
   : ( t = term { out.push_back(t); } )+
   ;
-  
-constant returns [expr::term_ref t = expr::term_ref()] 
-  : bc = bool_constant     { t = bc; } 
+
+constant returns [expr::term_ref t = expr::term_ref()]
+  : bc = bool_constant     { t = bc; }
   | dc = integer_constant  { t = dc; }
   | fc = decimal_constant { t = fc; }
   | bvc = bitvector_constant { t = bvc; }
-  ; 
+  ;
 
 bool_constant returns [expr::term_ref t = expr::term_ref()]
   : 'true'   { t = STATE->tm().mk_boolean_constant(true); }
   | 'false'  { t = STATE->tm().mk_boolean_constant(false); }
   ;
-  
+
 integer_constant returns [expr::term_ref t = expr::term_ref()]
-  : NUMERAL { 
+  : NUMERAL {
      expr::rational value(STATE->token_text($NUMERAL));
      t = STATE->tm().mk_rational_constant(value);
     }
-  ; 
+  ;
 
 decimal_constant returns [expr::term_ref t = expr::term_ref()]
   : a = NUMERAL '.' b = NUMERAL {
@@ -337,7 +339,7 @@ decimal_constant returns [expr::term_ref t = expr::term_ref()]
 bitvector_constant returns [expr::term_ref t = expr::term_ref()]
   : HEX_NUMERAL {
      std::string hex_number(STATE->token_text($HEX_NUMERAL));
-     hex_number = hex_number.substr(2); 
+     hex_number = hex_number.substr(2);
      expr::integer int_value(hex_number, 16);
      expr::bitvector value(hex_number.size()*4, int_value);
      t = STATE->tm().mk_bitvector_constant(value);
@@ -353,16 +355,16 @@ bitvector_constant returns [expr::term_ref t = expr::term_ref()]
      expr::integer int_value(STATE->token_text(v).substr(2), 10);
      expr::integer size_value(STATE->token_text(s), 10);
      expr::bitvector value(size_value.get_unsigned(), int_value);
-     t = STATE->tm().mk_bitvector_constant(value);     
+     t = STATE->tm().mk_bitvector_constant(value);
     }
   ;
 
 term_op returns [expr::term_op op = expr::OP_LAST]
   : // Boolean
-    'and'            { op = expr::TERM_AND; } 
+    'and'            { op = expr::TERM_AND; }
   | 'or'             { op = expr::TERM_OR; }
   | 'not'            { op = expr::TERM_NOT; }
-  | '=>'             { op = expr::TERM_IMPLIES; } 
+  | '=>'             { op = expr::TERM_IMPLIES; }
   | 'xor'            { op = expr::TERM_XOR; }
   | 'ite'            { op = expr::TERM_ITE; }
     // Equality
@@ -413,37 +415,37 @@ term_op returns [expr::term_op op = expr::OP_LAST]
 variable_list[std::vector<std::string>& out_vars, std::vector<expr::term_ref>& out_types]
 @declarations {
   std::string var_id;
-} 
-  : '(' 
-    ( '(' 
+}
+  : '('
+    ( '('
         // Variable name
-        symbol[var_id, parser::MCMT_OBJECT_LAST, false] { 
-        	out_vars.push_back(var_id); 
-        } 
-        // Type: either basic or composite (TODO: bitvector) 
-        t = type { out_types.push_back(t); } 
+        symbol[var_id, parser::MCMT_OBJECT_LAST, false] {
+        	out_vars.push_back(var_id);
+        }
+        // Type: either basic or composite (TODO: bitvector)
+        t = type { out_types.push_back(t); }
     ')' )*
     ')'
-  ; 
-        
+  ;
+
 type returns [expr::term_ref type]
 @declarations {
   std::string type_id;
 }
   : // Primitive types
-    symbol[type_id, parser::MCMT_TYPE, true] { type = STATE->get_type(type_id); }  
-  | // Bitvector types 
-    '(_' 'BitVec' size = NUMERAL ')' { 
+    symbol[type_id, parser::MCMT_TYPE, true] { type = STATE->get_type(type_id); }
+  | // Bitvector types
+    '(_' 'BitVec' size = NUMERAL ')' {
        expr::integer int_value(STATE->token_text(size), 10);
-       type = STATE->get_bitvector_type(int_value.get_unsigned());       
+       type = STATE->get_bitvector_type(int_value.get_unsigned());
     }
   ;
 
 /** Comments (skip) */
 COMMENT
   : ';' (~('\n' | '\r'))* { SKIP(); }
-  ; 
-  
+  ;
+
 /** Whitespace (skip) */
 WHITESPACE
   : (' ' | '\t' | '\f' | '\r' | '\n')+ { SKIP(); }
@@ -454,7 +456,7 @@ BV_NUMERAL: 'bv' DIGIT+;
 
 /** Matches a symbol. */
 SYMBOL
-  : (ALPHA | ('|' (~'|')* '|')) (ALPHA | ('|' (~'|')* '|') | DIGIT | '_' | '@' | '.' | '!' | '%' )* 
+  : (ALPHA | ('|' (~'|')* '|')) (ALPHA | ('|' (~'|')* '|') | DIGIT | '_' | '@' | '.' | '!' | '%' )*
   ;
 
 /** Matches a letter. */
@@ -471,10 +473,10 @@ BIN_NUMERAL: '#b' ('0'|'1')+;
 HEX_NUMERAL: '#x' HEX_DIGIT+;
 
 /** Matches a digit */
-fragment 
-DIGIT : '0'..'9';  
+fragment
+DIGIT : '0'..'9';
 
 /** Matches a hexadecimal digit */
-fragment 
+fragment
 HEX_DIGIT : DIGIT | 'a'..'f' | 'A'..'F';
- 
+
