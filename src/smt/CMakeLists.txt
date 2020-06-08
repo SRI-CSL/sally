@@ -31,7 +31,7 @@ set_source_files_properties(
   opensmt2/opensmt2.cpp opensmt2/opensmt2_internal.cpp opensmt2/opensmt2_term_cache.cpp
   PROPERTIES 
     LANGUAGE CXX
-    COMPILE_FLAGS "-std=c++11 -DPRODUCE_PROOF" 
+    COMPILE_FLAGS "-std=c++11" 
 )
 endif()
 
