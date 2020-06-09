@@ -35,13 +35,15 @@ sally::smt::opensmt2_internal::opensmt2_internal(sally::expr::term_manager &tm, 
   if (opts.has_option("solver-logic")) {
     auto logic_str = opts.get_string("solver-logic");
     if (logic_str == "QF_LRA") {
-      d_osmt = new Opensmt(qf_lra, "osmt_solver");
+      auto config = std::unique_ptr<SMTConfig>(new SMTConfig());
       const char *msg;
-      bool res = d_osmt->getConfig().setOption(":time-queries", SMTOption{0}, msg);
-      (void) res;
+      bool res = config->setOption(config->o_produce_inter, SMTOption{1}, msg);
       assert(res);
+      (void) res;
       assert(strcmp(msg, "ok") == 0);
-//    osmt->getConfig().sat_theory_propagation = 0;
+      d_osmt = new Opensmt(qf_lra, "osmt_solver", std::move(config));
+      res = d_osmt->getConfig().setOption(":time-queries", SMTOption{0}, msg);
+      assert(res);
 //    res = osmt->getConfig().setOption(":verbosity", SMTOption{2}, msg);
 //    assert(strcmp(msg, "ok") == 0);
 //    res = osmt->getConfig().setOption(":dump-query", SMTOption(1), msg);
@@ -108,7 +110,6 @@ void sally::smt::opensmt2_internal::pop() {
   assert(res);
   assert(d_stacked_A_partitions.size() == d_stack_level + 1); // we start at level 0
   --d_stack_level;
-  assert(d_stack_level == 0); // TODO interpolation with incremental solving may not work properly
   d_stacked_A_partitions.pop_back();
 }
 
