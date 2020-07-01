@@ -5,20 +5,20 @@
 #  CUDD_LIBRARIES - The libraries needed to use LibPoly
 
 if (CUDD_HOME)
-  find_path(CUDD_INCLUDE_DIR cudd.h PATHS "${CUDD_HOME}/include")
+  find_path(CUDD_INCLUDE_DIR cudd.h PATHS "${CUDD_HOME}/include" NO_DEFAULT_PATH)
 else() 
   find_path(CUDD_INCLUDE_DIR cudd.h)
 endif()
 
 if (SALLY_STATIC_BUILD)
   if (CUDD_HOME)
-    find_library(CUDD_LIBRARY libcudd.a cudd PATHS "${CUDD_HOME}/lib")
+    find_library(CUDD_LIBRARY libcudd.a cudd PATHS "${CUDD_HOME}/lib" NO_DEFAULT_PATH)
   else() 
     find_library(CUDD_LIBRARY libcudd.a cudd)
   endif()
 else()
   if (CUDD_HOME)
-    find_library(CUDD_LIBRARY cudd PATHS "${CUDD_HOME}/lib")
+    find_library(CUDD_LIBRARY cudd PATHS "${CUDD_HOME}/lib" NO_DEFAULT_PATH)
   else() 
     find_library(CUDD_LIBRARY cudd)
   endif()

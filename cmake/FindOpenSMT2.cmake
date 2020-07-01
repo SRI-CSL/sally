@@ -5,13 +5,13 @@
 #  OPENSMT2_LIBRARIES - The libraries needed to use OPENSMT2
 
 if (OPENSMT2_HOME)
-  find_path(OPENSMT2_INCLUDE_DIR opensmt/opensmt2.h PATHS "${OPENSMT2_HOME}/include")
+  find_path(OPENSMT2_INCLUDE_DIR opensmt/opensmt2.h PATHS "${OPENSMT2_HOME}/include" NO_DEFAULT_PATH)
 else()
   find_path(OPENSMT2_INCLUDE_DIR opensmt/opensmt2.h)
 endif()
 
 if (OPENSMT2_HOME)
-  find_library(OPENSMT2_LIBRARY opensmt2 PATHS "${OPENSMT2_HOME}/lib")
+  find_library(OPENSMT2_LIBRARY opensmt2 PATHS "${OPENSMT2_HOME}/lib" NO_DEFAULT_PATH)
 else()
   find_library(OPENSMT2_LIBRARY opensmt2)
 endif()

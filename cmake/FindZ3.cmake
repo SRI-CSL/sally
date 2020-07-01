@@ -5,13 +5,13 @@
 #  Z3_LIBRARIES - The libraries needed to use Z3
 
 if (Z3_HOME)
-  find_path(Z3_INCLUDE_DIR z3.h PATHS "${Z3_HOME}/include")
+  find_path(Z3_INCLUDE_DIR z3.h PATHS "${Z3_HOME}/include" NO_DEFAULT_PATH)
 else()
   find_path(Z3_INCLUDE_DIR z3.h)
 endif()
 
 if (Z3_HOME)
-  find_library(Z3_LIBRARY z3 PATHS "${Z3_HOME}/lib")
+  find_library(Z3_LIBRARY z3 PATHS "${Z3_HOME}/lib" NO_DEFAULT_PATH)
 else()
   find_library(Z3_LIBRARY z3)
 endif()

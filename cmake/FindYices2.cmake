@@ -5,20 +5,20 @@
 #  YICES2_LIBRARIES - The libraries needed to use yices2
 
 if (YICES2_HOME)
-  find_path(YICES2_INCLUDE_DIR yices.h PATHS "${YICES2_HOME}/include")
+  find_path(YICES2_INCLUDE_DIR yices.h PATHS "${YICES2_HOME}/include" NO_DEFAULT_PATH)
 else() 
   find_path(YICES2_INCLUDE_DIR yices.h)
 endif()
 
 if (SALLY_STATIC_BUILD)
   if (YICES2_HOME)
-    find_library(YICES2_LIBRARY libyices.a yices PATHS "${YICES2_HOME}/lib")
+    find_library(YICES2_LIBRARY libyices.a yices PATHS "${YICES2_HOME}/lib" NO_DEFAULT_PATH)
   else() 
     find_library(YICES2_LIBRARY libyices.a yices)
   endif()
 else()
   if (YICES2_HOME)
-    find_library(YICES2_LIBRARY yices PATHS "${YICES2_HOME}/lib")
+    find_library(YICES2_LIBRARY yices PATHS "${YICES2_HOME}/lib" NO_DEFAULT_PATH)
   else() 
     find_library(YICES2_LIBRARY yices)
   endif()
@@ -89,7 +89,7 @@ if (YICES2_INCLUDE_DIR AND Yices2_FIND_VERSION)
     COMPILE_OUTPUT_VARIABLE
       MCSAT_TEST_COMPILE_OUTPUT
   )  
-  
+
   if (NOT MCSAT_TEST_COMPILED)
     unset(YICES2_INCLUDE_DIR CACHE)
     unset(YICES2_LIBRARY CACHE)
