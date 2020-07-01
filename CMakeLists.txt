@@ -45,6 +45,13 @@ else()
   message(FATAL_ERROR "Could not the GMP number library (sudo apt-get install libgmp-dev)")
 endif()
 
+# Find CUDD
+SET(CUDD_HOME CACHE STRING "Cudd installation directory")
+find_package(CUDD 3.0.0)
+if (NOT CUDD_FOUND)
+  message(FATAL_ERROR "Could not the Cudd library")
+endif()
+
 # Find LibPoly
 SET(LIBPOLY_HOME CACHE STRING "LibPoly installation directory")
 find_package(LibPoly 0.1.5)
