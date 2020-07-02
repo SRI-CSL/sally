@@ -93,7 +93,10 @@ foreach(FILE ${regressions})
     # Get the gold output
     file(READ "${FILE}.gold" GOLD_OUTPUT)
     # Set the output
-    set_tests_properties(${FILE} PROPERTIES PASS_REGULAR_EXPRESSION "${GOLD_OUTPUT}")
+    set_tests_properties(${FILE} PROPERTIES 
+      PASS_REGULAR_EXPRESSION "${GOLD_OUTPUT}"
+      TIMEOUT 60
+    )
   endif()
   
 endforeach(FILE)
