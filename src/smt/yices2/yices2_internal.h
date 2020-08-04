@@ -60,6 +60,9 @@ class yices2_internal {
   /** Yices context (dpllt) */
   context_t *d_ctx_mcsat;
 
+  /** Interpolation context */
+  interpolation_context_t d_interpolation_ctx;
+
   /** Is dpllt incomplete */
   bool d_dpllt_incomplete;
 
@@ -183,6 +186,9 @@ public:
 
   /** Return the generalization */
   void generalize(smt::solver::generalization_type type, expr::model::ref, std::vector<expr::term_ref>& projection_out);
+
+  /** Interpolate */
+  void interpolate(std::vector<expr::term_ref>& out);
 
   /** Set the model hint */
   void set_hint(expr::model::ref m);

@@ -102,6 +102,12 @@ yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
     throw exception("yices2-mode must be one of dpllt, mcsat, or hybrid (got " + mode + ")");
   }
 
+  // Clear interpolation context
+  d_interpolation_ctx.ctx_A = NULL;
+  d_interpolation_ctx.ctx_B = NULL;
+  d_interpolation_ctx.interpolant = NULL_TERM;
+  d_interpolation_ctx.model = NULL;
+
   if (use_dpllt) {
     d_config_dpllt = yices_new_config();
     if (opts.has_option("solver-logic")) {
@@ -133,6 +139,18 @@ yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
       ss << "Yices error (context creation): " << yices_error();
       throw exception(ss.str());
     }
+    d_interpolation_ctx.ctx_A = yices_new_context(d_config_mcsat);
+    if (d_interpolation_ctx.ctx_A == 0) {
+      std::stringstream ss;
+      ss << "Yices error (context creation): " << yices_error();
+      throw exception(ss.str());
+    }
+    d_interpolation_ctx.ctx_B = yices_new_context(d_config_mcsat);
+    if (d_interpolation_ctx.ctx_B == 0) {
+      std::stringstream ss;
+      ss << "Yices error (context creation): " << yices_error();
+      throw exception(ss.str());
+    }
   }
 }
 
@@ -144,6 +162,14 @@ yices2_internal::~yices2_internal() {
   }
   if (d_ctx_mcsat) {
     yices_free_context(d_ctx_mcsat);
+  }
+
+  // The interpolation context
+  if (d_interpolation_ctx.ctx_A) {
+    yices_free_context(d_interpolation_ctx.ctx_A);
+  }
+  if (d_interpolation_ctx.ctx_B) {
+    yices_free_context(d_interpolation_ctx.ctx_B);
   }
 
   // The config
@@ -1046,8 +1072,7 @@ expr::term_ref yices2_internal::to_term(term_t yices_term) {
 }
 
 void yices2_internal::add(expr::term_ref ref, solver::formula_class f_class) {
-  int ret_dpllt = 0;
-  int ret_mcsat = 0;
+  int ret = 0;
 
   // Remember the assertions
   expr::term_ref_strong ref_strong(d_tm, ref);
@@ -1061,30 +1086,46 @@ void yices2_internal::add(expr::term_ref ref, solver::formula_class f_class) {
   }
 
   if (d_ctx_dpllt) {
-    ret_dpllt = yices_assert_formula(d_ctx_dpllt, yices_term);
-    if (ret_dpllt < 0) {
+    ret = yices_assert_formula(d_ctx_dpllt, yices_term);
+    if (ret < 0) {
       error_code_t error = yices_error_code();
       if (error == CTX_NONLINEAR_ARITH_NOT_SUPPORTED) {
         // Unsupported -> incomplete
         yices_clear_error();
         d_dpllt_incomplete = true;
       } else {
-        check_error(ret_dpllt, "Yices error (add)");
+        check_error(ret, "Yices error (add)");
       }
     }
   }
   if (d_ctx_mcsat) {
-    ret_mcsat = yices_assert_formula(d_ctx_mcsat, yices_term);
-    if (ret_mcsat < 0) {
+    ret = yices_assert_formula(d_ctx_mcsat, yices_term);
+    if (ret < 0) {
       error_code_t error = yices_error_code();
       if (error == MCSAT_ERROR_UNSUPPORTED_THEORY) {
         // Unsupported -> incomplete
         yices_clear_error();
         d_mcsat_incomplete = true;
       } else {
-        check_error(ret_mcsat, "Yices error (add)");
+        check_error(ret, "Yices error (add)");
       }
     }
+  }
+
+  switch(f_class) {
+  case solver::CLASS_A:
+  case solver::CLASS_T:
+    if (d_interpolation_ctx.ctx_A) {
+      ret = yices_assert_formula(d_interpolation_ctx.ctx_A, yices_term);
+      check_error(ret, "Yices error (add)");
+    }
+    break;
+  case solver::CLASS_B:
+    if (d_interpolation_ctx.ctx_B) {
+      ret = yices_assert_formula(d_interpolation_ctx.ctx_B, yices_term);
+      check_error(ret, "Yices error (add)");
+    }
+    break;
   }
 }
 
@@ -1381,6 +1422,14 @@ void yices2_internal::push() {
     ret = yices_push(d_ctx_mcsat);
     check_error(ret, "Yices error (push)");
   }
+  if (d_interpolation_ctx.ctx_A) {
+    ret = yices_push(d_interpolation_ctx.ctx_A);
+    check_error(ret, "Yices error (push)");
+  }
+  if (d_interpolation_ctx.ctx_B) {
+    ret = yices_push(d_interpolation_ctx.ctx_B);
+    check_error(ret, "Yices error (push)");
+  }
   d_assertions_size.push_back(d_assertions.size());
   d_dpllt_incomplete_log.push_back(d_dpllt_incomplete);
   d_mcsat_incomplete_log.push_back(d_mcsat_incomplete);
@@ -1394,6 +1443,14 @@ void yices2_internal::pop() {
   }
   if (d_ctx_mcsat) {
     ret = yices_pop(d_ctx_mcsat);
+    check_error(ret, "Yices error (pop)");
+  }
+  if (d_interpolation_ctx.ctx_A) {
+    ret = yices_pop(d_interpolation_ctx.ctx_A);
+    check_error(ret, "Yices error (pop)");
+  }
+  if (d_interpolation_ctx.ctx_B) {
+    ret = yices_pop(d_interpolation_ctx.ctx_B);
     check_error(ret, "Yices error (pop)");
   }
   size_t size = d_assertions_size.back();
@@ -1681,6 +1738,14 @@ void yices2_internal::efsmt_to_stream(std::ostream& out, const term_vector_t* G_
   out << "(check-sat)" << std::endl;
 }
 
+void yices2_internal::interpolate(std::vector<expr::term_ref>& out) {
+  smt_status status = yices_check_context_with_interpolation(&d_interpolation_ctx, NULL, 0);
+  (void)status;
+  assert(status = STATUS_UNSAT);
+  assert(d_interpolation_ctx.interpolant != NULL_TERM);
+  expr::term_ref interpolant = to_term(d_interpolation_ctx.interpolant);
+  out.push_back(interpolant);
+}
 
 }
 }
