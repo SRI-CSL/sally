@@ -145,7 +145,12 @@ yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
       ss << "Yices error (context creation): " << yices_error();
       throw exception(ss.str());
     }
-    d_interpolation_ctx.ctx_B = yices_new_context(d_config_mcsat);
+    if (opts.has_option("solver-logic") && use_dpllt) {
+      // Use best solver for the B part
+      d_interpolation_ctx.ctx_B = yices_new_context(d_config_dpllt);
+    } else {
+      d_interpolation_ctx.ctx_B = yices_new_context(d_config_mcsat);
+    }
     if (d_interpolation_ctx.ctx_B == 0) {
       std::stringstream ss;
       ss << "Yices error (context creation): " << yices_error();
@@ -1741,9 +1746,23 @@ void yices2_internal::efsmt_to_stream(std::ostream& out, const term_vector_t* G_
 void yices2_internal::interpolate(std::vector<expr::term_ref>& out) {
   smt_status status = yices_check_context_with_interpolation(&d_interpolation_ctx, NULL, 0);
   (void)status;
-  assert(status = STATUS_UNSAT);
+  assert(status == STATUS_UNSAT);
   assert(d_interpolation_ctx.interpolant != NULL_TERM);
   expr::term_ref interpolant = to_term(d_interpolation_ctx.interpolant);
+  if (sally::output::trace_tag_is_enabled("yices2::interpolation::check")) {
+    // Check: A => I
+    yices_push(d_interpolation_ctx.ctx_A);
+    yices_assert_formula(d_interpolation_ctx.ctx_A, yices_not(d_interpolation_ctx.interpolant));
+    status = yices_check_context(d_interpolation_ctx.ctx_A, NULL);
+    assert(status == STATUS_UNSAT);
+    yices_pop(d_interpolation_ctx.ctx_A);
+    // Check I && B is unsat
+    yices_push(d_interpolation_ctx.ctx_B);
+    yices_assert_formula(d_interpolation_ctx.ctx_B, d_interpolation_ctx.interpolant);
+    status = yices_check_context(d_interpolation_ctx.ctx_B, NULL);
+    assert(status == STATUS_UNSAT);
+    yices_pop(d_interpolation_ctx.ctx_B);
+  }
   out.push_back(interpolant);
 }
 
