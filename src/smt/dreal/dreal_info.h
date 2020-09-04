@@ -42,6 +42,12 @@ struct dreal_info {
     return "dreal";
   }
 
+  static std::string get_description() {
+    return
+        "The dReal SMT solver.";
+  }
+
+
   static solver* new_instance(const solver_context& ctx) {
     return new dreal(ctx.tm, ctx.opts, ctx.stats);
   }

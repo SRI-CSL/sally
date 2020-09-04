@@ -40,6 +40,12 @@ struct bmc_engine_info {
     return "bmc";
   }
 
+  static std::string get_description() {
+    return
+        "Bounded model checking (BMC) engine unrolls the system and tries to falsify the property in the query. "
+        "It can only disprove properies and produce a counter-example trace.";
+  }
+
   static engine* new_instance(const system::context& ctx) {
     return new bmc_engine(ctx);
   }

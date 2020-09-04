@@ -72,7 +72,9 @@ solver* factory::mk_solver(std::string id, expr::term_manager& tm, const options
 void factory::setup_options(boost::program_options::options_description& options) {
   for (solver_data::const_iterator it = s_solver_data.data().begin(); it != s_solver_data.data().end(); ++ it) {
     std::stringstream ss;
-    ss << "Solver '" << it->second->get_id() << "' options";
+    ss << "Solver '" << it->second->get_id() << "'." << std::endl;
+    ss << it->second->get_description() << std::endl;
+    ss << "Options";
     boost::program_options::options_description solver_options(ss.str());
     it->second->setup_options(solver_options);
     if (solver_options.options().size() > 0) {
@@ -91,7 +93,6 @@ void factory::enable_smt2_output(std::string prefix) {
   s_generate_smt = true;
   s_smt2_prefix = prefix;
 }
-
 
 }
 }

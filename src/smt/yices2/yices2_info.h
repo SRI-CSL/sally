@@ -41,6 +41,12 @@ struct yices2_info {
     return "yices2";
   }
 
+  static std::string get_description() {
+    return
+        "The Yices2 SMT solver.";
+  }
+
+
   static solver* new_instance(const solver_context& ctx) {
     return new yices2(ctx.tm, ctx.opts, ctx.stats);
   }

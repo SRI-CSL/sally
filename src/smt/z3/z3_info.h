@@ -37,6 +37,12 @@ struct z3_info {
     return "z3";
   }
 
+  static std::string get_description() {
+    return
+        "The Z3 SMT solver.";
+  }
+
+
   static solver* new_instance(const solver_context& ctx) {
     return new z3(ctx.tm, ctx.opts, ctx.stats);
   }

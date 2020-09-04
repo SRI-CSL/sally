@@ -18,30 +18,41 @@
 
 #pragma once
 
+#include "smt/solver.h"
 #include "system/context.h"
-#include "ai/ai.h"
+#include "engine/engine.h"
+#include "expr/term.h"
+
+#include <vector>
+#include "../../system/trace_helper.h"
 
 namespace sally {
-namespace ai {
+namespace simulator {
 
 /**
- * Crab static analyzer.
+ * Bounded model checking engine.
  */
-class crab : public abstract_interpreter {
+class simulator : public engine {
+
+  /** The trace we're building */
+  system::trace_helper* d_trace;
 
 public:
 
-  /** Construct the interpreter */
-  crab(const system::context& ctx);
+  simulator(const system::context& ctx);
+  ~simulator();
 
-  /** Destruct the interpreter */
-  ~crab();
+  /** Query */
+  result query(const system::transition_system* ts, const system::state_formula* sf);
 
-  /** Run the interpreter on the transition system */
-  void run(const system::transition_system* ts, std::vector<system::state_formula*>& out);
+  /** Trace */
+  const system::trace_helper* get_trace();
 
-  /** Garbage collection */
-  void gc_collect(const expr::gc_relocator& gc_reloc);
+  /** Invariant (not supported) */
+  invariant get_invariant();
+
+  /** Nothing to collect */
+  void gc_collect(const expr::gc_relocator& gc_reloc) {}
 };
 
 }

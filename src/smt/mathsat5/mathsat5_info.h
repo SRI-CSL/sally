@@ -43,6 +43,11 @@ struct mathsat5_info {
     return "mathsat5";
   }
 
+  static std::string get_description() {
+    return
+        "The MathSAT5 SMT solver.";
+  }
+
   static solver* new_instance(const solver_context& ctx) {
     return new mathsat5(ctx.tm, ctx.opts, ctx.stats);
   }

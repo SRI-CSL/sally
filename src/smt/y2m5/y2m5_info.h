@@ -41,6 +41,12 @@ struct y2m5_info {
     return "y2m5";
   }
 
+  static std::string get_description() {
+    return
+        "Combination of MathSAT5 and Yices2. Discharges satisfiability queries with Yices2 but uses MathSAT5 for interpolation.";
+  }
+
+
   static solver* new_instance(const solver_context& ctx) {
     return new y2m5(ctx.tm, ctx.opts, ctx.stats);
   }

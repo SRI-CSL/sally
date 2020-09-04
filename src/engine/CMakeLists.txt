@@ -9,5 +9,6 @@ add_library(engine
   pdkind/induction_obligation.cpp
   pdkind/cex_manager.cpp
   translator/translator.cpp
+  simulator/simulator.cpp
 )
 

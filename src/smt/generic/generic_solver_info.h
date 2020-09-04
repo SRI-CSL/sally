@@ -55,6 +55,12 @@ struct generic_solver_info {
     return "generic-solver";
   }
 
+  static std::string get_description() {
+    return
+        "A generic SMT-LIB compliant solver that takes SMT2 input from standard input.";
+  }
+
+
   static solver* new_instance(const solver_context& ctx) {
     if (ctx.opts.get_bool("generic-solver-flatten")) {
       solver_constructor* constructor = new generic_solver_constructor(ctx.tm, ctx.opts, ctx.stats);
