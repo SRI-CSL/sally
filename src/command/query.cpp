@@ -38,11 +38,11 @@ void query::run(system::context* ctx, engine* e) {
   for (size_t i = 0; i < d_queries.size(); ++ i) {
     engine::result result = e->query(T, d_queries[i]);
     // Output the result if not silent
-    if (result != engine::SILENT) {
+    if (result != engine::SILENT && result != engine::SILENT_WITH_TRACE) {
       std::cout << result << std::endl;
     }
     // If invalid, and asked to, show the trace
-    if (result == engine::INVALID && ctx->get_options().has_option("show-trace")) {
+    if ((result == engine::INVALID || result == engine::SILENT_WITH_TRACE) && ctx->get_options().has_option("show-trace")) {
       const system::trace_helper* trace = e->get_trace();
       std::cout << *trace << std::endl;
     }

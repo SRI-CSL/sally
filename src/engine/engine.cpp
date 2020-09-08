@@ -62,6 +62,7 @@ std::ostream& operator << (std::ostream& out, engine::result result) {
   case engine::UNSUPPORTED:
     out << "unsupported"; break;
   case engine::SILENT:
+  case engine::SILENT_WITH_TRACE:
     out << "silent"; break;
   default:
     out << "unknown";

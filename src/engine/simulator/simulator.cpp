@@ -79,9 +79,9 @@ engine::result simulator::query(const system::transition_system* ts, const syste
       if (!d_solver->is_consistent()) {
         // Inconsistent unrolling, property trivially valid
         if (unknown) {
-          return UNKNOWN;
+          return SILENT;
         } else {
-          return VALID;
+          return SILENT;
         }
       }
 
@@ -96,7 +96,7 @@ engine::result simulator::query(const system::transition_system* ts, const syste
       case smt::solver::SAT: {
         expr::model::ref m = d_solver->get_model();
         d_trace->set_model(m, 0, k);
-        return INVALID;
+        return SILENT_WITH_TRACE;
       }
       case smt::solver::UNKNOWN:
         unknown = true;
@@ -120,7 +120,7 @@ engine::result simulator::query(const system::transition_system* ts, const syste
     d_solver->add(d_trace->get_transition_formula(transition_formula, k), smt::solver::CLASS_A);
   }
 
-  return UNKNOWN;
+  return SILENT;
 }
 
 const system::trace_helper* simulator::get_trace() {
