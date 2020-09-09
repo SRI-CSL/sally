@@ -48,34 +48,50 @@ expr::term_ref transition_system::get_transition_relation() const {
   std::vector<expr::term_ref> transitions;
   transitions.push_back(d_transition_relation->get_formula());
   expr::term_ref transition = d_state_type->tm().mk_or(transitions);
-  if (has_assumptions()) {
-    expr::term_ref A = get_assumption();
+  if (has_state_assumptions()) {
+    expr::term_ref A = get_state_assumption();
     expr::term_ref A_next = d_state_type->change_formula_vars(state_type::STATE_CURRENT, state_type::STATE_NEXT, A);
     transition = d_state_type->tm().mk_term(expr::TERM_AND, transition, A, A_next);
+  }
+  if (has_transition_assumptions()) {
+    expr::term_ref T = get_transition_assumption();
+    transition = d_state_type->tm().mk_term(expr::TERM_AND, transition, T);
   }
   return transition;
 }
 
 expr::term_ref transition_system::get_initial_states() const {
   expr::term_ref I = d_initial_states->get_formula();
-  if (has_assumptions()) {
-    I = d_state_type->tm().mk_term(expr::TERM_AND, I, get_assumption());
+  if (has_state_assumptions()) {
+    I = d_state_type->tm().mk_term(expr::TERM_AND, I, get_state_assumption());
   }
   return I;
 }
 
 void transition_system::add_assumption(state_formula* assumption) {
-  d_assumptions.push_back(assumption);
+  d_assumptions_state.push_back(assumption);
+}
+
+void transition_system::add_assumption(transition_formula* assumption) {
+  d_assumptions_transition.push_back(assumption);
 }
 
 void transition_system::add_invariant(state_formula* invariant) {
   d_invariants.push_back(invariant);
 }
 
-expr::term_ref transition_system::get_assumption() const {
+expr::term_ref transition_system::get_state_assumption() const {
   std::vector<expr::term_ref> assumption_terms;
-  for (size_t i = 0; i < d_assumptions.size(); ++ i) {
-    assumption_terms.push_back(d_assumptions[i]->get_formula());
+  for (size_t i = 0; i < d_assumptions_state.size(); ++ i) {
+    assumption_terms.push_back(d_assumptions_state[i]->get_formula());
+  }
+  return d_state_type->tm().mk_and(assumption_terms);
+}
+
+expr::term_ref transition_system::get_transition_assumption() const {
+  std::vector<expr::term_ref> assumption_terms;
+  for (size_t i = 0; i < d_assumptions_transition.size(); ++ i) {
+    assumption_terms.push_back(d_assumptions_transition[i]->get_formula());
   }
   return d_state_type->tm().mk_and(assumption_terms);
 }
@@ -85,8 +101,8 @@ trace_helper* transition_system::get_trace_helper() const {
 }
 
 transition_system::~transition_system() {
-  for (size_t i = 0; i < d_assumptions.size(); ++ i) {
-    delete d_assumptions[i];
+  for (size_t i = 0; i < d_assumptions_state.size(); ++ i) {
+    delete d_assumptions_state[i];
   }
   for (size_t i = 0; i < d_invariants.size(); ++ i) {
     delete d_invariants[i];

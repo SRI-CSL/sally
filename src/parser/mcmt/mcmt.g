@@ -64,6 +64,7 @@ system_command returns [cmd::command* cmd = 0]
   | c = define_transition        { $cmd = c; }
   | c = define_transition_system { $cmd = c; }
   | c = assume                   { $cmd = c; }
+  | c = assume_input             { $cmd = c; }
   | c = query                    { $cmd = c; }
   | EOF { $cmd = 0; }
   ;
@@ -163,6 +164,22 @@ assume returns [cmd::command* cmd = 0]
     ')'
   ;
 
+/** Assumptions  */
+assume_input returns [cmd::command* cmd = 0]
+@declarations {
+  std::string id;
+  const system::state_type* state_type;
+}
+  : '(' 'assume-input'
+    symbol[id, parser::MCMT_TRANSITION_SYSTEM, true] {
+        state_type = STATE->ctx().get_transition_system(id)->get_state_type();
+    }
+    f = input_formula[state_type] {
+        $cmd = new cmd::assume(STATE->ctx(), id, f);
+    }
+    ')'
+  ;
+
 /** Query  */
 query returns [cmd::command* cmd = 0]
 @declarations {
@@ -194,9 +211,6 @@ define_constant
 
 /** A state formula */
 state_formula[const system::state_type* state_type] returns [system::state_formula* sf = 0]
-@declarations {
-  std::string sf_id;
-}
   : // Declare state variables
     {
         STATE->push_scope();
@@ -206,17 +220,30 @@ state_formula[const system::state_type* state_type] returns [system::state_formu
     sf_term = term
     // Undeclare the variables and return the formula
     {
-   		STATE->pop_scope();
-   		$sf = new system::state_formula(STATE->tm(),  state_type, sf_term);
+        STATE->pop_scope();
+        $sf = new system::state_formula(STATE->tm(), state_type, sf_term);
+    }
+  ;
+
+/** A formula over inputs only */
+input_formula[const system::state_type* state_type] returns [system::transition_formula* tf = 0]
+  : // Declare state variables
+    {
+        STATE->push_scope();
+        STATE->use_state_type(state_type, system::state_type::STATE_INPUT, true);
+    }
+    // Parse the actual formula
+    tf_term = term
+    // Undeclare the variables and return the formula
+    {
+      STATE->pop_scope();
+      $tf = new system::transition_formula(STATE->tm(), state_type, tf_term);
     }
   ;
 
 
 /** A state transition formula */
 state_transition_formula[const system::state_type* state_type] returns [system::transition_formula* tf = 0]
-@declarations {
-  std::string tf_id;
-}
   : // Use the state type
     {
         STATE->push_scope();
