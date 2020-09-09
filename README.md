@@ -262,10 +262,10 @@ unknown
 unknown
 invalid
 (trace
-  (frame (x 0) (y 0))
-  (frame (x 1) (y 1))
+  (state (x 0) (y 0))
+  (state (x 1) (y 1))
   ...
-  (frame (x 20) (y 20))
+  (state (x 20) (y 20))
 )
 unknown
 ```
