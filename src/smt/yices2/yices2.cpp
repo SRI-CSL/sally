@@ -118,6 +118,23 @@ void yices2::gc_collect(const expr::gc_relocator& gc_reloc) {
   d_internal->gc_collect(gc_reloc);
 }
 
+bool yices2::supports(solver::feature f) const {
+  switch (f) {
+  case GENERALIZATION:
+    return true;
+  case INTERPOLATION:
+    return true;
+  default:
+    return false;
+  }
+}
+
+void yices2::interpolate(std::vector<expr::term_ref>& out) {
+  TRACE("yices2") << "yices2[" << d_internal->instance() << "]: interpolate()" << std::endl;
+  d_internal->interpolate(out);
+  TRACE("yices2") << "yices2[" << d_internal->instance() << "]: interpolate(): " << out[0] << std::endl;
+}
+
 }
 }
 
