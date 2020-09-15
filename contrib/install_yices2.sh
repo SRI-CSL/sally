@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e 
+set -e
 
 # libpoly
 pushd .
@@ -9,7 +9,7 @@ cd libpoly/build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 make
 sudo make install
-popd 
+popd
 
 # CUDD
 pushd .
@@ -27,9 +27,8 @@ popd
 pushd .
 git clone https://github.com/SRI-CSL/yices2.git
 cd yices2
-git checkout mcsat-interpolation
 autoconf
-./configure --enable-mcsat 
-make 
+./configure --enable-mcsat
+make
 sudo make install
-popd 
+popd
