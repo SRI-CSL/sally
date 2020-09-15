@@ -47,6 +47,12 @@ struct pdkind_engine_info {
     return "pdkind";
   }
 
+  static std::string get_description() {
+      return
+          "Property-directed k-induction (PDKIND) engine attempts to prove the property by strengthening the query until it becomes k-inductive. "
+          "The engine can both prove properties and find counter-examples.";
+  }
+
   static engine* new_instance(const system::context& ctx) {
     return new pdkind_engine(ctx);
   }

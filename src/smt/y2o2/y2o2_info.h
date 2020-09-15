@@ -39,6 +39,12 @@ struct y2o2_info {
     return "y2o2";
   }
 
+  static std::string get_description() {
+    return
+        "Combination of Yices2 and OpenSMT2. Discharges satisfiability queries with Yices2 but uses OpenSMT2 for interpolation.";
+  }
+
+
   static solver* new_instance(const solver_context& ctx) {
     return new y2o2(ctx.tm, ctx.opts, ctx.stats);
   }

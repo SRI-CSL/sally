@@ -14,7 +14,6 @@ add_library(smt
   z3/z3.cpp
   z3/z3_internal.cpp
   z3/z3_common.cpp
-  y2z3/y2z3.cpp
   opensmt2/opensmt2.cpp
   opensmt2/opensmt2_internal.cpp
   opensmt2/opensmt2_term_cache.cpp

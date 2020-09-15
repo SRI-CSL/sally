@@ -34,6 +34,11 @@ struct translator_info {
     return "translator";
   }
 
+  static std::string get_description() {
+      return
+          "The translator will translate the system and queries into the target output language.";
+  }
+
   static engine* new_instance(const system::context& ctx) {
     return new translator(ctx);
   }

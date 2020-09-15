@@ -25,10 +25,11 @@
 #include "engine/bmc/bmc_engine_info.h"
 #include "engine/kind/kind_engine_info.h"
 #include "engine/pdkind/pdkind_engine_info.h"
-
+#include "engine/simulator/simulator_info.h"
 #include "engine/translator/translator_info.h"
 
 sally::engine_data::engine_data() {
+  add_module_info<simulator::simulator_info>();
   add_module_info<bmc::bmc_engine_info>();
   add_module_info<kind::kind_engine_info>();
   add_module_info<pdkind::pdkind_engine_info>();

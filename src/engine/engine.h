@@ -57,7 +57,9 @@ public:
     /** The engine was interrupted */
     INTERRUPTED,
     /** Silent result (e.g. for translator) */
-    SILENT
+    SILENT,
+    /** SIlent with trace */
+    SILENT_WITH_TRACE,
   };
 
   /** Create the engine */

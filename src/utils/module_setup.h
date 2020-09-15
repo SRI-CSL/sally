@@ -36,6 +36,7 @@ template <typename module_type, typename constructor_type>
 struct module_info_dynamic {
   virtual void setup_options(boost::program_options::options_description& options) const = 0;
   virtual std::string get_id() const = 0;
+  virtual std::string get_description() const = 0;
   virtual module_type* new_instance(const constructor_type& arg1) const = 0;
   virtual ~module_info_dynamic() {};
 };
@@ -48,6 +49,7 @@ template <typename T, typename module_type, typename constructor_type>
 class module_info_dynamic_instance : public module_info_dynamic<module_type, constructor_type> {
   void setup_options(boost::program_options::options_description& options) const { T::setup_options(options); }
   std::string get_id() const { return T::get_id(); }
+  std::string get_description() const { return T::get_description(); }
   module_type* new_instance(const constructor_type& arg) const { return T::new_instance(arg); }
   ~module_info_dynamic_instance() {}
 };

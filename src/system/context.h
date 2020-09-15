@@ -91,6 +91,9 @@ public:
   /** Add an assumption to the given transition system (takes over sf). */
   void add_assumption_to(std::string id, state_formula* sf);
 
+  /** Add an assumption to the given transition system (takes over sf). */
+  void add_assumption_to(std::string id, transition_formula* tf);
+
   /** Add an invariant to the given transition system (takes over sf). */
   void add_invariant_to(std::string id, state_formula* sf);
 

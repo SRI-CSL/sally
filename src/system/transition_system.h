@@ -40,16 +40,29 @@ class transition_system {
   transition_formula* d_transition_relation;
 
   /** Any assumptions */
-  std::vector<state_formula*> d_assumptions;
+  std::vector<state_formula*> d_assumptions_state;
 
   /** Get all the individual assumptions */
-  const std::vector<state_formula*>& get_assumptions() const {
-    return d_assumptions;
+  const std::vector<state_formula*>& get_state_assumptions() const {
+    return d_assumptions_state;
   }
 
   /** Do we have assumptions */
-  bool has_assumptions() const {
-    return !d_assumptions.empty();
+  bool has_state_assumptions() const {
+    return !d_assumptions_state.empty();
+  }
+
+  /** Any assumptions */
+  std::vector<transition_formula*> d_assumptions_transition;
+
+  /** Get all the individual assumptions */
+  const std::vector<transition_formula*>& get_transition_assumptions() const {
+    return d_assumptions_transition;
+  }
+
+  /** Do we have assumptions */
+  bool has_transition_assumptions() const {
+    return !d_assumptions_transition.empty();
   }
 
   /** Invariants */
@@ -60,7 +73,11 @@ class transition_system {
   }
 
   /** Get the assumptions in one state formula */
-  expr::term_ref get_assumption() const;
+  expr::term_ref get_state_assumption() const;
+
+  /** Get the assumptions in one transition formula */
+  expr::term_ref get_transition_assumption() const;
+
 
   /** The trace helper for this transition system */
   trace_helper* d_trace_helper;
@@ -86,6 +103,9 @@ public:
 
   /** Add an assumption on the state type (takes over the pointer) */
   void add_assumption(state_formula* assumption);
+
+  /** Add an assumption on the state type (takes over the pointer) */
+  void add_assumption(transition_formula* assumption);
 
   /** Add an invariant to the system (takes over the pointer) */
   void add_invariant(state_formula* invariant);

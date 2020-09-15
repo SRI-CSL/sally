@@ -1,4 +1,4 @@
-set(sally_SRC_DIRS utils expr smt system command parser ai engine)
+set(sally_SRC_DIRS utils expr smt system command parser engine)
 
 # Add all the subdirectories
 foreach(DIR ${sally_SRC_DIRS})
@@ -13,8 +13,8 @@ endif()
 # Add the executable
 add_executable(sally sally.cpp)
 if (SALLY_STATIC_BUILD)
-	set_target_properties(sally PROPERTIES LINK_FLAGS "-static")
-	set_target_properties (sally PROPERTIES LINK_SEARCH_START_STATIC ON)
+  set_target_properties(sally PROPERTIES LINK_FLAGS "-static")
+  set_target_properties (sally PROPERTIES LINK_SEARCH_START_STATIC ON)
   set_target_properties (sally PROPERTIES LINK_SEARCH_END_STATIC ON)
 endif()
 

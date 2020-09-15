@@ -39,6 +39,13 @@ struct kind_engine_info {
     return "kind";
   }
 
+  static std::string get_description() {
+    return
+        "The k-induction engine tries to prove the property in the query by checking if it is k-inductive. "
+        "A property is k-inductive iff it (a) holds for the first k-steps and (b) if it holds for k-steps then"
+        "it holds in step k+1. The engine can both prove properties and find counter-examples.";
+  }
+
   static engine* new_instance(const system::context& ctx) {
     return new kind_engine(ctx);
   }

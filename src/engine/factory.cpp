@@ -42,7 +42,9 @@ engine* engine_factory::mk_engine(std::string id, const system::context& ctx) {
 void engine_factory::setup_options(boost::program_options::options_description& options) {
   for (engine_data::const_iterator it = s_engine_data.data().begin(); it != s_engine_data.data().end(); ++ it) {
     std::stringstream ss;
-    ss << "Engine '" << it->second->get_id() << "' options";
+    ss << "Engine '" << it->second->get_id() << "'." << std::endl;
+    ss << it->second->get_description() << std::endl;
+    ss << "Options";
     boost::program_options::options_description engine_options(ss.str());
     it->second->setup_options(engine_options);
     if (engine_options.options().size() > 0) {

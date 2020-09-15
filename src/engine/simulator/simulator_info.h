@@ -18,27 +18,35 @@
 
 #pragma once
 
-#include "crab.h"
-#include <boost/program_options.hpp>
+#include "engine/simulator/simulator.h"
+
+#include <boost/program_options/options_description.hpp>
 
 namespace sally {
-namespace ai {
+namespace simulator {
 
-struct crab_info {
+struct simulator_info {
 
   static void setup_options(boost::program_options::options_description& options) {
     using namespace boost::program_options;
     options.add_options()
-        ("crab-domain", value<std::string>()->default_value("interval"), "The domain do use (intervals, ...)")
+        ("sim-max", value<unsigned>()->default_value(10), "Maximal unrolling length to check.")
+        ("sim-min", value<unsigned>()->default_value(0), "Minimal unrolling length to check.")
         ;
   }
 
   static std::string get_id() {
-    return "crab";
+    return "simulator";
   }
 
-  static abstract_interpreter* new_instance(const system::context& ctx) {
-    return new crab(ctx);
+  static std::string get_description() {
+      return
+          "The simulator tries to find a trace of the sytem such that the property in the query holds"
+          " for some state in the trace.";
+  }
+
+  static engine* new_instance(const system::context& ctx) {
+    return new simulator(ctx);
   }
 
 };

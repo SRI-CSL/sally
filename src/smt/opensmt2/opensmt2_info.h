@@ -41,6 +41,11 @@ struct opensmt2_info {
     return "opensmt2";
   }
 
+  static std::string get_description() {
+    return
+        "The OpenSMT2 SMT Solver.";
+  }
+
   static solver* new_instance(const solver_context& ctx) {
     return new opensmt2(ctx.tm, ctx.opts, ctx.stats);
   }
