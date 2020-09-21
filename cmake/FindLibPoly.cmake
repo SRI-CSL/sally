@@ -6,20 +6,20 @@
 
 if (LIBPOLY_HOME)
   find_path(LIBPOLY_INCLUDE_DIR poly/poly.h PATHS "${LIBPOLY_HOME}/include")
-else() 
+else()
   find_path(LIBPOLY_INCLUDE_DIR poly/poly.h)
 endif()
 
 if (SALLY_STATIC_BUILD)
   if (LIBPOLY_HOME)
     find_library(LIBPOLY_LIBRARY libpoly.a poly PATHS "${LIBPOLY_HOME}/lib" NO_DEFAULT_PATH)
-  else() 
+  else()
     find_library(LIBPOLY_LIBRARY libpoly.a poly)
   endif()
 else()
   if (LIBPOLY_HOME)
     find_library(LIBPOLY_LIBRARY poly PATHS "${LIBPOLY_HOME}/lib" NO_DEFAULT_PATH)
-  else() 
+  else()
     find_library(LIBPOLY_LIBRARY poly)
   endif()
 endif()
@@ -27,8 +27,8 @@ endif()
 # If library found, check the version
 if (LIBPOLY_INCLUDE_DIR AND LibPoly_FIND_VERSION)
 
-  # Check version. It is in poly/version.h of the form 
-  # 
+  # Check version. It is in poly/version.h of the form
+  #
   # #define LIBPOLY_VERSION 0.1.1
 
   # Extract version lines from yices.h
@@ -43,7 +43,7 @@ if (LIBPOLY_INCLUDE_DIR AND LibPoly_FIND_VERSION)
     unset(LIBPOLY_LIBRARY CACHE)
   elseif (LibPoly_FIND_VERSION_EXACT AND NOT "${LIBPOLY_VERSION}" VERSION_EQUAL "${LibPoly_FIND_VERSION}")
     unset(LIBPOLY_INCLUDE_DIR CACHE)
-    unset(LIBPOLY_LIBRARY CACHE) 
+    unset(LIBPOLY_LIBRARY CACHE)
   endif()
 endif()
 

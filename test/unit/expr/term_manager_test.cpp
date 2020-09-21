@@ -185,26 +185,26 @@ BOOST_AUTO_TEST_CASE(mk_term) {
   // Make some terms
   term_ref t_true = tm.mk_boolean_constant(true);
   cout << t_true << endl;
-  BOOST_CHECK_EQUAL(tm.term_of(t_true).size(), 0);
+  BOOST_CHECK_EQUAL((int) tm.term_of(t_true).size(), 0);
 
   term_ref t_false = tm.mk_boolean_constant(false);
   cout << t_false << endl;
-  BOOST_CHECK_EQUAL(tm.term_of(t_false).size(), 0);
+  BOOST_CHECK_EQUAL((int) tm.term_of(t_false).size(), 0);
 
   // A variable
   term_ref t_v_bool = tm.mk_variable("x", tm.boolean_type());
   cout << t_v_bool << endl;
-  BOOST_CHECK_EQUAL(tm.term_of(t_v_bool).size(), 1);
+  BOOST_CHECK_EQUAL((int) tm.term_of(t_v_bool).size(), 1);
 
   // Unary
   term_ref t_not = tm.mk_term(TERM_NOT, t_v_bool);
   cout << t_not << endl;
-  BOOST_CHECK_EQUAL(tm.term_of(t_not).size(), 1);
+  BOOST_CHECK_EQUAL((int) tm.term_of(t_not).size(), 1);
 
   // Binary
   term_ref t_or = tm.mk_term(TERM_OR, t_v_bool, t_not);
   cout << t_or << endl;
-  BOOST_CHECK_EQUAL(tm.term_of(t_or).size(), 2);
+  BOOST_CHECK_EQUAL((int) tm.term_of(t_or).size(), 2);
 
   std::vector<term_ref> children;
   children.push_back(t_true);
@@ -214,7 +214,7 @@ BOOST_AUTO_TEST_CASE(mk_term) {
   children.push_back(t_or);
   term_ref t_and = tm.mk_term(TERM_AND, children);
   cout << t_and << endl;
-  BOOST_CHECK_EQUAL(tm.term_of(t_and).size(), 5);
+  BOOST_CHECK_EQUAL((int) tm.term_of(t_and).size(), 5);
 
   term_ref t_v_real_0 = tm.mk_variable("x", tm.real_type());
   cout << t_v_real_0 << endl;
@@ -232,16 +232,16 @@ BOOST_AUTO_TEST_CASE(mk_term) {
 
   term_ref t_sub = tm.mk_term(TERM_SUB, t_v_real_0, t_v_real_1);
   cout << t_sub << endl;
-  BOOST_CHECK_EQUAL(tm.term_of(t_sub).size(), 2);
+  BOOST_CHECK_EQUAL((int) tm.term_of(t_sub).size(), 2);
   term_ref t_div = tm.mk_term(TERM_DIV, t_v_real_1, t_v_real_2);
   cout << t_div << endl;
-  BOOST_CHECK_EQUAL(tm.term_of(t_div).size(), 2);
+  BOOST_CHECK_EQUAL((int) tm.term_of(t_div).size(), 2);
 
   term_ref t_add_children[] = { t_v_real_0, t_v_real_1, t_r1 };
   term_ref t_add = tm.mk_term(TERM_ADD, t_add_children, t_add_children + 3);
   cout << t_add << endl;
   const term& add = tm.term_of(t_add);
-  BOOST_CHECK_EQUAL(add.size(), 3);
+  BOOST_CHECK_EQUAL((int) add.size(), 3);
   for (unsigned i = 0; i < add.size(); ++ i) {
     BOOST_CHECK_EQUAL(add[i], t_add_children[i]);
   }
@@ -250,7 +250,7 @@ BOOST_AUTO_TEST_CASE(mk_term) {
   term_ref t_mul = tm.mk_term(TERM_MUL, t_mul_children, 4);
   cout << t_mul << endl;
   const term& mul = tm.term_of(t_mul);
-  BOOST_CHECK_EQUAL(mul.size(), 4);
+  BOOST_CHECK_EQUAL((int) mul.size(), 4);
   for (unsigned i = 0; i < mul.size(); ++ i) {
     BOOST_CHECK_EQUAL(mul[i], t_mul_children[i]);
   }

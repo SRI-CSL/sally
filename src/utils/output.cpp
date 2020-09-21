@@ -158,11 +158,16 @@ std::ostream& get_msg_stream(bool show_time) {
   }
 
   if (show_time) {
+    char buf[80];
     time_t now = time(0);
+#ifdef __MINGW32__
+    struct tm *tstruct = localtime(&now);
+    strftime(buf, sizeof(buf), "[%Y-%m-%d.%X] ", tstruct);
+#else
     struct tm tstruct;
     localtime_r(&now, &tstruct);
-    char buf[80];
     strftime(buf, sizeof(buf), "[%Y-%m-%d.%X] ", &tstruct);
+#endif
     *result << buf;
   }
 

@@ -18,6 +18,8 @@
 
 #pragma once
 
+#ifdef WITH_GENERIC_SOLVER
+
 #include "smt/solver.h"
 
 #include <vector>
@@ -62,3 +64,5 @@ public:
 
 }
 }
+
+#endif

@@ -16,6 +16,8 @@
  * along with sally.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifdef WITH_GENERIC_SOLVER
+
 #include "expr/term_manager.h"
 #include "expr/gc_relocator.h"
 #include "smt/generic/generic_solver.h"
@@ -309,3 +311,5 @@ void generic_solver::gc_collect(const expr::gc_relocator& gc_reloc) {
 
 }
 }
+
+#endif

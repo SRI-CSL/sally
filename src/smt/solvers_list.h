@@ -53,10 +53,12 @@ sally::smt::solver_data::solver_data() {
   add_module_info<y2o2_info>();
 #endif // WITH_YICES2
 #endif // WITH_OPENSMT2
+#ifdef WITH_GENERIC_SOLVER
   add_module_info<generic_solver_info>();
+#endif
 #ifdef WITH_DREAL
   add_module_info<dreal_info>();
-#endif   
+#endif
 #ifdef WITH_YICES2
 #ifdef WITH_DREAL
   add_module_info<d4y2_info>();

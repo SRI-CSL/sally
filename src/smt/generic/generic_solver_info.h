@@ -18,6 +18,8 @@
 
 #pragma once
 
+#ifdef WITH_GENERIC_SOLVER
+
 #include "smt/generic/generic_solver.h"
 #include "smt/incremental_wrapper.h"
 
@@ -74,3 +76,5 @@ struct generic_solver_info {
 
 }
 }
+
+#endif

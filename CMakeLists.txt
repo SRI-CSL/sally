@@ -28,7 +28,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 # Some settings based on word size
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(ANTLR_CONFIG_FLAG "--enable-64bit")
-else (CMAKE_SIZEOF_VOID_P EQUAL 8) 
+else (CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(ANTLR_CONFIG_FLAG "")
 endif (CMAKE_SIZEOF_VOID_P EQUAL 8)
 
@@ -66,8 +66,13 @@ if (LIBPOLY_FOUND)
   find_package(Yices2 2.6.0)
   if (YICES2_FOUND)
     add_definitions(-DWITH_YICES2)
-    include_directories(${YICES2_INCLUDE_DIR}) 
+    include_directories(${YICES2_INCLUDE_DIR})
   endif()
+endif()
+
+# Add generic solver if not on Windows (windows doesn't support fork)
+if (NOT (${CMAKE_SYSTEM_NAME} STREQUAL "Windows"))
+  add_definitions(-DWITH_GENERIC_SOLVER)
 endif()
 
 # Find MathSAT5
@@ -105,15 +110,18 @@ if (OPENSMT2_FOUND)
 endif()
 
 # Make sure antlr C runtime is here
-include(ExternalProject) 
+include(ExternalProject)
 ExternalProject_Add(
-   libantlr3c-3.4
-   URL "${sally_SOURCE_DIR}/antlr/libantlr3c-3.4.tar.gz"
-   URL_MD5 08b1420129d5dccd0f4461cedf2a0d7d
-   PATCH_COMMAND chmod -R u+w src include 
-         COMMAND patch -p1 -t -N < "${sally_SOURCE_DIR}/antlr/libantlr3c-3.4.patch"
-   CONFIGURE_COMMAND <SOURCE_DIR>/configure ${ANTLR_CONFIG_FLAG} --enable-debuginfo --disable-antlrdebug --prefix=<INSTALL_DIR>
-   BUILD_IN_SOURCE 1
+  libantlr3c-3.4
+    URL "${sally_SOURCE_DIR}/antlr/libantlr3c-3.4.tar.gz"
+    URL_MD5 08b1420129d5dccd0f4461cedf2a0d7d
+    PATCH_COMMAND chmod -R u+w src include
+  COMMAND patch -p1 -t -N < "${sally_SOURCE_DIR}/antlr/libantlr3c-3.4.patch"
+  CONFIGURE_COMMAND
+    <SOURCE_DIR>/configure
+      --host=${ma}
+      ${ANTLR_CONFIG_FLAG} --enable-debuginfo --disable-antlrdebug --prefix=<INSTALL_DIR>
+  BUILD_IN_SOURCE 1
 )
 ExternalProject_Get_Property(libantlr3c-3.4 INSTALL_DIR)
 set(ANTLR3C_INCLUDE_DIR "${INSTALL_DIR}/include")
@@ -125,11 +133,13 @@ set_property(TARGET libantlr3c PROPERTY IMPORTED_LOCATION ${ANTLR3C_LIBRARY_DIR}
 # The antl3 binary
 set(ANTLR "${sally_SOURCE_DIR}/antlr/antlr3")
 
-# Add includes 
+# Add includes
 include_directories(${sally_SOURCE_DIR}/src ${ANTLR3C_INCLUDE_DIR})
 
 # Configure the subdirectories
 add_subdirectory(src)
 
 # Add the test project
-add_subdirectory(test)
+if (NOT CMAKE_CROSSCOMPILING)
+  add_subdirectory(test)
+endif()
