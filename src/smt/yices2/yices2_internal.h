@@ -54,6 +54,12 @@ class yices2_internal {
   /** Yices real type */
   static type_t s_real_type;
 
+  /** Enum types by size */
+  std::map<size_t, type_t> d_enum_types;
+
+  /** Returns the enumerated type for given size */
+  type_t yices2_enum_type(size_t size);
+
   /** Yices context (dpllt) */
   context_t *d_ctx_dpllt;
 

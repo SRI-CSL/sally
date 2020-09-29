@@ -55,6 +55,7 @@ command returns [cmd::command* cmd = 0]
 /** Parser an internal command */
 internal_command
   : define_constant
+  | define_enum_type
   ;
 
 /** Parses a system definition command */
@@ -207,6 +208,22 @@ define_constant
     symbol[id, parser::MCMT_VARIABLE, false]
     c = term { STATE->set_variable(id, c); }
     ')'
+  ;
+  
+/** Parse a declaration of an enumerated type */
+define_enum_type
+@declarations {
+  std::string type_name;
+  std::string enum_id;
+  std::vector<std::string> values;
+}  
+  : '(' 'define-enumeration'
+    symbol[type_name, parser::MCMT_VARIABLE, false]
+      '(' 
+        (symbol[enum_id, parser::MCMT_VARIABLE, false] { values.push_back(enum_id); })+
+      ')'
+    ')'
+    { STATE->define_enumeration(type_name, values); }
   ;
 
 /** A state formula */

@@ -309,6 +309,10 @@ bool term_manager_internal::is_record_type(term_ref t) const {
   return term_of(t).d_op == TYPE_RECORD;
 }
 
+bool term_manager_internal::is_enum_type(term_ref t) const {
+  return  term_of(t).d_op == TYPE_ENUM;
+}
+
 bool term_manager_internal::is_type(const term& t) {
   switch (t.op()) {
   case TYPE_TYPE:

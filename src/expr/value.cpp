@@ -42,6 +42,7 @@ value::value(const value& v)
 , d_b(v.d_b)
 , d_bv(v.d_bv)
 , d_q(v.d_q)
+, d_ev(v.d_ev)
 {
 }
 
@@ -58,6 +59,12 @@ value::value(const bitvector& bv)
 , d_bv(bv)
 {
 }
+
+value::value(const enum_value& ev)
+: d_type(VALUE_ENUM)
+, d_b(false)
+, d_ev(ev)
+{}
 
 value::value(const term_manager& tm, term_ref t)
 : d_type(VALUE_NONE)
@@ -78,6 +85,10 @@ value::value(const term_manager& tm, term_ref t)
     d_q = tm.get_rational_constant(t_term);
     d_type = VALUE_RATIONAL;
     break;
+  case CONST_ENUM:
+    d_ev = tm.get_enum_constant(t_term);
+    d_type = VALUE_ENUM;
+    break;
   default:
     assert(false);
   }
@@ -89,6 +100,7 @@ value& value::operator = (const value& v) {
     d_b = v.d_b;
     d_bv = v.d_bv;
     d_q = v.d_q;
+    d_ev = v.d_ev;
   }
   return *this;
 }
@@ -108,6 +120,8 @@ bool value::operator == (const value& v) const {
     return d_bv == v.d_bv;
   case VALUE_RATIONAL:
     return d_q == v.d_q;
+  case VALUE_ENUM:
+    return d_ev == v.d_ev;
   default:
     return false;
   }
@@ -127,6 +141,8 @@ size_t value::hash() const {
     return d_bv.hash();
   case VALUE_RATIONAL:
     return d_q.hash();
+  case VALUE_ENUM:
+    return d_ev.hash();
   default:
     return 0;
   }
@@ -146,6 +162,9 @@ void value::to_stream(std::ostream& out) const {
   case VALUE_RATIONAL:
     out << d_q;
     break;
+  case VALUE_ENUM:
+    out << d_ev;
+    break;
   }
 }
 
@@ -164,6 +183,11 @@ const rational& value::get_rational() const {
   return d_q;
 }
 
+const enum_value& value::get_enum_value() const {
+  assert(is_enum_value());
+  return d_ev;
+}
+
 term_ref value::to_term(term_manager& tm) const {
   switch (d_type) {
   case VALUE_NONE:
@@ -174,6 +198,8 @@ term_ref value::to_term(term_manager& tm) const {
     return tm.mk_bitvector_constant(d_bv);
   case VALUE_RATIONAL:
     return tm.mk_rational_constant(d_q);
+  case VALUE_ENUM:
+    return tm.mk_enum_constant(d_ev);
   }
   return term_ref();
 }

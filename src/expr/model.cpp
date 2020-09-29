@@ -106,6 +106,8 @@ value model::get_variable_value(expr::term_ref var, const expr::term_manager::su
       case TYPE_BITVECTOR:
         v = value(bitvector(d_tm.get_bitvector_size(type), 0));
         break;
+      case TYPE_ENUM:
+        v = value(d_tm.get_enum_constant(0, type));
       default:
         assert(false);
       }
@@ -277,6 +279,9 @@ public:
       }
     }
     break;
+    case CONST_ENUM:
+      v = d_tm.get_enum_constant(d_tm.term_of(t));
+      break;
     case CONST_RATIONAL:
       v = d_tm.get_rational_constant(d_tm.term_of(t));
       break;

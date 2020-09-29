@@ -93,6 +93,9 @@ public:
   /** Pop the locate declarations */
   void pop_scope();
 
+  /** Defines enumeration */
+  void define_enumeration(std::string name, const std::vector<std::string>& values);
+
   /** Returns the type with the given id */
   expr::term_ref get_type(std::string id) const;
 

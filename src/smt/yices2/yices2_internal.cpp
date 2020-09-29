@@ -405,6 +405,22 @@ term_t yices2_internal::mk_yices2_term(expr::term_op op, size_t n, term_t* child
   return result;
 }
 
+type_t yices2_internal::yices2_enum_type(size_t size) {
+  std::map<size_t, type_t>::const_iterator find = d_enum_types.find(size);
+  if (find == d_enum_types.end()) {
+    type_t type = yices_new_scalar_type(size);
+    d_enum_types[size] = type;
+    // set the names
+    for (unsigned i = 0; i < size; ++ i) {
+
+    }
+
+    return type;
+  } else {
+    return find->second;
+  }
+}
+
 type_t yices2_internal::to_yices2_type(expr::term_ref ref) {
 
   type_t result = NULL_TERM;
@@ -417,6 +433,11 @@ type_t yices2_internal::to_yices2_type(expr::term_ref ref) {
   case expr::TYPE_INTEGER:
     result = s_int_type;
     break;
+  case expr::TYPE_ENUM: {
+    size_t size = d_tm.get_enum_type_size(ref);
+    result = yices2_enum_type(size);
+    break;
+  }
   case expr::TYPE_REAL:
     result = s_real_type;
     break;
@@ -475,10 +496,13 @@ public:
     }
     // Otherwise, visit any meaningful children
     expr::term_op op = d_tm.term_of(t).op();
-    if (op == expr::VARIABLE) {
+    switch (op) {
+    case expr::VARIABLE:
+    case expr::TYPE_ENUM:
+    case expr::CONST_ENUM:
       // Don't go into the variable children (types)
       return expr::VISIT_AND_BREAK;
-    } else {
+    default:
       return expr::VISIT_AND_CONTINUE;
     }
   }
@@ -507,6 +531,12 @@ public:
     case expr::CONST_BITVECTOR: {
       expr::bitvector bv = d_tm.get_bitvector_constant(t);
       result = yices_bvconst_mpz(bv.size(), bv.mpz().get_mpz_t());
+      break;
+    }
+    case expr::CONST_ENUM: {
+      size_t k = d_tm.get_enum_constant_value(t);
+      expr::term_ref enum_type = d_tm.type_of(t);
+      result = yices_constant(d_yices.to_yices2_type(enum_type), k);
       break;
     }
     case expr::TERM_ITE:
@@ -576,7 +606,7 @@ public:
 
     if (result < 0) {
       std::stringstream ss;
-      ss << "Yices error (term creation): " << yices2_internal::yices_error();
+      ss << "Yices error (term creation) for " << t_op << ": " << yices2_internal::yices_error();
       throw exception(ss.str());
     }
 
@@ -1341,7 +1371,8 @@ expr::model::ref yices2_internal::get_model() {
     expr::term_ref var_type = d_tm.type_of(var);
 
     expr::value var_value;
-    switch (d_tm.term_of(var_type).op()) {
+    expr::term_op op = d_tm.term_of(var_type).op();
+    switch (op) {
     case expr::TYPE_BOOL: {
       int32_t value;
       ret = yices_get_bool_value(yices_model, yices_var, &value);
@@ -1401,6 +1432,19 @@ expr::model::ref yices2_internal::get_model() {
       expr::bitvector bv = bitvector_from_int32(size, value);
       var_value = expr::value(bv);
       delete[] value;
+      break;
+    }
+    case expr::TYPE_ENUM: {
+      int32_t a = 0;
+      ret = yices_get_scalar_value(yices_model, yices_var, &a);
+      if (ret < 0) {
+        throw exception("Error obtaining scalar value from Yices2 model.");
+      }
+      std::vector<std::string> values;
+      d_tm.get_enum_type_values(var_type, values);
+      expr::enum_value enum_value(a, values);
+      var_value = expr::value(enum_value);
+      std::cerr << var_value << std::endl;
       break;
     }
     default:

@@ -48,6 +48,14 @@ string mcmt_state::token_text(pANTLR3_COMMON_TOKEN token) {
   return string((const char*) start, size);
 }
 
+void mcmt_state::define_enumeration(std::string name, const std::vector<std::string>& values) {
+  term_ref type = tm().enum_type(values);
+  d_types.add_entry(name, term_ref_strong(tm(), type));
+  for (unsigned i = 0; i < values.size(); ++ i) {
+    set_variable(values[i], tm().mk_enum_constant(i, type));
+  }
+}
+
 term_ref mcmt_state::get_type(std::string id) const {
   if (!d_types.has_entry(id)) {
     throw parser_exception(id + " undeclared");

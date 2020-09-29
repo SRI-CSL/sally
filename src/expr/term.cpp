@@ -83,6 +83,7 @@ void term::mk_let_cache(term_manager& tm, expr_let_cache& let_cache, std::vector
   case CONST_RATIONAL:
   case CONST_BITVECTOR:
   case CONST_STRING:
+  case CONST_ENUM:
     record_let = false;
     break;
   case TERM_EQ:

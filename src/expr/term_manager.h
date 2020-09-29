@@ -27,6 +27,11 @@
 #include <vector>
 #include <boost/unordered_map.hpp>
 
+#include "expr/bitvector.h"
+#include "expr/enum_value.h"
+#include "expr/integer.h"
+#include "expr/rational.h"
+
 #include <iosfwd>
 
 namespace sally {
@@ -127,6 +132,9 @@ public:
 
   /** Get the size of the enumeration */
   size_t get_enum_type_size(term_ref enum_type) const;
+
+  /** Get the values of the enumeration */
+  void get_enum_type_values(term_ref enum_type, std::vector<std::string>& out) const;
 
   /** Get the size of a bitvector type */
   size_t get_bitvector_type_size(term_ref bv_type) const;
@@ -317,13 +325,28 @@ public:
   term_ref mk_function_application(term_ref fun, const std::vector<term_ref>& args);
 
   /** Make an enum constant */
+  term_ref mk_enum_constant(const enum_value& value);
+
+  /** Make an enum constant */
   term_ref mk_enum_constant(std::string value, term_ref type);
 
   /** Make an enum constant */
   term_ref mk_enum_constant(size_t value, term_ref type);
 
+  /** Return the enum constant value */
+  enum_value get_enum_constant(const term& t) const;
+
+  /** Return the enum constant value */
+  enum_value get_enum_constant(size_t k, term_ref type) const;
+
   /** Get the enum constant id */
   size_t get_enum_constant_value(term_ref t) const;
+
+  /** Get the enum constant id */
+  size_t get_enum_constant_value(const term& t) const;
+
+  /** get the enum id of given type */
+  std::string get_enum_constant_id(size_t k, term_ref type) const;
 
   /** get the enum constant value */
   std::string get_enum_constant_id(term_ref t) const;

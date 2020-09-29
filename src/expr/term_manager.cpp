@@ -367,6 +367,26 @@ term_ref term_manager::mk_function_application(term_ref fun, const std::vector<t
   return result;
 }
 
+term_ref term_manager::mk_enum_constant(const enum_value& value) {
+  term_ref type = enum_type(value.values());
+  return mk_enum_constant(value.index(), type);
+}
+
+enum_value term_manager::get_enum_constant(const term& t) const {
+  assert(t.op() == CONST_ENUM);
+  size_t k = get_enum_constant_value(t);
+  std::vector<std::string> values;
+  term_ref type = type_of(t);
+  get_enum_type_values(type, values);
+  return enum_value(k, values);
+}
+
+enum_value term_manager::get_enum_constant(size_t k, term_ref type) const {
+  std::vector<std::string> values;
+  get_enum_type_values(type, values);
+  return enum_value(k, values);
+}
+
 term_ref term_manager::mk_enum_constant(std::string value, term_ref type) {
   const term& type_term = term_of(type);
   assert(type_term.op() == TYPE_ENUM);
@@ -389,6 +409,16 @@ term_ref term_manager::mk_enum_constant(size_t value, term_ref type) {
 size_t term_manager::get_enum_constant_value(term_ref t) const {
   assert(term_of(t).op() == CONST_ENUM);
   return d_tm->payload_of<size_t>(t);
+}
+
+size_t term_manager::get_enum_constant_value(const term& t) const {
+  return d_tm->payload_of<size_t>(t);
+}
+
+std::string term_manager::get_enum_constant_id(size_t k, term_ref type) const {
+  const term& type_term = term_of(type);
+  const term& string_term = term_of(type_term[k]);
+  return get_string_constant(string_term);
 }
 
 std::string term_manager::get_enum_constant_id(term_ref t) const {
@@ -474,6 +504,15 @@ size_t term_manager::get_enum_type_size(term_ref enum_type) const {
   const term& enum_type_term = d_tm->term_of(enum_type);
   assert(enum_type_term.op() == TYPE_ENUM);
   return enum_type_term.size();
+}
+
+void term_manager::get_enum_type_values(term_ref enum_type, std::vector<std::string>& out) const {
+  const term& enum_type_term = d_tm->term_of(enum_type);
+  assert(enum_type_term.op() == TYPE_ENUM);
+  for (unsigned i = 0; i < enum_type_term.size(); ++ i) {
+    const term& string_term = term_of(enum_type_term[i]);
+    out.push_back(get_string_constant(string_term));
+  }
 }
 
 term_ref term_manager::record_type(const id_to_term_map& fields) {
