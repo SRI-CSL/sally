@@ -318,6 +318,8 @@ term returns [expr::term_ref t = expr::term_ref()]
   	  t = STATE->tm().mk_term(expr::TERM_NOT, t);
     }
     ')'
+   // Sally syntactic sugar functions
+  | '(' 'distinct' term_list[children] ')' { t = STATE->mk_distinct(children); }
   ;
 
 let_assignments

@@ -212,6 +212,20 @@ expr::term_ref mcmt_state::mk_cond(const std::vector<expr::term_ref>& children) 
   return result;
 }
 
+expr::term_ref mcmt_state::mk_distinct(const std::vector<expr::term_ref>& children) {
+  assert(children.size() >= 2);
+
+  std::vector<expr::term_ref> conjuncts;
+  for (unsigned i = 0; i < children.size(); ++ i) {
+    for (unsigned j = i + 1; j < children.size(); ++ j) {
+      term_ref eq = tm().mk_term(expr::TERM_EQ, children[i], children[j]);
+      conjuncts.push_back(tm().mk_not(eq));
+    }
+  }
+  return tm().mk_and(conjuncts);
+}
+
+
 bool mcmt_state::lsal_extensions() const {
   return ctx().get_options().get_bool("lsal-extensions");
 }
