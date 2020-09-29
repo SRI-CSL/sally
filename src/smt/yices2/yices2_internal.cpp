@@ -48,7 +48,7 @@ std::string  yices2_internal::yices_error(void) {
   return retval;
 }
 
-  
+
 void yices2_internal::check_error(int ret, const char* error_msg) const {
   if (ret < 0) {
     std::stringstream ss;
@@ -90,7 +90,7 @@ yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
   d_bv1 = expr::term_ref_strong(d_tm, d_tm.mk_bitvector_constant(expr::bitvector(1, 1)));
 
   // The context
-  int32_t ret = 0; 
+  int32_t ret = 0;
 
   std::string mode = "hybrid";
   if (opts.has_option("yices2-mode")) {
@@ -1444,7 +1444,6 @@ expr::model::ref yices2_internal::get_model() {
       d_tm.get_enum_type_values(var_type, values);
       expr::enum_value enum_value(a, values);
       var_value = expr::value(enum_value);
-      std::cerr << var_value << std::endl;
       break;
     }
     default:
