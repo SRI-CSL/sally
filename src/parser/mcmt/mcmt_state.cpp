@@ -225,6 +225,23 @@ expr::term_ref mcmt_state::mk_distinct(const std::vector<expr::term_ref>& childr
   return tm().mk_and(conjuncts);
 }
 
+expr::term_ref mcmt_state::mk_min(const std::vector<expr::term_ref>& children) {
+  assert(children.size() > 0);
+  expr::term_ref min = children[0];
+  for (unsigned i = 1; i < children.size(); ++ i) {
+    min = tm().mk_term(expr::TERM_ITE, tm().mk_term(expr::TERM_LT, min, children[i]), min, children[i]);
+  }
+  return min;
+}
+
+expr::term_ref mcmt_state::mk_max(const std::vector<expr::term_ref>& children) {
+  assert(children.size() > 0);
+  expr::term_ref max = children[0];
+  for (unsigned i = 1; i < children.size(); ++ i) {
+    max = tm().mk_term(expr::TERM_ITE, tm().mk_term(expr::TERM_GT, max, children[i]), max, children[i]);
+  }
+  return max;
+}
 
 bool mcmt_state::lsal_extensions() const {
   return ctx().get_options().get_bool("lsal-extensions");

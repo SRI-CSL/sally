@@ -120,6 +120,12 @@ public:
   /** Make a distinct term */
   expr::term_ref mk_distinct(const std::vector<expr::term_ref>& children);
 
+  /** Make a distinct term */
+  expr::term_ref mk_min(const std::vector<expr::term_ref>& children);
+
+  /** Make a distinct term */
+  expr::term_ref mk_max(const std::vector<expr::term_ref>& children);
+
   /** Get the string of a token begin parsed */
   static
   std::string token_text(pANTLR3_COMMON_TOKEN token);
