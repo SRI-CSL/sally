@@ -321,7 +321,9 @@ term returns [expr::term_ref t = expr::term_ref()]
    // Sally syntactic sugar functions
   | '(' 'distinct' term_list[children] ')' { t = STATE->mk_distinct(children); }
   | '(' 'sally.min' term_list[children] ')' { t = STATE->mk_min(children); }
+  | '(' 'sally.min_if' term_list[children] ')' { t = STATE->mk_min_if(children); }
   | '(' 'sally.max' term_list[children] ')' { t = STATE->mk_max(children); }
+  | '(' 'sally.max_if' term_list[children] ')' { t = STATE->mk_max_if(children); }
   ;
 
 let_assignments

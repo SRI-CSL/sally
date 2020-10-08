@@ -120,11 +120,25 @@ public:
   /** Make a distinct term */
   expr::term_ref mk_distinct(const std::vector<expr::term_ref>& children);
 
-  /** Make a distinct term */
+  /** Make a min(x1, ..., xn) term */
   expr::term_ref mk_min(const std::vector<expr::term_ref>& children);
 
-  /** Make a distinct term */
+  /**
+   * Make a min_if(c1, x1, ..., cn, xn, default) term:
+   * - if none of c1, ..., cn is true return default
+   * - otherwise return smallest x1 with c1 true
+   */
+  expr::term_ref mk_min_if(const std::vector<expr::term_ref>& children);
+
+  /** Make a max(x1, ..., xn) term */
   expr::term_ref mk_max(const std::vector<expr::term_ref>& children);
+
+  /**
+   * Make a max_if(c1, x1, ..., cn, xn, default) term:
+   * - if not of c1, ..., cn is true return default
+   * - otherwise return biggest x1 with c1 true
+   */
+  expr::term_ref mk_max_if(const std::vector<expr::term_ref>& children);
 
   /** Get the string of a token begin parsed */
   static

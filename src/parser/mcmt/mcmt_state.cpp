@@ -234,11 +234,69 @@ expr::term_ref mcmt_state::mk_min(const std::vector<expr::term_ref>& children) {
   return min;
 }
 
+expr::term_ref mcmt_state::mk_min_if(const std::vector<expr::term_ref>& children) {
+  if (children.size() < 3) {
+    throw parser_exception("sally.min_if needs at least 3 children");
+  }
+  if (children.size() % 2 == 0) {
+    throw parser_exception("sally.min_if needs odd number of children");
+  }
+  expr::term_ref def = children.back();
+  expr::term_ref min = tm().mk_term(expr::TERM_ITE, children[0], children[1], def);
+  expr::term_ref has_min = children[0];
+  for (unsigned i = 2; i+1 < children.size(); i += 2) {
+    min = tm().mk_term(expr::TERM_ITE,
+        has_min,
+          tm().mk_term(expr::TERM_ITE,
+              children[i],
+              tm().mk_term(expr::TERM_ITE, tm().mk_term(expr::TERM_LT, children[i+1], min), children[i+1], min),
+              min
+          ),
+          tm().mk_term(expr::TERM_ITE,
+              children[i],
+              children[i+1],
+              def
+          )
+    );
+    has_min = tm().mk_term(expr::TERM_OR, has_min, children[i]);
+  }
+  return min;
+}
+
 expr::term_ref mcmt_state::mk_max(const std::vector<expr::term_ref>& children) {
   assert(children.size() > 0);
   expr::term_ref max = children[0];
   for (unsigned i = 1; i < children.size(); ++ i) {
     max = tm().mk_term(expr::TERM_ITE, tm().mk_term(expr::TERM_GT, max, children[i]), max, children[i]);
+  }
+  return max;
+}
+
+expr::term_ref mcmt_state::mk_max_if(const std::vector<expr::term_ref>& children) {
+  if (children.size() < 3) {
+    throw parser_exception("sally.min_if needs at least 3 children");
+  }
+  if (children.size() % 2 == 0) {
+    throw parser_exception("sally.min_if needs odd number of children");
+  }
+  expr::term_ref def = children.back();
+  expr::term_ref max = tm().mk_term(expr::TERM_ITE, children[0], children[1], def);
+  expr::term_ref has_max = children[0];
+  for (unsigned i = 2; i+1 < children.size(); i += 2) {
+    max = tm().mk_term(expr::TERM_ITE,
+        has_max,
+          tm().mk_term(expr::TERM_ITE,
+              children[i],
+              tm().mk_term(expr::TERM_ITE, tm().mk_term(expr::TERM_GT, children[i+1], max), children[i+1], max),
+              max
+          ),
+          tm().mk_term(expr::TERM_ITE,
+              children[i],
+              children[i+1],
+              def
+          )
+    );
+    has_max = tm().mk_term(expr::TERM_OR, has_max, children[i]);
   }
   return max;
 }
