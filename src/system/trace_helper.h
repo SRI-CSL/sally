@@ -96,6 +96,12 @@ class trace_helper : public expr::gc_participant {
   /** Make an equality x = v, where v is the value of x in the model */
   expr::term_ref mk_equality(expr::term_ref x, expr::model::ref m);
 
+  /** To stream with regular MCMT language */
+  void to_stream_mcmt(std::ostream& out) const;
+
+  /** To stream using CSV */
+  void to_stream_tab(std::ostream& out) const;
+
 public:
 
   /** Get the size of the trace */

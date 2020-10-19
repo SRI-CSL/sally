@@ -167,6 +167,7 @@ void term::to_stream(std::ostream& out) const {
   // Print
   switch (lang) {
   case output::MCMT:
+  case output::MCMT_TAB:
   case output::HORN: {
     if (output::get_use_lets(out)) {
       std::vector<expr::term_ref> definitions;

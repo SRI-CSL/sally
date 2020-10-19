@@ -98,6 +98,7 @@ void bitvector::to_stream(std::ostream& out) const {
   output::language lang = output::get_output_language(out);
   switch (lang) {
   case output::MCMT:
+  case output::MCMT_TAB:
   case output::HORN:
   {
     out << "(_ bv";

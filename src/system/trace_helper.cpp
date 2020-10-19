@@ -187,8 +187,7 @@ void trace_helper::set_model(expr::model::ref m, size_t start, size_t end) {
   d_model_size = std::max(end + 1, d_model_size);
 }
 
-void trace_helper::to_stream(std::ostream& out) const {
-
+void trace_helper::to_stream_mcmt(std::ostream& out) const {
   d_state_type->use_namespace();
   d_state_type->use_namespace(state_type::STATE_CURRENT);
   d_state_type->use_namespace(state_type::STATE_INPUT);
@@ -202,6 +201,8 @@ void trace_helper::to_stream(std::ostream& out) const {
   // Output the values
   for (size_t k = 0; k < d_model_size; ++ k) {
 
+    out << "  ;; State at " << k << std::endl;
+
     // The state variables
     out << "  (state" << std::endl;
     std::vector<expr::term_ref> state_vars_k;
@@ -213,7 +214,8 @@ void trace_helper::to_stream(std::ostream& out) const {
     out << "  )" << std::endl;
 
     // The input variables (except the last one)
-    if (k + 1 < d_model_size) {
+    if (k + 1 < d_model_size && input_vars.size() > 0) {
+      out << "  ;; Inputs for " << k << " -> " << k + 1 << std::endl;
       out << "  (input" << std::endl;
       std::vector<expr::term_ref> input_vars_k;
       get_struct_variables(d_input_variables_structs[k], input_vars_k);
@@ -231,6 +233,82 @@ void trace_helper::to_stream(std::ostream& out) const {
   d_state_type->tm().pop_namespace();
   d_state_type->tm().pop_namespace();
   d_state_type->tm().pop_namespace();
+}
+
+void trace_helper::to_stream_tab(std::ostream& out) const {
+  d_state_type->use_namespace();
+  d_state_type->use_namespace(state_type::STATE_CURRENT);
+  d_state_type->use_namespace(state_type::STATE_INPUT);
+
+  // Separator to use
+  std::string sep = "\t";
+
+  // Variables to use for printing names
+  const std::vector<expr::term_ref> state_vars = d_state_type->get_variables(state_type::STATE_CURRENT);
+  const std::vector<expr::term_ref> input_vars = d_state_type->get_variables(state_type::STATE_INPUT);
+  size_t total_vars = state_vars.size() + input_vars.size();
+
+  // Step
+  out << "k" << sep;
+
+  // Print out all the variable names
+  for (size_t i = 0; i < state_vars.size(); ++ i) {
+    out << state_vars[i];
+    if (i + 1 != total_vars) {
+      out << sep;
+    }
+  }
+  for (size_t i = 0; i < input_vars.size(); ++ i) {
+    out << input_vars[i];
+    if (state_vars.size() + i + 1 != total_vars) {
+      out << sep;
+    }
+  }
+  out << std::endl;
+
+  // Output the values
+  for (size_t k = 0; k < d_model_size; ++ k) {
+
+    out << k << sep;
+
+    // The state variables
+    std::vector<expr::term_ref> state_vars_k;
+    get_struct_variables(d_state_variables_structs[k], state_vars_k);
+    assert(state_vars.size() == state_vars_k.size());
+    for (size_t i = 0; i < state_vars_k.size(); ++ i) {
+      out << d_model->get_variable_value(state_vars_k[i]);
+      if (i + 1 != total_vars) {
+        out << sep;
+      }
+    }
+
+    // The input variables (except the last one)
+    if (k + 1 < d_model_size && input_vars.size() > 0) {
+      std::vector<expr::term_ref> input_vars_k;
+      get_struct_variables(d_input_variables_structs[k], input_vars_k);
+      assert(input_vars.size() == input_vars_k.size());
+      for (size_t i = 0; i < input_vars_k.size(); ++ i) {
+        out << d_model->get_variable_value(input_vars_k[i]);
+        if (state_vars.size() + i + 1 != total_vars) {
+          out << sep;
+        }
+      }
+    }
+
+    out << std::endl;
+  }
+
+  d_state_type->tm().pop_namespace();
+  d_state_type->tm().pop_namespace();
+  d_state_type->tm().pop_namespace();
+}
+
+void trace_helper::to_stream(std::ostream& out) const {
+  if (output::get_output_language(out) == output::MCMT_TAB) {
+    to_stream_tab(out);
+  } else {
+    to_stream_mcmt(out);
+  }
 }
 
 bool trace_helper::is_true_in_frame(size_t frame, expr::term_ref f, expr::model::ref model) {

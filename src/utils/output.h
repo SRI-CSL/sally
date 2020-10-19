@@ -36,6 +36,8 @@ enum language {
   NUXMV,
   // Horn clause/SMT2
   HORN,
+  // CSV: MCMT for terms, CSV for traces
+  MCMT_TAB,
   // Unknown
   UNKNOWN
 };

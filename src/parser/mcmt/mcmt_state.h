@@ -54,6 +54,9 @@ class mcmt_state {
   /** Symbol table for types */
   utils::symbol_table<expr::term_ref_strong> d_types;
 
+  /** Current state type */
+  const system::state_type* d_current_state_type;
+
 public:
 
   /** Construct the parser state */
@@ -69,6 +72,12 @@ public:
   system::state_type* mk_state_type(std::string id,
       const std::vector<std::string>& state_vars, const std::vector<expr::term_ref>& state_types,
       const std::vector<std::string>& input_vars, const std::vector<expr::term_ref>& input_types) const;
+
+  /** Mark the current state type in use (use 0 to unset) */
+  void set_current_state_type(const system::state_type* state_type) { d_current_state_type = state_type; }
+
+  /** Get the current state type */
+  const system::state_type* get_current_state_type() const { return d_current_state_type; }
 
   /**
    * Use the state type, i.e. declare the variables var_class.x, var_class.y, ...
@@ -139,6 +148,17 @@ public:
    * - otherwise return biggest x1 with c1 true
    */
   expr::term_ref mk_max_if(const std::vector<expr::term_ref>& children);
+
+  /**
+   * Given a sequence of state variables, make a noop relation:
+   *
+   * (and
+   *   (= next.children[0] state.children[0])
+   *   ...
+   *   (= next.children[n-1] state.children[n-1])
+   * )
+   */
+  expr::term_ref mk_noop(const std::vector<expr::term_ref>& children);
 
   /** Get the string of a token begin parsed */
   static

@@ -172,6 +172,7 @@ std::ostream& get_msg_stream(bool show_time) {
 std::string language_to_string(language lang) {
   switch (lang) {
   case MCMT: return "mcmt";
+  case MCMT_TAB: return "mcmt-tab";
   case NUXMV: return "nuxmv";
   case HORN: return "horn";
   default:
@@ -181,6 +182,7 @@ std::string language_to_string(language lang) {
 
 language language_from_string(std::string lang) {
   if (lang == "mcmt") return MCMT;
+  if (lang == "mcmt-tab") return MCMT_TAB;
   if (lang == "nuxmv") return NUXMV;
   if (lang == "horn") return HORN;
   throw exception(std::string("Unsupported language: ") + lang);

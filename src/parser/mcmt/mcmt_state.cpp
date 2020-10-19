@@ -34,6 +34,7 @@ mcmt_state::mcmt_state(const system::context& context)
 : d_context(context)
 , d_variables("local vars")
 , d_types("types")
+, d_current_state_type(0)
 {
   // Add the basic types
   term_manager& tm = context.tm();
@@ -299,6 +300,21 @@ expr::term_ref mcmt_state::mk_max_if(const std::vector<expr::term_ref>& children
     has_max = tm().mk_term(expr::TERM_OR, has_max, children[i]);
   }
   return max;
+}
+
+expr::term_ref mcmt_state::mk_noop(const std::vector<expr::term_ref>& children) {
+  assert(d_current_state_type);
+  std::vector<expr::term_ref> conjuncts;
+  for (unsigned i = 0; i < children.size(); ++ i) {
+    if (!d_current_state_type->is_state_formula(children[i])) {
+      throw parser_exception("sally.mk_noop can only take state terms");
+    }
+    expr::term_ref lhs = children[i];
+    expr::term_ref rhs = d_current_state_type->change_formula_vars(system::state_type::STATE_CURRENT, system::state_type::STATE_NEXT, lhs);
+    expr::term_ref eq = tm().mk_term(expr::TERM_EQ, lhs, rhs);
+    conjuncts.push_back(eq);
+  }
+  return tm().mk_and(conjuncts);
 }
 
 bool mcmt_state::lsal_extensions() const {

@@ -317,7 +317,7 @@ engine::result translator::query(const system::transition_system* ts, const syst
     to_stream_horn(std::cout);
     break;
   default:
-    throw exception("Unsupported language");
+    throw exception("Unsupported translation language");
   }
 
   return SILENT;

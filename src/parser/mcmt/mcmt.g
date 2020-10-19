@@ -102,10 +102,12 @@ define_states returns [cmd::command* cmd = 0]
   : '(' 'define-states'
         symbol[id, parser::MCMT_STATE_FORMULA, false]
         symbol[type_id, parser::MCMT_STATE_TYPE, true] {
-        	state_type = STATE->ctx().get_state_type(type_id);
+          state_type = STATE->ctx().get_state_type(type_id);
+          STATE->set_current_state_type(state_type);
         }
         sf = state_formula[state_type] {
-        	$cmd = new cmd::define_states(id, sf);
+          $cmd = new cmd::define_states(id, sf);
+          STATE->set_current_state_type(0);
         }
     ')'
   ;
@@ -120,10 +122,12 @@ define_transition returns [cmd::command* cmd = 0]
   : '(' 'define-transition'
       symbol[id, parser::MCMT_TRANSITION_FORMULA, false]
       symbol[type_id, parser::MCMT_STATE_TYPE, true] {
-          state_type = STATE->ctx().get_state_type(type_id);
+        state_type = STATE->ctx().get_state_type(type_id);
+        STATE->set_current_state_type(state_type);  
       }
       f = state_transition_formula[state_type] {
-          $cmd = new cmd::define_transition(id, f);
+        $cmd = new cmd::define_transition(id, f);
+        STATE->set_current_state_type(0);  
       }
     ')'
   ;
@@ -139,12 +143,16 @@ define_transition_system returns [cmd::command* cmd = 0]
 }
   : '(' 'define-transition-system'
       symbol[id, parser::MCMT_TRANSITION_SYSTEM, false]
-      symbol[type_id, parser::MCMT_STATE_TYPE, true] { state_type = STATE->ctx().get_state_type(type_id); }
+      symbol[type_id, parser::MCMT_STATE_TYPE, true] { 
+        state_type = STATE->ctx().get_state_type(type_id); 
+        STATE->set_current_state_type(state_type);
+      }
       initial_states = state_formula[state_type]
       transition_relation = state_transition_formula[state_type]
       {
       	system::transition_system* T = new system::transition_system(state_type, initial_states, transition_relation);
         $cmd = new cmd::define_transition_system(id, T);
+        STATE->set_current_state_type(0);
       }
     ')'
   ;
@@ -157,10 +165,12 @@ assume returns [cmd::command* cmd = 0]
 }
   : '(' 'assume'
     symbol[id, parser::MCMT_TRANSITION_SYSTEM, true] {
-        state_type = STATE->ctx().get_transition_system(id)->get_state_type();
+      state_type = STATE->ctx().get_transition_system(id)->get_state_type();
+      STATE->set_current_state_type(state_type);
     }
     f = state_formula[state_type] {
-    	$cmd = new cmd::assume(STATE->ctx(), id, f);
+      $cmd = new cmd::assume(STATE->ctx(), id, f);
+      STATE->set_current_state_type(0);
     }
     ')'
   ;
@@ -173,10 +183,12 @@ assume_input returns [cmd::command* cmd = 0]
 }
   : '(' 'assume-input'
     symbol[id, parser::MCMT_TRANSITION_SYSTEM, true] {
-        state_type = STATE->ctx().get_transition_system(id)->get_state_type();
+      state_type = STATE->ctx().get_transition_system(id)->get_state_type();
+      STATE->set_current_state_type(state_type);
     }
     f = input_formula[state_type] {
-        $cmd = new cmd::assume(STATE->ctx(), id, f);
+      $cmd = new cmd::assume(STATE->ctx(), id, f);
+      STATE->set_current_state_type(0);
     }
     ')'
   ;
@@ -190,11 +202,13 @@ query returns [cmd::command* cmd = 0]
 }
   : '(' 'query'
     symbol[id, parser::MCMT_TRANSITION_SYSTEM, true] {
-        state_type = STATE->ctx().get_transition_system(id)->get_state_type();
+      state_type = STATE->ctx().get_transition_system(id)->get_state_type();
+      STATE->set_current_state_type(state_type);    
     }
     ( f = state_formula[state_type] { queries.push_back(f); } )+
     {
-      	$cmd = new cmd::query(STATE->ctx(), id, queries);
+      $cmd = new cmd::query(STATE->ctx(), id, queries);
+      STATE->set_current_state_type(0);
     }
     ')'
   ;
@@ -324,6 +338,17 @@ term returns [expr::term_ref t = expr::term_ref()]
   | '(' 'sally.min_if' term_list[children] ')' { t = STATE->mk_min_if(children); }
   | '(' 'sally.max' term_list[children] ')' { t = STATE->mk_max(children); }
   | '(' 'sally.max_if' term_list[children] ')' { t = STATE->mk_max_if(children); }
+  | '(' 'sally.noop' 
+      {
+        STATE->push_scope();
+        STATE->use_state_type(STATE->get_current_state_type(), system::state_type::STATE_CURRENT, true); 
+      }
+      // List of state terms
+      term_list[children]
+      {
+        STATE->pop_scope();
+      }
+    ')' { t = STATE->mk_noop(children); }
   ;
 
 let_assignments
