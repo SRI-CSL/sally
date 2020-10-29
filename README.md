@@ -37,6 +37,14 @@ make check
 The ``cmake`` command will search for the necessary libraries and for the backend
 SMT solvers installed on your system.
 
+For convenience, you can take a look at the at the following scripts to install 
+some common SMT solvers:
+
+- [install_yices2.sh](https://github.com/SRI-CSL/sally/blob/master/contrib/install_yices2.sh)
+- [install_opensmt2.sh](https://github.com/SRI-CSL/sally/blob/master/contrib/install_opensmt2.sh)
+- [install_dreal4.sh](https://github.com/SRI-CSL/sally/blob/master/contrib/install_dreal4.sh)
+
+
 If a solver is installed in a non-standard
 location, and ``cmake`` does not find it, you can give extra options. For example,
 if MathSAT5 is installed in the $MD directory, meaning that there are
