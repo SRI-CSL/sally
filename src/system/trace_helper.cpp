@@ -228,7 +228,7 @@ void trace_helper::to_stream_mcmt(std::ostream& out) const {
 
   }
 
-  out << ")" << std::endl;
+  out << ")";
 
   d_state_type->tm().pop_namespace();
   d_state_type->tm().pop_namespace();
