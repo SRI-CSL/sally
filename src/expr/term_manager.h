@@ -444,6 +444,9 @@ public:
   /** Check if t is an array type */
   bool is_array_type(term_ref t) const;
 
+  /** Check if t is a bitvector type */
+  bool is_bitvector_type(term_ref t) const;
+
   /** Check if t is an integer type */
   bool is_integer_type(term_ref t) const;
 

@@ -884,6 +884,10 @@ bool term_manager::is_array_type(term_ref t) const {
   return d_tm->is_array_type(t);
 }
 
+bool term_manager::is_bitvector_type(term_ref t) const {
+  return d_tm->is_bitvector_type(t);
+}
+
 bool term_manager::is_integer_type(term_ref t) const {
   return d_tm->is_integer_type(t);
 }

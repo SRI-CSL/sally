@@ -1077,7 +1077,11 @@ public:
           pow_children.push_back(d_conversion_cache.get_term_cache(p_t));
         }
       }
-      result = d_tm.mk_term(expr::TERM_BV_MUL, pow_children);
+      if (yices_term_is_bitvector(yices_term)) {
+        result = d_tm.mk_term(expr::TERM_BV_MUL, pow_children);
+      } else {
+        result = d_tm.mk_term(expr::TERM_MUL, pow_children);
+      }
       break;
     }
     default:
