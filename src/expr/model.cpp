@@ -108,6 +108,7 @@ value model::get_variable_value(expr::term_ref var, const expr::term_manager::su
         break;
       case TYPE_ENUM:
         v = value(d_tm.get_enum_constant(0, type));
+        break;
       default:
         assert(false);
       }
@@ -286,51 +287,49 @@ public:
       v = d_tm.get_rational_constant(d_tm.term_of(t));
       break;
     case TERM_ADD: {
-      rational sum;
-      for (size_t i = 0; i < t_size; ++ i) {
-        sum += children_values[i].get_rational();
+      v = children_values[0];
+      for (size_t i = 1; i < t_size; ++ i) {
+        v += children_values[i];
       }
-      v = value(sum);
       break;
     }
     case TERM_SUB:
       if (t_size == 1) {
-        v = value(-children_values[0].get_rational());
+        v = -children_values[0];
       } else {
-        v = value(children_values[0].get_rational() - children_values[1].get_rational());
+        v = children_values[0] - children_values[1];
       }
       break;
     case TERM_MUL: {
-      rational mul(1, 1);
-      for (size_t i = 0; i < t_size; ++ i) {
-        mul *= children_values[i].get_rational();
+      v = children_values[0];
+      for (size_t i = 1; i < t_size; ++ i) {
+        v *= children_values[i];
       }
-      v = value(mul);
       break;
     }
     case TERM_DIV:
-      v = value(children_values[0].get_rational() / children_values[1].get_rational());
+      v = children_values[0] / children_values[1];
       break;
     case TERM_LEQ:
-      v = (children_values[0].get_rational() <= children_values[1].get_rational() ? d_true : d_false);
+      v = children_values[0] <= children_values[1];
       break;
     case TERM_LT:
-      v = (children_values[0].get_rational() < children_values[1].get_rational() ? d_true : d_false);
+      v = children_values[0] < children_values[1];
       break;
     case TERM_GEQ:
-      v = (children_values[0].get_rational() >= children_values[1].get_rational() ? d_true : d_false);
+      v = children_values[0] >= children_values[1];
       break;
     case TERM_GT:
-      v = (children_values[0].get_rational() > children_values[1].get_rational() ? d_true : d_false);
+      v = children_values[0] > children_values[1];
       break;
     case TERM_TO_INT:
-      v = value(children_values[0].get_rational().floor());
+      v = children_values[0].floor();
       break;
     case TERM_TO_REAL:
       v = children_values[0];
       break;
     case TERM_IS_INT:
-      v = children_values[0].get_rational().is_integer() ? d_true : d_false;
+      v = children_values[0].is_integer() ? d_true : d_false;
       break;
 
     // Bit-vector terms

@@ -209,7 +209,12 @@ void trace_helper::to_stream_mcmt(std::ostream& out) const {
     get_struct_variables(d_state_variables_structs[k], state_vars_k);
     assert(state_vars.size() == state_vars_k.size());
     for (size_t i = 0; i < state_vars_k.size(); ++ i) {
-      out << "    (" << state_vars[i] << " " << d_model->get_variable_value(state_vars_k[i]) << ")" << std::endl;
+      const expr::value& v = d_model->get_variable_value(state_vars_k[i]);
+      if (v.is_algebraic()) {
+        out << "    (" << state_vars[i] << " " << v.get_algebraic().approx() << ") ;; " << v << std::endl;
+      } else {
+        out << "    (" << state_vars[i] << " " << v << ")" << std::endl;
+      }
     }
     out << "  )" << std::endl;
 
@@ -221,7 +226,12 @@ void trace_helper::to_stream_mcmt(std::ostream& out) const {
       get_struct_variables(d_input_variables_structs[k], input_vars_k);
       assert(input_vars.size() == input_vars_k.size());
       for (size_t i = 0; i < input_vars_k.size(); ++ i) {
-        out << "    (" << input_vars[i] << " " << d_model->get_variable_value(input_vars_k[i]) << ")" << std::endl;
+        const expr::value& v = d_model->get_variable_value(input_vars_k[i]);
+        if (v.is_algebraic()) {
+          out << "    (" << input_vars[i] << " " << v.get_algebraic().approx() << ") ;; " << v << std::endl;
+        } else {
+          out << "    (" << input_vars[i] << " " << v << ")" << std::endl;
+        }
       }
       out << "  )" << std::endl;
     }
