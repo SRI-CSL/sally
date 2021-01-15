@@ -1608,8 +1608,10 @@ void yices2_internal::generalize(smt::solver::generalization_type type, expr::mo
       std::cerr << i << ": ";
       yices_pp_term(stderr, variables[i], 80, 100, 0);
     }
-    std::cerr << "model: ";
+    std::cerr << "yices model: " << std::endl;
     yices_pp_model(stderr, yices_model, 80, 100, 0);
+    std::cerr << "sally model: " << std::endl;
+    std::cerr << m << std::endl;
   }
 
   // Generalize
@@ -1620,6 +1622,13 @@ void yices2_internal::generalize(smt::solver::generalization_type type, expr::mo
     std::stringstream ss;
     ss << "Yices error (generalization): " << yices_error();
     throw exception(ss.str());
+  }
+
+  if (output::trace_tag_is_enabled("yices2::gen")) {
+    std::cerr << "generalization: " << std::endl;
+    for (size_t i = 0; i < G_y.size; ++ i) {
+      std::cerr << i << ": "; yices_pp_term(stderr, G_y.data[i], 80, 100, 0);
+    }
   }
 
   for (size_t i = 0; i < G_y.size; ++ i) {
@@ -1641,14 +1650,6 @@ void yices2_internal::generalize(smt::solver::generalization_type type, expr::mo
     ss << "gen_check_" << (id ++) << ".smt2";
     std::ofstream out(ss.str().c_str());
     efsmt_to_stream(out, &G_y, assertions, assertions_size, d_A_variables, d_T_variables, d_B_variables);
-  }
-
-  if (output::trace_tag_is_enabled("yices2::gen")) {
-    std::cerr << "generalization: " << std::endl;
-    for (size_t i = 0; i < projection_out.size(); ++ i) {
-      std::cerr << i << ": "; yices_pp_term(stderr, G_y.data[i], 80, 100, 0);
-      std::cerr << i << ": " << projection_out[i] << std::endl;
-    }
   }
 
   yices_delete_term_vector(&G_y);
@@ -1734,7 +1735,7 @@ void yices2_internal::efsmt_to_stream(std::ostream& out, const term_vector_t* G_
 
   out << expr::set_tm(d_tm);
 
-  out << "(set-logic LRA)" << std::endl;
+  out << "(set-logic NRA)" << std::endl;
   out << "(set-info :smt-lib-version 2.0)" << std::endl;
   out << "(set-info :status unsat)" << std::endl;
   out << std::endl;
@@ -1787,6 +1788,7 @@ void yices2_internal::interpolate(std::vector<expr::term_ref>& out) {
   assert(status == STATUS_UNSAT);
   assert(d_interpolation_ctx.interpolant != NULL_TERM);
   expr::term_ref interpolant = to_term(d_interpolation_ctx.interpolant);
+  TRACE("yices2::interpolation") << "I = " << interpolant << std::endl;
   if (sally::output::trace_tag_is_enabled("yices2::interpolation::check")) {
     // Check: A => I
     yices_push(d_interpolation_ctx.ctx_A);

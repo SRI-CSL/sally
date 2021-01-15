@@ -422,7 +422,7 @@ engine::result pdkind_engine::query(const system::transition_system* ts, const s
 
 #ifndef NDEBUG
   // Check trace generation if not asked for explicityly
-  if (r == engine::INVALID && !ctx().get_options().has_option("show-trace")) { get_trace(); }  
+  if (false && r == engine::INVALID && !ctx().get_options().has_option("show-trace")) { get_trace(); }
 #endif
 
   return r;
