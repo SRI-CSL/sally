@@ -83,6 +83,8 @@ public:
   bool is_algebraic() const { return d_type == VALUE_ALGEBRAIC; }
   bool is_enum_value() const { return d_type == VALUE_ENUM; }
 
+  bool is_arithmetic() const { return d_type == VALUE_RATIONAL || d_type == VALUE_ALGEBRAIC; }
+
   bool get_bool() const;
   const bitvector& get_bitvector() const;
   const rational& get_rational() const;

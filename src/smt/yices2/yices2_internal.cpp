@@ -31,6 +31,8 @@
 #include <iostream>
 #include <fstream>
 
+#define unused_var(x) { (void)x; }
+
 namespace sally {
 namespace smt {
 
@@ -1289,29 +1291,31 @@ model_t* yices2_internal::get_yices_model(expr::model::ref m) {
   model_t* yices_model = yices_new_model();
 
   size_t i;
+  int ret;
   for (i = 0; i < variables.size(); ++ i) {
     term_t var = to_yices2_term(variables[i]);
     expr::value value = m->get_variable_value(variables[i]);
     switch (value.value_type()) {
     case expr::value::VALUE_BOOL:
       // Boolean value
-      yices_model_set_bool(yices_model, var, value.get_bool());
+      ret = yices_model_set_bool(yices_model, var, value.get_bool());
       break;
     case expr::value::VALUE_RATIONAL:
       // Rational value
-      yices_model_set_mpq(yices_model, var, (mpq_ptr) value.get_rational().mpq().get_mpq_t());
+      ret = yices_model_set_mpq(yices_model, var, (mpq_ptr) value.get_rational().mpq().get_mpq_t());
       break;
     case expr::value::VALUE_BITVECTOR:
       // Bitvector value
-      yices_model_set_mpz(yices_model, var, (mpz_ptr) value.get_bitvector().mpz().get_mpz_t());
+      ret = yices_model_set_mpz(yices_model, var, (mpz_ptr) value.get_bitvector().mpz().get_mpz_t());
       break;
     case expr::value::VALUE_ALGEBRAIC:
       // Algebraic number values
-      yices_model_set_algebraic_number(yices_model, var, value.get_algebraic().a());
+      ret = yices_model_set_algebraic_number(yices_model, var, value.get_algebraic().a());
       break;
     default:
       assert(false);
     }
+    assert(ret == 0);
   }
 
   return yices_model;
@@ -1634,6 +1638,7 @@ void yices2_internal::generalize(smt::solver::generalization_type type, expr::mo
   for (size_t i = 0; i < G_y.size; ++ i) {
     assert(yices_formula_true_in_model(yices_model, G_y.data[i]));
     expr::term_ref t_i = to_term(G_y.data[i]);
+    assert(m->is_true(t_i));
     projection_out.push_back(t_i);
   }
 
@@ -1784,7 +1789,7 @@ void yices2_internal::efsmt_to_stream(std::ostream& out, const term_vector_t* G_
 
 void yices2_internal::interpolate(std::vector<expr::term_ref>& out) {
   smt_status status = yices_check_context_with_interpolation(&d_interpolation_ctx, NULL, 0);
-  (void)status;
+  unused_var(status);
   assert(status == STATUS_UNSAT);
   assert(d_interpolation_ctx.interpolant != NULL_TERM);
   expr::term_ref interpolant = to_term(d_interpolation_ctx.interpolant);

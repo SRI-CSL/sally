@@ -214,6 +214,7 @@ public:
       model::term_to_value_map::const_iterator find = d_cache.find(child);
       assert(find != d_cache.end());
       children_values.push_back(find->second);
+      TRACE("expr::model") << "t[i] = " << find->second << std::endl;
     }
 
     // Now, compute the value

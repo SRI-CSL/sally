@@ -118,6 +118,10 @@ value& value::operator = (const value& v) {
 
 bool value::operator == (const value& v) const {
 
+  if (is_arithmetic() && v.is_arithmetic()) {
+    return cmp(v) == 0;
+  }
+
   if (d_type != v.d_type) {
     return false;
   }
@@ -129,13 +133,10 @@ bool value::operator == (const value& v) const {
     return d_b == v.d_b;
   case VALUE_BITVECTOR:
     return d_bv == v.d_bv;
-  case VALUE_RATIONAL:
-    return d_q == v.d_q;
-  case VALUE_ALGEBRAIC:
-    return d_a == v.d_a;
   case VALUE_ENUM:
     return d_ev == v.d_ev;
   default:
+    assert(false);
     return false;
   }
 }
