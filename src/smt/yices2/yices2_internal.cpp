@@ -1315,6 +1315,7 @@ model_t* yices2_internal::get_yices_model(expr::model::ref m) {
     default:
       assert(false);
     }
+    unused_var(ret);
     assert(ret == 0);
   }
 
