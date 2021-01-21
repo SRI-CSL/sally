@@ -105,6 +105,9 @@ public:
    */
   expr::term_ref get_full_cex(size_t property_id, edge_vector& edges) const;
 
+  /** Get the length (in terms of steps) of the (shortest) counter-example for the given property. */
+  size_t get_cex_length(size_t property_id) const;
+
   /** Print to stream */
   void to_stream(std::ostream& out) const;
 

@@ -251,6 +251,20 @@ void cex_manager::to_stream(std::ostream& out) const {
   out << "}" << std::endl;
 }
 
+size_t cex_manager::get_cex_length(size_t property_id) const {
+  edge_vector edges;
+  get_full_cex(property_id, edges);
+
+  size_t result = 0;
+  for (unsigned i = 0; i < edges.size(); ++ i) {
+    const cex_edge& e = edges[i];
+    result += e.edge_length;
+  }
+
+  return result;
+}
+
+
 std::ostream& operator << (std::ostream& out, const cex_manager& cm) {
   cm.to_stream(out);
   return out;
