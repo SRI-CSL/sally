@@ -157,7 +157,7 @@ pdkind_engine::induction_result pdkind_engine::push_obligation(induction_obligat
     if (reachable.r == reachability::REACHABLE) {
       d_property_invalid = true;
       d_cex_manager.add_edge(cex_result.generalization, ind.F_cex, d_induction_frame_depth, 0);
-      MSG(1) << "pdkind: found counter-example of length " << d_cex_manager.get_cex_length(0) << std::endl;
+      MSG(1) << "pdkind: found counter-example of length " << d_cex_manager.get_cex_length(0) + 1 << std::endl;
       return INDUCTION_FAIL;
     }
 
