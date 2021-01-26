@@ -45,7 +45,7 @@ struct solver_context {
  * SMT solver interface for solving queries.
  *
  * Formulas being solved are of the form (A(a, t) and T(a, b, t) and B(b, t)). When
- * generalizing we eliminate the variables b, t. When intepolating we eliminate
+ * generalizing we eliminate the variables b, t. When interpolating we eliminate
  * the variables a, t.
  */
 class solver : public expr::gc_participant {

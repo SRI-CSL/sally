@@ -34,7 +34,9 @@ enum type {
   DEFINE_TRANSITION,
   DEFINE_TRANSITION_SYSTEM,
   ASSUME,
-  QUERY
+  QUERY,
+  INTERPOLATE,
+  CHECKSAT
 };
 
 class command {

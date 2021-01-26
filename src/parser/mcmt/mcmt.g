@@ -31,6 +31,8 @@ options {
   #include "command/define_transition.h"
   #include "command/define_transition_system.h"
   #include "command/query.h"
+  #include "command/interpolate.h"
+  #include "command/checksat.h"
   #include "command/sequence.h"
   #include "parser/mcmt/mcmt_state.h"
   using namespace sally;
@@ -67,6 +69,8 @@ system_command returns [cmd::command* cmd = 0]
   | c = assume                   { $cmd = c; }
   | c = assume_input             { $cmd = c; }
   | c = query                    { $cmd = c; }
+  | c = interpolate              { $cmd = c; }
+  | c = checksat                 { $cmd = c; }
   | EOF { $cmd = 0; }
   ;
 
@@ -210,6 +214,45 @@ query returns [cmd::command* cmd = 0]
       $cmd = new cmd::query(STATE->ctx(), id, queries);
       STATE->set_current_state_type(0);
     }
+    ')'
+  ;
+
+interpolate returns [cmd::command* cmd = 0] 
+@declarations {
+  std::string type_id;
+  const system::state_type* state_type;
+}
+  : '(' 'interpolate' 
+        symbol[type_id, parser::MCMT_STATE_TYPE, true] 
+        { 
+          state_type = STATE->ctx().get_state_type(type_id); 
+          STATE->set_current_state_type(state_type);
+        }
+        A = state_formula[state_type] 
+        B = state_formula[state_type]
+        {
+          $cmd = new cmd::interpolate(A, B);
+          STATE->set_current_state_type(0);
+        }
+    ')'
+  ;
+  
+checksat returns [cmd::command* cmd = 0] 
+@declarations {
+  std::string type_id;
+  const system::state_type* state_type;
+}
+  : '(' 'check-sat' 
+        symbol[type_id, parser::MCMT_STATE_TYPE, true] 
+        { 
+          state_type = STATE->ctx().get_state_type(type_id); 
+          STATE->set_current_state_type(state_type);
+        }
+        F = state_formula[state_type] 
+        {
+          $cmd = new cmd::checksat(F);
+          STATE->set_current_state_type(0);
+        }
     ')'
   ;
 
