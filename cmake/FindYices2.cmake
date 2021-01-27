@@ -6,20 +6,20 @@
 
 if (YICES2_HOME)
   find_path(YICES2_INCLUDE_DIR yices.h PATHS "${YICES2_HOME}/include" NO_DEFAULT_PATH)
-else() 
+else()
   find_path(YICES2_INCLUDE_DIR yices.h)
 endif()
 
 if (SALLY_STATIC_BUILD)
   if (YICES2_HOME)
     find_library(YICES2_LIBRARY libyices.a yices PATHS "${YICES2_HOME}/lib" NO_DEFAULT_PATH)
-  else() 
+  else()
     find_library(YICES2_LIBRARY libyices.a yices)
   endif()
 else()
   if (YICES2_HOME)
     find_library(YICES2_LIBRARY yices PATHS "${YICES2_HOME}/lib" NO_DEFAULT_PATH)
-  else() 
+  else()
     find_library(YICES2_LIBRARY yices)
   endif()
 endif()
@@ -27,8 +27,8 @@ endif()
 # If library found, check the version
 if (YICES2_INCLUDE_DIR AND Yices2_FIND_VERSION)
 
-  # Check version. It is in yices.h of the form 
-  # 
+  # Check version. It is in yices.h of the form
+  #
   # #define __YICES_VERSION            2
   # #define __YICES_VERSION_MAJOR      3
   # #define __YICES_VERSION_PATCHLEVEL 0
@@ -49,9 +49,9 @@ if (YICES2_INCLUDE_DIR AND Yices2_FIND_VERSION)
      unset(YICES2_LIBRARY CACHE)
   elseif (Yices2_FIND_VERSION_EXACT AND NOT "${__YICES_H_VERSION}" VERSION_EQUAL "${Yices2_FIND_VERSION}")
      unset(YICES2_INCLUDE_DIR CACHE)
-     unset(YICES2_LIBRARY CACHE) 
+     unset(YICES2_LIBRARY CACHE)
   endif()
-  
+
   # Try to compile and check for MCSAT
   file(WRITE "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/yices2.c" "
     #include <stdio.h>
@@ -65,15 +65,15 @@ if (YICES2_INCLUDE_DIR AND Yices2_FIND_VERSION)
       return 0;
     }
   ")
-  
-  # We need to compile as:
-  # gcc -I${YICES2_INCLUDE_DIR} -I${GMP_INCLUDE} version_test.cpp ${YICES2_LIBRARY} ${LIBPOLY_LIBRARY} ${GMP_LIBRARY} 
 
-  # Run the test program 
+  # We need to compile as:
+  # gcc -I${YICES2_INCLUDE_DIR} -I${GMP_INCLUDE} version_test.cpp ${YICES2_LIBRARY} ${LIBPOLY_LIBRARY} ${GMP_LIBRARY}
+
+  # Run the test program
   try_run(
-    MCSAT_TEST_EXITCODE 
+    MCSAT_TEST_EXITCODE
     MCSAT_TEST_COMPILED
-    ${CMAKE_BINARY_DIR} 
+    ${CMAKE_BINARY_DIR}
     ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/yices2.c
     COMPILE_DEFINITIONS
       -I"${YICES2_INCLUDE_DIR}"
@@ -83,22 +83,23 @@ if (YICES2_INCLUDE_DIR AND Yices2_FIND_VERSION)
     LINK_LIBRARIES
       ${YICES2_LIBRARY} ${LIBPOLY_LIBRARY} ${GMP_LIBRARY} ${CUDD_LIBRARY}
     CMAKE_FLAGS
-      -DCMAKE_SKIP_RPATH:BOOL=${CMAKE_SKIP_RPATH}       
+      -DCMAKE_SKIP_RPATH:BOOL=${CMAKE_SKIP_RPATH}
     RUN_OUTPUT_VARIABLE
       MCSAT_TEST_RUN_OUTPUT
     COMPILE_OUTPUT_VARIABLE
       MCSAT_TEST_COMPILE_OUTPUT
-  )  
+  )
 
   if (NOT MCSAT_TEST_COMPILED)
     unset(YICES2_INCLUDE_DIR CACHE)
     unset(YICES2_LIBRARY CACHE)
+    message(STATUS "Yices2 test program doesn't compile: ${MCSAT_TEST_COMPILE_OUTPUT}")
   elseif (NOT ("${MCSAT_TEST_EXITCODE}" EQUAL 0))
     unset(YICES2_INCLUDE_DIR CACHE)
     unset(YICES2_LIBRARY CACHE)
     message(STATUS "Yices2 found, but doesn't have MCSAT enabled (configure Yices2 with --enable-mcsat).")
   endif()
-  
+
 endif()
 
 set(YICES2_LIBRARIES ${YICES2_LIBRARY})
