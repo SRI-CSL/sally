@@ -36,6 +36,7 @@ enum type {
   ASSUME,
   QUERY,
   INTERPOLATE,
+  GENERALIZE,
   CHECKSAT
 };
 

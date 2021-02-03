@@ -8,6 +8,7 @@ add_library(command
   query.cpp
   sequence.cpp
   interpolate.cpp
+  generalize.cpp
   checksat.cpp
 )
 
