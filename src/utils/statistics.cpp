@@ -95,6 +95,15 @@ void statistics::values_to_stream(std::ostream& out) const {
   }
 }
 
+void statistics::to_stream(std::string prefix, std::ostream& out) const {
+  for (size_t i = 0; i < d_stats.size(); ++ i) {
+    if (!d_stats[i]->is_delimiter()) {
+      out << prefix << d_stats[i]->get_id() << "\t" << *d_stats[i] << std::endl;
+    }
+  }
+}
+
+
 std::ostream& operator << (std::ostream& out, const stat& s) {
   s.to_stream(out);
   return out;

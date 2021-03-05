@@ -238,6 +238,9 @@ private:
   const utils::name_transformer* d_name_transformer;
 
   utils::stat_int* d_stat_terms;
+  utils::stat_int* d_stat_vars_bool;
+  utils::stat_int* d_stat_vars_int;
+  utils::stat_int* d_stat_vars_real;
 
   /** Compute the type of t and all subterms */
   void compute_type(term_ref t);
@@ -261,6 +264,9 @@ public:
 
   /** Get the Boolean type */
   term_ref boolean_type() const { return d_booleanType; }
+
+  /** Is it the boolean type */
+  bool is_boolean_type(term_ref t) const;
 
   /** Get the Integer type */
   term_ref integer_type() const { return d_integerType; }
@@ -395,6 +401,15 @@ public:
   template<term_op op>
   term_ref mk_term(const typename term_op_traits<op>::payload_type& payload, term_ref child) {
     term_ref children[1] = { child };
+    if (op == VARIABLE) {
+      if (is_integer_type(child)) {
+        d_stat_vars_int->get_value() ++;
+      } else if (is_real_type(child)) {
+        d_stat_vars_real->get_value() ++;
+      } else if (is_boolean_type(child)) {
+        d_stat_vars_bool->get_value() ++;
+      }
+    }
     return mk_term<op, term_ref*>(payload, children, children + 1);
   }
 

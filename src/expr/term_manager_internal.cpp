@@ -45,7 +45,13 @@ term_manager_internal::term_manager_internal(utils::statistics& stats)
 
   // Statistic for size of term table
   d_stat_terms = new utils::stat_int("sally::expr::term_manager_internal::memory_size", 0);
+  d_stat_vars_bool = new utils::stat_int("sally::expr::term_manager_internal::bool_vars", 0);
+  d_stat_vars_real = new utils::stat_int("sally::expr::term_manager_internal::real_vars", 0);
+  d_stat_vars_int = new utils::stat_int("sally::expr::term_manager_internal::int_vars", 0);
   stats.add(d_stat_terms);
+  stats.add(d_stat_vars_bool);
+  stats.add(d_stat_vars_real);
+  stats.add(d_stat_vars_int);
 
   // Create the types
   d_typeType = term_ref_strong(*this, mk_term<TYPE_TYPE>(alloc::empty_type()));
@@ -287,6 +293,14 @@ bool term_manager_internal::is_integer_type(term_ref t) const {
     return  is_integer_type(var_type);
   }
   return false;
+}
+
+bool term_manager_internal::is_real_type(term_ref t) const {
+  return term_of(t).d_op == TYPE_REAL;
+}
+
+bool term_manager_internal::is_boolean_type(term_ref t) const {
+  return term_of(t).d_op == TYPE_BOOL;
 }
 
 bool term_manager_internal::is_bitvector_type(term_ref t) const {
