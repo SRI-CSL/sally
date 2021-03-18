@@ -134,6 +134,8 @@ yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
     }
     ret = yices_set_config(d_config_mcsat, "solver-type", "mcsat");
     check_error(ret, "Yices error (mcsat option)");
+    ret = yices_set_config(d_config_mcsat, "model-interpolation", "true");
+    check_error(ret, "Yices error (model interpolation option)");
     d_ctx_mcsat = yices_new_context(d_config_mcsat);
     if (d_ctx_mcsat == 0) {
       std::stringstream ss;
@@ -1520,10 +1522,6 @@ void yices2_internal::generalize(smt::solver::generalization_type type, std::vec
   // Get the model
   expr::model::ref m = get_model();
 
-  if (output::trace_tag_is_enabled("yices2")) {
-    std::cerr << "model:" << (*m) << std::endl;
-  }
-
   // Generalize with the current model
   generalize(type, m, projection_out);
 }
@@ -1531,6 +1529,8 @@ void yices2_internal::generalize(smt::solver::generalization_type type, std::vec
 void yices2_internal::generalize(smt::solver::generalization_type type, expr::model::ref m, std::vector<expr::term_ref>& projection_out) {
 
   assert(!d_assertions.empty());
+
+  TRACE("yices2::gen") << "generalization model:" << (*m) << std::endl;
 
   // When we generalize backward we eliminate from T and B
   // When we generalize forward we eliminate from A and T
@@ -1639,7 +1639,6 @@ void yices2_internal::generalize(smt::solver::generalization_type type, expr::mo
   for (size_t i = 0; i < G_y.size; ++ i) {
     assert(yices_formula_true_in_model(yices_model, G_y.data[i]));
     expr::term_ref t_i = to_term(G_y.data[i]);
-    assert(m->is_true(t_i));
     projection_out.push_back(t_i);
   }
 
@@ -1790,7 +1789,9 @@ void yices2_internal::efsmt_to_stream(std::ostream& out, const term_vector_t* G_
 
 void yices2_internal::interpolate(std::vector<expr::term_ref>& out) {
   smt_status status = yices_check_context_with_interpolation(&d_interpolation_ctx, NULL, 0);
-  unused_var(status);
+  if (status == STATUS_ERROR) {
+    check_error(-1, "Yices error (interpolation)");
+  }
   assert(status == STATUS_UNSAT);
   assert(d_interpolation_ctx.interpolant != NULL_TERM);
   expr::term_ref interpolant = to_term(d_interpolation_ctx.interpolant);
