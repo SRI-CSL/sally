@@ -209,7 +209,12 @@ void trace_helper::to_stream_mcmt(std::ostream& out) const {
     get_struct_variables(d_state_variables_structs[k], state_vars_k);
     assert(state_vars.size() == state_vars_k.size());
     for (size_t i = 0; i < state_vars_k.size(); ++ i) {
-      out << "    (" << state_vars[i] << " " << d_model->get_variable_value(state_vars_k[i]) << ")" << std::endl;
+      const expr::value& v = d_model->get_variable_value(state_vars_k[i]);
+      if (v.is_algebraic()) {
+        out << "    (" << state_vars[i] << " " << v.get_algebraic().approx() << ") ;; " << v << std::endl;
+      } else {
+        out << "    (" << state_vars[i] << " " << v << ")" << std::endl;
+      }
     }
     out << "  )" << std::endl;
 
@@ -221,7 +226,12 @@ void trace_helper::to_stream_mcmt(std::ostream& out) const {
       get_struct_variables(d_input_variables_structs[k], input_vars_k);
       assert(input_vars.size() == input_vars_k.size());
       for (size_t i = 0; i < input_vars_k.size(); ++ i) {
-        out << "    (" << input_vars[i] << " " << d_model->get_variable_value(input_vars_k[i]) << ")" << std::endl;
+        const expr::value& v = d_model->get_variable_value(input_vars_k[i]);
+        if (v.is_algebraic()) {
+          out << "    (" << input_vars[i] << " " << v.get_algebraic().approx() << ") ;; " << v << std::endl;
+        } else {
+          out << "    (" << input_vars[i] << " " << v << ")" << std::endl;
+        }
       }
       out << "  )" << std::endl;
     }
@@ -368,6 +378,32 @@ void trace_helper::add_model_to_solver(expr::model::ref m, size_t start, size_t 
     solver->add(eq, c);
   }
 }
+
+void trace_helper::add_vars(size_t start, size_t end, std::vector<expr::term_ref>& out) {
+  // Add individual frames
+  for (size_t k = start; k < end; ++ k) {
+    // State variables
+    const std::vector<expr::term_ref>& state_variables = get_state_variables(k);
+    for (size_t i =  0; i < state_variables.size(); ++ i) {
+      expr::term_ref x = state_variables[i];
+      out.push_back(x);
+    }
+    // Input variables
+    const std::vector<expr::term_ref>& input_variables = get_input_variables(k);
+    for (size_t i =  0; i < input_variables.size(); ++ i) {
+      expr::term_ref x = input_variables[i];
+      out.push_back(x);
+    }
+  }
+
+  // Add last frame
+  const std::vector<expr::term_ref>& state_variables = get_state_variables(end);
+  for (size_t i =  0; i < state_variables.size(); ++ i) {
+    expr::term_ref x = state_variables[i];
+    out.push_back(x);
+  }
+}
+
 
 }
 }

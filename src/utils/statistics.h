@@ -34,6 +34,7 @@ public:
   virtual ~stat() {}
   std::string get_id() const { return d_id; }
   virtual void to_stream(std::ostream& out) const = 0;
+  virtual bool is_delimiter() const { return false; }
 };
 
 std::ostream& operator << (std::ostream& out, const stat& s);
@@ -44,6 +45,7 @@ public:
   stat_delimiter(const char* delim = "|")
   : stat(delim) {}
   void to_stream(std::ostream& out) const { out << get_id(); }
+  bool is_delimiter() const { return true; }
 };
 
 /** Double valued statistic */
@@ -107,6 +109,9 @@ public:
 
   /** Output current values to stream */
   void values_to_stream(std::ostream& out) const;
+
+  /** Print to headers and values to the stream */
+  void to_stream(std::string prefix, std::ostream& out) const;
 
 };
 

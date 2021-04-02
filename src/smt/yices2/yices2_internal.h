@@ -170,7 +170,7 @@ public:
   void get_assertions(std::set<expr::term_ref>& out) const;
 
   /** Check satisfiability */
-  solver::result check();
+  solver::result check(expr::model::ref m, const std::vector<expr::term_ref>* vars);
 
   /** Is the state consistent */
   bool is_consistent();

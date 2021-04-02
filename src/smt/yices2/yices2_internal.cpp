@@ -18,19 +18,20 @@
 
 #ifdef WITH_YICES2
 
-#ifdef WITH_LIBPOLY
 #include "poly/rational.h"
 #include "poly/algebraic_number.h"
-#endif
 #include "smt/yices2/yices2_internal.h"
 #include "smt/yices2/yices2_term_cache.h"
 #include "utils/trace.h"
 #include "expr/gc_relocator.h"
 #include "expr/term_visitor.h"
 #include "utils/output.h"
+#include "expr/value.h"
 
 #include <iostream>
 #include <fstream>
+
+#define unused_var(x) { (void)x; }
 
 namespace sally {
 namespace smt {
@@ -133,6 +134,8 @@ yices2_internal::yices2_internal(expr::term_manager& tm, const options& opts)
     }
     ret = yices_set_config(d_config_mcsat, "solver-type", "mcsat");
     check_error(ret, "Yices error (mcsat option)");
+    ret = yices_set_config(d_config_mcsat, "model-interpolation", "true");
+    check_error(ret, "Yices error (model interpolation option)");
     d_ctx_mcsat = yices_new_context(d_config_mcsat);
     if (d_ctx_mcsat == 0) {
       std::stringstream ss;
@@ -1168,35 +1171,56 @@ void yices2_internal::add(expr::term_ref ref, solver::formula_class f_class) {
   }
 }
 
-solver::result yices2_internal::check() {
+solver::result yices2_internal::check(expr::model::ref m, const std::vector<expr::term_ref>* vars) {
 
   smt_status_t result;
 
   // Call DPLL(T) first, then MCSAT if unsupported
   if (d_ctx_dpllt) {
-    result = d_last_check_status_dpllt = yices_check_context(d_ctx_dpllt, 0);
-    d_last_check_status_mcsat = STATUS_UNKNOWN;
-    switch (result) {
-    case STATUS_SAT:
-      if (!d_dpllt_incomplete) {
-        return solver::SAT;
-      } else {
-        d_last_check_status_dpllt = STATUS_UNKNOWN;
+    if (!m.is_null()) {
+      d_last_check_status_dpllt = STATUS_UNKNOWN;
+      d_last_check_status_mcsat = STATUS_UNKNOWN;
+    } else {
+      result = d_last_check_status_dpllt = yices_check_context(d_ctx_dpllt, 0);
+      d_last_check_status_mcsat = STATUS_UNKNOWN;
+      switch (result) {
+      case STATUS_SAT:
+        if (!d_dpllt_incomplete) {
+          return solver::SAT;
+        } else {
+          d_last_check_status_dpllt = STATUS_UNKNOWN;
+          break; // Do MCSAT
+        }
+      case STATUS_UNSAT:
+        return solver::UNSAT;
+      case STATUS_UNKNOWN:
         break; // Do MCSAT
+      default: {
+        std::stringstream ss;
+        ss << "Yices error (check): " << yices_error();
+        throw exception(ss.str());
       }
-    case STATUS_UNSAT:
-      return solver::UNSAT;
-    case STATUS_UNKNOWN:
-      break; // Do MCSAT
-    default: {
-      std::stringstream ss;
-      ss << "Yices error (check): " << yices_error();
-      throw exception(ss.str());
-    }
+      }
     }
   }
   if (d_ctx_mcsat) {
-    result = d_last_check_status_mcsat = yices_check_context(d_ctx_mcsat, 0);
+    if (m.is_null()) {
+      result = d_last_check_status_mcsat = yices_check_context(d_ctx_mcsat, 0);
+    } else {
+      // Get the yices model
+      model_t* yices_model = get_yices_model(m);
+      // Get all the variables
+      size_t n_vars = vars->size();
+      term_t* yices_vars = new term_t[n_vars];
+      for (size_t i = 0; i < n_vars; ++ i) {
+        yices_vars[i] = to_yices2_term((*vars)[i]);
+      }
+      // Check with model
+      result = d_last_check_status_mcsat = yices_check_context_with_model(d_ctx_mcsat, NULL, yices_model, n_vars, yices_vars);
+      // Free model and variables
+      delete[] yices_vars;
+      yices_free_model(yices_model);
+    }
     switch (result) {
     case STATUS_SAT:
       if (!d_mcsat_incomplete) {
@@ -1287,32 +1311,36 @@ model_t* yices2_internal::get_yices_model(expr::model::ref m) {
   std::vector<expr::term_ref> variables;
   get_variables(variables);
 
-  uint32_t n = variables.size();
-  term_t* yices_variables = (term_t*) malloc(sizeof(term_t)*n);
-  term_t* yices_values = (term_t*) malloc(sizeof(term_t)*n);
+  model_t* yices_model = yices_new_model();
 
   size_t i;
+  int ret;
   for (i = 0; i < variables.size(); ++ i) {
-    yices_variables[i] = to_yices2_term(variables[i]);
+    term_t var = to_yices2_term(variables[i]);
     expr::value value = m->get_variable_value(variables[i]);
-    if (value.is_bool()) {
+    switch (value.value_type()) {
+    case expr::value::VALUE_BOOL:
       // Boolean value
-      yices_values[i] = value.get_bool() ? yices_true() : yices_false();
-    } else if (value.is_rational()) {
+      ret = yices_model_set_bool(yices_model, var, value.get_bool());
+      break;
+    case expr::value::VALUE_RATIONAL:
       // Rational value
-      yices_values[i] = yices_mpq(value.get_rational().mpq().get_mpq_t());
-    } else if (value.is_bitvector()) {
-      // Bit-vector value
-      yices_values[i] = yices_bvconst_mpz(value.get_bitvector().size(), value.get_bitvector().mpz().get_mpz_t());
-    } else {
+      ret = yices_model_set_mpq(yices_model, var, (mpq_ptr) value.get_rational().mpq().get_mpq_t());
+      break;
+    case expr::value::VALUE_BITVECTOR:
+      // Bitvector value
+      ret = yices_model_set_bv_mpz(yices_model, var, (mpz_ptr) value.get_bitvector().mpz().get_mpz_t());
+      break;
+    case expr::value::VALUE_ALGEBRAIC:
+      // Algebraic number values
+      ret = yices_model_set_algebraic_number(yices_model, var, value.get_algebraic().a());
+      break;
+    default:
       assert(false);
     }
+    unused_var(ret);
+    assert(ret == 0);
   }
-
-  model_t* yices_model = yices_model_from_map(n, yices_variables, yices_values);
-
-  free(yices_variables);
-  free(yices_values);
 
   return yices_model;
 }
@@ -1397,7 +1425,7 @@ expr::model::ref yices2_internal::get_model() {
       break;
     }
     case expr::TYPE_REAL: {
-      // The integer mpz_t value
+      // The integer mpq_t value
       mpq_t value;
       mpq_init(value);
       ret = yices_get_mpq_value(yices_model, yices_var, value);
@@ -1406,23 +1434,14 @@ expr::model::ref yices2_internal::get_model() {
         expr::rational rational_value(value);
         var_value = expr::value(rational_value);
       } else {
-#ifdef WITH_LIBPOLY
         lp_algebraic_number_t a;
         lp_algebraic_number_construct_zero(&a);
         ret = yices_get_algebraic_number_value(yices_model, yices_var, &a);
         if (ret < 0) {
           throw exception("Error obtaining real value from Yices2 model.");
         }
-        // TODO: proper algebraic numbers
-        lp_rational_t a_q;
-        lp_rational_construct(&a_q);
-        lp_algebraic_number_to_rational(&a, &a_q);
-        var_value = expr::rational(&a_q);
-        lp_algebraic_number_destruct(&a);
-        lp_rational_destruct(&a_q);
-#else
-        throw exception("Error obtaining real value from Yices2 model.");
-#endif
+        expr::algebraic_number algebraic_value(&a);
+        var_value = expr::value(algebraic_value);
       }
       // Clear the temps
       mpq_clear(value);
@@ -1524,10 +1543,6 @@ void yices2_internal::generalize(smt::solver::generalization_type type, std::vec
   // Get the model
   expr::model::ref m = get_model();
 
-  if (output::trace_tag_is_enabled("yices2")) {
-    std::cerr << "model:" << (*m) << std::endl;
-  }
-
   // Generalize with the current model
   generalize(type, m, projection_out);
 }
@@ -1535,6 +1550,8 @@ void yices2_internal::generalize(smt::solver::generalization_type type, std::vec
 void yices2_internal::generalize(smt::solver::generalization_type type, expr::model::ref m, std::vector<expr::term_ref>& projection_out) {
 
   assert(!d_assertions.empty());
+
+  TRACE("yices2::gen") << "generalization model:" << (*m) << std::endl;
 
   // When we generalize backward we eliminate from T and B
   // When we generalize forward we eliminate from A and T
@@ -1617,8 +1634,10 @@ void yices2_internal::generalize(smt::solver::generalization_type type, expr::mo
       std::cerr << i << ": ";
       yices_pp_term(stderr, variables[i], 80, 100, 0);
     }
-    std::cerr << "model: ";
+    std::cerr << "yices model: " << std::endl;
     yices_pp_model(stderr, yices_model, 80, 100, 0);
+    std::cerr << "sally model: " << std::endl;
+    std::cerr << m << std::endl;
   }
 
   // Generalize
@@ -1629,6 +1648,13 @@ void yices2_internal::generalize(smt::solver::generalization_type type, expr::mo
     std::stringstream ss;
     ss << "Yices error (generalization): " << yices_error();
     throw exception(ss.str());
+  }
+
+  if (output::trace_tag_is_enabled("yices2::gen")) {
+    std::cerr << "generalization: " << std::endl;
+    for (size_t i = 0; i < G_y.size; ++ i) {
+      std::cerr << i << ": "; yices_pp_term(stderr, G_y.data[i], 80, 100, 0);
+    }
   }
 
   for (size_t i = 0; i < G_y.size; ++ i) {
@@ -1650,14 +1676,6 @@ void yices2_internal::generalize(smt::solver::generalization_type type, expr::mo
     ss << "gen_check_" << (id ++) << ".smt2";
     std::ofstream out(ss.str().c_str());
     efsmt_to_stream(out, &G_y, assertions, assertions_size, d_A_variables, d_T_variables, d_B_variables);
-  }
-
-  if (output::trace_tag_is_enabled("yices2::gen")) {
-    std::cerr << "generalization: " << std::endl;
-    for (size_t i = 0; i < projection_out.size(); ++ i) {
-      std::cerr << i << ": "; yices_pp_term(stderr, G_y.data[i], 80, 100, 0);
-      std::cerr << i << ": " << projection_out[i] << std::endl;
-    }
   }
 
   yices_delete_term_vector(&G_y);
@@ -1743,7 +1761,7 @@ void yices2_internal::efsmt_to_stream(std::ostream& out, const term_vector_t* G_
 
   out << expr::set_tm(d_tm);
 
-  out << "(set-logic LRA)" << std::endl;
+  out << "(set-logic NRA)" << std::endl;
   out << "(set-info :smt-lib-version 2.0)" << std::endl;
   out << "(set-info :status unsat)" << std::endl;
   out << std::endl;
@@ -1792,10 +1810,13 @@ void yices2_internal::efsmt_to_stream(std::ostream& out, const term_vector_t* G_
 
 void yices2_internal::interpolate(std::vector<expr::term_ref>& out) {
   smt_status status = yices_check_context_with_interpolation(&d_interpolation_ctx, NULL, 0);
-  (void)status;
+  if (status == STATUS_ERROR) {
+    check_error(-1, "Yices error (interpolation)");
+  }
   assert(status == STATUS_UNSAT);
   assert(d_interpolation_ctx.interpolant != NULL_TERM);
   expr::term_ref interpolant = to_term(d_interpolation_ctx.interpolant);
+  TRACE("yices2::interpolation") << "I = " << interpolant << std::endl;
   if (sally::output::trace_tag_is_enabled("yices2::interpolation::check")) {
     // Check: A => I
     yices_push(d_interpolation_ctx.ctx_A);

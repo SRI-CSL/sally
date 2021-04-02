@@ -7,5 +7,8 @@ add_library(command
   define_transition_system.cpp
   query.cpp
   sequence.cpp
+  interpolate.cpp
+  generalize.cpp
+  checksat.cpp
 )
 

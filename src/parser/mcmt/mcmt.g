@@ -31,6 +31,9 @@ options {
   #include "command/define_transition.h"
   #include "command/define_transition_system.h"
   #include "command/query.h"
+  #include "command/interpolate.h"
+  #include "command/generalize.h"
+  #include "command/checksat.h"
   #include "command/sequence.h"
   #include "parser/mcmt/mcmt_state.h"
   using namespace sally;
@@ -67,6 +70,9 @@ system_command returns [cmd::command* cmd = 0]
   | c = assume                   { $cmd = c; }
   | c = assume_input             { $cmd = c; }
   | c = query                    { $cmd = c; }
+  | c = interpolate              { $cmd = c; }
+  | c = generalize               { $cmd = c; }
+  | c = checksat                 { $cmd = c; }
   | EOF { $cmd = 0; }
   ;
 
@@ -213,6 +219,81 @@ query returns [cmd::command* cmd = 0]
     ')'
   ;
 
+interpolate returns [cmd::command* cmd = 0] 
+@declarations {
+  std::string type_id;
+  const system::state_type* state_type;
+}
+  : '(' 'interpolate' 
+        symbol[type_id, parser::MCMT_STATE_TYPE, true] 
+        { 
+          state_type = STATE->ctx().get_state_type(type_id); 
+          STATE->set_current_state_type(state_type);
+        }
+        A = state_formula[state_type] 
+        B = state_formula[state_type]
+        {
+          $cmd = new cmd::interpolate(A, B);
+          STATE->set_current_state_type(0);
+        }
+    ')'
+  ;
+
+generalize returns [cmd::command* cmd = 0] 
+@declarations {
+  std::string type_id;
+  const system::state_type* state_type;
+  std::vector<expr::term_ref> variables;
+  std::vector<expr::term_ref> values;
+  std::vector<expr::term_ref> to_eliminate;
+}
+  : '(' 'generalize' 
+        symbol[type_id, parser::MCMT_STATE_TYPE, true] 
+        { 
+          state_type = STATE->ctx().get_state_type(type_id); 
+          STATE->set_current_state_type(state_type);
+        }
+        // Formula 
+        F = state_formula[state_type] 
+        // Model
+        '('
+          (
+          '(' x = state_term[state_type] v = state_term[state_type] ')' { 
+              variables.push_back(x);
+              values.push_back(v);
+           }
+          )+
+        ')'
+        // Variables to eliminate
+        '('
+          ( x = state_term[state_type] { to_eliminate.push_back(x); } )+ 
+        ')'
+        {
+          $cmd = new cmd::generalize(F, variables, values, to_eliminate);
+          STATE->set_current_state_type(0);
+        }
+    ')'
+  ;
+  
+checksat returns [cmd::command* cmd = 0] 
+@declarations {
+  std::string type_id;
+  const system::state_type* state_type;
+}
+  : '(' 'check-sat' 
+        symbol[type_id, parser::MCMT_STATE_TYPE, true] 
+        { 
+          state_type = STATE->ctx().get_state_type(type_id); 
+          STATE->set_current_state_type(state_type);
+        }
+        F = state_formula[state_type] 
+        {
+          $cmd = new cmd::checksat(F);
+          STATE->set_current_state_type(0);
+        }
+    ')'
+  ;
+
 /** Parse a constant definition */
 define_constant
 @declarations {
@@ -253,6 +334,21 @@ state_formula[const system::state_type* state_type] returns [system::state_formu
     {
         STATE->pop_scope();
         $sf = new system::state_formula(STATE->tm(), state_type, sf_term);
+    }
+  ;
+
+/** A state term */
+state_term[const system::state_type* state_type] returns [expr::term_ref st]
+  : // Declare state variables
+    {
+        STATE->push_scope();
+        STATE->use_state_type(state_type, system::state_type::STATE_CURRENT, true);
+    }
+    // Parse the actual formula
+    t = term { $st = t; }
+    // Undeclare the variables and return the formula
+    {
+        STATE->pop_scope();
     }
   ;
 

@@ -157,6 +157,7 @@ pdkind_engine::induction_result pdkind_engine::push_obligation(induction_obligat
     if (reachable.r == reachability::REACHABLE) {
       d_property_invalid = true;
       d_cex_manager.add_edge(cex_result.generalization, ind.F_cex, d_induction_frame_depth, 0);
+      MSG(1) << "pdkind: found counter-example of length " << d_cex_manager.get_cex_length(0) + 1 << std::endl;
       return INDUCTION_FAIL;
     }
 
@@ -422,7 +423,7 @@ engine::result pdkind_engine::query(const system::transition_system* ts, const s
 
 #ifndef NDEBUG
   // Check trace generation if not asked for explicityly
-  if (r == engine::INVALID && !ctx().get_options().has_option("show-trace")) { get_trace(); }  
+  if (r == engine::INVALID && !ctx().get_options().has_option("show-trace")) { get_trace(); }
 #endif
 
   return r;
@@ -464,12 +465,15 @@ const system::trace_helper* pdkind_engine::get_trace() {
   expr::term_ref cex_start = d_cex_manager.get_full_cex(property_id, cex_edges);
   assert(!cex_start.is_null()); // Returns null if no path to property
 
-  // Computethe size of the counter-example
+  // Compute the size of the counter-example
   size_t cex_length = 0;
   for (size_t i = 0; i < cex_edges.size(); ++ i) { cex_length += cex_edges[i].edge_length; }
 
   // Construct the solver
   smt::solver* solver = smt::factory::mk_default_solver(tm(), ctx().get_options(), ctx().get_statistics());
+
+  // Variables that are already assigned
+  std::vector<expr::term_ref> assigned_variables;
 
   // Add all variables
   for (size_t k = 0; k <= cex_length; ++ k) {
@@ -496,6 +500,7 @@ const system::trace_helper* pdkind_engine::get_trace() {
   (void)res;
   assert(res == smt::solver::SAT);
   expr::model::ref model = solver->get_model();
+  TRACE("pdkind::cex") << "model = " << *model << std::endl;
   scope.pop();
 
   // Add model to trace
@@ -517,7 +522,12 @@ const system::trace_helper* pdkind_engine::get_trace() {
     scope.push();
 
     // Assert the previous model as the starting point
-    d_trace->add_model_to_solver(model, current_depth, current_depth, solver, smt::solver::CLASS_A);
+    if (solver->supports(smt::solver::SMT_MODULO_MODELS)) {
+      assigned_variables.clear();
+      d_trace->add_vars(current_depth, current_depth, assigned_variables);
+    } else {
+      d_trace->add_model_to_solver(model, current_depth, current_depth, solver, smt::solver::CLASS_A);
+    }
 
     // Add the transition relation
     expr::term_ref T = d_transition_system->get_transition_relation(); 
@@ -533,7 +543,12 @@ const system::trace_helper* pdkind_engine::get_trace() {
     solver->add(cex_next, smt::solver::CLASS_A);
 
     // Check for satisfiability (it must be SAT)
-    smt::solver::result res = solver->check();
+    smt::solver::result res;
+    if (solver->supports(smt::solver::SMT_MODULO_MODELS)) {
+      res = solver->check(model, assigned_variables);
+    } else {
+      res = solver->check();
+    }
     (void)res; // Unused
     assert(res == smt::solver::SAT);
 

@@ -18,6 +18,7 @@
 
 #include "value.h"
 #include "expr/term_manager.h"
+#include "utils/exception.h"
 
 #include <iostream>
 #include <cassert>
@@ -42,6 +43,7 @@ value::value(const value& v)
 , d_b(v.d_b)
 , d_bv(v.d_bv)
 , d_q(v.d_q)
+, d_a(v.d_a)
 , d_ev(v.d_ev)
 {
 }
@@ -52,6 +54,14 @@ value::value(const rational& q)
 , d_q(q)
 {
 }
+
+value::value(const algebraic_number& a)
+: d_type(VALUE_ALGEBRAIC)
+, d_b(false)
+, d_a(a)
+{
+}
+
 
 value::value(const bitvector& bv)
 : d_type(VALUE_BITVECTOR)
@@ -100,12 +110,17 @@ value& value::operator = (const value& v) {
     d_b = v.d_b;
     d_bv = v.d_bv;
     d_q = v.d_q;
+    d_a = v.d_a;
     d_ev = v.d_ev;
   }
   return *this;
 }
 
 bool value::operator == (const value& v) const {
+
+  if (is_arithmetic() && v.is_arithmetic()) {
+    return cmp(v) == 0;
+  }
 
   if (d_type != v.d_type) {
     return false;
@@ -118,11 +133,10 @@ bool value::operator == (const value& v) const {
     return d_b == v.d_b;
   case VALUE_BITVECTOR:
     return d_bv == v.d_bv;
-  case VALUE_RATIONAL:
-    return d_q == v.d_q;
   case VALUE_ENUM:
     return d_ev == v.d_ev;
   default:
+    assert(false);
     return false;
   }
 }
@@ -141,6 +155,8 @@ size_t value::hash() const {
     return d_bv.hash();
   case VALUE_RATIONAL:
     return d_q.hash();
+  case VALUE_ALGEBRAIC:
+    return d_a.hash();
   case VALUE_ENUM:
     return d_ev.hash();
   default:
@@ -161,6 +177,9 @@ void value::to_stream(std::ostream& out) const {
     break;
   case VALUE_RATIONAL:
     out << d_q;
+    break;
+  case VALUE_ALGEBRAIC:
+    out << d_a;
     break;
   case VALUE_ENUM:
     out << d_ev;
@@ -183,6 +202,11 @@ const rational& value::get_rational() const {
   return d_q;
 }
 
+const algebraic_number& value::get_algebraic() const {
+  assert(is_algebraic());
+  return d_a;
+}
+
 const enum_value& value::get_enum_value() const {
   assert(is_enum_value());
   return d_ev;
@@ -198,16 +222,230 @@ term_ref value::to_term(term_manager& tm) const {
     return tm.mk_bitvector_constant(d_bv);
   case VALUE_RATIONAL:
     return tm.mk_rational_constant(d_q);
+  case VALUE_ALGEBRAIC:
+    throw exception("Cannot create algebraic numbers as terms");
   case VALUE_ENUM:
     return tm.mk_enum_constant(d_ev);
   }
   return term_ref();
 }
 
-
 std::ostream& operator << (std::ostream& out, const value& v) {
   v.to_stream(out);
   return out;
+}
+
+class value_upcast {
+
+  const value* x_to_use;
+  const value* y_to_use;
+
+  value tmp;
+
+public:
+
+  value_upcast(const value& x, const value& y)
+  : x_to_use(0)
+  , y_to_use(0)
+  {
+    if (x.value_type() == y.value_type()) {
+      x_to_use = &x;
+      y_to_use = &y;
+    } else {
+      if (x.value_type() == value::VALUE_RATIONAL) {
+        tmp = value(algebraic_number(x.get_rational()));
+        x_to_use = &tmp;
+        y_to_use = &y;
+      } else {
+        tmp = value(algebraic_number(y.get_rational()));
+        x_to_use = &x;
+        y_to_use = &tmp;
+      }
+    }
+  }
+
+  const value& x() { return *x_to_use; }
+  const value& y() { return *y_to_use; }
+
+  value::type value_type() const { return x_to_use->value_type(); }
+};
+
+value value::operator + (const value& other) const {
+  value_upcast cast(*this, other);
+  switch (cast.value_type()) {
+  case VALUE_RATIONAL:
+    return value(cast.x().get_rational() + cast.y().get_rational());
+  case VALUE_ALGEBRAIC:
+    return value(cast.x().get_algebraic() + cast.y().get_algebraic());
+  default:
+    assert(false);
+    break;
+  }
+  return value();
+}
+
+value& value::operator += (const value& other) {
+  value_upcast cast(*this, other);
+  switch (cast.value_type()) {
+  case VALUE_RATIONAL:
+    return *this = value(cast.x().get_rational() + cast.y().get_rational());
+  case VALUE_ALGEBRAIC:
+    return *this = value(cast.x().get_algebraic() + cast.y().get_algebraic());
+  default:
+    assert(false);
+    break;
+  }
+  return *this;
+}
+
+value value::operator - () const {
+  switch (value_type()) {
+  case VALUE_RATIONAL:
+    return value(get_rational().invert());
+  case VALUE_ALGEBRAIC:
+    return value(get_algebraic().invert());
+  default:
+    assert(false);
+  }
+  return value();
+}
+
+value value::operator - (const value& other) const {
+  value_upcast cast(*this, other);
+  switch (cast.value_type()) {
+  case VALUE_RATIONAL:
+    return value(cast.x().get_rational() - cast.y().get_rational());
+  case VALUE_ALGEBRAIC:
+    return value(cast.x().get_algebraic() - cast.y().get_algebraic());
+  default:
+    assert(false);
+    break;
+  }
+  return value();
+}
+
+value& value::operator -= (const value& other) {
+  value_upcast cast(*this, other);
+  switch (cast.value_type()) {
+  case VALUE_RATIONAL:
+    return *this = value(cast.x().get_rational() - cast.y().get_rational());
+  case VALUE_ALGEBRAIC:
+    return *this = value(cast.x().get_algebraic() - cast.y().get_algebraic());
+  default:
+    assert(false);
+    break;
+  }
+  return *this;
+}
+
+value value::operator * (const value& other) const {
+  value_upcast cast(*this, other);
+  switch (cast.value_type()) {
+  case VALUE_RATIONAL:
+    return value(cast.x().get_rational() * cast.y().get_rational());
+  case VALUE_ALGEBRAIC:
+    return value(cast.x().get_algebraic() * cast.y().get_algebraic());
+  default:
+    assert(false);
+    break;
+  }
+  return value();
+}
+
+value& value::operator *= (const value& other) {
+  value_upcast cast(*this, other);
+  switch (cast.value_type()) {
+  case VALUE_RATIONAL:
+    return *this = value(cast.x().get_rational() * cast.y().get_rational());
+  case VALUE_ALGEBRAIC:
+    return *this = value(cast.x().get_algebraic() * cast.y().get_algebraic());
+  default:
+    assert(false);
+    break;
+  }
+  return *this;
+}
+
+value value::operator / (const value& other) const {
+  value_upcast cast(*this, other);
+  switch (cast.value_type()) {
+  case VALUE_RATIONAL:
+    return value(cast.x().get_rational() / cast.y().get_rational());
+  case VALUE_ALGEBRAIC:
+    return value(cast.x().get_algebraic() / cast.y().get_algebraic());
+  default:
+    assert(false);
+    break;
+  }
+  return value();
+}
+
+value& value::operator /= (const value& other) {
+  value_upcast cast(*this, other);
+  switch (cast.value_type()) {
+  case VALUE_RATIONAL:
+    return *this = value(cast.x().get_rational() / cast.y().get_rational());
+  case VALUE_ALGEBRAIC:
+    return *this = value(cast.x().get_algebraic() / cast.y().get_algebraic());
+  default:
+    assert(false);
+    break;
+  }
+  return *this;
+}
+
+bool value::operator < (const value& other) const {
+  return cmp(other) < 0;
+}
+
+bool value::operator <= (const value& other) const {
+  return cmp(other) <= 0;
+}
+
+bool value::operator > (const value& other) const {
+  return cmp(other) > 0;
+}
+
+bool value::operator >= (const value& other) const {
+  return cmp(other) >= 0;
+}
+
+int value::cmp(const value& other) const {
+  value_upcast cast(*this, other);
+  switch (cast.value_type()) {
+  case VALUE_RATIONAL:
+    return cast.x().get_rational().cmp(cast.y().get_rational());
+  case VALUE_ALGEBRAIC:
+    return cast.x().get_algebraic().cmp(cast.y().get_algebraic());
+  default:
+    assert(false);
+    break;
+  }
+  return false;
+}
+
+value value::floor() const {
+  switch (value_type()) {
+  case VALUE_RATIONAL:
+    return value(get_rational().floor());
+  case VALUE_ALGEBRAIC:
+    return value(get_algebraic().floor());
+  default:
+    assert(false);
+  }
+  return false;
+}
+
+bool value::is_integer() const {
+  switch (value_type()) {
+  case VALUE_RATIONAL:
+    return get_rational().is_integer();
+  case VALUE_ALGEBRAIC:
+    return get_algebraic().is_integer();
+  default:
+    assert(false);
+  }
+  return false;
 }
 
 }

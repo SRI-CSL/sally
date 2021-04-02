@@ -1,0 +1,39 @@
+;;
+;; Cauchy–Schwarz inequality
+;;
+;; (sum x_i y_i)^2 <= (sum x_i^2) (sum y_i^2)
+;;
+
+(define-state-type state
+  (
+    (S1 Real) ;; sum x_i*y_i
+    (S2 Real) ;; sum x_i*x_i
+    (S3 Real) ;; sum y_i*y_i
+  )
+  (
+    (x Real)
+    (y Real)
+  )
+)
+
+(define-states init state
+  (and
+    (= S1 0) (= S2 0) (= S3 0)
+  )
+)
+
+(define-transition transition state
+  (and
+    (= next.S1 (+ state.S1 (* input.x input.y)))
+    (= next.S2 (+ state.S2 (* input.x input.x)))
+    (= next.S3 (+ state.S3 (* input.y input.y)))
+  )
+)
+
+(define-transition-system T
+  state
+  init
+  transition
+)
+
+(query T (<= (* S1 S1) (* S2 S3)))

@@ -45,7 +45,7 @@ struct solver_context {
  * SMT solver interface for solving queries.
  *
  * Formulas being solved are of the form (A(a, t) and T(a, b, t) and B(b, t)). When
- * generalizing we eliminate the variables b, t. When intepolating we eliminate
+ * generalizing we eliminate the variables b, t. When interpolating we eliminate
  * the variables a, t.
  */
 class solver : public expr::gc_participant {
@@ -105,6 +105,7 @@ public:
     GENERALIZATION,
     INTERPOLATION,
     UNSAT_CORE,
+    SMT_MODULO_MODELS
   };
 
   /**
@@ -168,6 +169,12 @@ public:
   virtual
   result check_relaxed() {
     return check();
+  }
+
+  /** Check for satisfiability modulo given model */
+  virtual
+  result check(expr::model::ref m, const std::vector<expr::term_ref>& vars) {
+    throw exception("check() modulo model not supported by solver " + d_name);
   }
 
   /** Check if the solver is in a consistent state (i.e., not trivially inconsistent) */

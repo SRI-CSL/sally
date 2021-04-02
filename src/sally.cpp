@@ -124,6 +124,11 @@ int main(int argc, char* argv[]) {
         MSG(2) << "Got command " << *cmd << endl;
         // Run the command
         cmd->run(&ctx, engine_to_use);
+
+        if (boost_opts.count("stats") > 0) {
+          std::cout << "Stats after " << cmd->get_command_type_string() << std::endl;
+          stats.to_stream(" - ", std::cout);
+        }
       }
     }
 
@@ -203,6 +208,7 @@ void parse_options(int argc, char* argv[], variables_map& variables)
       ("output-language", value<string>()->default_value("mcmt"), get_output_languages_list().c_str())
       ("lsal-extensions", "Use lsal extensions to the MCMT language")
       ("no-input-namespace", "Don't use input namespace in the the MCMT language")
+      ("stats", "Show statistics after every command")
       ("live-stats", value<string>(), "Output live statistic to the given file (- for stdout).")
       ("live-stats-time", value<unsigned>()->default_value(100), "Time period for statistics output (in miliseconds)")
       ("smt2-output", value<string>(), "Generate smt2 logs of solver queries with given prefix.")

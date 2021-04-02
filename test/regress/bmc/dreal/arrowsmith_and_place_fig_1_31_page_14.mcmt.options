@@ -1,1 +1,0 @@
---engine bmc --lsal-extensions --solver dreal --dreal-precision=0.001
