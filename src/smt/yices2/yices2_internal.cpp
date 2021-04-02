@@ -1212,7 +1212,7 @@ solver::result yices2_internal::check(expr::model::ref m, const std::vector<expr
       // Get all the variables
       size_t n_vars = vars->size();
       term_t* yices_vars = new term_t[n_vars];
-      for (int i = 0; i < n_vars; ++ i) {
+      for (size_t i = 0; i < n_vars; ++ i) {
         yices_vars[i] = to_yices2_term((*vars)[i]);
       }
       // Check with model
