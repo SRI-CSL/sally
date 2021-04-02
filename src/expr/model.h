@@ -51,6 +51,9 @@ public:
   /** Assignments */
   model& operator = (const model& other);
 
+  /** Get the size of the model (number of variables) */
+  size_t size() const { return d_variables.size(); }
+
   /** Clear the model */
   void clear();
 

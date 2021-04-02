@@ -63,8 +63,14 @@ void yices2::add(expr::term_ref f, formula_class f_class) {
 
 solver::result yices2::check() {
   TRACE("yices2") << "yices2[" << d_internal->instance() << "]: check()" << std::endl;
-  return d_internal->check();
+  return d_internal->check(expr::model::ref::null, 0);
 }
+
+solver::result yices2::check(expr::model::ref m, const std::vector<expr::term_ref>& vars) {
+  TRACE("yices2") << "yices2[" << d_internal->instance() << "]: check(" << m << ")" << std::endl;
+  return d_internal->check(m, &vars);
+}
+
 
 bool yices2::is_consistent() {
   TRACE("yices2") << "yices2[" << d_internal->instance() << "]: is_consistent()" << std::endl;
@@ -123,6 +129,8 @@ bool yices2::supports(solver::feature f) const {
   case GENERALIZATION:
     return true;
   case INTERPOLATION:
+    return true;
+  case SMT_MODULO_MODELS:
     return true;
   default:
     return false;

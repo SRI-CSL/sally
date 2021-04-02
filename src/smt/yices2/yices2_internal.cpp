@@ -1171,35 +1171,56 @@ void yices2_internal::add(expr::term_ref ref, solver::formula_class f_class) {
   }
 }
 
-solver::result yices2_internal::check() {
+solver::result yices2_internal::check(expr::model::ref m, const std::vector<expr::term_ref>* vars) {
 
   smt_status_t result;
 
   // Call DPLL(T) first, then MCSAT if unsupported
   if (d_ctx_dpllt) {
-    result = d_last_check_status_dpllt = yices_check_context(d_ctx_dpllt, 0);
-    d_last_check_status_mcsat = STATUS_UNKNOWN;
-    switch (result) {
-    case STATUS_SAT:
-      if (!d_dpllt_incomplete) {
-        return solver::SAT;
-      } else {
-        d_last_check_status_dpllt = STATUS_UNKNOWN;
+    if (!m.is_null()) {
+      d_last_check_status_dpllt = STATUS_UNKNOWN;
+      d_last_check_status_mcsat = STATUS_UNKNOWN;
+    } else {
+      result = d_last_check_status_dpllt = yices_check_context(d_ctx_dpllt, 0);
+      d_last_check_status_mcsat = STATUS_UNKNOWN;
+      switch (result) {
+      case STATUS_SAT:
+        if (!d_dpllt_incomplete) {
+          return solver::SAT;
+        } else {
+          d_last_check_status_dpllt = STATUS_UNKNOWN;
+          break; // Do MCSAT
+        }
+      case STATUS_UNSAT:
+        return solver::UNSAT;
+      case STATUS_UNKNOWN:
         break; // Do MCSAT
+      default: {
+        std::stringstream ss;
+        ss << "Yices error (check): " << yices_error();
+        throw exception(ss.str());
       }
-    case STATUS_UNSAT:
-      return solver::UNSAT;
-    case STATUS_UNKNOWN:
-      break; // Do MCSAT
-    default: {
-      std::stringstream ss;
-      ss << "Yices error (check): " << yices_error();
-      throw exception(ss.str());
-    }
+      }
     }
   }
   if (d_ctx_mcsat) {
-    result = d_last_check_status_mcsat = yices_check_context(d_ctx_mcsat, 0);
+    if (m.is_null()) {
+      result = d_last_check_status_mcsat = yices_check_context(d_ctx_mcsat, 0);
+    } else {
+      // Get the yices model
+      model_t* yices_model = get_yices_model(m);
+      // Get all the variables
+      size_t n_vars = vars->size();
+      term_t* yices_vars = new term_t[n_vars];
+      for (int i = 0; i < n_vars; ++ i) {
+        yices_vars[i] = to_yices2_term((*vars)[i]);
+      }
+      // Check with model
+      result = d_last_check_status_mcsat = yices_check_context_with_model(d_ctx_mcsat, NULL, yices_model, n_vars, yices_vars);
+      // Free model and variables
+      delete[] yices_vars;
+      yices_free_model(yices_model);
+    }
     switch (result) {
     case STATUS_SAT:
       if (!d_mcsat_incomplete) {
@@ -1308,7 +1329,7 @@ model_t* yices2_internal::get_yices_model(expr::model::ref m) {
       break;
     case expr::value::VALUE_BITVECTOR:
       // Bitvector value
-      ret = yices_model_set_mpz(yices_model, var, (mpz_ptr) value.get_bitvector().mpz().get_mpz_t());
+      ret = yices_model_set_bv_mpz(yices_model, var, (mpz_ptr) value.get_bitvector().mpz().get_mpz_t());
       break;
     case expr::value::VALUE_ALGEBRAIC:
       // Algebraic number values

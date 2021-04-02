@@ -379,5 +379,31 @@ void trace_helper::add_model_to_solver(expr::model::ref m, size_t start, size_t 
   }
 }
 
+void trace_helper::add_vars(size_t start, size_t end, std::vector<expr::term_ref>& out) {
+  // Add individual frames
+  for (size_t k = start; k < end; ++ k) {
+    // State variables
+    const std::vector<expr::term_ref>& state_variables = get_state_variables(k);
+    for (size_t i =  0; i < state_variables.size(); ++ i) {
+      expr::term_ref x = state_variables[i];
+      out.push_back(x);
+    }
+    // Input variables
+    const std::vector<expr::term_ref>& input_variables = get_input_variables(k);
+    for (size_t i =  0; i < input_variables.size(); ++ i) {
+      expr::term_ref x = input_variables[i];
+      out.push_back(x);
+    }
+  }
+
+  // Add last frame
+  const std::vector<expr::term_ref>& state_variables = get_state_variables(end);
+  for (size_t i =  0; i < state_variables.size(); ++ i) {
+    expr::term_ref x = state_variables[i];
+    out.push_back(x);
+  }
+}
+
+
 }
 }

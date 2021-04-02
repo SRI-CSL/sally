@@ -56,7 +56,13 @@ public:
   const T* operator -> () const;
   bool operator < (const smart_ptr& other) const;
   operator bool () const { return d_obj; }
+
+  bool is_null() const { return d_obj == 0; }
+
+  static smart_ptr null;
 };
+
+template <typename T> smart_ptr<T> smart_ptr<T>::null;
 
 template <typename T>
 smart_ptr<T>::T_counted::T_counted(T* obj)

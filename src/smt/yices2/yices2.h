@@ -56,6 +56,9 @@ public:
   /** Check the assertions for satisfiability */
   result check();
 
+  /** Check he assertions modulo model */
+  result check(expr::model::ref m, const std::vector<expr::term_ref>& vars);
+
   /** Consistent? */
   bool is_consistent();
 

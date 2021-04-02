@@ -148,6 +148,11 @@ public:
   void add_model_to_solver(expr::model::ref m, size_t start, size_t end, smt::solver* solver, smt::solver::formula_class c);
 
   /**
+   * As above, just add variables to the output.
+   */
+  void add_vars(size_t start, size_t end, std::vector<expr::term_ref>& out);
+
+  /**
    * Add model to the trace (model over trace variables), for frames
    * start, ..., end. All other model variables will not be added.
    */

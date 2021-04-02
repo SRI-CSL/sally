@@ -105,6 +105,7 @@ public:
     GENERALIZATION,
     INTERPOLATION,
     UNSAT_CORE,
+    SMT_MODULO_MODELS
   };
 
   /**
@@ -168,6 +169,12 @@ public:
   virtual
   result check_relaxed() {
     return check();
+  }
+
+  /** Check for satisfiability modulo given model */
+  virtual
+  result check(expr::model::ref m, const std::vector<expr::term_ref>& vars) {
+    throw exception("check() modulo model not supported by solver " + d_name);
   }
 
   /** Check if the solver is in a consistent state (i.e., not trivially inconsistent) */
