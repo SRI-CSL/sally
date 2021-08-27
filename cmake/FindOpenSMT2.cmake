@@ -11,9 +11,9 @@ else()
 endif()
 
 if (OPENSMT2_HOME)
-  find_library(OPENSMT2_LIBRARY opensmt2 PATHS "${OPENSMT2_HOME}/lib" NO_DEFAULT_PATH)
+  find_library(OPENSMT2_LIBRARY opensmt PATHS "${OPENSMT2_HOME}/lib" NO_DEFAULT_PATH)
 else()
-  find_library(OPENSMT2_LIBRARY opensmt2)
+  find_library(OPENSMT2_LIBRARY opensmt)
 endif()
 
 # If library found, check the version supports interpolation
@@ -40,6 +40,7 @@ if (OPENSMT2_INCLUDE_DIR AND OPENSMT2_LIBRARY)
       ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/opensmt2.cpp
     COMPILE_DEFINITIONS
       -I"${OPENSMT2_INCLUDE_DIR}"
+      -I"${GMP_INCLUDE}"
       -std=c++11
     LINK_LIBRARIES ${OPENSMT2_LIBRARY} ${GMP_LIBRARY}
   )
