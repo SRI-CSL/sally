@@ -58,7 +58,7 @@ sally::smt::opensmt2_internal::opensmt2_internal(sally::expr::term_manager &tm, 
         d_osmt->getConfig().setRandomSeed(opts.get_int("opensmt2-random_seed"));
       }
       if (opts.has_option("opensmt2-simplify_itp")) {
-        d_osmt->getConfig().simplify_interpolant = opts.get_int("opensmt2-simplify_itp");
+        d_osmt->getConfig().setSimplifyInterpolant(opts.get_int("opensmt2-simplify_itp"));
       }
     } else {
       throw sally::exception("OpenSMT currently supports only logic QF_LRA!");
@@ -329,21 +329,23 @@ sally::expr::term_ref sally::smt::opensmt2_internal::osmt_to_sally(PTRef ref) {
 
 sally::expr::model::ref sally::smt::opensmt2_internal::get_model() {
     // Create new model
+    assert(get_main_solver().getStatus() == s_True);
+    auto model = get_main_solver().getModel();
     expr::model::ref m = new expr::model(d_tm, false);
 
-    // Get the model from mathsat
+    // Get the model from opensmt
     for (size_t i = 0; i < d_variables.size(); ++ i) {
         expr::term_ref var = d_variables[i];
         expr::term_ref var_type = d_tm.type_of(var);
         expr::value var_value;
 
         PTRef m_var = sally_to_osmt(var);
-        const char* val = get_main_solver().getValue(m_var).val;
+        PTRef val = model->evaluate(m_var);
 
         switch (d_tm.term_of(var_type).op()) {
             case expr::TYPE_BOOL: {
-              assert(strcmp(val, "true") == 0 || strcmp(val, "false") == 0);
-              var_value = expr::value(strcmp(val, "true") == 0);
+              assert(val == get_logic().getTerm_true() || val == get_logic().getTerm_false());
+              var_value = expr::value(val == get_logic().getTerm_true());
                 break;
             }
             case expr::TYPE_INTEGER: {
@@ -353,7 +355,9 @@ sally::expr::model::ref sally::smt::opensmt2_internal::get_model() {
             case expr::TYPE_REAL: {
                 mpq_t value;
                 mpq_init(value);
-                mpq_set_str(value, val, 10);
+                char * val_str = get_logic().pp(val);
+                mpq_set_str(value, val_str, 10);
+                free(val_str);
                 var_value = expr::value(expr::rational(value));
                 mpq_clear(value);
                 break;
@@ -382,13 +386,11 @@ sally::smt::opensmt2_internal::add_variable(sally::expr::term_ref var, sally::sm
 void sally::smt::opensmt2_internal::interpolate(vector<sally::expr::term_ref> &out) {
   assert(get_main_solver().getStatus() == s_False);
   std::vector<PTRef> itps;
-  auto & smt_solver = get_main_solver().getSMTSolver();
+  auto itp_context = get_main_solver().getInterpolationContext();
   auto A_mask = get_A_mask();
-  smt_solver.createProofGraph();
 //  std::cout << "Interpolation mask is: " << A_mask.get_str() << '\n';
-  get_main_solver().getSMTSolver().getSingleInterpolant(itps, A_mask);
+  itp_context->getSingleInterpolant(itps, A_mask);
   assert(itps.size() == 1);
-  smt_solver.deleteProofGraph();
   PTRef itp = itps[0];
 //  std::cout << get_logic().printTerm(itp) << std::endl;
   out.push_back(osmt_to_sally(itp));
