@@ -26,6 +26,7 @@
 #include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
 
+#include <set>
 #include <map>
 #include <queue>
 #include <iterator>
