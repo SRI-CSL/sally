@@ -5,7 +5,7 @@ project(sally CXX C)
 enable_testing()
 
 set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wall")
 
 # If ENABLE_COVERAGE is defined, try to set coverage flags.
 if (ENABLE_COVERAGE)

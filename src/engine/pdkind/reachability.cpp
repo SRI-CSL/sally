@@ -115,7 +115,7 @@ reachability::result reachability::check_reachable(size_t k, expr::term_ref f, s
   bool reachable = false;
 
   // The induction not valid, try to extend to full counter-example
-  for (size_t check = 0; !reachability_obligations.empty(); ++ check) {
+  while (!reachability_obligations.empty()) {
     // Get the next reachability obligations
     reachability_obligation reach = reachability_obligations.back();
     // If we're at 0 frame, we're reachable: anything passed in is consistent
