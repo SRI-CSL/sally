@@ -590,11 +590,11 @@ public:
     {
       size_t size = t.size();
       assert(size > 0);
-      term_t children[size];
+      std::vector<term_t> children(size);
       for (size_t i = 0; i < size; ++ i) {
         children[i] = d_conversion_cache.get_term_cache(t[i]);
       }
-      result = d_yices.mk_yices2_term(t.op(), size, children);
+      result = d_yices.mk_yices2_term(t.op(), size, children.data());
       break;
     }
     case expr::TERM_BV_EXTRACT: {
