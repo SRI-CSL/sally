@@ -602,11 +602,11 @@ msat_term mathsat5_internal::to_mathsat5_term(expr::term_ref ref) {
   {
     size_t size = t.size();
     assert(size > 0);
-    msat_term children[size];
+    std::vector<msat_term> children(size);
     for (size_t i = 0; i < size; ++ i) {
       children[i] = to_mathsat5_term(t[i]);
     }
-    result = mk_mathsat5_term(t.op(), size, children);
+    result = mk_mathsat5_term(t.op(), size, children.data());
     break;
   }
   case expr::TERM_BV_EXTRACT: {
@@ -1069,7 +1069,7 @@ void mathsat5_internal::generalize(solver::generalization_type type, const std::
     msat_term f_msat = to_mathsat5_term(f_to_eliminate);
 
     // Variables to eliminate
-    msat_term vars_msat[vars_to_elim.size()];
+    std::vector<msat_term> vars_msat(vars_to_elim.size());
     std::set<expr::term_ref>::const_iterator it = vars_to_elim.begin(), it_end = vars_to_elim.end();
     for (size_t i = 0; it != it_end; ++ it, ++ i) {
       vars_msat[i] = to_mathsat5_term(*it);
@@ -1080,7 +1080,7 @@ void mathsat5_internal::generalize(solver::generalization_type type, const std::
     opts.boolean_simplifications = true;
     opts.remove_redundant_constraints = true;
     opts.toplevel_propagation = true;
-    msat_term msat_result = msat_exist_elim(d_env, f_msat, vars_msat, vars_to_elim.size(), MSAT_EXIST_ELIM_ALLSMT_FM, opts);
+    msat_term msat_result = msat_exist_elim(d_env, f_msat, vars_msat.data(), vars_msat.size(), MSAT_EXIST_ELIM_ALLSMT_FM, opts);
 
     // Add to result
     expr::term_ref result = to_term(msat_result);
