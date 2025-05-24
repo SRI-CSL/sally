@@ -74,6 +74,7 @@ enum input_language {
   INPUT_MCMT,
   INPUT_SMT2,
   INPUT_BTOR,
+  INPUT_BTOR2,
   INPUT_SAL,
   INPUT_AIGER
 };

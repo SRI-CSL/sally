@@ -159,12 +159,12 @@ void context::add_assumption_to(std::string id, transition_formula* tf) {
   d_transition_systems.get_entry(id)->add_assumption(tf);
 }
 
-void context::add_invariant_to(std::string id, state_formula* sf) {
-  if (!d_transition_systems.has_entry(id)) {
-    throw exception(id + " not declared");
-  }
-  d_transition_systems.get_entry(id)->add_invariant(sf);
-}
+// void context::add_invariant_to(std::string id, state_formula* sf) {
+//   if (!d_transition_systems.has_entry(id)) {
+//     throw exception(id + " not declared");
+//   }
+//   d_transition_systems.get_entry(id)->add_invariant(sf);
+// }
 
 options& context::get_options() const {
   return d_options;

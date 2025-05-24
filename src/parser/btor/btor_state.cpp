@@ -266,6 +266,8 @@ cmd::command* btor_state::finalize() const {
     term_ref bad = tm().substitute_and_cache(d_roots[i], btor_to_state_var);
     bad_children.push_back(bad);
   }
+  // FIXME: Don't think this works for more than one child -- 
+  // 'property' is a bool, but then the next line compares it to bv 0
   term_ref property = tm().mk_or(bad_children);
   property = tm().mk_term(TERM_EQ, property, d_zero);
   system::state_formula* property_formula = new system::state_formula(tm(), state_type, property);
