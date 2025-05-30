@@ -47,6 +47,9 @@ endif()
 if (DREAL_FOUND)
   target_link_libraries(sally ${DREAL_LIBRARIES})
 endif()
+if (BTOR2TOOLS_FOUND)
+  target_link_libraries(sally -lbtor2parser)
+endif()
 
 target_link_libraries(sally ${Boost_LIBRARIES} ${GMP_LIBRARY})
 

@@ -24,7 +24,9 @@
 namespace sally {
 namespace parser {
 
+#ifdef WITH_BTOR2TOOLS
 internal_parser_interface* new_btor2_parser(const system::context& ctx, const char* filename);
+#endif
 
 }
 }

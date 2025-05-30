@@ -72,22 +72,28 @@ size_t bitvector::hash() const {
   return hasher.get();
 }
 
-bitvector::bitvector(const char* bits)
-: integer(bits, 2)
-, d_size(strlen(bits))
+bitvector::bitvector(const char* bits, size_t base, size_t size)
+: integer(bits, base)
 {
-  assert(d_size > 0);
+  if (size == 0) {
+    d_size = strlen(bits);
+  } else {
+    d_size = size;
+  }
   assert(sgn() >= 0);
   if (mpz_sizeinbase(d_gmp_int.get_mpz_t(), 2) > d_size) {
     mpz_fdiv_r_2exp(d_gmp_int.get_mpz_t(), d_gmp_int.get_mpz_t(), d_size);
   }
 }
 
-bitvector::bitvector(std::string bits)
-: integer(bits, 2)
-, d_size(bits.size())
+bitvector::bitvector(std::string bits, size_t base, size_t size)
+: integer(bits, base)
 {
-  assert(d_size > 0);
+  if (size == 0) {
+    d_size = bits.size();
+  } else {
+    d_size = size;
+  }
   assert(sgn() >= 0);
   if (mpz_sizeinbase(d_gmp_int.get_mpz_t(), 2) > d_size) {
     mpz_fdiv_r_2exp(d_gmp_int.get_mpz_t(), d_gmp_int.get_mpz_t(), d_size);

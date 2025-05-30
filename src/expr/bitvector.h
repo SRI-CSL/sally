@@ -47,11 +47,11 @@ public:
   /** Construct from int */
   bitvector(size_t size, long x);
 
-  /** Construct from a string representation (0 terminated) */
-  explicit bitvector(const char* bits);
+  /** Construct from a string representation ('\0' terminated) */
+  explicit bitvector(const char* bits, size_t base = 2, size_t size = 0);
 
   /** Construct from a string representation */
-  explicit bitvector(std::string bits);
+  explicit bitvector(std::string bits, size_t base = 2, size_t size = 0);
 
   /** Get the size of the bitvector */
   size_t size() const { return d_size; }

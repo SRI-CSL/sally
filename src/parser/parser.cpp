@@ -22,7 +22,9 @@
 #include "mcmt/mcmt.h"
 #include "smt2/smt2.h"
 #include "btor/btor.h"
+#ifdef WITH_BTOR2TOOLS
 #include "btor2/btor2.h"
+#endif
 #include "sal/sal.h"
 #include "aiger/aiger.h"
 
@@ -62,6 +64,13 @@ parser_exception::parser_exception(std::string msg, std::string filename, int li
 , d_pos(pos)
 {}
 
+parser_exception::parser_exception(std::string msg, std::string filename, int line)
+: exception(msg)
+, d_filename(filename)
+, d_line(line)
+, d_pos(-1)
+{}
+
 bool parser_exception::has_line_info() const {
   return d_line != -1;
 }
@@ -80,8 +89,12 @@ std::string parser_exception::get_filename() const {
 
 void parser_exception::to_stream(std::ostream& out) const {
   out << "Parse error: ";
-  if (d_line != -1) {
+  if (d_line != -1 && d_pos != -1) {
     out << get_filename() << ":" << get_line() << ":" << get_position() << ": ";
+  } else if (d_line != -1) {
+    out << get_filename() << ":" << get_line() << ": ";
+  } else {
+    out << get_filename() << ":";
   }
   out << get_message();
 }
@@ -99,7 +112,11 @@ parser::parser(const system::context& ctx, input_language lang, const char* file
     d_internal = new_btor_parser(ctx, filename);
     break;
   case INPUT_BTOR2:
-    d_internal = new_btor2_parser(ctx, filename);
+#ifdef WITH_BTOR2TOOLS
+      d_internal = new_btor2_parser(ctx, filename);
+#else
+      throw parser_exception("Btor2Tools is not installed, cannot parse btor2 files");
+#endif
     break;
   case INPUT_SAL:
     d_internal = new_sal_parser(ctx, filename);

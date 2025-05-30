@@ -5,7 +5,7 @@ project(sally CXX C)
 enable_testing()
 
 set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wall")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wall -Wno-deprecated-declarations")
 
 # If ENABLE_COVERAGE is defined, try to set coverage flags.
 if (ENABLE_COVERAGE)
@@ -103,6 +103,16 @@ find_package(OpenSMT2)
 if (OPENSMT2_FOUND)
   add_definitions(-DWITH_OPENSMT2)
   include_directories(${OPENSMT2_INCLUDE_DIR})
+endif()
+
+# Find Btor2Tools
+SET(BTOR2TOOLS_HOME CACHE STRING "Btor2Tools installation directory")
+find_package(Btor2Tools)
+if (BTOR2TOOLS_FOUND)
+  add_definitions(-DWITH_BTOR2TOOLS)
+  include_directories(${BTOR2TOOLS_HOME}/src/btor2parser)
+  set(CMAKE_INSTALL_RPATH "${BTOR2TOOLS_HOME}/build/lib")
+  set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 endif()
 
 # Make sure antlr C runtime is here

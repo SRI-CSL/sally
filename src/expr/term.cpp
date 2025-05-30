@@ -140,7 +140,7 @@ void term::mk_let_cache(term_manager& tm, expr_let_cache& let_cache, std::vector
     }
     break;
   default:
-    assert(false);
+    throw exception("Unsupported let caching for operator: " + std::to_string(d_op));
   }
 
   // Record the mapping
@@ -282,7 +282,10 @@ std::string get_smt_keyword(term_op op) {
     return "bvsrem";
   case TERM_BV_SMOD:
     return "bvsmod";
-
+  case TERM_BV_ROR:
+    return "bvror";
+  case TERM_BV_ROL:
+    return "bvrol";
   case TERM_ARRAY_READ:
     return "select";
   case TERM_ARRAY_WRITE:
@@ -660,7 +663,7 @@ void term::to_stream_smt_without_let(std::ostream& out, term_manager& tm, const 
     break;
   }
   default:
-    assert(false);
+    throw exception("Unsupported term operation: " + std::to_string(d_op));
   }
 }
 
@@ -695,7 +698,7 @@ std::string get_nuxmv_operator(expr::term_op op) {
   case TERM_BV_UDIV: return "/";
   case TERM_BV_UREM: return "mod";
   default:
-    assert(false);
+    throw exception("Unsupported term operation: " + std::to_string(op));
   }
   return "unknown";
 }

@@ -60,26 +60,6 @@ set_source_files_properties(
 
 add_custom_command(
    OUTPUT 
-     ${CMAKE_CURRENT_SOURCE_DIR}/btor2/btor2Parser.h
-     ${CMAKE_CURRENT_SOURCE_DIR}/btor2/btor2Parser.c
-     ${CMAKE_CURRENT_SOURCE_DIR}/btor2/btor2Lexer.h
-     ${CMAKE_CURRENT_SOURCE_DIR}/btor2/btor2Lexer.c
-     ${CMAKE_CURRENT_SOURCE_DIR}/btor2/btor2.tokens
-   COMMAND 
-     ${ANTLR} -make -fo ${CMAKE_CURRENT_SOURCE_DIR}/btor2/ ${CMAKE_CURRENT_SOURCE_DIR}/btor2/btor2.g 
-   DEPENDS 
-     ${CMAKE_CURRENT_SOURCE_DIR}/btor2/btor2.g libantlr3c-3.4
-)
-
-set_source_files_properties(
-  btor2/btor2Parser.c btor2/btor2Lexer.c 
-  PROPERTIES 
-    LANGUAGE CXX
-    COMPILE_FLAGS "-Wno-parentheses-equality -Wno-sign-compare -Wno-unused-function -Wno-unused-variable -Wno-tautological-compare -x c++"
-)
-
-add_custom_command(
-   OUTPUT 
      ${CMAKE_CURRENT_SOURCE_DIR}/sal/salParser.h
      ${CMAKE_CURRENT_SOURCE_DIR}/sal/salParser.c
      ${CMAKE_CURRENT_SOURCE_DIR}/sal/salLexer.h
@@ -98,11 +78,19 @@ set_source_files_properties(
     COMPILE_FLAGS "-Wno-parentheses-equality -Wno-sign-compare -Wno-unused-function -Wno-unused-variable -Wno-tautological-compare -x c++"
 )
 
-set_source_fileS_properties(
+set_source_files_properties(
   aiger/aiger-1.9.4/aiger.c
   PROPERTIES
     LANGUAGE C
 )
+
+if (WITH_BTOR2TOOLS)
+  set_source_files_properties(
+    btor2/btor2parser/btor2parser.c
+    PROPERTIES
+      LANGUAGE C
+  )
+endif()
 
 add_library(parser 
   mcmt/mcmtParser.c 
@@ -117,9 +105,6 @@ add_library(parser
   btor/btorLexer.c 
   btor/btor_state.cpp
   btor/btor.cpp
-  btor2/btor2Parser.c 
-  btor2/btor2Lexer.c 
-  btor2/btor2_state.cpp
   btor2/btor2.cpp
   sal/salParser.c 
   sal/salLexer.c 
