@@ -29,6 +29,16 @@ transition_system::transition_system(const state_type* state_type, state_formula
 , d_transition_relation(transition_relation)
 {
   d_trace_helper = new trace_helper(state_type);
+  d_invariant = new state_formula(state_type->tm(), state_type, state_type->tm().mk_boolean_constant(true));
+}
+
+transition_system::transition_system(const state_type* state_type, state_formula* initial_states, transition_formula* transition_relation, state_formula* invariant)
+: d_state_type(state_type)
+, d_initial_states(initial_states)
+, d_transition_relation(transition_relation)
+, d_invariant(invariant)
+{
+  d_trace_helper = new trace_helper(state_type);
 }
 
 void transition_system::to_stream(std::ostream& out) const {
@@ -36,6 +46,7 @@ void transition_system::to_stream(std::ostream& out) const {
   out << "type: " << *d_state_type << std::endl;
   out << "I: " << d_initial_states->get_formula() << std::endl;
   out << "T: " << d_transition_relation->get_formula() << std::endl;
+  out << "Inv: " << d_invariant->get_formula() << std::endl;
   out << "]";
 }
 
@@ -68,6 +79,10 @@ expr::term_ref transition_system::get_initial_states() const {
   return I;
 }
 
+expr::term_ref transition_system::get_invariant() const {
+  return d_invariant->get_formula();
+}
+
 void transition_system::add_assumption(state_formula* assumption) {
   d_assumptions_state.push_back(assumption);
 }
@@ -76,9 +91,11 @@ void transition_system::add_assumption(transition_formula* assumption) {
   d_assumptions_transition.push_back(assumption);
 }
 
-void transition_system::add_invariant(state_formula* invariant) {
-  d_invariants.push_back(invariant);
-}
+// void transition_system::add_invariant(state_formula* invariant) {
+//   expr::term_ref t = d_state_type->tm().mk_and(d_invariant->get_formula(), 
+//                                                invariant->get_formula());
+//   d_invariant = new system::state_formula(d_state_type->tm(), d_state_type, t);
+// }
 
 expr::term_ref transition_system::get_state_assumption() const {
   std::vector<expr::term_ref> assumption_terms;
@@ -104,11 +121,9 @@ transition_system::~transition_system() {
   for (size_t i = 0; i < d_assumptions_state.size(); ++ i) {
     delete d_assumptions_state[i];
   }
-  for (size_t i = 0; i < d_invariants.size(); ++ i) {
-    delete d_invariants[i];
-  }
   delete d_initial_states;
   delete d_transition_relation;
+  delete d_invariant;
   delete d_trace_helper;
 }
 
