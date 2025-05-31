@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.5)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 project(sally CXX C)
@@ -110,8 +110,8 @@ SET(BTOR2TOOLS_HOME CACHE STRING "Btor2Tools installation directory")
 find_package(Btor2Tools)
 if (BTOR2TOOLS_FOUND)
   add_definitions(-DWITH_BTOR2TOOLS)
-  include_directories(${BTOR2TOOLS_HOME}/src/btor2parser)
-  set(CMAKE_INSTALL_RPATH "${BTOR2TOOLS_HOME}/build/lib")
+  include_directories(${BTOR2TOOLS_INCLUDE_DIRS})
+  set(CMAKE_INSTALL_RPATH "${BTOR2TOOLS_LIBRARY_DIR}")
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 endif()
 

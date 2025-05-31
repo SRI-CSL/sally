@@ -84,14 +84,6 @@ set_source_files_properties(
     LANGUAGE C
 )
 
-if (WITH_BTOR2TOOLS)
-  set_source_files_properties(
-    btor2/btor2parser/btor2parser.c
-    PROPERTIES
-      LANGUAGE C
-  )
-endif()
-
 add_library(parser 
   mcmt/mcmtParser.c 
   mcmt/mcmtLexer.c 
