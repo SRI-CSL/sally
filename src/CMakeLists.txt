@@ -55,12 +55,22 @@ target_link_libraries(sally ${Boost_LIBRARIES} ${GMP_LIBRARY})
 
 # Add tests
 
-file(GLOB_RECURSE regressions 
-  ${sally_SOURCE_DIR}/test/regress/*.mcmt 
-  ${sally_SOURCE_DIR}/test/regress/*.btor
-  ${sally_SOURCE_DIR}/test/regress/*.sal
+# Build the list of regression files based on available solvers
+set(regression_patterns
+  ${sally_SOURCE_DIR}/test/regress/**/*.mcmt 
+  ${sally_SOURCE_DIR}/test/regress/**/*.btor
+  ${sally_SOURCE_DIR}/test/regress/**/*.sal
 )
+
+# Add btor2 files only if Btor2Tools is found
+if (BTOR2TOOLS_FOUND)
+  list(APPEND regression_patterns ${sally_SOURCE_DIR}/test/regress/**/*.btor2)
+endif()
+
+# Get all the regression files
+file(GLOB_RECURSE regressions ${regression_patterns})
 list(SORT regressions)
+
 
 foreach(FILE ${regressions})
   # Get the options for this test

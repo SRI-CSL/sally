@@ -144,8 +144,8 @@ class btor2_parser : public internal_parser_interface {
   /** Get the term at index (negated if negative), casting to bitvector if necessary */
   expr::term_ref get_term_bitvector(int index) const;
 
-  /** Cast boolean term to bitvector term */
-  // expr::term_ref bool_to_bitvector(expr::term_ref t);
+  /** Get the term at index (negated if negative), casting to boolean if necessary */
+  expr::term_ref get_term_boolean(int index) const;
 
   /** Get the term at index (negated if negative) with a specific width */
   size_t get_term_width(int index) const;
@@ -237,6 +237,24 @@ expr::term_ref btor2_parser::get_term_bitvector(int index) const {
     return result;
   } else {
     return tm.mk_term(expr::TERM_BV_NOT, result);
+  }
+}
+
+expr::term_ref btor2_parser::get_term_boolean(int index) const {
+  size_t i = index >= 0 ? index : -index;
+  expr::term_ref result = nodes[i];
+
+  // If the term is a bit-vector, convert it to a boolean
+  expr::term_ref type = tm.type_of(result);
+  if (tm.is_bitvector_type(type)) {
+    result = tm.mk_term(expr::TERM_EQ, result, one);
+  }
+
+  // If the id is negative, negate the term
+  if (index >= 0) {
+    return result;
+  } else {
+    return tm.mk_term(expr::TERM_NOT, result);
   }
 }
 
@@ -518,7 +536,7 @@ btor2_parser::btor2_parser(const system::context& ctx, const char* filename)
     case BTOR2_TAG_iff:
     case BTOR2_TAG_implies: {
       add_binary_term(line->id, btor2_tag_to_term_op[line->tag], line->sort.id, 
-                      get_term(line->args[0]), get_term(line->args[1]));
+                      get_term_boolean(line->args[0]), get_term_boolean(line->args[1]));
       break;
     }
     case BTOR2_TAG_eq:      
