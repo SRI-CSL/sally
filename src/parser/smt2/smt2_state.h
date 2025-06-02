@@ -24,9 +24,6 @@
 #include "utils/symbol_table.h"
 #include "command/command.h"
 
-
-#include <iosfwd>
-
 #include <antlr3.h>
 
 namespace sally {

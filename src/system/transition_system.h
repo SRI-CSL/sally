@@ -39,6 +39,9 @@ class transition_system {
   /** The transition formula */
   transition_formula* d_transition_relation;
 
+  /** The invariant formula */
+  state_formula* d_invariant;
+
   /** Any assumptions */
   std::vector<state_formula*> d_assumptions_state;
 
@@ -65,12 +68,6 @@ class transition_system {
     return !d_assumptions_transition.empty();
   }
 
-  /** Invariants */
-  std::vector<state_formula*> d_invariants;
-
-  const std::vector<state_formula*>& get_invariants() const {
-    return d_invariants;
-  }
 
   /** Get the assumptions in one state formula */
   expr::term_ref get_state_assumption() const;
@@ -85,6 +82,7 @@ class transition_system {
 public:
 
   transition_system(const state_type* state_type, state_formula* initial_states, transition_formula* transition_relation);
+  transition_system(const state_type* state_type, state_formula* initial_states, transition_formula* transition_relation, state_formula* invariant);
   ~transition_system();
 
   /** Get the state type */
@@ -98,6 +96,9 @@ public:
   /** Get the whole transition relation (disjunction) */
   expr::term_ref get_transition_relation() const;
 
+  /** Get the whole invariant (conjunction) */
+  expr::term_ref get_invariant() const;
+
   /** Get the trace helper */
   trace_helper* get_trace_helper() const;
 
@@ -106,9 +107,6 @@ public:
 
   /** Add an assumption on the state type (takes over the pointer) */
   void add_assumption(transition_formula* assumption);
-
-  /** Add an invariant to the system (takes over the pointer) */
-  void add_invariant(state_formula* invariant);
 
   /** Print it to the stream */
   void to_stream(std::ostream& out) const;

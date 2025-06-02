@@ -78,7 +78,7 @@ set_source_files_properties(
     COMPILE_FLAGS "-Wno-parentheses-equality -Wno-sign-compare -Wno-unused-function -Wno-unused-variable -Wno-tautological-compare -x c++"
 )
 
-set_source_fileS_properties(
+set_source_files_properties(
   aiger/aiger-1.9.4/aiger.c
   PROPERTIES
     LANGUAGE C
@@ -97,6 +97,7 @@ add_library(parser
   btor/btorLexer.c 
   btor/btor_state.cpp
   btor/btor.cpp
+  btor2/btor2.cpp
   sal/salParser.c 
   sal/salLexer.c 
   sal/sal_state.cpp
