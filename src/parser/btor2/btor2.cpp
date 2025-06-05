@@ -486,7 +486,7 @@ btor2_parser::btor2_parser(const system::context& ctx, const char* filename)
       if (line->sort.tag == BTOR2_TAG_SORT_bitvec) {
         add_bv_type(line->id, line->sort.bitvec.width);
       } else {
-        add_array_type(line->id, line->sort.array.index, line->sort.array.element);
+        throw parser_exception("Sally does not support const arrays: " + std::string(line->name), filename, lineno);
       }
       break;
     case BTOR2_TAG_one:{
