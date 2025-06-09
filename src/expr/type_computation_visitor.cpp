@@ -513,6 +513,17 @@ void type_computation_visitor::visit(term_ref t_ref) {
       else error_message << "child must be a bit-vector";
     }
     break;
+  case TERM_BV_NEG:
+    if (t.size() != 1) {
+      d_ok = false;
+      error_message << "must have 1 child";
+    } else {
+      term_ref t0 = base_type_of(t[0]);
+      d_ok = d_tm.is_bitvector_type(t0);
+      if (d_ok) t_type = t0;
+      else error_message << "child must be a bit-vector";
+    }
+    break;
   case TERM_BV_SUB:
     if (t.size() == 1) {
       term_ref t0 = base_type_of(t[0]);
@@ -658,6 +669,7 @@ void type_computation_visitor::visit(term_ref t_ref) {
     }
     break;
   case TERM_BV_SGN_EXTEND:
+  case TERM_BV_EXTEND:
     if (t.size() != 1) {
       d_ok = false;
       error_message << "must have 1 child";
@@ -1007,6 +1019,7 @@ void type_computation_visitor::visit(term_ref t_ref) {
     else error_message << "no children allowed";
     break;
   default:
+    std::cout << "Unsupported term operation: " << t.op() << std::endl;
     assert(false);
   }
 

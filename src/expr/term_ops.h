@@ -113,6 +113,10 @@ enum term_op {
   TERM_BV_UGT,
   TERM_BV_SGT,
   TERM_BV_SGN_EXTEND,
+  TERM_BV_NEG,
+  TERM_BV_EXTEND,
+  TERM_BV_ROR,
+  TERM_BV_ROL,
 
   // Arrays
   TERM_ARRAY_READ,
