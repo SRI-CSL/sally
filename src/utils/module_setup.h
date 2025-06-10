@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include "utils/exception.h"
+
 #include <map>
 #include <boost/program_options/options_description.hpp>
 

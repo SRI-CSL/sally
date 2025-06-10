@@ -404,11 +404,11 @@ public:
     term_ref children[1] = { child };
     if (op == VARIABLE) {
       if (is_integer_type(child)) {
-        d_stat_vars_int->get_value() ++;
+        d_stat_vars_int->set_value(d_stat_vars_int->get_value() + 1);
       } else if (is_real_type(child)) {
-        d_stat_vars_real->get_value() ++;
+        d_stat_vars_real->set_value(d_stat_vars_real->get_value() + 1);
       } else if (is_boolean_type(child)) {
-        d_stat_vars_bool->get_value() ++;
+        d_stat_vars_bool->set_value(d_stat_vars_bool->get_value() + 1);
       }
     }
     return mk_term<op, term_ref*>(payload, children, children + 1);

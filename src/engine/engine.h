@@ -62,6 +62,12 @@ public:
     SILENT_WITH_TRACE,
   };
 
+  /** The result of the last query */
+  result d_last_result = UNKNOWN;
+
+  /** Get the string representation of the result */
+  std::string result_to_string(result r) const;
+
   /** Create the engine */
   engine(const system::context& ctx);
 
@@ -88,6 +94,9 @@ public:
   /** Get the invariant, if the previous query allows it, return null if not applicable */
   virtual
   invariant get_invariant() = 0;
+
+  /** Get the result of the last query */
+  std::string get_last_result_string() const { return result_to_string(d_last_result); }
 
 };
 

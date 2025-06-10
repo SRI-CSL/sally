@@ -21,6 +21,7 @@
 #include "engine/factory.h"
 
 #include "smt/factory.h"
+#include "utils/statistics.h"
 #include "utils/trace.h"
 #include "expr/gc_relocator.h"
 
@@ -53,19 +54,13 @@ pdkind_engine::pdkind_engine(const system::context& ctx)
 , d_property_invalid(false)
 , d_learning_type(LEARN_UNDEFINED)
 {
-  d_stats.frame_index = new utils::stat_int("pdkind::frame_index", 0);
-  d_stats.induction_depth = new utils::stat_int("pdkind::induction_depth", 0);
-  d_stats.frame_size = new utils::stat_int("pdkind::frame_size", 0);
-  d_stats.frame_pushed = new utils::stat_int("pdkind::frame_pushed", 0);
-  d_stats.queue_size = new utils::stat_int("pdkind::queue_size", 0);
-  d_stats.max_cex_depth = new utils::stat_int("pdkind::max_cex_depth", 0);
-  ctx.get_statistics().add(new utils::stat_delimiter());
-  ctx.get_statistics().add(d_stats.frame_index);
-  ctx.get_statistics().add(d_stats.induction_depth);
-  ctx.get_statistics().add(d_stats.frame_size);
-  ctx.get_statistics().add(d_stats.frame_pushed);
-  ctx.get_statistics().add(d_stats.queue_size);
-  ctx.get_statistics().add(d_stats.max_cex_depth);
+  utils::statistics& stats = ctx.get_statistics();
+  d_stats.frame_index = static_cast<utils::stat_int*>(stats.register_stat("pdkind::frame_index"));
+  d_stats.induction_depth = static_cast<utils::stat_int*>(stats.register_stat("pdkind::induction_depth"));
+  d_stats.frame_size = static_cast<utils::stat_int*>(stats.register_stat("pdkind::frame_size"));
+  d_stats.frame_pushed = static_cast<utils::stat_int*>(stats.register_stat("pdkind::frame_pushed"));
+  d_stats.queue_size = static_cast<utils::stat_int*>(stats.register_stat("pdkind::queue_size"));
+  d_stats.max_cex_depth = static_cast<utils::stat_int*>(stats.register_stat("pdkind::max_cex_depth"));
 }
 
 pdkind_engine::~pdkind_engine() {
@@ -97,7 +92,7 @@ induction_obligation pdkind_engine::pop_induction_obligation() {
   induction_obligation ind = d_induction_obligations.top();
   d_induction_obligations.pop();
   d_induction_obligations_handles.erase(ind);
-  d_stats.queue_size->get_value() = d_induction_obligations.size();
+  d_stats.queue_size->set_value(d_induction_obligations.size());
   return ind;
 }
 
@@ -105,7 +100,7 @@ void pdkind_engine::enqueue_induction_obligation(const induction_obligation& ind
   assert(d_induction_frame.find(ind) != d_induction_frame.end());
   induction_obligation_queue::handle_type h = d_induction_obligations.push(ind);
   d_induction_obligations_handles[ind] = h;
-  d_stats.queue_size->get_value() = d_induction_obligations.size();
+  d_stats.queue_size->set_value(d_induction_obligations.size());
 }
 
 pdkind_engine::induction_result pdkind_engine::push_obligation(induction_obligation& ind) {
@@ -122,7 +117,7 @@ pdkind_engine::induction_result pdkind_engine::push_obligation(induction_obligat
     TRACE("pdkind") << "pdkind: pushed " << ind.F_fwd << std::endl;
     // Add it to set of pushed facts
     d_induction_obligations_next.push_back(ind);
-    d_stats.frame_pushed->get_value() = d_induction_obligations_next.size();
+    d_stats.frame_pushed->set_value(d_induction_obligations_next.size());
     // We're done
     return INDUCTION_SUCCESS;
   }
@@ -174,7 +169,7 @@ pdkind_engine::induction_result pdkind_engine::push_obligation(induction_obligat
     induction_obligation new_ind(tm(), F_fwd, F_cex, d_induction_frame_depth + ind.d, 1);
     assert(d_induction_frame.find(new_ind) == d_induction_frame.end());
     d_induction_frame.insert(new_ind);
-    d_stats.frame_size->get_value() = d_induction_frame.size();
+    d_stats.frame_size->set_value(d_induction_frame.size());
     d_smt->add_to_induction_solver(F_fwd, solvers::INDUCTION_FIRST);
     d_smt->add_to_induction_solver(F_fwd, solvers::INDUCTION_INTERMEDIATE);
     enqueue_induction_obligation(new_ind);
@@ -223,11 +218,11 @@ pdkind_engine::induction_result pdkind_engine::push_obligation(induction_obligat
     induction_obligation new_ind(tm(), F_cex_not, ind.F_cex, ind.d, ind.d);
     assert(d_induction_frame.find(new_ind) == d_induction_frame.end());
     d_induction_frame.insert(new_ind);
-    d_stats.frame_size->get_value() = d_induction_frame.size();
+    d_stats.frame_size->set_value(d_induction_frame.size());
     // No need to assert anything, we already have F_fwd => !F_cex
     // Also, just add to next
     d_induction_obligations_next.push_back(new_ind);
-    d_stats.frame_pushed->get_value() = d_induction_obligations_next.size();
+    d_stats.frame_pushed->set_value(d_induction_obligations_next.size());
 
     // Current obligation has failed, we know it will become invalid
     return INDUCTION_FAIL;
@@ -316,7 +311,7 @@ engine::result pdkind_engine::search() {
     // Clear induction obligations queue and the frame
     d_induction_obligations.clear();
     d_induction_frame.clear();
-    d_stats.frame_size->get_value() = 0;
+    d_stats.frame_size->set_value(0);
 
     // If exceeded number of frames
     if (ctx().get_options().get_unsigned("pdkind-max") > 0 && d_induction_frame_index >= ctx().get_options().get_unsigned("pdkind-max")) {
@@ -346,17 +341,17 @@ engine::result pdkind_engine::search() {
       d_smt->add_to_induction_solver(ind.F_fwd, solvers::INDUCTION_FIRST);
       d_smt->add_to_induction_solver(ind.F_fwd, solvers::INDUCTION_INTERMEDIATE);
       d_induction_frame.insert(ind);
-      d_stats.frame_size->get_value() = d_induction_frame.size();
+      d_stats.frame_size->set_value(d_induction_frame.size());
       enqueue_induction_obligation(ind);
     }
 
     // Clear next frame info
     d_induction_obligations_next.clear();
-    d_stats.frame_pushed->get_value() = 0;
+    d_stats.frame_pushed->set_value(0);
 
     // Update stats
-    d_stats.frame_index->get_value() = d_induction_frame_index;
-    d_stats.induction_depth->get_value() = d_induction_frame_depth;
+    d_stats.frame_index->set_value(d_induction_frame_index);
+    d_stats.induction_depth->set_value(d_induction_frame_depth);
 
     // Do garbage collection
     d_smt->gc();
@@ -370,6 +365,7 @@ engine::result pdkind_engine::query(const system::transition_system* ts, const s
 
   // Initialize
   result r = UNKNOWN;
+  d_last_result = r;
 
   // Reset the engine
   reset();
@@ -410,6 +406,7 @@ engine::result pdkind_engine::query(const system::transition_system* ts, const s
 
     // Search
     r = search();
+    d_last_result = r;
   }
 
   MSG(1) << "pdkind: search done: " << r << std::endl;
@@ -442,7 +439,7 @@ bool pdkind_engine::add_property(expr::term_ref P) {
       // Add to induction frame, we know it holds at 0
       assert(d_induction_frame_depth == 1);
       d_induction_frame.insert(ind);
-      d_stats.frame_size->get_value() = d_induction_frame.size();
+      d_stats.frame_size->set_value(d_induction_frame.size());
       d_smt->add_to_induction_solver(P, solvers::INDUCTION_FIRST);
       enqueue_induction_obligation(ind);
     }

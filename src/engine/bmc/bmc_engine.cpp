@@ -83,8 +83,10 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
       if (!d_solver->is_consistent()) {
         // Inconsistent unrolling, property trivially valid
         if (unknown) {
+          d_last_result = UNKNOWN;
           return UNKNOWN;
         } else {
+          d_last_result = VALID;
           return VALID;
         }
       }
@@ -101,10 +103,12 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
       case smt::solver::SAT: {
         expr::model::ref m = d_solver->get_model();
         d_trace->set_model(m, 0, k);
+        d_last_result = INVALID;
         return INVALID;
       }
       case smt::solver::UNKNOWN:
         unknown = true;
+        d_last_result = UNKNOWN;
       case smt::solver::UNSAT:
         // No counterexample found, continue
         break;
@@ -124,6 +128,8 @@ engine::result bmc_engine::query(const system::transition_system* ts, const syst
     // Unroll once more
     d_solver->add(d_trace->get_transition_formula(transition_formula, k), smt::solver::CLASS_A);
   }
+
+  d_last_result = UNKNOWN;
 
   return UNKNOWN;
 }
