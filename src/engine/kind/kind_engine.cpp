@@ -99,6 +99,7 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
 
     // Did we go overboard
     if (k >= kind_max) {
+      d_last_result = UNKNOWN;
       return UNKNOWN;
     }
 
@@ -118,9 +119,11 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
       expr::model::ref m = solver1->get_model();
       // Add model to trace
       d_trace->set_model(m,0, k);
+      d_last_result = INVALID;
       return INVALID;
     }
     case smt::solver::UNKNOWN:
+      d_last_result = UNKNOWN;
       return UNKNOWN;
     case smt::solver::UNSAT:
       // No counterexample found, continue
@@ -175,6 +178,7 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
       case smt::solver::UNSAT:
         // Proved it, done
         d_invariant = invariant(property, k);
+        d_last_result = VALID;
         return VALID;
         break;
       default:
@@ -188,6 +192,8 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
     // One more transition for solver 1
     solver1->add(transition_k, smt::solver::CLASS_A);
   }
+
+  d_last_result = UNKNOWN;
 
   return UNKNOWN;
 }

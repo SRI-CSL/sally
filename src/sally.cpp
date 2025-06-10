@@ -21,6 +21,7 @@
 #include <boost/program_options.hpp>
 #include <boost/thread.hpp>
 
+#include "command/command.h"
 #include "expr/term_manager.h"
 #include "utils/output.h"
 #include "system/context.h"
@@ -36,7 +37,7 @@ using namespace boost::program_options;
 using namespace sally;
 
 /** Parses the program arguments. */
-void parse_options(int argc, char* argv[], variables_map& variables);
+void parse_options(int argc, char* argv[], variables_map& variables, utils::statistics& stats);
 
 /** Prints statistics to the given output and given time slice */
 void live_stats(const utils::statistics* stats, std::string file, unsigned time);
@@ -47,7 +48,8 @@ int main(int argc, char* argv[]) {
 
     // Get the options from command line and config files
     variables_map boost_opts;
-    parse_options(argc, argv, boost_opts);
+    utils::statistics stats;
+    parse_options(argc, argv, boost_opts, stats);
     options opts(boost_opts);
 
     // Get the files to run
@@ -75,9 +77,17 @@ int main(int argc, char* argv[]) {
       }
     }
 
-    // Create the statistics */
-    utils::statistics stats;
-    stats.add(new utils::stat_timer("sally::time", true));
+    // Create the statistics
+    utils::stat_string* stat_filename = static_cast<utils::stat_string*>(stats.register_stat("filename"));
+    utils::stat_string* stat_engine = static_cast<utils::stat_string*>(stats.register_stat("engine"));
+    utils::stat_string* stat_solver = static_cast<utils::stat_string*>(stats.register_stat("solver"));
+    utils::stat_timer* stat_time = static_cast<utils::stat_timer*>(stats.register_stat("time"));
+    utils::stat_string* stat_result = static_cast<utils::stat_string*>(stats.register_stat("result"));
+    stat_filename->set_value(files[0]);
+    stat_engine->set_value(opts.has_option("engine") ? opts.get_string("engine") : "none");
+    stat_solver->set_value(opts.get_string("solver"));
+    stat_result->set_value("unknown");
+    stat_time->start();
 
     // Create the term manager
     expr::term_manager tm(stats);
@@ -128,6 +138,12 @@ int main(int argc, char* argv[]) {
         if (boost_opts.count("stats") > 0) {
           std::cout << "Stats after " << cmd->get_command_type_string() << std::endl;
           stats.to_stream(" - ", std::cout);
+        } 
+
+        if (cmd->get_type() == cmd::QUERY && boost_opts.count("stats-format") > 0) {
+          stat_result->set_value(engine_to_use->get_last_result_string());
+          std::string format = boost_opts.at("stats-format").as<string>();
+          std::cout << stats.format(format) << std::endl;
         }
       }
     }
@@ -188,7 +204,7 @@ std::string get_output_languages_list() {
   return out.str();
 }
 
-void parse_options(int argc, char* argv[], variables_map& variables)
+void parse_options(int argc, char* argv[], variables_map& variables, utils::statistics& stats)
 {
   // Define the main options
   options_description description("General options");
@@ -209,6 +225,8 @@ void parse_options(int argc, char* argv[], variables_map& variables)
       ("lsal-extensions", "Use lsal extensions to the MCMT language")
       ("no-input-namespace", "Don't use input namespace in the the MCMT language")
       ("stats", "Show statistics after every command")
+      ("stats-format", value<string>(), "Show statistics in the given format after every query. See --stats-help for more information.")
+      ("stats-help", "Show help for statistics formatting.")
       ("live-stats", value<string>(), "Output live statistic to the given file (- for stdout).")
       ("live-stats-time", value<unsigned>()->default_value(100), "Time period for statistics output (in miliseconds)")
       ("smt2-output", value<string>(), "Generate smt2 logs of solver queries with given prefix.")
@@ -231,6 +249,11 @@ void parse_options(int argc, char* argv[], variables_map& variables)
     store(command_line_parser(argc, argv).options(description).positional(positional).run(), variables);
   } catch (...) {
     parseError = true;
+  }
+
+  if (variables.count("stats-help") > 0) {
+    cout << stats.get_help_string() << endl;
+    exit(0);
   }
 
   // If help needed, print it out

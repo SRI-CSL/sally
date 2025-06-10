@@ -36,6 +36,26 @@ expr::term_manager& engine::tm() const {
   return ctx().tm();
 }
 
+std::string engine::result_to_string(result r) const {
+  switch (r) {
+  case VALID:
+    return "valid";
+  case INVALID:
+    return "invalid";
+  case UNKNOWN:
+    return "unknown";
+  case UNSUPPORTED:
+    return "unsupported";
+  case INTERRUPTED:
+    return "interrupted";
+  case SILENT:
+  case SILENT_WITH_TRACE:
+    return "silent";
+  default:
+    return "unknown";
+  }
+}
+
 std::ostream& operator << (std::ostream& out, engine::result result) {
 
   output::language lang = output::get_output_language(out);
