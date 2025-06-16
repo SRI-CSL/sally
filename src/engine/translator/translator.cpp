@@ -320,6 +320,8 @@ engine::result translator::query(const system::transition_system* ts, const syst
     throw exception("Unsupported translation language");
   }
 
+  d_last_result = SILENT;
+
   return SILENT;
 }
 
