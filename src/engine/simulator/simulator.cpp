@@ -124,6 +124,8 @@ engine::result simulator::query(const system::transition_system* ts, const syste
     d_solver->add(d_trace->get_transition_formula(transition_formula, k), smt::solver::CLASS_A);
   }
 
+  d_last_result = UNKNOWN;
+
   return SILENT;
 }
 

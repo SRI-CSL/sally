@@ -37,8 +37,8 @@ void query::run(system::context* ctx, engine* e) {
   // Check the formula
   for (size_t i = 0; i < d_queries.size(); ++ i) {
     engine::result result = e->query(T, d_queries[i]);
-    // Output the result if not silent
-    if (result != engine::SILENT && result != engine::SILENT_WITH_TRACE) {
+    // Output the result if not silent and stats-format is not set
+    if (result != engine::SILENT && result != engine::SILENT_WITH_TRACE && !ctx->get_options().has_option("stats-format")) {
       std::cout << result << std::endl;
     }
     // If invalid, and asked to, show the trace

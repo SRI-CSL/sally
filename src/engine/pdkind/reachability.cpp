@@ -17,20 +17,17 @@ reachability::reachability(const system::context& ctx, cex_manager& cm)
 , d_smt(0)
 , d_cex_manager(cm)
 {
-  d_stats.reachable = new utils::stat_int("sally::pdkind::reachable", 0);
-  d_stats.unreachable = new utils::stat_int("sally::pdkind::unreachable", 0);
-  d_stats.queries = new utils::stat_int("sally::pdkind::reachability_queries", 0);
-  ctx.get_statistics().add(new utils::stat_delimiter());
-  ctx.get_statistics().add(d_stats.reachable);
-  ctx.get_statistics().add(d_stats.unreachable);
-  ctx.get_statistics().add(d_stats.queries);
+  utils::statistics& stats = ctx.get_statistics();
+  d_stats.reachable = static_cast<utils::stat_int*>(stats.register_stat("pdkind::reachable"));
+  d_stats.unreachable = static_cast<utils::stat_int*>(stats.register_stat("pdkind::unreachable"));
+  d_stats.queries = static_cast<utils::stat_int*>(stats.register_stat("pdkind::queries"));
 }
 
 solvers::query_result reachability::check_one_step_reachable(size_t k, expr::term_ref F) {
   assert(k > 0);
   ensure_frame(k-1);
 
-  d_stats.queries->get_value() ++;
+  d_stats.queries->set_value(d_stats.queries->get_value() + 1);
 
   // The state type
   const system::state_type* state_type = d_transition_system->get_state_type();
@@ -166,11 +163,11 @@ reachability::result reachability::check_reachable(size_t k, expr::term_ref f, s
   // All discharged, so it's not reachable
   if (reachable) {
     TRACE("pdkind") << "pdkind: checking reachability at " << k << ": reachable" << std::endl;
-    d_stats.reachable->get_value() ++;
+    d_stats.reachable->set_value(d_stats.reachable->get_value() + 1);
     return REACHABLE;
   } else {
     TRACE("pdkind") << "pdkind: checking reachability at " << k << ": unreachable" << std::endl;
-    d_stats.unreachable->get_value() ++;
+    d_stats.unreachable->set_value(d_stats.unreachable->get_value() + 1);
     return UNREACHABLE;
   }
 }
