@@ -4,9 +4,9 @@
 [![Coverage Status](https://coveralls.io/repos/SRI-CSL/sally/badge.svg?branch=master)](https://coveralls.io/r/SRI-CSL/sally?branch=master)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/5578/badge.svg)](https://scan.coverity.com/projects/5578)
 
-# Sally
+# SRI Sally
 
-Sally is a model checker for infinite state systems described as transition
+SRI Sally is a model checker for infinite state systems described as transition
 systems. It is research software under development so the features and the
 input language may change rapidly.
 
