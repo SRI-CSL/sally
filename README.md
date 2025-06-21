@@ -60,6 +60,15 @@ make check
 ```
 You can also set YICES2_HOME, OPENSMT2_HOME, or DREAL_HOME.
 
+To compile with the Btor2 frontend, ensure that you have btor2tools installed 
+(using ``contrib/install_btor2tools.sh``).
+Then provide the BTOR2TOOLS_HOME directory to ``cmake`` and build with  
+```bash
+cd build
+cmake .. -DBTOR2TOOLS_HOME=path/to/contrib/btor2tools
+make
+make check
+```
 
 To compile Sally in debug mode, build with
 ```bash
