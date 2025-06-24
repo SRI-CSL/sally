@@ -1,6 +1,23 @@
 #!/bin/bash
 set -e
 
+# Find Homebrew prefix for macOS and set build flags for dependencies
+if [[ "$(uname)" == "Darwin" ]]; then
+  if [ -d /opt/homebrew ]; then
+    BREW_PREFIX=/opt/homebrew
+  else
+    BREW_PREFIX=/usr/local
+  fi
+  export CPPFLAGS="-I$BREW_PREFIX/include"
+  export LDFLAGS="-L$BREW_PREFIX/lib"
+  export PKG_CONFIG_PATH="$BREW_PREFIX/lib/pkgconfig"
+  export LD_LIBRARY_PATH="$BREW_PREFIX/lib:$LD_LIBRARY_PATH"
+  echo "[INFO] macOS build flags set:"
+  echo "CPPFLAGS=$CPPFLAGS"
+  echo "LDFLAGS=$LDFLAGS"
+  echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
+  echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
+fi
 
 # libpoly
 pushd .
