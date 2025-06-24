@@ -8,7 +8,7 @@ enable_testing()
 cmake_policy(SET CMP0167 NEW)
 cmake_policy(SET CMP0135 NEW)
 
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wall")
 
 # If ENABLE_COVERAGE is defined, try to set coverage flags.
