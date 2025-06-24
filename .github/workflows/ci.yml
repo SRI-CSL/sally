@@ -17,10 +17,10 @@ jobs:
     strategy:
       matrix:
         build-type: [Debug, Release]
-        enable-coverage: [false, true]
-        exclude:
-          - build-type: Debug
-            enable-coverage: true
+        #enable-coverage: [false, true]
+        #exclude:
+        #  - build-type: Debug
+        #    enable-coverage: true
 
     steps:
     - name: Checkout code
@@ -65,16 +65,17 @@ jobs:
       run: |
         bash contrib/install_yices2.sh
 
-    - name: Install coverage tools
-      if: matrix.enable-coverage
-      run: |
-        pip3 install --user cpp-coveralls
+    #- name: Install coverage tools
+    #  if: matrix.enable-coverage
+    #  run: |
+    #    pip3 install --user cpp-coveralls
 
     - name: Configure and build
       run: |
         mkdir -p build
         cd build
-        cmake -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DENABLE_COVERAGE=${{ matrix.enable-coverage }} ..
+        #cmake -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DENABLE_COVERAGE=${{ matrix.enable-coverage }} ..
+        cmake -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} ..
         make -j${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
 
     # - name: Run tests
@@ -83,13 +84,13 @@ jobs:
     #     make check
     #   timeout-minutes: 30
 
-    - name: Upload coverage to Coveralls
-      if: matrix.enable-coverage
-      run: |
-        cd build
-        coveralls -r .. -b . --gcov-options '\-lp'
-      env:
-        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+    #- name: Upload coverage to Coveralls
+    #  if: matrix.enable-coverage
+    #  run: |
+    #    cd build
+    #    coveralls -r .. -b . --gcov-options '\-lp'
+    #  env:
+    #    COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
 
     - name: Show ccache statistics
       run: ccache -s
