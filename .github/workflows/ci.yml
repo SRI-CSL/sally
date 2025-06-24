@@ -128,21 +128,6 @@ jobs:
         bash contrib/install_opensmt2.sh
         bash contrib/install_dreal4.sh
 
-    - name: Set up GMP environment variables (Homebrew)
-      run: |
-        # Find the Homebrew prefix
-        if [ -d /opt/homebrew ]; then
-          BREW_PREFIX=/opt/homebrew
-        else
-          BREW_PREFIX=/usr/local
-        fi
-        echo "LDFLAGS=-L$BREW_PREFIX/lib" >> $GITHUB_ENV
-        echo "CPPFLAGS=-I$BREW_PREFIX/include" >> $GITHUB_ENV
-        echo "PKG_CONFIG_PATH=$BREW_PREFIX/lib/pkgconfig" >> $GITHUB_ENV
-        echo "CMAKE_PREFIX_PATH=$BREW_PREFIX" >> $GITHUB_ENV
-        echo "GMP_HOME=$BREW_PREFIX" >> $GITHUB_ENV
-        echo "Environment variables set for future steps."
-
     - name: Install Java
       run: |
         brew install --cask temurin
@@ -170,6 +155,7 @@ jobs:
         echo "CPPFLAGS=$CPPFLAGS"
         echo "CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH"
         echo "GMP_HOME=$GMP_HOME"
+        export LD_LIBRARY_PATH=/usr/local/lib/:${LD_LIBRARY_PATH}
         mkdir -p build
         cd build
         cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$BREW_PREFIX ..
