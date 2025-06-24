@@ -122,6 +122,12 @@ jobs:
         brew update
         brew install cmake boost gmp bison flex readline ccache
 
+    - name: Install SMT solvers
+      run: |
+        bash contrib/install_yices2.sh
+        bash contrib/install_opensmt2.sh
+        bash contrib/install_dreal4.sh
+
     - name: Install Java
       run: |
         brew install --cask temurin
