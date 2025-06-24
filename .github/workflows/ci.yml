@@ -139,6 +139,8 @@ jobs:
         echo "LDFLAGS=-L$BREW_PREFIX/lib" >> $GITHUB_ENV
         echo "CPPFLAGS=-I$BREW_PREFIX/include" >> $GITHUB_ENV
         echo "PKG_CONFIG_PATH=$BREW_PREFIX/lib/pkgconfig" >> $GITHUB_ENV
+        echo "CMAKE_PREFIX_PATH=$BREW_PREFIX" >> $GITHUB_ENV
+        echo "GMP_HOME=$BREW_PREFIX" >> $GITHUB_ENV
 
     - name: Install Java
       run: |
@@ -153,7 +155,7 @@ jobs:
       run: |
         mkdir -p build
         cd build
-        cmake -DCMAKE_BUILD_TYPE=Release ..
+        cmake -DCMAKE_BUILD_TYPE=Release -DGMP_HOME=$BREW_PREFIX ..
         make -j$(sysctl -n hw.ncpu)
 
     - name: Run tests
