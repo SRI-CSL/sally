@@ -1,0 +1,148 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  # Enable parallel builds
+  CMAKE_BUILD_PARALLEL_LEVEL: 4
+
+jobs:
+  build-and-test-linux:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        build-type: [Debug, Release]
+        enable-coverage: [false, true]
+        include:
+          - build-type: Debug
+            enable-coverage: false
+          - build-type: Release
+            enable-coverage: false
+          - build-type: Release
+            enable-coverage: true
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/ccache
+          ~/.local
+        key: ${{ runner.os }}-deps-${{ hashFiles('**/CMakeLists.txt', '**/package.json', '**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-deps-
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          bison \
+          flex \
+          libgmp-dev \
+          libboost-program-options-dev \
+          libboost-iostreams-dev \
+          libboost-test-dev \
+          libboost-thread-dev \
+          libboost-system-dev \
+          libreadline-dev \
+          default-jre \
+          gperf \
+          python3-pip \
+          ccache
+
+    - name: Setup ccache
+      run: |
+        echo "CCACHE_DIR=$HOME/.cache/ccache" >> $GITHUB_ENV
+        ccache --max-size=1G
+
+    - name: Install SMT solvers
+      run: |
+        bash contrib/install_yices2.sh
+        bash contrib/install_opensmt2.sh
+        bash contrib/install_dreal4.sh
+
+    - name: Install coverage tools
+      if: matrix.enable-coverage
+      run: |
+        pip3 install --user cpp-coveralls
+
+    - name: Configure and build
+      run: |
+        mkdir -p build
+        cd build
+        cmake -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DENABLE_COVERAGE=${{ matrix.enable-coverage }} ..
+        make -j${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
+
+    - name: Run tests
+      run: |
+        cd build
+        make check
+      timeout-minutes: 30
+
+    - name: Upload coverage to Coveralls
+      if: matrix.enable-coverage
+      run: |
+        cd build
+        coveralls -r .. -b . --gcov-options '\-lp'
+      env:
+        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+
+    - name: Show ccache statistics
+      run: ccache -s
+
+  build-macos:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/Library/Caches/Homebrew
+          ~/.cache/ccache
+        key: ${{ runner.os }}-deps-${{ hashFiles('**/CMakeLists.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-deps-
+
+    - name: Install dependencies via Homebrew
+      run: |
+        brew update
+        brew install cmake boost gmp bison flex readline ccache
+
+    - name: Install Java
+      run: |
+        brew install --cask temurin
+
+    - name: Setup ccache
+      run: |
+        echo "CCACHE_DIR=$HOME/.cache/ccache" >> $GITHUB_ENV
+        ccache --max-size=1G
+
+    - name: Configure and build
+      run: |
+        mkdir -p build
+        cd build
+        cmake -DCMAKE_BUILD_TYPE=Release ..
+        make -j$(sysctl -n hw.ncpu)
+
+    - name: Run tests
+      run: |
+        cd build
+        make check
+      timeout-minutes: 30
+
+    - name: Show ccache statistics
+      run: ccache -s

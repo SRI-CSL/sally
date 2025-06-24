@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/SRI-CSL/sally.svg?branch=master)](https://travis-ci.org/SRI-CSL/sally)
+[![CI](https://github.com/SRI-CSL/sally/workflows/CI/badge.svg)](https://github.com/SRI-CSL/sally/actions?query=workflow%3ACI)
 [![Coverage Status](https://coveralls.io/repos/SRI-CSL/sally/badge.svg?branch=master)](https://coveralls.io/r/SRI-CSL/sally?branch=master)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/5578/badge.svg)](https://scan.coverity.com/projects/5578)
 
