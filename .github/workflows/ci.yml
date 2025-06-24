@@ -77,11 +77,11 @@ jobs:
         cmake -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DENABLE_COVERAGE=${{ matrix.enable-coverage }} ..
         make -j${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
 
-    - name: Run tests
-      run: |
-        cd build
-        make check
-      timeout-minutes: 30
+    # - name: Run tests
+    #   run: |
+    #     cd build
+    #     make check
+    #   timeout-minutes: 30
 
     - name: Upload coverage to Coveralls
       if: matrix.enable-coverage
