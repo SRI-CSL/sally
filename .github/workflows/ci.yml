@@ -128,6 +128,18 @@ jobs:
         bash contrib/install_opensmt2.sh
         bash contrib/install_dreal4.sh
 
+    - name: Set up GMP environment variables (Homebrew)
+      run: |
+        # Find the Homebrew prefix
+        if [ -d /opt/homebrew ]; then
+          BREW_PREFIX=/opt/homebrew
+        else
+          BREW_PREFIX=/usr/local
+        fi
+        echo "LDFLAGS=-L$BREW_PREFIX/lib" >> $GITHUB_ENV
+        echo "CPPFLAGS=-I$BREW_PREFIX/include" >> $GITHUB_ENV
+        echo "PKG_CONFIG_PATH=$BREW_PREFIX/lib/pkgconfig" >> $GITHUB_ENV
+
     - name: Install Java
       run: |
         brew install --cask temurin
