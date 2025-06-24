@@ -71,9 +71,11 @@ make check
 
 In order to use the non-linear capabilities of Yices2 in Sally, you
 must use a version of Yices2 compiled with MCSAT support, and
-[LibPoly](https://github.com/SRI-CSL/libpoly) must be
-installed on your system. As above, you can pass `-DLIBPOLY_HOME=$LPD` to
-cmake if LibPoly is installed in a non-standard location.
+[LibPoly](https://github.com/SRI-CSL/libpoly) and
+[CUDD](https://github.com/ivmai/cudd) must be
+installed on your system. As above, you can pass `-DLIBPOLY_HOME=$LPD` or
+`-DCUDD_HOME=$CD` to cmake if LibPoly or CUDD are installed in
+non-standard locations.
 
 
 ## Input Language
