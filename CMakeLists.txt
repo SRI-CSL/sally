@@ -1,8 +1,12 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 project(sally CXX C)
 enable_testing()
+
+# Set CMake policies to suppress warnings
+cmake_policy(SET CMP0167 NEW)
+cmake_policy(SET CMP0135 NEW)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wall")
@@ -111,6 +115,7 @@ ExternalProject_Add(
    libantlr3c-3.4
    URL "${sally_SOURCE_DIR}/antlr/libantlr3c-3.4.tar.gz"
    URL_MD5 08b1420129d5dccd0f4461cedf2a0d7d
+   DOWNLOAD_EXTRACT_TIMESTAMP TRUE
    PATCH_COMMAND chmod -R u+w src include
          COMMAND patch -p1 -t -N < "${sally_SOURCE_DIR}/antlr/libantlr3c-3.4.patch"
    CONFIGURE_COMMAND <SOURCE_DIR>/configure ${ANTLR_CONFIG_FLAG} --enable-debuginfo --disable-antlrdebug --prefix=<INSTALL_DIR>
