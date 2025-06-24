@@ -68,8 +68,6 @@ jobs:
     - name: Install SMT solvers
       run: |
         bash contrib/install_yices2.sh
-        bash contrib/install_opensmt2.sh
-        bash contrib/install_dreal4.sh
 
     - name: Install coverage tools
       if: matrix.enable-coverage
