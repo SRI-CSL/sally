@@ -141,6 +141,17 @@ jobs:
         echo "PKG_CONFIG_PATH=$BREW_PREFIX/lib/pkgconfig" >> $GITHUB_ENV
         echo "CMAKE_PREFIX_PATH=$BREW_PREFIX" >> $GITHUB_ENV
         echo "GMP_HOME=$BREW_PREFIX" >> $GITHUB_ENV
+        # Also export for current shell
+        export LDFLAGS="-L$BREW_PREFIX/lib"
+        export CPPFLAGS="-I$BREW_PREFIX/include"
+        export PKG_CONFIG_PATH="$BREW_PREFIX/lib/pkgconfig"
+        export CMAKE_PREFIX_PATH="$BREW_PREFIX"
+        export GMP_HOME="$BREW_PREFIX"
+        echo "Environment variables set:"
+        echo "LDFLAGS=$LDFLAGS"
+        echo "CPPFLAGS=$CPPFLAGS"
+        echo "CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH"
+        echo "GMP_HOME=$GMP_HOME"
 
     - name: Install Java
       run: |
@@ -153,9 +164,15 @@ jobs:
 
     - name: Configure and build
       run: |
+        # Find the Homebrew prefix again for this step
+        if [ -d /opt/homebrew ]; then
+          BREW_PREFIX=/opt/homebrew
+        else
+          BREW_PREFIX=/usr/local
+        fi
         mkdir -p build
         cd build
-        cmake -DCMAKE_BUILD_TYPE=Release -DGMP_HOME=$BREW_PREFIX ..
+        cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$BREW_PREFIX ..
         make -j$(sysctl -n hw.ncpu)
 
     - name: Run tests
