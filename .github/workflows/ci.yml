@@ -98,19 +98,13 @@ jobs:
   build-macos:
     runs-on: macos-latest
     
+    strategy:
+      matrix:
+        build-type: [Debug, Release]
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-
-    - name: Cache dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/Library/Caches/Homebrew
-          ~/.cache/ccache
-        key: ${{ runner.os }}-deps-${{ hashFiles('**/CMakeLists.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-deps-
 
     - name: Install dependencies via Homebrew
       run: |
@@ -134,7 +128,7 @@ jobs:
       run: |
         mkdir -p build
         cd build
-        cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$BREW_PREFIX ..
+        cmake -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DCMAKE_PREFIX_PATH=$BREW_PREFIX ..
         make -j$(sysctl -n hw.ncpu)
 
     - name: Run tests
