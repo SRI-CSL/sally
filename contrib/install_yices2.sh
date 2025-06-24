@@ -28,6 +28,7 @@ popd
 pushd .
 git clone https://github.com/SRI-CSL/yices2.git
 cd yices2
+export LD_LIBRARY_PATH=/usr/local/lib/:${LD_LIBRARY_PATH}
 autoconf
 ./configure --enable-mcsat
 make
