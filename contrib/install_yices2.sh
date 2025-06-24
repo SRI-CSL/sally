@@ -1,14 +1,6 @@
 #!/bin/bash
 set -e
 
-# Ensure autoreconf is available on macOS
-if [[ "$(uname)" == "Darwin" ]]; then
-  if ! command -v autoreconf >/dev/null 2>&1; then
-    echo "[INFO] Installing autoconf and automake via Homebrew (macOS)..."
-    brew update
-    brew install autoconf automake
-  fi
-fi
 
 # libpoly
 pushd .

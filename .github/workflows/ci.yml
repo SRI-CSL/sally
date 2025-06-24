@@ -120,7 +120,7 @@ jobs:
     - name: Install dependencies via Homebrew
       run: |
         brew update
-        brew install cmake boost gmp bison flex readline ccache
+        brew install cmake boost gmp bison flex readline ccache autoconf automake libtool
 
     - name: Install SMT solvers
       run: |
