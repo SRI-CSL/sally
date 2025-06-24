@@ -18,12 +18,8 @@ jobs:
       matrix:
         build-type: [Debug, Release]
         enable-coverage: [false, true]
-        include:
+        exclude:
           - build-type: Debug
-            enable-coverage: false
-          - build-type: Release
-            enable-coverage: false
-          - build-type: Release
             enable-coverage: true
 
     steps:
@@ -135,23 +131,6 @@ jobs:
 
     - name: Configure and build
       run: |
-        # Find the Homebrew prefix again for this step
-        if [ -d /opt/homebrew ]; then
-          BREW_PREFIX=/opt/homebrew
-        else
-          BREW_PREFIX=/usr/local
-        fi
-        export LDFLAGS="-L$BREW_PREFIX/lib"
-        export CPPFLAGS="-I$BREW_PREFIX/include"
-        export PKG_CONFIG_PATH="$BREW_PREFIX/lib/pkgconfig"
-        export CMAKE_PREFIX_PATH="$BREW_PREFIX"
-        export GMP_HOME="$BREW_PREFIX"
-        echo "Environment variables for build:"
-        echo "LDFLAGS=$LDFLAGS"
-        echo "CPPFLAGS=$CPPFLAGS"
-        echo "CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH"
-        echo "GMP_HOME=$GMP_HOME"
-        export LD_LIBRARY_PATH=/usr/local/lib/:${LD_LIBRARY_PATH}
         mkdir -p build
         cd build
         cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$BREW_PREFIX ..
