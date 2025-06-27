@@ -1,10 +1,12 @@
-[![Build Status](https://travis-ci.org/SRI-CSL/sally.svg?branch=master)](https://travis-ci.org/SRI-CSL/sally)
+[![CI](https://github.com/SRI-CSL/sally/workflows/CI/badge.svg)](https://github.com/SRI-CSL/sally/actions?query=workflow%3ACI)
 [![Coverage Status](https://coveralls.io/repos/SRI-CSL/sally/badge.svg?branch=master)](https://coveralls.io/r/SRI-CSL/sally?branch=master)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/5578/badge.svg)](https://scan.coverity.com/projects/5578)
 
-# Sally
+<img width="100" style="display: block; margin: auto;" src="https://avatars.githubusercontent.com/u/8029212"/>
 
-Sally is a model checker for infinite state systems described as transition
+# SRI Sally
+
+SRI Sally is a model checker for infinite state systems described as transition
 systems. It is research software under development so the features and the
 input language may change rapidly.
 
@@ -78,9 +80,11 @@ make check
 
 In order to use the non-linear capabilities of Yices2 in Sally, you
 must use a version of Yices2 compiled with MCSAT support, and
-[LibPoly](https://github.com/SRI-CSL/libpoly) must be
-installed on your system. As above, you can pass `-DLIBPOLY_HOME=$LPD` to
-cmake if LibPoly is installed in a non-standard location.
+[LibPoly](https://github.com/SRI-CSL/libpoly) and
+[CUDD](https://github.com/ivmai/cudd) must be
+installed on your system. As above, you can pass `-DLIBPOLY_HOME=$LPD` or
+`-DCUDD_HOME=$CD` to cmake if LibPoly or CUDD are installed in
+non-standard locations.
 
 
 ## Input Language
