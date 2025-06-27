@@ -16,21 +16,14 @@
  * along with sally.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "expr/term_manager.h"
-#include "expr/gc_relocator.h"
 #include "expr/bitvector.h"
 
-#include "command/assume.h"
 #include "command/declare_state_type.h"
-#include "command/define_states.h"
-#include "command/define_transition.h"
 #include "command/define_transition_system.h"
 #include "command/query.h"
 #include "command/sequence.h"
 
 #include <cassert>
-#include <sstream>
-#include <iostream>
-#include <unordered_set>
 
 #include "parser/btor2/btor2.h"
 
@@ -369,23 +362,23 @@ void btor2_parser::build_transition_system() {
   transition = tm.substitute_and_cache(transition, btor_to_state_var);
   system::transition_formula* transition_formula = new system::transition_formula(tm, state_type, transition);
 
+  // Define the transition system
+  system::transition_system* transition_system = new system::transition_system(state_type, init_formula, transition_formula);
+  cmd::command* transition_system_define = new cmd::define_transition_system("Sys", transition_system);
+
   // Define any invariants
   std::vector<expr::term_ref> constraint_children;
   for (size_t i = 0; i < constraints.size(); ++ i) {
     expr::term_ref constraint = constraints[i];
-    // FIXME: is this necessary?
     if (tm.type_of(constraint) != tm.boolean_type()) {
       constraint = tm.mk_term(expr::TERM_EQ, constraint, one);
     }
     constraint_children.push_back(constraint);
   }
-  expr::term_ref invar = tm.mk_and(constraint_children);
-  invar = tm.substitute_and_cache(invar, btor_to_state_var);
-  system::state_formula* invar_formula = new system::state_formula(tm, state_type, invar);
-
-  // Define the transition system
-  system::transition_system* transition_system = new system::transition_system(state_type, init_formula, transition_formula, invar_formula);
-  cmd::command* transition_system_define = new cmd::define_transition_system("Sys", transition_system);
+  expr::term_ref invariant = tm.mk_and(constraint_children);
+  invariant = tm.substitute_and_cache(invariant, btor_to_state_var);
+  system::state_formula* invariant_formula = new system::state_formula(tm, state_type, invariant);
+  transition_system->add_invariant(invariant_formula);
 
   // Query
   std::vector<expr::term_ref> bad_children;

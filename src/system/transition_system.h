@@ -68,13 +68,14 @@ class transition_system {
     return !d_assumptions_transition.empty();
   }
 
-
   /** Get the assumptions in one state formula */
   expr::term_ref get_state_assumption() const;
 
   /** Get the assumptions in one transition formula */
   expr::term_ref get_transition_assumption() const;
 
+  /** Get the invariant */
+  expr::term_ref get_invariant() const;
 
   /** The trace helper for this transition system */
   trace_helper* d_trace_helper;
@@ -82,7 +83,6 @@ class transition_system {
 public:
 
   transition_system(const state_type* state_type, state_formula* initial_states, transition_formula* transition_relation);
-  transition_system(const state_type* state_type, state_formula* initial_states, transition_formula* transition_relation, state_formula* invariant);
   ~transition_system();
 
   /** Get the state type */
@@ -96,8 +96,8 @@ public:
   /** Get the whole transition relation (disjunction) */
   expr::term_ref get_transition_relation() const;
 
-  /** Get the whole invariant (conjunction) */
-  expr::term_ref get_invariant() const;
+  /** Add an invariant (takes over the pointer) */
+  void add_invariant(state_formula* invariant);
 
   /** Get the trace helper */
   trace_helper* get_trace_helper() const;

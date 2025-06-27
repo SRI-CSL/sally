@@ -81,11 +81,6 @@ engine::result kind_engine::query(const system::transition_system* ts, const sys
   // Transition formula
   expr::term_ref transition_formula = ts->get_transition_relation();
 
-  // Invariant formula
-  expr::term_ref invar_formula = ts->get_invariant();
-  solver1->add(d_trace->get_state_formula(invar_formula, 0), smt::solver::CLASS_A);
-  solver2->add(d_trace->get_state_formula(invar_formula, 0), smt::solver::CLASS_A);
-
   // The property
   expr::term_ref property = sf->get_formula();
 

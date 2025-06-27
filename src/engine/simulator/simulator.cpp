@@ -53,10 +53,6 @@ engine::result simulator::query(const system::transition_system* ts, const syste
   // Transition formula
   expr::term_ref transition_formula = ts->get_transition_relation();
 
-  // Invariant formula
-  expr::term_ref invar_formula = ts->get_invariant();
-  d_solver->add(d_trace->get_state_formula(invar_formula, 0), smt::solver::CLASS_A);
-
   // The property
   expr::term_ref property = sf->get_formula();
 
