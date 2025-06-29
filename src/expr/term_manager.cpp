@@ -874,6 +874,10 @@ term_ref term_manager::mk_or(const std::vector<term_ref>& disjuncts) {
 
 bool term_manager::is_type(term_ref t) const {
   return d_tm->is_type(t);
+} 
+
+bool term_manager::is_boolean_type(term_ref t) const {
+  return d_tm->is_boolean_type(t);
 }
 
 bool term_manager::is_function_type(term_ref t) const {

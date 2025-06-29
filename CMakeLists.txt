@@ -109,6 +109,18 @@ if (OPENSMT2_FOUND)
   include_directories(${OPENSMT2_INCLUDE_DIR})
 endif()
 
+# Find Btor2Tools
+SET(BTOR2TOOLS_HOME CACHE STRING "Btor2Tools installation directory")
+find_package(Btor2Tools)
+if (BTOR2TOOLS_FOUND)
+  add_definitions(-DWITH_BTOR2TOOLS)
+  include_directories(${BTOR2TOOLS_INCLUDE_DIRS})
+  set(CMAKE_INSTALL_RPATH "${BTOR2TOOLS_LIBRARY_DIR}")
+  set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+  set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+  set(CMAKE_INSTALL_RPATH "${BTOR2TOOLS_HOME}/build/lib")
+endif()
+
 # Make sure antlr C runtime is here
 include(ExternalProject)
 ExternalProject_Add(

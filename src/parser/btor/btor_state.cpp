@@ -261,13 +261,14 @@ cmd::command* btor_state::finalize() const {
   cmd::command* transition_system_define = new cmd::define_transition_system("T", transition_system);
 
   // Query
+  // We cast the roots to booleans then conjunct them
   std::vector<term_ref> bad_children;
   for (size_t i = 0; i < d_roots.size(); ++ i) {
     term_ref bad = tm().substitute_and_cache(d_roots[i], btor_to_state_var);
+    bad = tm().mk_term(TERM_EQ, bad, d_zero);
     bad_children.push_back(bad);
   }
-  term_ref property = tm().mk_or(bad_children);
-  property = tm().mk_term(TERM_EQ, property, d_zero);
+  term_ref property = tm().mk_and(bad_children);
   system::state_formula* property_formula = new system::state_formula(tm(), state_type, property);
   cmd::command* query = new cmd::query(ctx(), "T", property_formula);
 

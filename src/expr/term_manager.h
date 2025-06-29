@@ -438,6 +438,9 @@ public:
   /** Check if t is a type */
   bool is_type(term_ref t) const;
 
+  /** Check if t is a boolean type */
+  bool is_boolean_type(term_ref t) const;
+
   /** Check if t is a function type */
   bool is_function_type(term_ref t) const;
 

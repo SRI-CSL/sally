@@ -808,9 +808,13 @@ term_ref term_manager_internal::mk_term(term_op op, iterator begin, iterator end
     SWITCH_TO_TERM(TERM_BV_NOR)
     SWITCH_TO_TERM(TERM_BV_XNOR)
     SWITCH_TO_TERM(TERM_BV_CONCAT)
+    SWITCH_TO_TERM(TERM_BV_NEG)
+    SWITCH_TO_TERM(TERM_BV_ROR)
+    SWITCH_TO_TERM(TERM_BV_ROL)
     SWITCH_TO_TERM(TERM_FUN_APP)
     SWITCH_TO_TERM(TERM_TUPLE_CONSTRUCT)
   default:
+    std::cout << "Unsupported term operation: " << op << std::endl;
     assert(false);
   }
 

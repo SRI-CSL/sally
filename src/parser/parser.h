@@ -51,6 +51,7 @@ public:
 
   /** Create an exception with line information */
   parser_exception(std::string msg, std::string filename, int line, int pos);
+  parser_exception(std::string msg, std::string filename, int line);
 
   /** Returns true if the exception carries line information */
   bool has_line_info() const;
@@ -74,6 +75,7 @@ enum input_language {
   INPUT_MCMT,
   INPUT_SMT2,
   INPUT_BTOR,
+  INPUT_BTOR2,
   INPUT_SAL,
   INPUT_AIGER
 };
