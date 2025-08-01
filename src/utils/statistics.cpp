@@ -191,7 +191,7 @@ void statistics::values_to_stream(std::ostream& out) const {
     if (!first) {
       out << "\t";
     }
-    out << stat.second->get_name();
+    out << *stat.second;
     first = false;
   }
 }
